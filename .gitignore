@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Tooling
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Môi trường - không bao giờ commit
+.env
+config/*-local.ini
+
+# Claude - giữ memory, bỏ setting cá nhân
+.claude/settings.local.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
