@@ -105,10 +105,14 @@ ngày/tuần. Gọi thẳng `services/` đúng như `api/` gọi — không tự
 ### `api/`
 Vỏ HTTP, không chứa nghiệp vụ.
 
-| Thư mục | Việc |
+| File / thư mục | Việc |
 |---|---|
+| `app.py` | Nơi ráp: tạo app, gắn router, middleware, nối observability. `uvicorn mycel.api.app:app` trỏ vào đây |
 | `routes/` | Nhận request, validate, gọi service, trả response. Không SQL, không gọi LLM, không `if/else` nghiệp vụ |
 | `schemas/` | Hình dạng dữ liệu vào/ra qua HTTP. Khác bảng DB — đổi DB không vỡ API |
+
+`app.py` là file duy nhất biết hệ thống có những nhóm route nào. Thêm một nhóm endpoint =
+thêm một file trong `routes/` + một dòng `include_router` — không đụng file route đang có.
 
 Có xác thực — dữ liệu bên trong là Slack và Gmail nội bộ.
 

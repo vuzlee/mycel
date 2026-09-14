@@ -994,6 +994,113 @@ footer {
       <code>storage/</code>. Scheduler bỏ qua mắt xích đầu, vào thẳng
       <code>services/report_service.py</code>.
     </p>
+
+    <figure>
+      <div class="scroll-x">
+        <svg class="diagram" viewBox="0 0 940 200" role="img"
+             aria-label="Bên trong tầng vỏ HTTP của Mycel: uvicorn chạy api/app.py; app.py tạo app, gắn middleware và observability rồi gom các router lại; mỗi file trong routes là một router cho một nhóm tài nguyên, ví dụ reports.py và health.py; các route dùng schemas để định hình dữ liệu vào ra và gọi xuống services.">
+          <defs>
+            <marker id="ap-ar" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <text x="16" y="20" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">BÊN TRONG TẦNG VỎ</text>
+
+          <!-- uvicorn -->
+          <rect x="16" y="66" width="140" height="44" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="86" y="85" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)" text-anchor="middle">uvicorn</text>
+          <text x="86" y="101" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)" text-anchor="middle">process phục vụ HTTP</text>
+
+          <!-- app.py -->
+          <rect x="204" y="52" width="196" height="72" rx="2"
+                fill="var(--accent)" opacity="0.1"/>
+          <rect x="204" y="52" width="196" height="72" rx="2"
+                fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+          <text x="222" y="76" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--accent)">api/app.py</text>
+          <text x="222" y="95" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">tạo app · middleware · trace</text>
+          <text x="222" y="112" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">gom router lại</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
+             color="var(--ink-faint)" marker-end="url(#ap-ar)">
+            <path d="M 156 88 L 200 88"/>
+          </g>
+          <text x="178" y="80" font-family="JetBrains Mono, monospace" font-size="9"
+                fill="var(--ink-faint)" text-anchor="middle">:app</text>
+
+          <!-- routes -->
+          <text x="448" y="34" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">ROUTES/ — MỖI FILE MỘT ROUTER</text>
+
+          <rect x="448" y="46" width="216" height="36" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="464" y="69" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)">reports.py</text>
+          <text x="648" y="69" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)" text-anchor="end">yêu cầu · đọc báo cáo</text>
+
+          <rect x="448" y="94" width="216" height="36" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="464" y="117" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)">health.py</text>
+          <text x="648" y="117" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)" text-anchor="end">live · ready</text>
+
+          <rect x="448" y="142" width="216" height="32" rx="2"
+                fill="var(--surface)" stroke="var(--line)" stroke-dasharray="3 3"/>
+          <text x="464" y="163" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink-faint)">…nhóm mới</text>
+
+          <g stroke="var(--accent)" stroke-width="1.3" fill="none"
+             color="var(--accent)" marker-end="url(#ap-ar)">
+            <path d="M 400 76 L 424 76 L 424 64 L 444 64"/>
+            <path d="M 400 88 L 424 88 L 424 112 L 444 112"/>
+            <path d="M 400 100 L 424 100 L 424 158 L 444 158"/>
+          </g>
+          <text x="412" y="46" font-family="JetBrains Mono, monospace" font-size="9"
+                fill="var(--accent)" text-anchor="middle">include_router</text>
+
+          <!-- schemas + services -->
+          <rect x="712" y="46" width="212" height="36" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="728" y="69" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)">schemas/</text>
+          <text x="908" y="69" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)" text-anchor="end">hình dạng vào/ra</text>
+
+          <rect x="712" y="110" width="212" height="44" rx="2"
+                fill="var(--accent)" opacity="0.1"/>
+          <rect x="712" y="110" width="212" height="44" rx="2"
+                fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="728" y="130" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--accent)">services/</text>
+          <text x="728" y="146" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)">nghiệp vụ — ra khỏi tầng vỏ</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
+             fill="none" color="var(--ink-faint)" marker-end="url(#ap-ar)">
+            <path d="M 664 64 L 708 64"/>
+          </g>
+          <g stroke="var(--accent)" stroke-width="1.6" fill="none"
+             color="var(--accent)" marker-end="url(#ap-ar)">
+            <path d="M 664 112 L 686 112 L 686 132 L 708 132"/>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        <code>app.py</code> là file duy nhất biết hệ thống có những nhóm route nào. Thêm
+        một nhóm endpoint = thêm một file trong <code>routes/</code> và một dòng
+        <code>include_router</code> — không đụng file route nào đang có.
+      </figcaption>
+    </figure>
   </section>
   <section id="s07">
     <div class="section-head">
@@ -1257,7 +1364,19 @@ footer {
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>api/</span>
-        <span class="tree-note">Vỏ HTTP. <code>routes/</code> nhận và validate, <code>schemas/</code> định hình dữ liệu vào ra. Có xác thực — dữ liệu là nội bộ.</span>
+        <span class="tree-note">Vỏ HTTP. Có xác thực — dữ liệu là Slack và Gmail nội bộ.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>app.py</span>
+        <span class="tree-note">Nơi ráp: tạo app, gắn router, middleware, observability. File duy nhất biết có những nhóm route nào. <code>uvicorn</code> trỏ vào đây.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>routes/</span>
+        <span class="tree-note">Endpoint theo nhóm tài nguyên — <code>reports.py</code>, <code>health.py</code>. Mỗi file một router.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>schemas/</span>
+        <span class="tree-note">Hình dạng dữ liệu vào/ra qua HTTP. Khác bảng DB — đổi DB không vỡ API.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>observability/</span>
