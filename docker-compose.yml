@@ -32,6 +32,34 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
+  # Chạy job nền: sync, transform, sinh báo cáo. Scale ngang bằng --scale worker=N
+  worker:
+    build: .
+    command: python -m mycel.jobs.worker
+    env_file: .env
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  # --- Inference local (tuỳ chọn) ---
+  # Chỉ chạy khi bật profile: docker compose --profile local-llm up -d
+  # Không bật thì mọi lượt gọi LLM đi cloud.
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    profiles: [local-llm]
+    command: >
+      --model Qwen/Qwen2.5-3B-Instruct-AWQ
+      --quantization awq
+      --dtype float16
+      --max-model-len 4096
+      --gpu-memory-utilization 0.85
+    ports: ["8001:8000"]
+    volumes: ["hfcache:/root/.cache/huggingface"]
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
   # --- Observability ---
 
   otel-collector:
@@ -61,3 +89,4 @@ services:
 
 volumes:
   pgdata:
+  hfcache:
