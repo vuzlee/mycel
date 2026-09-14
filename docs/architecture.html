@@ -375,6 +375,86 @@ figcaption {
 
 .op p { font-size: 0.8125rem; color: var(--ink-soft); }
 
+/* ---------- Mục lục ---------- */
+
+.toc {
+  list-style: none;
+  margin: 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.5rem 2rem;
+  font-size: 0.8125rem;
+}
+
+.toc a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: flex;
+  gap: 0.625rem;
+  padding-block: 0.125rem;
+}
+
+.toc a:hover { color: var(--accent); }
+
+.toc a b {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+  padding-top: 0.125rem;
+}
+
+section { scroll-margin-top: 1.5rem; }
+
+/* ---------- Bảng gọn dùng chung ---------- */
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tbl th {
+  text-align: left;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--ink-faint);
+  padding: 0 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: bottom;
+}
+
+.tbl td {
+  padding: 0.6875rem 1rem 0.6875rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.tbl td:last-child, .tbl th:last-child { padding-right: 0; }
+
+.tbl tr:last-child td { border-bottom: none; }
+
+.tbl .who {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.tbl .no { color: var(--ink-faint); }
+
+.tbl .tone-raw    .who { color: var(--raw); }
+.tbl .tone-silver .who { color: var(--silver); }
+.tbl .tone-gold   .who { color: var(--gold); }
+.tbl .tone-accent .who { color: var(--accent); }
+
 /* ---------- Footer ---------- */
 
 footer {
@@ -391,6 +471,11 @@ footer {
 
 @media (max-width: 760px) {
   .layers { grid-template-columns: 1fr; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+  .tbl thead { display: none; }
+  .tbl tr { border-bottom: 1px solid var(--line); padding-block: 0.75rem; }
+  .tbl tr:last-child { border-bottom: none; }
+  .tbl td { border: none; padding: 0.125rem 0; }
   .tree, .tree-row { grid-template-columns: 1fr; gap: 0.125rem; }
   .tree-row { padding-block: 0.5rem; }
 }
@@ -416,10 +501,24 @@ footer {
       <span><b>Runtime</b> Python 3.11 · Docker</span>
       <span><b>Quan trắc</b> OTel → Tempo · Prometheus → Grafana</span>
     </div>
+
+    <ul class="toc">
+      <li><a href="#s01"><b>01</b><span>Luồng dữ liệu</span></a></li>
+      <li><a href="#s02"><b>02</b><span>Hợp đồng giữa các tầng</span></a></li>
+      <li><a href="#s03"><b>03</b><span>Tầng AI</span></a></li>
+      <li><a href="#s04"><b>04</b><span>Cấu trúc thư mục</span></a></li>
+      <li><a href="#s05"><b>05</b><span>Thứ tự phụ thuộc</span></a></li>
+      <li><a href="#s06"><b>06</b><span>Trách nhiệm từng tầng</span></a></li>
+      <li><a href="#s07"><b>07</b><span>Vòng đời một yêu cầu</span></a></li>
+      <li><a href="#s08"><b>08</b><span>Nguyên tắc</span></a></li>
+      <li><a href="#s09"><b>09</b><span>Stack vận hành</span></a></li>
+      <li><a href="#s10"><b>10</b><span>Từ máy dev tới host</span></a></li>
+      <li><a href="#s11"><b>11</b><span>Trạng thái</span></a></li>
+    </ul>
   </header>
 
   <!-- ============ SƠ ĐỒ PHÂN TẦNG ============ -->
-  <section>
+  <section id="s01">
     <div class="section-head">
       <p class="eyebrow">01 · Luồng dữ liệu</p>
       <h2>Dữ liệu chảy một chiều qua bốn tầng</h2>
@@ -645,7 +744,7 @@ footer {
   </section>
 
   <!-- ============ BA TẦNG DỮ LIỆU ============ -->
-  <section>
+  <section id="s02">
     <div class="section-head">
       <p class="eyebrow">02 · Hợp đồng giữa các tầng</p>
       <h2>Vì sao giữ nguyên <code>raw</code></h2>
@@ -690,7 +789,7 @@ footer {
   </section>
 
   <!-- ============ TẦNG AI ============ -->
-  <section>
+  <section id="s03">
     <div class="section-head">
       <p class="eyebrow">03 · Tầng AI</p>
       <h2>Local gánh số lượng, cloud lo suy luận</h2>
@@ -873,10 +972,37 @@ footer {
         OpenAI-compatible.
       </figcaption>
     </figure>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Việc</th>
+          <th>Vì sao cần</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tone-accent">
+          <td class="who">llm/router.py</td>
+          <td>Chọn local hay cloud cho từng lượt gọi</td>
+          <td>Đổi model chỉ sửa một chỗ, không lần theo cả repo</td>
+        </tr>
+        <tr>
+          <td class="who">llm/cache.py</td>
+          <td>Prompt trùng thì trả kết quả cũ</td>
+          <td>Chạy lại một báo cáo không phải trả tiền hai lần</td>
+        </tr>
+        <tr>
+          <td class="who">llm/budget.py</td>
+          <td>Cộng dồn token theo job, vượt trần thì raise</td>
+          <td>Một vòng lặp agent hỏng không đốt sạch hạn mức</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 
   <!-- ============ CÂY THƯ MỤC ============ -->
-  <section>
+  <section id="s04">
     <div class="section-head">
       <p class="eyebrow">04 · Cấu trúc thư mục</p>
       <h2>Nhìn tên là biết việc</h2>
@@ -991,7 +1117,7 @@ footer {
   </section>
 
   <!-- ============ THỨ TỰ PHỤ THUỘC ============ -->
-  <section>
+  <section id="s05">
     <div class="section-head">
       <p class="eyebrow">05 · Ràng buộc</p>
       <h2>Thứ tự phụ thuộc</h2>
@@ -1079,7 +1205,7 @@ footer {
   </section>
 
   <!-- ============ TẦNG TRONG MỘT REQUEST ============ -->
-  <section>
+  <section id="s06">
     <div class="section-head">
       <p class="eyebrow">06 · Trách nhiệm từng tầng</p>
       <h2>Ai làm gì trong một request</h2>
@@ -1203,10 +1329,52 @@ footer {
         sinh được báo cáo, thì các tầng đang nằm đúng chỗ.
       </figcaption>
     </figure>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Tầng</th>
+          <th>Được làm</th>
+          <th>Không được làm</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="who">api/routes/</td>
+          <td>Nhận request, validate, gọi service, trả response</td>
+          <td class="no">SQL · gọi LLM · <code>if/else</code> nghiệp vụ</td>
+        </tr>
+        <tr class="tone-accent">
+          <td class="who">services/</td>
+          <td>Kiểm quyền, điều phối đầu-cuối, đẩy job, trả <code>job_id</code></td>
+          <td class="no">Viết lại luật đã có ở tầng miền · biết mình được gọi từ HTTP hay cron</td>
+        </tr>
+        <tr class="tone-gold">
+          <td class="who">pipeline/ agents/ reports/</td>
+          <td>Luật nghiệp vụ thật: transform, suy luận, dựng artifact</td>
+          <td class="no">Đọc request HTTP · viết SQL tay</td>
+        </tr>
+        <tr>
+          <td class="who">storage/</td>
+          <td>Mọi câu SQL, session, transaction</td>
+          <td class="no">Chứa quyết định nghiệp vụ</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <figure>
+      <figcaption style="margin-top:0">
+        Một yêu cầu báo cáo đi qua đúng những file này:
+        <code>api/routes/reports.py</code> → <code>services/report_service.py</code> →
+        <code>jobs/</code> → <code>agents/manager.py</code> → <code>reports/</code> →
+        <code>storage/</code>. Scheduler bỏ qua mắt xích đầu, vào thẳng
+        <code>services/report_service.py</code>.
+      </figcaption>
+    </figure>
   </section>
 
   <!-- ============ VÒNG ĐỜI YÊU CẦU ============ -->
-  <section>
+  <section id="s07">
     <div class="section-head">
       <p class="eyebrow">07 · Một yêu cầu đi qua đâu</p>
       <h2>Từ lúc bấm cho tới lúc có báo cáo</h2>
@@ -1311,7 +1479,7 @@ footer {
   </section>
 
   <!-- ============ NGUYÊN TẮC ============ -->
-  <section>
+  <section id="s08">
     <div class="section-head">
       <p class="eyebrow">08 · Nguyên tắc</p>
       <h2>Quy ước bất di bất dịch</h2>
@@ -1358,7 +1526,7 @@ footer {
   </section>
 
   <!-- ============ VẬN HÀNH ============ -->
-  <section>
+  <section id="s09">
     <div class="section-head">
       <p class="eyebrow">09 · Chạy thật</p>
       <h2>Stack vận hành</h2>
@@ -1418,7 +1586,7 @@ footer {
   </section>
 
   <!-- ============ ĐƯỜNG RA PRODUCTION ============ -->
-  <section>
+  <section id="s10">
     <div class="section-head">
       <p class="eyebrow">10 · Từ máy dev tới host</p>
       <h2>Một image, ba môi trường</h2>
@@ -1542,10 +1710,99 @@ footer {
         lần sau mới <code>drop</code>.
       </figcaption>
     </figure>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Môi trường</th>
+          <th>Dữ liệu</th>
+          <th>Model</th>
+          <th>Khác biệt</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="who">dev</td>
+          <td>Máy cá nhân, dữ liệu thật hoặc mẫu</td>
+          <td>vLLM local nếu có GPU</td>
+          <td>Chạy từ source, hot reload</td>
+        </tr>
+        <tr>
+          <td class="who">staging</td>
+          <td>Ẩn danh</td>
+          <td>Cloud, key hạn mức riêng</td>
+          <td>Cùng image với prod, khác biến môi trường</td>
+        </tr>
+        <tr class="tone-gold">
+          <td class="who">prod</td>
+          <td>Thật, postgres có backup</td>
+          <td>Cloud, key production</td>
+          <td>Chỉ deploy tag SHA đã qua staging</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Ba môi trường chạy <em>cùng một image</em>. Mọi khác biệt nằm ở biến môi trường:
+      chuỗi kết nối DB, API key, có bật <code>vllm</code> hay không. Secret luôn đọc từ
+      env — không bao giờ nằm trong <code>config/</code> đã commit.
+    </p>
+  </section>
+
+  <!-- ============ TRẠNG THÁI ============ -->
+  <section id="s11">
+    <div class="section-head">
+      <p class="eyebrow">11 · Trạng thái</p>
+      <h2>Cái gì đã có, cái gì chưa</h2>
+      <p>
+        Trang này mô tả thiết kế, không mô tả một hệ thống đang chạy. Phần dưới nói rõ
+        ranh giới để không ai đọc nhầm.
+      </p>
+    </div>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Hạng mục</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="who">Khung thư mục · quy ước tầng</td>
+          <td>Đã dựng — module có sẵn, docstring nói rõ trách nhiệm</td>
+        </tr>
+        <tr>
+          <td class="who">docker compose · observability</td>
+          <td>Đã viết config: postgres, otel-collector, tempo, prometheus, grafana</td>
+        </tr>
+        <tr>
+          <td class="who">CI · build image</td>
+          <td>Đã có workflow: lint, kiểm kiểu, migration, test; build tag theo SHA</td>
+        </tr>
+        <tr class="tone-raw">
+          <td class="who">sources/ — connector</td>
+          <td class="no">Chưa có provider nào chạy thật. Slack/Gmail/Confluence mới là dự định</td>
+        </tr>
+        <tr class="tone-raw">
+          <td class="who">pipeline/ · agents/ · reports/</td>
+          <td class="no">Chưa có bước transform hay agent nào được cài đặt</td>
+        </tr>
+        <tr class="tone-raw">
+          <td class="who">evals/ — golden set</td>
+          <td class="no">Có khung và luật chặn merge, chưa có cặp dữ liệu nào</td>
+        </tr>
+        <tr class="tone-raw">
+          <td class="who">Model local 3B</td>
+          <td class="no">Chưa chốt việc cụ thể nó gánh. Không có việc khối lượng lớn thật thì bỏ hẳn tầng local</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 
   <footer>
     <span>Mycel v0.1 — bản thiết kế. Khung đã dựng, chưa có connector nào chạy thật.</span>
+    <span>Bản chữ: <code>docs/architecture.md</code></span>
     <span class="mono">docs/architecture.html</span>
   </footer>
 
