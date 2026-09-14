@@ -1,0 +1,949 @@
+<title>Mycel Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root {
+  /* Đất rừng sáng */
+  --ground:      #FBFAF7;
+  --surface:     #F2F0E9;
+  --surface-alt: #E8E5DB;
+  --line:        #D6D2C4;
+  --line-soft:   #E3E0D4;
+  --ink:         #1C1F19;
+  --ink-soft:    #5A5F52;
+  --ink-faint:   #868B79;
+
+  /* Ba tầng dữ liệu */
+  --raw:    #8B6F47;
+  --silver: #5E8159;
+  --gold:   #A8861B;
+  --accent: #A8861B;
+
+  --raw-wash:    #8b6f4718;
+  --silver-wash: #5e815918;
+  --gold-wash:   #a8861b18;
+
+  --step: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:      #0F1310;
+    --surface:     #171C17;
+    --surface-alt: #1F251E;
+    --line:        #2E362C;
+    --line-soft:   #242B23;
+    --ink:         #E6E9DF;
+    --ink-soft:    #9BA391;
+    --ink-faint:   #6E7666;
+
+    --raw:    #B8946A;
+    --silver: #8FB588;
+    --gold:   #D9B43C;
+    --accent: #D9B43C;
+
+    --raw-wash:    #b8946a1f;
+    --silver-wash: #8fb5881f;
+    --gold-wash:   #d9b43c1f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:      #0F1310;
+  --surface:     #171C17;
+  --surface-alt: #1F251E;
+  --line:        #2E362C;
+  --line-soft:   #242B23;
+  --ink:         #E6E9DF;
+  --ink-soft:    #9BA391;
+  --ink-faint:   #6E7666;
+
+  --raw:    #B8946A;
+  --silver: #8FB588;
+  --gold:   #D9B43C;
+  --accent: #D9B43C;
+
+  --raw-wash:    #b8946a1f;
+  --silver-wash: #8fb5881f;
+  --gold-wash:   #d9b43c1f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+  padding-block: clamp(2.5rem, 7vw, 5rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--step);
+}
+
+/* ---------- Typography ---------- */
+
+h1, h2, h3 {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  letter-spacing: -0.012em;
+}
+
+h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+p { margin: 0; max-width: 62ch; }
+
+.eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+code, .mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero-lede {
+  font-size: clamp(1.0625rem, 2.2vw, 1.25rem);
+  color: var(--ink-soft);
+  max-width: 54ch;
+}
+
+.hero-lede em {
+  font-family: Fraunces, Georgia, serif;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.hero-meta b {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* ---------- Sections ---------- */
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+figure { margin: 0; }
+
+figcaption {
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  max-width: 64ch;
+}
+
+.diagram {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.scroll-x {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.scroll-x .diagram { min-width: 620px; }
+
+/* ---------- Bảng ba tầng ---------- */
+
+.layers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.layer {
+  background: var(--ground);
+  padding: 1.375rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border-top: 3px solid var(--tone);
+}
+
+.layer:nth-child(1) { --tone: var(--raw); }
+.layer:nth-child(2) { --tone: var(--silver); }
+.layer:nth-child(3) { --tone: var(--gold); }
+
+.layer-name {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tone);
+  letter-spacing: 0.02em;
+}
+
+.layer p { font-size: 0.9375rem; color: var(--ink-soft); }
+
+.layer dl {
+  margin: 0.25rem 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.layer dt { color: var(--ink-faint); }
+.layer dd { margin: 0; color: var(--ink-soft); }
+
+/* ---------- Cây thư mục ---------- */
+
+.tree {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: start;
+}
+
+.tree-col {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: baseline;
+  padding-block: 0.0625rem;
+}
+
+.tree-row + .tree-row { border-top: 1px solid var(--line-soft); }
+
+.tree-row.is-head {
+  border-top: 1px solid var(--line);
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.tree-row:first-child { border-top: none; }
+
+.tree-path {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  white-space: pre;
+  color: var(--ink);
+}
+
+.tree-path .dim { color: var(--ink-faint); }
+
+.tree-note {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.tree-row.is-head .tree-path {
+  color: var(--ink-faint);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.tree-row[data-tone="raw"]    .tree-path { color: var(--raw); }
+.tree-row[data-tone="silver"] .tree-path { color: var(--silver); }
+.tree-row[data-tone="gold"]   .tree-path { color: var(--gold); }
+
+/* ---------- Nguyên tắc ---------- */
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.75rem 2.5rem;
+}
+
+.rules li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--line);
+}
+
+.rules li strong {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.rules li span {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Bảng vận hành ---------- */
+
+.ops {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.op {
+  background: var(--ground);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.op-svc {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
+.op-role { font-size: 0.875rem; font-weight: 500; }
+
+.op p { font-size: 0.8125rem; color: var(--ink-soft); }
+
+/* ---------- Footer ---------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 760px) {
+  .layers { grid-template-columns: 1fr; }
+  .tree, .tree-row { grid-template-columns: 1fr; gap: 0.125rem; }
+  .tree-row { padding-block: 0.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">Bản thiết kế kiến trúc · v0.1</p>
+    <h1>Mycel</h1>
+    <p class="hero-lede">
+      Hệ multi-agent tổng hợp báo cáo và dashboard từ nhiều nguồn dữ liệu rời rạc.
+      Tên lấy từ <em>mycelium</em> — mạng sợi nấm ngầm kết nối cả khu rừng: chạy nền,
+      âm thầm gom dữ liệu, rồi mới trồi lên thành báo cáo.
+    </p>
+    <div class="hero-meta">
+      <span><b>Storage</b> PostgreSQL · 3 schema</span>
+      <span><b>Runtime</b> Python 3.11 · Docker</span>
+      <span><b>Trace</b> OpenTelemetry → Tempo</span>
+      <span><b>Metrics</b> Prometheus → Grafana</span>
+    </div>
+  </header>
+
+  <!-- ============ SƠ ĐỒ PHÂN TẦNG ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">01 · Luồng dữ liệu</p>
+      <h2>Dữ liệu chảy một chiều qua bốn tầng</h2>
+      <p>
+        Mỗi tầng chỉ đọc tầng ngay dưới nó và ghi lên tầng ngay trên. Không có đường tắt:
+        agent không bao giờ chạm <code>raw</code> hay <code>silver</code>.
+      </p>
+    </div>
+
+    <figure>
+      <div class="scroll-x">
+        <svg class="diagram" viewBox="0 0 940 560" role="img"
+             aria-label="Sơ đồ bốn tầng của Mycel: các provider bên ngoài đổ vào tầng thu thập sources, ghi xuống schema raw trong PostgreSQL; pipeline biến đổi raw thành silver rồi thành gold; agents chỉ đọc gold để sinh báo cáo; scheduler và api điều khiển từ bên cạnh; mọi tầng phát trace về OpenTelemetry Collector.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+            <marker id="ar-gold" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--gold)"/>
+            </marker>
+            <marker id="ar-faint" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--ink-faint)"/>
+            </marker>
+          </defs>
+
+          <!-- ===== Cột trái: provider ngoài ===== -->
+          <text x="24" y="30" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">NGUỒN NGOÀI</text>
+
+          <g font-family="Inter Tight, sans-serif" font-size="12" fill="var(--ink-soft)">
+            <rect x="24" y="44" width="118" height="34" rx="2" fill="var(--surface)"
+                  stroke="var(--line)"/>
+            <text x="83" y="65" text-anchor="middle">Slack</text>
+
+            <rect x="24" y="86" width="118" height="34" rx="2" fill="var(--surface)"
+                  stroke="var(--line)"/>
+            <text x="83" y="107" text-anchor="middle">Gmail</text>
+
+            <rect x="24" y="128" width="118" height="34" rx="2" fill="var(--surface)"
+                  stroke="var(--line)"/>
+            <text x="83" y="149" text-anchor="middle">Confluence</text>
+
+            <rect x="24" y="170" width="118" height="34" rx="2" fill="var(--surface)"
+                  stroke="var(--line)" stroke-dasharray="3 3"/>
+            <text x="83" y="191" text-anchor="middle" fill="var(--ink-faint)">…provider mới</text>
+          </g>
+
+          <!-- mũi tên provider -> sources -->
+          <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none" marker-end="url(#ar-faint)">
+            <path d="M 142 61  L 168 61  L 168 118 L 214 118"/>
+            <path d="M 142 103 L 176 103 L 176 118 L 214 118"/>
+            <path d="M 142 145 L 176 145 L 176 118 L 214 118"/>
+            <path d="M 142 187 L 168 187 L 168 118 L 214 118"/>
+          </g>
+          <text x="178" y="82" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)" text-anchor="middle">HTTP</text>
+
+          <!-- ===== Tầng 1: sources ===== -->
+          <rect x="218" y="86" width="200" height="64" rx="2"
+                fill="var(--raw-wash)" stroke="var(--raw)" stroke-width="1.4"/>
+          <text x="234" y="110" font-family="JetBrains Mono, monospace" font-size="12.5"
+                fill="var(--raw)">sources/</text>
+          <text x="234" y="130" font-family="Inter Tight, sans-serif" font-size="11.5"
+                fill="var(--ink-soft)">kéo về, không xử lý</text>
+
+          <!-- sources -> raw -->
+          <path d="M 318 150 L 318 196" stroke="var(--raw)" stroke-width="1.4"
+                fill="none" marker-end="url(#ar)" color="var(--raw)"/>
+          <text x="328" y="177" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--raw)">ghi nguyên bản</text>
+
+          <!-- ===== Khối PostgreSQL ===== -->
+          <rect x="190" y="196" width="500" height="214" rx="3"
+                fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="4 4"/>
+          <text x="206" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">POSTGRESQL — MỘT DATABASE, BA SCHEMA</text>
+
+          <!-- raw -->
+          <rect x="214" y="232" width="200" height="52" rx="2"
+                fill="var(--raw-wash)" stroke="var(--raw)" stroke-width="1.4"/>
+          <text x="230" y="254" font-family="JetBrains Mono, monospace" font-size="12.5"
+                fill="var(--raw)">raw</text>
+          <text x="230" y="272" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-soft)">payload gốc, bất biến</text>
+
+          <!-- silver -->
+          <rect x="214" y="298" width="200" height="52" rx="2"
+                fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.4"/>
+          <text x="230" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
+                fill="var(--silver)">silver</text>
+          <text x="230" y="338" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-soft)">chuẩn hoá, khử trùng lặp</text>
+
+          <!-- gold -->
+          <rect x="450" y="298" width="200" height="52" rx="2"
+                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.8"/>
+          <text x="466" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
+                fill="var(--gold)">gold</text>
+          <text x="466" y="338" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-soft)">bảng nghiệp vụ, sẵn dùng</text>
+
+          <!-- pipeline: raw -> silver -->
+          <path d="M 314 284 L 314 298" stroke="var(--silver)" stroke-width="1.4"
+                fill="none" marker-end="url(#ar)" color="var(--silver)"/>
+
+          <!-- pipeline: silver -> gold -->
+          <path d="M 414 324 L 450 324" stroke="var(--gold)" stroke-width="1.4"
+                fill="none" marker-end="url(#ar-gold)"/>
+
+          <!-- nhãn pipeline -->
+          <rect x="434" y="232" width="216" height="44" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="450" y="252" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--ink)">pipeline/</text>
+          <text x="450" y="268" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">bước transform idempotent</text>
+          <g stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 3" fill="none">
+            <path d="M 434 254 L 324 254"/>
+            <path d="M 500 276 L 432 320"/>
+          </g>
+
+          <!-- gold -> agents : đường duy nhất ra khỏi DB -->
+          <path d="M 650 324 L 700 324 L 700 152 L 738 152"
+                stroke="var(--gold)" stroke-width="2" fill="none" marker-end="url(#ar-gold)"/>
+          <text x="664" y="240" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--gold)" transform="rotate(-90 664 240)" text-anchor="middle">chỉ đọc gold</text>
+
+          <!-- ===== Tầng agents ===== -->
+          <text x="742" y="30" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">TẦNG AI</text>
+
+          <rect x="742" y="44" width="174" height="180" rx="2"
+                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
+          <text x="758" y="66" font-family="JetBrains Mono, monospace" font-size="12.5"
+                fill="var(--gold)">agents/</text>
+
+          <g font-family="Inter Tight, sans-serif" font-size="11" fill="var(--ink-soft)">
+            <rect x="758" y="78" width="142" height="30" rx="2"
+                  fill="var(--ground)" stroke="var(--line)"/>
+            <text x="770" y="97">manager — chia task</text>
+
+            <rect x="758" y="114" width="142" height="30" rx="2"
+                  fill="var(--ground)" stroke="var(--line)"/>
+            <text x="770" y="133">worker ×N — phân tích</text>
+
+            <rect x="758" y="150" width="142" height="30" rx="2"
+                  fill="var(--ground)" stroke="var(--line)"/>
+            <text x="770" y="169">tools — query, chart</text>
+
+            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">manager ghép kết quả worker</text>
+          </g>
+
+          <!-- agents -> reports -->
+          <path d="M 829 224 L 829 258" stroke="var(--gold)" stroke-width="1.6"
+                fill="none" marker-end="url(#ar-gold)"/>
+
+          <rect x="742" y="258" width="174" height="56" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="758" y="280" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--ink)">reports/</text>
+          <text x="758" y="299" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-soft)">báo cáo · dashboard</text>
+
+          <!-- ===== Tầng điều khiển ===== -->
+          <text x="24" y="462" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">TẦNG ĐIỀU KHIỂN &amp; VẬN HÀNH</text>
+
+          <rect x="24" y="476" width="176" height="52" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="40" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--ink)">scheduler/</text>
+          <text x="40" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">chạy job theo lịch</text>
+
+          <rect x="216" y="476" width="176" height="52" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="232" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--ink)">api/</text>
+          <text x="232" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">trigger thủ công · đọc báo cáo</text>
+
+          <rect x="408" y="476" width="176" height="52" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="424" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--ink)">core/ · storage/</text>
+          <text x="424" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">config · session · SQL</text>
+
+          <rect x="600" y="476" width="316" height="52" rx="2"
+                fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
+          <text x="616" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--accent)">observability/</text>
+          <text x="616" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">log · trace · metrics — mọi tầng đều phát</text>
+
+          <!-- scheduler/api kích hoạt -->
+          <g stroke="var(--ink-faint)" stroke-width="1.2" stroke-dasharray="3 3"
+             fill="none" marker-end="url(#ar-faint)">
+            <path d="M 112 476 L 112 436 L 318 436 L 318 152" opacity="0.75"/>
+            <path d="M 304 476 L 304 448 L 700 448 L 700 340" opacity="0.75"/>
+          </g>
+          <text x="128" y="431" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)">kích hoạt sync + transform</text>
+          <text x="470" y="443" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)">yêu cầu báo cáo</text>
+
+          <!-- observability thu thập -->
+          <path d="M 758 476 L 758 330" stroke="var(--accent)" stroke-width="1"
+                stroke-dasharray="2 4" fill="none" opacity="0.6"/>
+          <path d="M 690 476 L 690 372 L 440 372" stroke="var(--accent)" stroke-width="1"
+                stroke-dasharray="2 4" fill="none" opacity="0.6"/>
+        </svg>
+      </div>
+      <figcaption>
+        Đường vàng đậm từ <code>gold</code> sang <code>agents/</code> là lối duy nhất dữ liệu
+        rời khỏi database để vào tầng AI. Đường đứt nét là điều khiển và quan trắc, không phải
+        dữ liệu nghiệp vụ.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ BA TẦNG DỮ LIỆU ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">02 · Hợp đồng giữa các tầng</p>
+      <h2>Vì sao giữ nguyên <code>raw</code></h2>
+      <p>
+        Khi logic transform sai — và nó sẽ sai — ta chạy lại từ <code>raw</code> thay vì
+        phải gọi lại provider. Provider có rate limit, có dữ liệu đã bị xoá, có API đổi
+        schema. <code>raw</code> là bản sao ta kiểm soát được.
+      </p>
+    </div>
+
+    <div class="layers">
+      <article class="layer">
+        <div class="layer-name">raw</div>
+        <p>Payload nguyên bản, chưa đụng vào. Chỉ thêm, không sửa, không xoá.</p>
+        <dl>
+          <dt>ghi bởi</dt><dd>sources/</dd>
+          <dt>đọc bởi</dt><dd>pipeline/</dd>
+          <dt>kiểu</dt><dd>JSONB + metadata</dd>
+        </dl>
+      </article>
+
+      <article class="layer">
+        <div class="layer-name">silver</div>
+        <p>Chuẩn hoá schema, khử trùng lặp, ép kiểu, thống nhất timestamp về UTC.</p>
+        <dl>
+          <dt>ghi bởi</dt><dd>pipeline/</dd>
+          <dt>đọc bởi</dt><dd>pipeline/</dd>
+          <dt>kiểu</dt><dd>cột định kiểu</dd>
+        </dl>
+      </article>
+
+      <article class="layer">
+        <div class="layer-name">gold</div>
+        <p>Bảng tổng hợp theo nghiệp vụ. Đây là hợp đồng duy nhất với tầng AI.</p>
+        <dl>
+          <dt>ghi bởi</dt><dd>pipeline/</dd>
+          <dt>đọc bởi</dt><dd>agents/ · reports/</dd>
+          <dt>kiểu</dt><dd>bảng tổng hợp</dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ CÂY THƯ MỤC ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">03 · Cấu trúc thư mục</p>
+      <h2>Nhìn tên là biết việc</h2>
+      <p>
+        Module phẳng, một tầng. Khi một module phình to thì tách thành thư mục và giữ nguyên
+        tên: <code>sources/slack.py</code> → <code>sources/slack/{client,parser}.py</code>.
+        Không dựng sẵn tầng trừu tượng khi chưa có gì để bỏ vào.
+      </p>
+    </div>
+
+    <div class="tree-col">
+      <div class="tree-row is-head">
+        <span class="tree-path">Mã nguồn</span>
+        <span></span>
+      </div>
+
+      <div class="tree-row">
+        <span class="tree-path">src/mycel/</span>
+        <span class="tree-note"></span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>core/</span>
+        <span class="tree-note">Config, logging, exception, kiểu dùng chung. Tầng đáy — không import module nào khác.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>storage/</span>
+        <span class="tree-note">Engine, session, repository cho từng tầng. Mọi câu SQL nằm ở đây.</span>
+      </div>
+      <div class="tree-row" data-tone="raw">
+        <span class="tree-path"><span class="dim">├─ </span>sources/</span>
+        <span class="tree-note">Mỗi provider một file. Cùng interface: nhận khoảng thời gian, trả bản ghi thô, ghi xuống <code>raw</code>.</span>
+      </div>
+      <div class="tree-row" data-tone="silver">
+        <span class="tree-path"><span class="dim">├─ </span>pipeline/</span>
+        <span class="tree-note">Các bước transform. Mỗi bước idempotent — chạy lại hai lần cho cùng kết quả.</span>
+      </div>
+      <div class="tree-row" data-tone="gold">
+        <span class="tree-path"><span class="dim">├─ </span>agents/</span>
+        <span class="tree-note">manager điều phối, worker thực thi, <code>tools/</code> là năng lực agent gọi được.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>reports/</span>
+        <span class="tree-note">Dựng artifact cuối từ kết quả agent: văn bản, bảng số liệu, dashboard.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
+        <span class="tree-note">Định nghĩa job và lịch: sync theo giờ, transform sau sync, báo cáo hàng ngày.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>api/</span>
+        <span class="tree-note">Trigger job thủ công, đọc báo cáo đã sinh, health check.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">└─ </span>observability/</span>
+        <span class="tree-note">Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Mọi tầng gọi vào đây.</span>
+      </div>
+
+      <div class="tree-row is-head">
+        <span class="tree-path">Vận hành</span>
+        <span></span>
+      </div>
+
+      <div class="tree-row">
+        <span class="tree-path">deploy/</span>
+        <span class="tree-note">Config hạ tầng: OTel Collector, dashboard Grafana, script init Postgres.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path">config/</span>
+        <span class="tree-note">Cấu hình theo môi trường và theo nguồn. Bí mật ở <code>.env</code>, không bao giờ ở đây.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path">migrations/</span>
+        <span class="tree-note">Alembic. Mỗi thay đổi schema là một revision, không sửa DB bằng tay.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path">docs/</span>
+        <span class="tree-note">Tài liệu thiết kế — bao gồm chính trang này.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path">tests/</span>
+        <span class="tree-note">Test, cấu trúc soi gương <code>src/mycel/</code>.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path">scripts/</span>
+        <span class="tree-note">Script vận hành chạy một lần. Không phải nơi để logic nghiệp vụ.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THỨ TỰ PHỤ THUỘC ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">04 · Ràng buộc</p>
+      <h2>Thứ tự phụ thuộc</h2>
+      <p>
+        Mũi tên đọc là <em>“được import bởi”</em>. Không có mũi tên nào đi ngược lên —
+        nếu bạn thấy mình cần import ngược, thiết kế đã sai chỗ nào đó.
+      </p>
+    </div>
+
+    <figure>
+      <div class="scroll-x">
+        <svg class="diagram" viewBox="0 0 940 250" role="img"
+             aria-label="Đồ thị phụ thuộc: core là tầng đáy, được storage import; storage được sources và pipeline import; agents import storage và được reports import; scheduler và api ngồi trên cùng; observability nằm ngang, được mọi tầng import.">
+          <defs>
+            <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <g font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">
+            <rect x="24" y="96" width="122" height="40" rx="2"
+                  fill="var(--surface-alt)" stroke="var(--line)"/>
+            <text x="85" y="121" fill="var(--ink)">core</text>
+
+            <rect x="206" y="96" width="122" height="40" rx="2"
+                  fill="var(--surface)" stroke="var(--line)"/>
+            <text x="267" y="121" fill="var(--ink)">storage</text>
+
+            <rect x="388" y="42" width="122" height="40" rx="2"
+                  fill="var(--raw-wash)" stroke="var(--raw)"/>
+            <text x="449" y="67" fill="var(--raw)">sources</text>
+
+            <rect x="388" y="150" width="122" height="40" rx="2"
+                  fill="var(--silver-wash)" stroke="var(--silver)"/>
+            <text x="449" y="175" fill="var(--silver)">pipeline</text>
+
+            <rect x="570" y="96" width="122" height="40" rx="2"
+                  fill="var(--gold-wash)" stroke="var(--gold)"/>
+            <text x="631" y="121" fill="var(--gold)">agents</text>
+
+            <rect x="752" y="42" width="122" height="40" rx="2"
+                  fill="var(--surface)" stroke="var(--line)"/>
+            <text x="813" y="67" fill="var(--ink)">reports</text>
+
+            <rect x="752" y="150" width="122" height="40" rx="2"
+                  fill="var(--surface)" stroke="var(--line)"/>
+            <text x="813" y="175" fill="var(--ink)">scheduler · api</text>
+          </g>
+
+          <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
+             marker-end="url(#dep)">
+            <path d="M 146 116 L 202 116"/>
+            <path d="M 328 110 L 356 110 L 356 62 L 384 62"/>
+            <path d="M 328 122 L 356 122 L 356 170 L 384 170"/>
+            <path d="M 328 116 L 566 116" stroke-dasharray="4 3"/>
+            <path d="M 692 110 L 720 110 L 720 62 L 748 62"/>
+            <path d="M 692 122 L 720 122 L 720 170 L 748 170"/>
+          </g>
+
+          <text x="447" y="108" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)" text-anchor="middle">chỉ qua gold</text>
+
+          <!-- observability cắt ngang -->
+          <line x1="24" y1="226" x2="874" y2="226" stroke="var(--accent)"
+                stroke-width="1.2" stroke-dasharray="3 4"/>
+          <rect x="380" y="210" width="180" height="32" rx="2"
+                fill="var(--ground)" stroke="var(--accent)" stroke-width="1.2"/>
+          <text x="470" y="231" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--accent)" text-anchor="middle">observability</text>
+          <text x="590" y="231" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-faint)">— mọi tầng đều import</text>
+        </svg>
+      </div>
+      <figcaption>
+        <code>observability</code> là ngoại lệ có chủ đích: nó cắt ngang mọi tầng, nên phải
+        giữ thật mỏng và không chứa logic nghiệp vụ.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ NGUYÊN TẮC ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">05 · Bốn nguyên tắc</p>
+      <h2>Quy ước bất di bất dịch</h2>
+    </div>
+
+    <ul class="rules">
+      <li>
+        <strong>Một chiều</strong>
+        <span>Dữ liệu chỉ chảy raw → silver → gold. Không tầng nào đọc ngược lên.</span>
+      </li>
+      <li>
+        <strong>Agent chỉ đọc gold</strong>
+        <span>Agent không bao giờ chạm raw hay silver. Gold là hợp đồng duy nhất.</span>
+      </li>
+      <li>
+        <strong>Thêm nguồn không sửa code cũ</strong>
+        <span>Một provider mới = một file trong <code>sources/</code> + một file config.</span>
+      </li>
+      <li>
+        <strong>Tên module = việc nó làm</strong>
+        <span>Không viết tắt, không tầng trừu tượng dựng sẵn cho tương lai chưa tới.</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ============ VẬN HÀNH ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">06 · Chạy thật</p>
+      <h2>Stack vận hành</h2>
+      <p>
+        Một lệnh <code>docker compose up</code> dựng cả app lẫn tầng quan trắc. Mỗi lần sync
+        nguồn, mỗi bước transform, mỗi lượt gọi LLM đều là một span — khi báo cáo sai số
+        hoặc chạy chậm, bạn lần được ngược về đúng bước gây ra.
+      </p>
+    </div>
+
+    <div class="ops">
+      <article class="op">
+        <span class="op-svc">api</span>
+        <span class="op-role">Cổng vào</span>
+        <p>Nhận yêu cầu báo cáo, trả kết quả đã sinh, health check cho load balancer.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">scheduler</span>
+        <span class="op-role">Chạy nền</span>
+        <p>Sync nguồn theo giờ, transform sau khi sync xong, sinh báo cáo định kỳ.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">postgres</span>
+        <span class="op-role">Kho dữ liệu</span>
+        <p>Một database, ba schema. Volume tách rời để nâng cấp image không mất dữ liệu.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">otel-collector</span>
+        <span class="op-role">Điểm gom</span>
+        <p>App chỉ gửi OTLP tới một chỗ; collector chia về Tempo và Prometheus.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">tempo</span>
+        <span class="op-role">Lưu trace</span>
+        <p>Một yêu cầu báo cáo là một trace: từ HTTP, qua query gold, tới từng lượt gọi LLM.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">prometheus</span>
+        <span class="op-role">Lưu metrics</span>
+        <p>Độ trễ sync, số bản ghi mỗi tầng, token đã dùng, tỷ lệ job lỗi.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">grafana</span>
+        <span class="op-role">Màn hình</span>
+        <p>Dashboard vận hành, provision từ <code>deploy/grafana/</code> nên versioned theo code.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <span>Mycel v0.1 — bản thiết kế, chưa có connector nào hoạt động</span>
+    <span class="mono">docs/architecture.html</span>
+  </footer>
+
+</div>

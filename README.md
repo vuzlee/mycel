@@ -29,22 +29,33 @@ src/mycel/
   reports/     Sinh báo cáo, dashboard từ gold
   scheduler/   Lập lịch job (sync, transform, báo cáo)
   api/         HTTP API
+  observability/  Log có cấu trúc, trace OTel, metrics Prometheus
 
 config/        File cấu hình theo môi trường và theo nguồn
+deploy/        Config hạ tầng: OTel Collector, dashboard Grafana
 migrations/    Alembic migration
 docs/          Tài liệu thiết kế
 scripts/       Script vận hành một lần
 tests/         Test
 ```
 
-Chi tiết từng tầng: [docs/architecture.md](docs/architecture.md)
+Chi tiết từng tầng: [docs/architecture.md](docs/architecture.md) ·
+Sơ đồ trực quan: [docs/architecture.html](docs/architecture.html)
 
 ## Bắt đầu
 
 ```bash
-cp .env.example .env     # điền DB và API key
-uv sync                  # cài dependency
+cp .env.example .env      # điền DB và API key
+docker compose up -d      # app + postgres + observability
 ```
+
+| Dịch vụ | URL |
+|---|---|
+| API | http://localhost:8000 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+
+Chạy trực tiếp không qua Docker: `uv sync` rồi `uvicorn mycel.api.app:app --reload`.
 
 ## Trạng thái
 

@@ -1,5 +1,7 @@
 # Kiến trúc Mycel
 
+> Bản trực quan có sơ đồ phân tầng: [architecture.html](architecture.html)
+
 ## Nguyên tắc
 
 1. **Một chiều.** Dữ liệu chỉ chảy raw → silver → gold. Không tầng nào đọc ngược lên.
@@ -54,6 +56,13 @@ báo cáo hàng ngày/tuần.
 ### `api/`
 Endpoint để trigger job thủ công, đọc báo cáo đã sinh, health check.
 
+### `observability/`
+Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Đây là module duy nhất cắt
+ngang mọi tầng, nên phải giữ thật mỏng và không chứa logic nghiệp vụ.
+
+Mỗi lần sync nguồn, mỗi bước transform, mỗi lượt gọi LLM đều là một span — khi báo cáo
+sai số hoặc chạy chậm, ta lần ngược được về đúng bước gây ra.
+
 ## Thứ tự phụ thuộc
 
 ```
@@ -66,6 +75,24 @@ core  ◄── storage ◄── sources
 ```
 
 Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` và `scheduler` ngồi trên cùng.
+`observability` là ngoại lệ có chủ đích: mọi tầng đều import nó.
+
+## Vận hành
+
+`docker compose up` dựng cả app lẫn tầng quan trắc:
+
+| Service | Vai trò |
+|---|---|
+| `api` | Cổng vào — nhận yêu cầu báo cáo, health check |
+| `scheduler` | Chạy nền — sync, transform, báo cáo định kỳ |
+| `postgres` | Một database, ba schema. Volume tách rời để nâng image không mất dữ liệu |
+| `otel-collector` | Điểm gom duy nhất; chia trace về Tempo, metrics về Prometheus |
+| `tempo` | Lưu trace — một yêu cầu báo cáo là một trace, từ HTTP tới từng lượt gọi LLM |
+| `prometheus` | Lưu metrics — độ trễ sync, số bản ghi mỗi tầng, token đã dùng, tỷ lệ job lỗi |
+| `grafana` | Dashboard, provision từ `deploy/grafana/` nên versioned theo code |
+
+App chỉ gửi OTLP tới một địa chỉ (`otel-collector:4317`); đổi backend quan trắc về sau
+chỉ cần sửa `deploy/otel/config.yaml`, không đụng code.
 
 ## Mở rộng sau này
 
