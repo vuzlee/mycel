@@ -1,84 +1,30 @@
 # Mycel
 
-Hệ multi-agent tự động tổng hợp **báo cáo và dashboard** từ nhiều nguồn dữ liệu rời rạc.
+Hệ multi-agent tự động tổng hợp **báo cáo và dashboard** từ nhiều nguồn dữ liệu rời rạc
+— Slack, Gmail, Confluence.
 
-Tên lấy từ *mycelium* — mạng sợi nấm ngầm kết nối cả khu rừng. Mycel cũng vậy: chạy nền, âm
-thầm gom dữ liệu từ Slack, Gmail, Confluence..., xử lý qua nhiều tầng, rồi mới "trồi lên"
-thành báo cáo cho người dùng.
+Tên lấy từ *mycelium*, mạng sợi nấm ngầm kết nối cả khu rừng. Mycel cũng vậy: chạy nền,
+âm thầm gom dữ liệu, xử lý qua nhiều tầng, rồi mới "trồi lên" thành báo cáo.
 
-## Luồng dữ liệu
+> **Trạng thái:** đang dựng khung. Chưa có connector nào chạy thật.
 
-```
-Sources ──► raw ──► silver ──► gold ──► Agents ──► Báo cáo / Dashboard
-(Slack,    (thô,    (chuẩn    (sẵn      (qua llm/:
- Gmail,    nguyên   hoá,      sàng để    local hoặc
- ...)      bản)     làm sạch) dùng)      cloud)
-```
-
-Cả 3 tầng đều nằm trong **PostgreSQL**, mỗi tầng là một schema riêng.
-Agent chỉ đọc `gold` — không bao giờ chạm `raw` hay `silver`.
-
-Đó là **trục dữ liệu**, chạy nền theo lịch. Khi người dùng bấm nút thì request đi theo
-**trục khác**, tính bằng giây:
+## Nó làm gì
 
 ```
-HTTP ──► api/app.py ──► managers/<miền>/controller.py ──► managers/<miền>/pipeline.py
-                                                              └─► services/ ──► storage/
+Slack · Gmail · … ──► raw ──► silver ──► gold ──► Agents ──► Báo cáo / Dashboard
+                      thô     sạch      sẵn dùng
 ```
 
-`pipeline` là *chuỗi* nghiệp vụ, `service` là *mắt xích*. Hai trục gặp nhau ở `gold`.
+Ba tầng đều nằm trong một **PostgreSQL**, mỗi tầng một schema. Agent chỉ đọc `gold`.
 
-## Tầng AI
+Phần suy luận đi qua `llm/` — việc khối lượng lớn chạy model local, suy luận cuối gọi
+model cloud. Không module nào import thẳng SDK provider.
 
-Mọi lượt gọi model đi qua `llm/`, không module nào import thẳng SDK provider:
-
-| | Dùng khi | Chạy ở |
-|---|---|---|
-| **local** | Việc khối lượng lớn, đầu ra ngắn, dữ liệu nhạy cảm — phân loại, trích entity, chấm điểm, tóm tắt từng bản ghi | vLLM + Qwen 2.5 3B AWQ |
-| **cloud** | Suy luận cuối — tổng hợp nhiều nguồn, viết báo cáo | API model lớn |
-
-Không bật container vLLM thì mọi lượt gọi đi cloud; code không đổi vì cả hai đều là
-endpoint OpenAI-compatible. Chi tiết ràng buộc phần cứng: [deploy/inference/](deploy/inference/README.md)
-
-## Cấu trúc
-
-```
-src/mycel/
-  core/        Config, logging, exception, kiểu dùng chung
-  storage/     Kết nối Postgres, repository cho từng tầng
-  sources/     Connector tới từng provider  -> raw
-  etl/         raw -> silver -> gold (chạy nền theo lịch)
-  llm/         Cổng duy nhất tới model: router, cache, budget
-  agents/      Manager điều phối + worker + tools + prompts
-  jobs/        Hàng đợi: chạy nền, retry, dead-letter
-  reports/     Sinh báo cáo, dashboard từ gold
-  managers/    Điểm vào theo miền: <miền>/{controller,pipeline,schemas}.py
-  services/    Mắt xích đơn lẻ — pipeline ghép chúng lại thành chuỗi nghiệp vụ
-  scheduler/   Tới giờ thì gọi thẳng pipeline trong managers/
-  api/         Vỏ HTTP: app.py ráp controller + health.py. Không chứa nghiệp vụ
-  observability/  Log có cấu trúc, trace OTel, metrics Prometheus
-
-config/        File cấu hình theo môi trường và theo nguồn
-deploy/        Config hạ tầng: OTel, Grafana, vLLM, môi trường deploy
-.github/       CI và build image
-evals/         Golden set chấm chất lượng báo cáo
-migrations/    Alembic migration
-docs/          Tài liệu thiết kế
-scripts/       Script vận hành một lần
-tests/         Test code
-```
-
-Chi tiết từng tầng: [docs/architecture.md](docs/architecture.md) ·
-Sơ đồ trực quan: [docs/architecture.html](docs/architecture.html)
-
-## Bắt đầu
+## Chạy thử
 
 ```bash
 cp .env.example .env      # điền DB và API key
 docker compose up -d      # app + postgres + observability
-
-# Muốn chạy model 3B ngay trên máy (cần GPU):
-docker compose --profile local-llm up -d
 ```
 
 | Dịch vụ | URL |
@@ -87,13 +33,27 @@ docker compose --profile local-llm up -d
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
 
-Chạy trực tiếp không qua Docker: `uv sync` rồi `uvicorn mycel.api.app:app --reload`.
+Không qua Docker: `uv sync` rồi `uvicorn mycel.api.app:app --reload`.
+Muốn bật model local (cần GPU): thêm `--profile local-llm`.
 
-Lên staging/prod: CI build **một** image tag theo commit SHA, mọi môi trường kéo đúng image
-đó về chạy — xem [deploy/envs/](deploy/envs/README.md).
+## Cây thư mục
 
-Đổi prompt hay đổi model thì chạy lại golden set trước khi merge — xem [evals/](evals/README.md).
+```
+src/mycel/     Mã nguồn — xem docs/ để biết tầng nào làm gì
+config/        Cấu hình theo môi trường và theo nguồn (bí mật ở .env)
+deploy/        Config hạ tầng: OTel, Grafana, vLLM, môi trường deploy
+evals/         Golden set chấm chất lượng báo cáo
+migrations/    Alembic migration
+docs/          Tài liệu thiết kế
+tests/         Test
+```
 
-## Trạng thái
+## Tài liệu
 
-Đang dựng khung. Chưa có connector nào hoạt động.
+| | |
+|---|---|
+| **[docs/architecture.html](docs/architecture.html)** | Bản đầy đủ có sơ đồ — đọc cái này trước |
+| [docs/architecture.md](docs/architecture.md) | Cùng nội dung, bản chữ |
+| [deploy/inference/](deploy/inference/README.md) | Ràng buộc phần cứng cho model local |
+| [deploy/envs/](deploy/envs/README.md) | Biến môi trường và cách lên staging/prod |
+| [evals/](evals/README.md) | Đổi prompt hay đổi model thì chạy lại trước khi merge |
