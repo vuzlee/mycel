@@ -10,7 +10,7 @@
 4. **Gọi model chỉ qua `llm/`.** Không module nào import thẳng SDK provider.
 5. **Việc lâu thì vào hàng đợi.** API không chờ LLM chạy xong.
 6. **Đổi prompt phải chạy eval.** Báo cáo kém đi không làm test đỏ.
-7. **Route mỏng, service dày.** Bỏ hẳn `api/` mà `scheduler` vẫn sinh được báo cáo thì tầng đang đúng chỗ.
+7. **Controller mỏng, pipeline dày.** Bỏ hẳn `api/` mà `scheduler` vẫn sinh được báo cáo thì tầng đang đúng chỗ.
 8. **Một image cho mọi môi trường.** Build một lần, tag theo commit SHA. Khác nhau chỉ ở biến môi trường.
 9. **Tên module = việc nó làm.** Không viết tắt, không tầng trừu tượng thừa.
 
@@ -19,8 +19,8 @@
 | Tầng | Schema | Chứa gì | Ai ghi |
 |---|---|---|---|
 | **raw** | `raw` | Payload nguyên bản từ provider, chưa đụng vào. Giữ để replay được. | `sources/` |
-| **silver** | `silver` | Đã chuẩn hoá schema, khử trùng lặp, ép kiểu, gắn timestamp thống nhất. | `pipeline/` |
-| **gold** | `gold` | Bảng đã tổng hợp theo nghiệp vụ, sẵn sàng cho truy vấn và báo cáo. | `pipeline/` |
+| **silver** | `silver` | Đã chuẩn hoá schema, khử trùng lặp, ép kiểu, gắn timestamp thống nhất. | `etl/` |
+| **gold** | `gold` | Bảng đã tổng hợp theo nghiệp vụ, sẵn sàng cho truy vấn và báo cáo. | `etl/` |
 
 Giữ raw nguyên bản là điều quan trọng nhất: khi logic transform sai, ta chạy lại từ raw
 thay vì phải gọi lại provider.
@@ -42,11 +42,14 @@ không làm sạch — việc đó của pipeline.
 
 Cấu hình riêng của từng nguồn (endpoint, scope, rate limit) nằm ở `config/sources/`.
 
-### `pipeline/`
-Các bước biến đổi. Mỗi bước là một hàm thuần: đọc từ tầng dưới, ghi lên tầng trên,
-idempotent — chạy lại hai lần cho cùng kết quả.
+### `etl/`
+Các bước biến đổi dữ liệu: raw → silver → gold. Đây là ETL chạy nền theo lịch, **không
+phải** chuỗi xử lý request — chuỗi đó nằm ở `managers/<miền>/pipeline.py`.
 
-`pipeline/checks/` kiểm tra sau mỗi bước: thiếu cột, null bất thường, số đếm lệch quá
+Mỗi bước là một hàm thuần: đọc từ tầng dưới, ghi lên tầng trên, idempotent — chạy lại
+hai lần cho cùng kết quả.
+
+`etl/checks/` kiểm tra sau mỗi bước: thiếu cột, null bất thường, số đếm lệch quá
 ngưỡng. Fail thì dừng, không ghi lên tầng trên. Provider đổi schema mà không báo là
 chuyện thường; không check thì gold hỏng lặng lẽ và agent tự tin báo cáo số sai.
 
@@ -89,47 +92,76 @@ báo cáo mất vài phút và sẽ có lúc fail giữa chừng, nên:
 ### `reports/`
 Từ kết quả agent dựng ra artifact cuối: báo cáo văn bản, bảng số liệu, dashboard.
 
+### `managers/`
+Điểm vào của hệ thống, **chia theo miền nghiệp vụ**. HTTP không gọi thẳng service — nó
+gọi vào manager của miền tương ứng:
+
+```
+managers/report/          mọi thứ liên quan tới báo cáo
+  controller.py           endpoint HTTP — nhận, validate, gọi pipeline, trả
+  pipeline.py             chuỗi nghiệp vụ — gọi lần lượt các service
+  schemas.py              hình dạng dữ liệu vào/ra qua HTTP
+managers/sync/            miền đồng bộ nguồn, cùng ba file đó
+```
+
+Thêm một miền mới = thêm một thư mục ở đây + một dòng `include_router` trong
+`api/app.py`. Không đụng miền đang có.
+
+Vì sao chia theo miền chứ không theo kỹ thuật: sửa một nghiệp vụ thì mở đúng một thư
+mục, không phải nhảy giữa `routes/`, `services/` và `pipeline/` nằm ở ba nơi.
+
+**Pipeline là chuỗi, service là mắt xích.** `managers/report/pipeline.py` định nghĩa
+*thứ tự*: `permission` → `queue` → *(worker nhận job)* → `gather` → `analyze` →
+`render`. `managers/sync/pipeline.py`: `fetch` → `transform` → `check`. Pipeline không
+tự làm việc gì, chỉ ghép service lại.
+
 ### `services/`
-Một file = một nghiệp vụ đầu-cuối. `report_service.py`, `sync_service.py`...
+Một file = một việc đơn lẻ, làm xong một chuyện: `permission_service.py`,
+`queue_service.py`, `fetch_service.py`, `transform_service.py`, `gather_service.py`,
+`analyze_service.py`, `render_service.py`, `check_service.py`.
 
-Tầng này tồn tại vì mỗi nghiệp vụ có ít nhất hai nơi gọi: `api/` (người bấm nút) và
-`scheduler/` (tới giờ). Không có nó thì logic bị chép đôi và hai đường dần lệch nhau.
+Service phải dùng lại được — `gather_service` phục vụ cả miền báo cáo lẫn miền đồng bộ.
+Nó không biết mình đang nằm trong chuỗi nào, cũng không biết ai gọi nó: HTTP hay
+scheduler đều như nhau.
 
-Service *điều phối*: kiểm quyền, đẩy job vào hàng đợi, trả `job_id`. Luật nghiệp vụ thật
-nằm ở `pipeline/`, `agents/`, `reports/` — service không tự viết lại chúng.
+Luật nghiệp vụ phức tạp (transform, suy luận, dựng artifact) nằm ở `etl/`, `agents/`,
+`reports/` — service chỉ gọi tới.
 
 ### `scheduler/`
 Trả lời *khi nào chạy*: sync nguồn theo giờ, transform sau khi sync xong, báo cáo hàng
-ngày/tuần. Gọi thẳng `services/` đúng như `api/` gọi — không tự gọi HTTP vào chính mình.
+ngày/tuần. Gọi thẳng `pipeline` trong `managers/` — đúng chỗ controller gọi, chỉ bỏ qua
+mắt xích HTTP. Không tự gọi HTTP vào chính mình.
 
 ### `api/`
-Vỏ HTTP, không chứa nghiệp vụ.
+Vỏ HTTP, mỏng nhất có thể. Endpoint nghiệp vụ **không** nằm ở đây — chúng nằm trong
+`managers/<miền>/controller.py`.
 
-| File / thư mục | Việc |
+| File | Việc |
 |---|---|
-| `app.py` | Nơi ráp: tạo app, gắn router, middleware, nối observability. `uvicorn mycel.api.app:app` trỏ vào đây |
-| `routes/` | Nhận request, validate, gọi service, trả response. Không SQL, không gọi LLM, không `if/else` nghiệp vụ |
-| `schemas/` | Hình dạng dữ liệu vào/ra qua HTTP. Khác bảng DB — đổi DB không vỡ API |
+| `app.py` | Nơi ráp: tạo app, gắn controller của từng manager, middleware, observability. `uvicorn mycel.api.app:app` trỏ vào đây |
+| `health.py` | `/health/live` cho policy restart container, `/health/ready` cho load balancer (DB tới được, migration đã chạy). Không thuộc miền nghiệp vụ nào |
 
-`app.py` là file duy nhất biết hệ thống có những nhóm route nào. Thêm một nhóm endpoint =
-thêm một file trong `routes/` + một dòng `include_router` — không đụng file route đang có.
+`app.py` là file duy nhất biết hệ thống có những miền nào.
 
 Có xác thực — dữ liệu bên trong là Slack và Gmail nội bộ.
 
-`routes/health.py` tách hai loại: `/health/live` cho policy restart container,
-`/health/ready` cho load balancer (DB tới được, migration đã chạy).
-
-### Một request đi qua bốn tầng
+### Một request đi qua các tầng
 
 | Tầng | Ai | Được làm gì |
 |---|---|---|
-| Vỏ | `api/routes/` | Nhận · validate · gọi service · trả |
-| Nghiệp vụ | `services/` | Điều phối đầu-cuối. Tầng duy nhất cả `api/` lẫn `scheduler/` cùng gọi |
-| Miền | `pipeline/` `agents/` `reports/` | Luật nghiệp vụ thật |
+| Vỏ | `api/app.py` | Tạo app, gắn controller, middleware, observability. Không endpoint, không nghiệp vụ |
+| Điểm vào | `managers/*/controller.py` | Nhận · validate · gọi pipeline · trả |
+| Chuỗi | `managers/*/pipeline.py` | Định nghĩa thứ tự các bước. Tầng duy nhất cả `api/` lẫn `scheduler/` cùng gọi |
+| Mắt xích | `services/` | Một việc đơn lẻ, dùng lại được ở nhiều pipeline |
+| Miền | `etl/` `agents/` `reports/` | Luật nghiệp vụ thật |
 | Dữ liệu | `storage/` | Mọi câu SQL |
 
 Quy tắc kiểm tra nhanh: bỏ hẳn `api/` đi mà `scheduler` vẫn sinh được báo cáo, thì các
 tầng đang nằm đúng chỗ.
+
+**Hai trục, đừng lẫn.** Trục dữ liệu `sources → raw → etl → silver → gold` chạy nền
+theo lịch, tính bằng phút. Trục request `controller → pipeline → service` chạy khi
+người dùng bấm nút, tính bằng giây. Hai trục gặp nhau đúng một chỗ: ở `gold`.
 
 ### `observability/`
 Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Đây là module duy nhất cắt
@@ -142,14 +174,16 @@ sai số hoặc chạy chậm, ta lần ngược được về đúng bước g�
 
 ```
 core ◄── storage ◄── sources
-             ▲   ◄── pipeline
+             ▲   ◄── etl
              │
              └──────► agents ◄── llm
                         ▲  ▲
-                 reports┘  └ jobs, services, scheduler, api
+                 reports┘  └ services ◄── managers ◄── api, scheduler
+                                            ▲
+                                          jobs
 ```
 
-Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` và `scheduler` ngồi trên cùng.
+Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` và `scheduler` ngồi trên cùng, cả hai đều đi qua `managers`.
 `observability` là ngoại lệ có chủ đích: mọi tầng đều import nó.
 
 ## Vận hành

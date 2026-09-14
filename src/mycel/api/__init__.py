@@ -1,6 +1,8 @@
-"""Vỏ HTTP. Chỉ nhận request, gọi services, trả response. Không chứa nghiệp vụ.
+"""Vỏ HTTP — mỏng nhất có thể.
 
-  app.py     ráp app: tạo FastAPI, gắn router, middleware, observability
-  routes/    endpoint theo nhóm tài nguyên — mỗi file một router
-  schemas/   hình dạng dữ liệu vào/ra qua HTTP
+  app.py     tạo app, gắn controller của từng manager, middleware, observability
+  health.py  /health/live và /health/ready — không thuộc miền nghiệp vụ nào
+
+Endpoint nghiệp vụ không nằm ở đây. Chúng nằm trong managers/<miền>/controller.py,
+app.py chỉ gom lại.
 """

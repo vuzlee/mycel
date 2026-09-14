@@ -18,6 +18,16 @@ Sources ──► raw ──► silver ──► gold ──► Agents ──►
 Cả 3 tầng đều nằm trong **PostgreSQL**, mỗi tầng là một schema riêng.
 Agent chỉ đọc `gold` — không bao giờ chạm `raw` hay `silver`.
 
+Đó là **trục dữ liệu**, chạy nền theo lịch. Khi người dùng bấm nút thì request đi theo
+**trục khác**, tính bằng giây:
+
+```
+HTTP ──► api/app.py ──► managers/<miền>/controller.py ──► managers/<miền>/pipeline.py
+                                                              └─► services/ ──► storage/
+```
+
+`pipeline` là *chuỗi* nghiệp vụ, `service` là *mắt xích*. Hai trục gặp nhau ở `gold`.
+
 ## Tầng AI
 
 Mọi lượt gọi model đi qua `llm/`, không module nào import thẳng SDK provider:
@@ -37,14 +47,15 @@ src/mycel/
   core/        Config, logging, exception, kiểu dùng chung
   storage/     Kết nối Postgres, repository cho từng tầng
   sources/     Connector tới từng provider  -> raw
-  pipeline/    raw -> silver -> gold
+  etl/         raw -> silver -> gold (chạy nền theo lịch)
   llm/         Cổng duy nhất tới model: router, cache, budget
   agents/      Manager điều phối + worker + tools + prompts
   jobs/        Hàng đợi: chạy nền, retry, dead-letter
   reports/     Sinh báo cáo, dashboard từ gold
-  services/    Nghiệp vụ — một file một việc, dùng chung cho api/ và scheduler/
-  scheduler/   Tới giờ thì gọi services/
-  api/         Vỏ HTTP: routes/ + schemas/. Không chứa nghiệp vụ
+  managers/    Điểm vào theo miền: <miền>/{controller,pipeline,schemas}.py
+  services/    Mắt xích đơn lẻ — pipeline ghép chúng lại thành chuỗi nghiệp vụ
+  scheduler/   Tới giờ thì gọi thẳng pipeline trong managers/
+  api/         Vỏ HTTP: app.py ráp controller + health.py. Không chứa nghiệp vụ
   observability/  Log có cấu trúc, trace OTel, metrics Prometheus
 
 config/        File cấu hình theo môi trường và theo nguồn

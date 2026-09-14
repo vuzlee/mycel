@@ -1,7 +1,10 @@
-"""Một file = một nghiệp vụ đầu-cuối.
+"""Một file = một việc đơn lẻ, làm xong một chuyện.
 
-Tầng này tồn tại vì mỗi nghiệp vụ có ít nhất hai nơi gọi: api (người bấm) và
-scheduler (tới giờ). Không có nó thì logic bị chép đôi.
+Service là mắt xích; pipeline trong managers/ là chuỗi ghép các mắt xích lại.
+Vì vậy service phải dùng lại được: gather_service phục vụ cả miền báo cáo lẫn
+miền đồng bộ.
 
-Services điều phối; luật nghiệp vụ thật nằm ở pipeline/, agents/, reports/.
+Service không biết mình đang nằm trong chuỗi nào, cũng không biết ai gọi nó —
+HTTP hay scheduler đều như nhau. Luật nghiệp vụ phức tạp (transform, suy luận,
+dựng artifact) nằm ở etl/, agents/, reports/; service chỉ gọi tới.
 """
