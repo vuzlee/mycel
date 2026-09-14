@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push: {branches: [main]}
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: mycel, POSTGRES_PASSWORD: mycel, POSTGRES_DB: mycel_test}
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-retries 10
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgresql://mycel:mycel@localhost:5432/mycel_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Kiểu dữ liệu
+        run: uv run mypy
+
+      - name: Migration chạy được
+        run: uv run alembic upgrade head
+
+      - name: Test
+        run: uv run pytest
+
+  # Eval tốn tiền (gọi model thật) nên chỉ chạy khi PR đụng vào prompt hoặc tầng llm.
+  evals:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - id: changed
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep -qE '^(src/mycel/(agents|llm)/|evals/)' && echo "run=true" >> $GITHUB_OUTPUT || true
+      - uses: astral-sh/setup-uv@v5
+        if: steps.changed.outputs.run == 'true'
+      - name: Golden set
+        if: steps.changed.outputs.run == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: uv sync && uv run python -m evals.run --compare-baseline

@@ -929,17 +929,21 @@ footer {
         <span class="tree-path"><span class="dim">├─ </span>jobs/</span>
         <span class="tree-note">Hàng đợi: chạy nền, retry khi lỗi, idempotency key, dead-letter khi hết lượt.</span>
       </div>
+      <div class="tree-row" data-tone="gold">
+        <span class="tree-path"><span class="dim">├─ </span>services/</span>
+        <span class="tree-note">Nghiệp vụ. Một file một việc đầu-cuối, dùng chung cho cả <code>api/</code> lẫn <code>scheduler/</code>.</span>
+      </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>
         <span class="tree-note">Dựng artifact cuối từ kết quả agent: văn bản, bảng số liệu, dashboard.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
-        <span class="tree-note">Trả lời <em>khi nào chạy</em>. Đẩy việc vào <code>jobs/</code> rồi thôi, không tự thực thi.</span>
+        <span class="tree-note">Trả lời <em>khi nào chạy</em>. Gọi <code>services/</code> đúng như <code>api/</code> gọi, không qua HTTP.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>api/</span>
-        <span class="tree-note">Trigger job thủ công, đọc báo cáo đã sinh, health check. Có xác thực — dữ liệu là nội bộ.</span>
+        <span class="tree-note">Vỏ HTTP. <code>routes/</code> nhận và validate, <code>schemas/</code> định hình dữ liệu vào ra. Có xác thực — dữ liệu là nội bộ.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>observability/</span>
@@ -951,13 +955,17 @@ footer {
         <span></span>
       </div>
 
+      <div class="tree-row">
+        <span class="tree-path">.github/workflows/</span>
+        <span class="tree-note">CI chạy mọi PR; build image tag theo commit SHA khi vào <code>main</code>.</span>
+      </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path">evals/</span>
         <span class="tree-note">Golden set chấm chất lượng báo cáo. Đổi prompt hay đổi model mà điểm tụt là chặn merge.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Config hạ tầng: OTel Collector, dashboard Grafana, init Postgres, <code>inference/</code> cho vLLM.</span>
+        <span class="tree-note">Config hạ tầng: OTel, Grafana, init Postgres, <code>inference/</code> cho vLLM, <code>envs/</code> cho từng môi trường.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
@@ -1070,10 +1078,137 @@ footer {
     </figure>
   </section>
 
+  <!-- ============ TẦNG TRONG MỘT REQUEST ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">06 · Trách nhiệm từng tầng</p>
+      <h2>Ai làm gì trong một request</h2>
+      <p>
+        Bốn tầng, mỗi tầng một việc. Sai chỗ dễ mắc nhất là nhét nghiệp vụ vào route —
+        lúc đó <code>scheduler</code> muốn dùng lại phải gọi HTTP vào chính mình.
+      </p>
+    </div>
+
+    <figure>
+      <div class="scroll-x">
+        <svg class="diagram" viewBox="0 0 940 330" role="img"
+             aria-label="Bốn tầng trong một request của Mycel: route chỉ nhận và validate rồi gọi service; service chứa nghiệp vụ và là nơi duy nhất được gọi từ cả api lẫn scheduler; service điều phối xuống các module miền là pipeline, agents và reports; các module miền đọc ghi dữ liệu qua storage. Mũi tên chỉ đi xuống, không tầng nào gọi ngược lên.">
+          <defs>
+            <marker id="ly-ar" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- hai nơi gọi vào -->
+          <rect x="150" y="14" width="150" height="34" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="225" y="36" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)" text-anchor="middle">người bấm nút</text>
+
+          <rect x="560" y="14" width="150" height="34" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="635" y="36" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)" text-anchor="middle">scheduler — tới giờ</text>
+
+          <!-- tầng 1: route -->
+          <rect x="150" y="74" width="150" height="52" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="166" y="96" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--ink)">api/routes/</text>
+          <text x="166" y="114" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-soft)">nhận · validate · trả</text>
+
+          <text x="318" y="94" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-faint)">Không SQL, không gọi LLM,</text>
+          <text x="318" y="110" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-faint)">không if/else nghiệp vụ.</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
+             color="var(--ink-faint)" marker-end="url(#ly-ar)">
+            <path d="M 225 48 L 225 70"/>
+          </g>
+
+          <!-- tầng 2: service -->
+          <rect x="150" y="152" width="560" height="56" rx="2"
+                fill="var(--accent)" opacity="0.1"/>
+          <rect x="150" y="152" width="560" height="56" rx="2"
+                fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+          <text x="166" y="176" font-family="JetBrains Mono, monospace" font-size="12"
+                fill="var(--accent)">services/</text>
+          <text x="166" y="196" font-family="Inter Tight, sans-serif" font-size="11"
+                fill="var(--ink-soft)">nghiệp vụ — một file một việc đầu-cuối</text>
+          <text x="694" y="176" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-faint)" text-anchor="end">Tầng duy nhất cả hai nơi trên cùng gọi.</text>
+          <text x="694" y="194" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-faint)" text-anchor="end">Không có nó thì logic bị chép đôi.</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
+             color="var(--ink-faint)" marker-end="url(#ly-ar)">
+            <path d="M 225 126 L 225 148"/>
+            <path d="M 635 48 L 635 148"/>
+          </g>
+          <text x="648" y="100" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)">gọi thẳng, không qua HTTP</text>
+
+          <!-- tầng 3: miền -->
+          <g font-family="JetBrains Mono, monospace" font-size="11.5" text-anchor="middle">
+            <rect x="150" y="236" width="170" height="40" rx="2"
+                  fill="var(--silver-wash)" stroke="var(--silver)"/>
+            <text x="235" y="261" fill="var(--silver)">pipeline/</text>
+
+            <rect x="345" y="236" width="170" height="40" rx="2"
+                  fill="var(--gold-wash)" stroke="var(--gold)"/>
+            <text x="430" y="261" fill="var(--gold)">agents/</text>
+
+            <rect x="540" y="236" width="170" height="40" rx="2"
+                  fill="var(--surface)" stroke="var(--line)"/>
+            <text x="625" y="261" fill="var(--ink)">reports/</text>
+          </g>
+          <text x="726" y="261" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--ink-faint)">Luật nghiệp vụ thật nằm ở đây.</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
+             color="var(--ink-faint)" marker-end="url(#ly-ar)">
+            <path d="M 235 208 L 235 232"/>
+            <path d="M 430 208 L 430 232"/>
+            <path d="M 625 208 L 625 232"/>
+          </g>
+
+          <!-- tầng 4: storage -->
+          <rect x="150" y="296" width="560" height="34" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="430" y="318" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--ink)" text-anchor="middle">storage/ — mọi câu SQL</text>
+
+          <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
+             color="var(--ink-faint)" marker-end="url(#ly-ar)">
+            <path d="M 235 276 L 235 292"/>
+            <path d="M 430 276 L 430 292"/>
+            <path d="M 625 276 L 625 292"/>
+          </g>
+
+          <!-- nhãn cột trái -->
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="var(--ink-faint)"
+             text-anchor="end" letter-spacing="1.2">
+            <text x="138" y="104">VỎ</text>
+            <text x="138" y="184">NGHIỆP VỤ</text>
+            <text x="138" y="260">MIỀN</text>
+            <text x="138" y="318">DỮ LIỆU</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>
+        Quy tắc kiểm tra nhanh: bỏ hẳn <code>api/</code> đi mà <code>scheduler</code> vẫn
+        sinh được báo cáo, thì các tầng đang nằm đúng chỗ.
+      </figcaption>
+    </figure>
+  </section>
+
   <!-- ============ VÒNG ĐỜI YÊU CẦU ============ -->
   <section>
     <div class="section-head">
-      <p class="eyebrow">06 · Một yêu cầu đi qua đâu</p>
+      <p class="eyebrow">07 · Một yêu cầu đi qua đâu</p>
       <h2>Từ lúc bấm cho tới lúc có báo cáo</h2>
       <p>
         Sinh báo cáo mất vài phút và sẽ có lúc lỗi giữa chừng. Vì vậy API không tự chạy —
@@ -1178,7 +1313,7 @@ footer {
   <!-- ============ NGUYÊN TẮC ============ -->
   <section>
     <div class="section-head">
-      <p class="eyebrow">07 · Nguyên tắc</p>
+      <p class="eyebrow">08 · Nguyên tắc</p>
       <h2>Quy ước bất di bất dịch</h2>
     </div>
 
@@ -1208,6 +1343,14 @@ footer {
         <span>Báo cáo kém đi không làm test đỏ. Chỉ golden set bắt được.</span>
       </li>
       <li>
+        <strong>Route mỏng, service dày</strong>
+        <span>Bỏ hẳn <code>api/</code> mà <code>scheduler</code> vẫn sinh được báo cáo thì tầng đang đúng chỗ.</span>
+      </li>
+      <li>
+        <strong>Một image cho mọi môi trường</strong>
+        <span>Build một lần, tag theo commit SHA. Khác nhau chỉ ở biến môi trường.</span>
+      </li>
+      <li>
         <strong>Tên module = việc nó làm</strong>
         <span>Không viết tắt, không tầng trừu tượng dựng sẵn cho tương lai chưa tới.</span>
       </li>
@@ -1217,7 +1360,7 @@ footer {
   <!-- ============ VẬN HÀNH ============ -->
   <section>
     <div class="section-head">
-      <p class="eyebrow">08 · Chạy thật</p>
+      <p class="eyebrow">09 · Chạy thật</p>
       <h2>Stack vận hành</h2>
       <p>
         Một lệnh <code>docker compose up</code> dựng cả app lẫn tầng quan trắc. Thêm
@@ -1272,6 +1415,133 @@ footer {
         <p>Dashboard vận hành, provision từ <code>deploy/grafana/</code> nên versioned theo code.</p>
       </article>
     </div>
+  </section>
+
+  <!-- ============ ĐƯỜNG RA PRODUCTION ============ -->
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">10 · Từ máy dev tới host</p>
+      <h2>Một image, ba môi trường</h2>
+      <p>
+        CI build image <em>một lần</em>, tag bằng commit SHA. Staging và prod kéo đúng
+        image đó về chạy — không build lại, nên không có chuyện “máy tôi chạy được”.
+      </p>
+    </div>
+
+    <figure>
+      <div class="scroll-x">
+        <svg class="diagram" viewBox="0 0 940 300" role="img"
+             aria-label="Đường ra production của Mycel: lập trình viên push code, CI chạy lint, kiểm kiểu, migration, test, và chạy eval golden set khi pull request đụng vào prompt hoặc tầng llm; merge vào main thì CI build một image tag theo commit SHA và đẩy lên registry; staging rồi prod cùng kéo image đó về, chạy migration trước rồi mới đổi container; rollback là quay về tag SHA cũ.">
+          <defs>
+            <marker id="sh-ar" viewBox="0 0 10 10" refX="9" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- push -->
+          <rect x="16" y="86" width="124" height="44" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="78" y="105" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)" text-anchor="middle">git push</text>
+          <text x="78" y="121" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)" text-anchor="middle">pull request</text>
+
+          <!-- CI -->
+          <rect x="180" y="42" width="216" height="132" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="196" y="64" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--ink)">CI — mọi PR</text>
+          <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
+            <text x="196" y="86">lint · kiểm kiểu</text>
+            <text x="196" y="106">migration chạy được</text>
+            <text x="196" y="126">test</text>
+          </g>
+          <line x1="196" y1="138" x2="380" y2="138" stroke="var(--line)"/>
+          <text x="196" y="158" font-family="Inter Tight, sans-serif" font-size="10.5"
+                fill="var(--accent)">eval — chỉ khi đụng prompt / llm</text>
+
+          <!-- build -->
+          <rect x="436" y="86" width="180" height="44" rx="2"
+                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
+          <text x="452" y="105" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--gold)">build image</text>
+          <text x="452" y="121" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)">tag = commit SHA</text>
+
+          <!-- registry -->
+          <rect x="656" y="86" width="124" height="44" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="718" y="112" font-family="JetBrains Mono, monospace" font-size="11"
+                fill="var(--ink)" text-anchor="middle">registry</text>
+
+          <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
+             marker-end="url(#sh-ar)">
+            <path d="M 140 108 L 176 108"/>
+            <path d="M 396 108 L 432 108"/>
+            <path d="M 616 108 L 652 108"/>
+          </g>
+          <text x="414" y="100" font-family="JetBrains Mono, monospace" font-size="9"
+                fill="var(--ink-faint)" text-anchor="middle">merge</text>
+
+          <!-- staging + prod -->
+          <rect x="656" y="182" width="268" height="44" rx="2"
+                fill="var(--surface)" stroke="var(--line)"/>
+          <text x="672" y="201" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--ink)">staging</text>
+          <text x="672" y="217" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)">dữ liệu ẩn danh · key hạn mức riêng</text>
+
+          <rect x="656" y="240" width="268" height="44" rx="2"
+                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
+          <text x="672" y="259" font-family="JetBrains Mono, monospace" font-size="11.5"
+                fill="var(--gold)">prod</text>
+          <text x="672" y="275" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--ink-soft)">postgres có backup</text>
+
+          <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
+             marker-end="url(#sh-ar)">
+            <path d="M 718 130 L 718 178"/>
+            <path d="M 790 226 L 790 236"/>
+          </g>
+          <text x="800" y="163" font-family="JetBrains Mono, monospace" font-size="9"
+                fill="var(--ink-faint)">cùng một image</text>
+
+          <!-- thứ tự deploy -->
+          <rect x="16" y="182" width="600" height="102" rx="2"
+                fill="none" stroke="var(--accent)" stroke-width="1.2"/>
+          <text x="36" y="204" font-family="JetBrains Mono, monospace" font-size="10"
+                letter-spacing="1.4" fill="var(--accent)">THỨ TỰ DEPLOY — KHÔNG ĐỔI</text>
+
+          <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink)">
+            <text x="36" y="230">1 · compose pull</text>
+            <text x="36" y="250">2 · alembic upgrade head</text>
+            <text x="36" y="270">3 · compose up -d</text>
+          </g>
+          <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
+            <text x="230" y="230">lấy image theo SHA</text>
+            <text x="230" y="250">migration chạy trước code mới</text>
+            <text x="230" y="270">rồi mới đổi container</text>
+          </g>
+          <text x="432" y="250" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--raw)">nên schema phải</text>
+          <text x="432" y="266" font-family="Inter Tight, sans-serif" font-size="10"
+                fill="var(--raw)">tương thích ngược một bậc</text>
+
+          <!-- rollback -->
+          <path d="M 924 262 L 936 262 L 936 108 L 786 108"
+                stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
+                fill="none" color="var(--ink-faint)" marker-end="url(#sh-ar)"/>
+          <text x="880" y="26" font-family="JetBrains Mono, monospace" font-size="9.5"
+                fill="var(--ink-faint)" text-anchor="end">rollback = quay về tag SHA cũ</text>
+        </svg>
+      </div>
+      <figcaption>
+        Migration chạy trước container mới, nên mọi thay đổi schema phải để code cũ vẫn
+        chạy được. Muốn xoá một cột thì làm hai lần release: lần đầu bỏ code dùng nó,
+        lần sau mới <code>drop</code>.
+      </figcaption>
+    </figure>
   </section>
 
   <footer>

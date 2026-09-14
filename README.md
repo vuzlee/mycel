@@ -42,12 +42,14 @@ src/mycel/
   agents/      Manager điều phối + worker + tools + prompts
   jobs/        Hàng đợi: chạy nền, retry, dead-letter
   reports/     Sinh báo cáo, dashboard từ gold
-  scheduler/   Tới giờ thì đẩy việc vào hàng đợi
-  api/         HTTP API
+  services/    Nghiệp vụ — một file một việc, dùng chung cho api/ và scheduler/
+  scheduler/   Tới giờ thì gọi services/
+  api/         Vỏ HTTP: routes/ + schemas/. Không chứa nghiệp vụ
   observability/  Log có cấu trúc, trace OTel, metrics Prometheus
 
 config/        File cấu hình theo môi trường và theo nguồn
-deploy/        Config hạ tầng: OTel, Grafana, vLLM
+deploy/        Config hạ tầng: OTel, Grafana, vLLM, môi trường deploy
+.github/       CI và build image
 evals/         Golden set chấm chất lượng báo cáo
 migrations/    Alembic migration
 docs/          Tài liệu thiết kế
@@ -75,6 +77,9 @@ docker compose --profile local-llm up -d
 | Prometheus | http://localhost:9090 |
 
 Chạy trực tiếp không qua Docker: `uv sync` rồi `uvicorn mycel.api.app:app --reload`.
+
+Lên staging/prod: CI build **một** image tag theo commit SHA, mọi môi trường kéo đúng image
+đó về chạy — xem [deploy/envs/](deploy/envs/README.md).
 
 Đổi prompt hay đổi model thì chạy lại golden set trước khi merge — xem [evals/](evals/README.md).
 

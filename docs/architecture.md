@@ -10,7 +10,9 @@
 4. **Gọi model chỉ qua `llm/`.** Không module nào import thẳng SDK provider.
 5. **Việc lâu thì vào hàng đợi.** API không chờ LLM chạy xong.
 6. **Đổi prompt phải chạy eval.** Báo cáo kém đi không làm test đỏ.
-7. **Tên module = việc nó làm.** Không viết tắt, không tầng trừu tượng thừa.
+7. **Route mỏng, service dày.** Bỏ hẳn `api/` mà `scheduler` vẫn sinh được báo cáo thì tầng đang đúng chỗ.
+8. **Một image cho mọi môi trường.** Build một lần, tag theo commit SHA. Khác nhau chỉ ở biến môi trường.
+9. **Tên module = việc nó làm.** Không viết tắt, không tầng trừu tượng thừa.
 
 ## Ba tầng dữ liệu
 
@@ -87,13 +89,43 @@ báo cáo mất vài phút và sẽ có lúc fail giữa chừng, nên:
 ### `reports/`
 Từ kết quả agent dựng ra artifact cuối: báo cáo văn bản, bảng số liệu, dashboard.
 
+### `services/`
+Một file = một nghiệp vụ đầu-cuối. `report_service.py`, `sync_service.py`...
+
+Tầng này tồn tại vì mỗi nghiệp vụ có ít nhất hai nơi gọi: `api/` (người bấm nút) và
+`scheduler/` (tới giờ). Không có nó thì logic bị chép đôi và hai đường dần lệch nhau.
+
+Service *điều phối*: kiểm quyền, đẩy job vào hàng đợi, trả `job_id`. Luật nghiệp vụ thật
+nằm ở `pipeline/`, `agents/`, `reports/` — service không tự viết lại chúng.
+
 ### `scheduler/`
-Định nghĩa job và lịch chạy: sync nguồn theo giờ, transform sau khi sync xong, sinh
-báo cáo hàng ngày/tuần.
+Trả lời *khi nào chạy*: sync nguồn theo giờ, transform sau khi sync xong, báo cáo hàng
+ngày/tuần. Gọi thẳng `services/` đúng như `api/` gọi — không tự gọi HTTP vào chính mình.
 
 ### `api/`
-Endpoint để trigger job thủ công, đọc báo cáo đã sinh, health check. Có xác thực — dữ
-liệu bên trong là Slack và Gmail nội bộ.
+Vỏ HTTP, không chứa nghiệp vụ.
+
+| Thư mục | Việc |
+|---|---|
+| `routes/` | Nhận request, validate, gọi service, trả response. Không SQL, không gọi LLM, không `if/else` nghiệp vụ |
+| `schemas/` | Hình dạng dữ liệu vào/ra qua HTTP. Khác bảng DB — đổi DB không vỡ API |
+
+Có xác thực — dữ liệu bên trong là Slack và Gmail nội bộ.
+
+`routes/health.py` tách hai loại: `/health/live` cho policy restart container,
+`/health/ready` cho load balancer (DB tới được, migration đã chạy).
+
+### Một request đi qua bốn tầng
+
+| Tầng | Ai | Được làm gì |
+|---|---|---|
+| Vỏ | `api/routes/` | Nhận · validate · gọi service · trả |
+| Nghiệp vụ | `services/` | Điều phối đầu-cuối. Tầng duy nhất cả `api/` lẫn `scheduler/` cùng gọi |
+| Miền | `pipeline/` `agents/` `reports/` | Luật nghiệp vụ thật |
+| Dữ liệu | `storage/` | Mọi câu SQL |
+
+Quy tắc kiểm tra nhanh: bỏ hẳn `api/` đi mà `scheduler` vẫn sinh được báo cáo, thì các
+tầng đang nằm đúng chỗ.
 
 ### `observability/`
 Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Đây là module duy nhất cắt
@@ -110,7 +142,7 @@ core ◄── storage ◄── sources
              │
              └──────► agents ◄── llm
                         ▲  ▲
-                 reports┘  └ jobs, scheduler, api
+                 reports┘  └ jobs, services, scheduler, api
 ```
 
 Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` và `scheduler` ngồi trên cùng.
@@ -134,6 +166,33 @@ Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` v�
 
 App chỉ gửi OTLP tới một địa chỉ (`otel-collector:4317`); đổi backend quan trắc về sau
 chỉ cần sửa `deploy/otel/config.yaml`, không đụng code.
+
+## Từ máy dev tới host
+
+CI build image **một lần**, tag bằng commit SHA. Staging và prod kéo đúng image đó về
+chạy — không build lại, nên không có chuyện "máy tôi chạy được".
+
+```
+git push ──► CI (lint · kiểu · migration · test) ──► build image (tag = SHA)
+                     └─ eval chỉ chạy khi đụng prompt/ hoặc llm/
+                                                          │
+                                         registry ◄───────┘
+                                            ├──► staging  (dữ liệu ẩn danh)
+                                            └──► prod
+```
+
+Thứ tự deploy không đổi:
+
+```bash
+docker compose pull            # lấy image theo SHA
+alembic upgrade head           # migration chạy trước code mới
+docker compose up -d           # rồi mới đổi container
+```
+
+Migration chạy trước container mới, nên mọi thay đổi schema phải để code cũ vẫn chạy
+được: muốn xoá cột thì làm hai lần release — lần đầu bỏ code dùng nó, lần sau mới drop.
+
+Rollback = trỏ về tag SHA cũ. Chi tiết biến môi trường và secret: `deploy/envs/README.md`.
 
 ## Mở rộng sau này
 
