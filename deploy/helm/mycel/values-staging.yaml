@@ -1,0 +1,12 @@
+# Đè lên values.yaml. Dữ liệu ẩn danh, key LLM riêng có hạn mức.
+
+api:    {replicas: 1, autoscaling: {enabled: false}}
+worker: {replicas: 1, autoscaling: {enabled: false}}
+
+kafka:    {storage: 5Gi, partitions: 3}
+postgres: {storage: 20Gi}
+minio:    {storage: 20Gi}
+
+vllm: {enabled: false}
+
+ingress: {host: mycel-staging.internal}

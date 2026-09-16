@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: mycel
+  namespace: argocd
+spec:
+  description: Mycel — báo cáo đa nguồn
+
+  # Giới hạn để một Application cấu hình sai không với sang được chỗ khác.
+  sourceRepos:
+    - https://git.internal/mycel.git
+  destinations:
+    - {server: https://kubernetes.default.svc, namespace: mycel-staging}
+    - {server: https://kubernetes.default.svc, namespace: mycel-prod}
+
+  # Chart này không cần tạo tài nguyên cấp cụm.
+  clusterResourceWhitelist: []

@@ -539,7 +539,7 @@ footer {
       <span><b>Storage</b> PostgreSQL · 3 schema</span>
       <span><b>LLM</b> vLLM 3B local + cloud</span>
       <span><b>Runtime</b> Python 3.11 · Docker</span>
-      <span><b>Quan trắc</b> OTel → Tempo · Prometheus → Grafana</span>
+      <span><b>Theo dõi</b> OTel → Tempo · Prometheus · Loki → Grafana</span>
     </div>
 
     <nav class="toc">
@@ -700,17 +700,17 @@ footer {
           <g font-family="Inter Tight, sans-serif" font-size="11" fill="var(--ink-soft)">
             <rect x="758" y="78" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="97">manager — chia task</text>
+            <text x="770" y="97">orchestrator — chia task</text>
 
             <rect x="758" y="114" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="133">worker ×N — phân tích</text>
+            <text x="770" y="133">analyst · writer · reviewer</text>
 
             <rect x="758" y="150" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
             <text x="770" y="169">tools — query, chart</text>
 
-            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">manager ghép kết quả worker</text>
+            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">orchestrator ghép kết quả lại</text>
           </g>
 
           <!-- agents -> reports -->
@@ -776,7 +776,7 @@ footer {
       </div>
       <figcaption>
         Đường vàng đậm từ <code>gold</code> sang <code>agents/</code> là lối duy nhất dữ liệu
-        rời khỏi database để vào tầng AI. Đường đứt nét là điều khiển và quan trắc, không phải
+        rời khỏi database để vào tầng AI. Đường đứt nét là điều khiển và theo dõi, không phải
         dữ liệu nghiệp vụ.
       </figcaption>
     </figure>
@@ -1104,7 +1104,7 @@ footer {
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="Vòng đời một yêu cầu báo cáo: pipeline của miền báo cáo đẩy việc vào hàng đợi rồi trả về job id ngay; worker nhận job, manager chia task cho các worker agent, các worker truy vấn gold và gọi model qua tầng llm, kết quả dựng thành báo cáo và lưu lại; nếu lỗi thì job được retry, hết lượt thì rơi vào dead-letter; toàn bộ đường đi là một trace duy nhất.">
+             aria-label="Vòng đời một yêu cầu báo cáo: pipeline của miền báo cáo đẩy việc vào hàng đợi rồi trả về job id ngay; worker rút job ra chạy, orchestrator chia task cho các agent chuyên môn, các agent truy vấn gold và gọi model qua tầng llm, kết quả dựng thành báo cáo và lưu lại; nếu lỗi thì job được retry, hết lượt thì rơi vào dead-letter; toàn bộ đường đi là một trace duy nhất.">
           <defs>
             <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1121,19 +1121,19 @@ footer {
 
             <rect x="182" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="245" y="75" fill="var(--ink)">jobs</text>
+            <text x="245" y="75" fill="var(--ink)">queue</text>
             <text x="245" y="91" font-family="Inter Tight, sans-serif" font-size="10"
                   fill="var(--ink-soft)">hàng đợi</text>
 
             <rect x="348" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
-            <text x="411" y="75" fill="var(--gold)">manager</text>
+            <text x="411" y="75" fill="var(--gold)">orchestrator</text>
             <text x="411" y="91" font-family="Inter Tight, sans-serif" font-size="10"
                   fill="var(--ink-soft)">chia task</text>
 
             <rect x="514" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
-            <text x="577" y="75" fill="var(--gold)">worker ×N</text>
+            <text x="577" y="75" fill="var(--gold)">agent ×N</text>
             <text x="577" y="91" font-family="Inter Tight, sans-serif" font-size="10"
                   fill="var(--ink-soft)">gold + llm</text>
 
@@ -1313,7 +1313,19 @@ footer {
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>storage/</span>
-        <span class="tree-note">Engine, session, repository cho từng tầng. Mọi câu SQL nằm ở đây.</span>
+        <span class="tree-note">Ba kho, ba loại dữ liệu. Mọi truy cập đi qua đây — không rải rác trong pipeline hay agent.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>storage/postgres/</span>
+        <span class="tree-note">State giao dịch: engine, session, repository cho từng tầng <code>raw</code> · <code>silver</code> · <code>gold</code>. Mọi câu SQL nằm ở đây.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>storage/vectors/</span>
+        <span class="tree-note">Tìm kiếm knowledge base bằng embedding (Qdrant). Nguồn embedding là <code>gold</code>, không phải raw. Quyền xem là filter của Qdrant, không lọc sau khi lấy top-k.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>storage/objects/</span>
+        <span class="tree-note">File lớn: PDF nguồn, báo cáo đã render (MinIO, S3 API). Postgres giữ metadata, bucket giữ nội dung. API trả presigned URL nên file không đi qua process API.</span>
       </div>
       <div class="tree-row" data-tone="raw">
         <span class="tree-path"><span class="dim">├─ </span>sources/</span>
@@ -1329,15 +1341,19 @@ footer {
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>llm/</span>
-        <span class="tree-note">Cổng duy nhất tới mọi model. <code>router</code> chọn local hay cloud, <code>cache</code> tránh gọi lại, <code>budget</code> chặn vượt trần.</span>
+        <span class="tree-note">Cổng duy nhất tới mọi model. <code>router</code> chọn local hay cloud, <code>client</code> là nơi duy nhất import SDK provider, <code>cache</code> tránh gọi lại, <code>tokens</code>/<code>usage</code> đếm trước và sau, <code>budget</code> chặn vượt trần.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note">manager điều phối, worker thực thi, <code>tools/</code> là năng lực agent gọi được, <code>prompts/</code> tách khỏi code để sửa không cần deploy.</span>
+        <span class="tree-note"><code>orchestrator</code> điều phối; <code>analyst</code> · <code>writer</code> · <code>reviewer</code> mỗi agent một việc; <code>tools/</code> là năng lực agent gọi được (<code>query_gold</code> cho câu có số liệu chính xác, <code>search_docs</code> cho câu mơ hồ); <code>prompts/</code> tách khỏi code để sửa không cần deploy.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>jobs/</span>
-        <span class="tree-note">Hàng đợi: chạy nền, retry khi lỗi, idempotency key, dead-letter khi hết lượt.</span>
+        <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
+        <span class="tree-note">Nền chung của riêng <code>agents/</code>, không dính nghiệp vụ: vòng lặp agent, <code>streaming/</code>, <code>hooks</code> (gắn trace · log usage · cộng budget), <code>guards</code>, <code>integrations/mcp</code>.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>queue/</span>
+        <span class="tree-note">Tầng job <em>trên</em> Kafka (broker chạy ngoài, KRaft mode). Kafka là log có thứ tự chứ không phải hàng đợi task, nên phải tự làm: retry bằng topic theo bậc <code>jobs → jobs.retry.1m → jobs.retry.10m → jobs.dlq</code>, đếm số lần retry trong header, nâng <code>max.poll.interval.ms</code>. Commit sau khi job xong ⇒ at-least-once ⇒ idempotency key là bắt buộc. Cửa vào là <code>services/enqueue.py</code>.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>managers/</span>
@@ -1353,7 +1369,7 @@ footer {
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>services/</span>
-        <span class="tree-note">Mắt xích đơn lẻ, mỗi file một việc: <code>permission</code>, <code>queue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>. Dùng lại được ở nhiều pipeline.</span>
+        <span class="tree-note">Mắt xích đơn lẻ, mỗi file một việc: <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>. Tên là động từ, không hậu tố <code>_service</code>. Dùng lại được ở nhiều pipeline.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>
@@ -1372,12 +1388,20 @@ footer {
         <span class="tree-note">Nơi ráp: tạo app, gắn controller của từng manager, middleware, observability. File duy nhất biết hệ thống có những miền nào. <code>uvicorn</code> trỏ vào đây.</span>
       </div>
       <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>middleware.py</span>
+        <span class="tree-note">Chỉ <code>request_id</code> — tracing, CORS, lỗi, rate limit đều dùng đồ có sẵn. Viết pure ASGI, không <code>BaseHTTPMiddleware</code> (nó buffer response, nghẽn SSE).</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>dependencies.py</span>
+        <span class="tree-note">Thứ controller khai qua <code>Depends()</code>: xác thực, session DB, phân trang. Xác thực ở đây chứ không ở middleware — vào được OpenAPI schema và mypy kiểm được.</span>
+      </div>
+      <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>health.py</span>
         <span class="tree-note"><code>/health/live</code> cho policy restart container, <code>/health/ready</code> cho load balancer. Không thuộc miền nghiệp vụ nào.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>observability/</span>
-        <span class="tree-note">Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Mọi tầng gọi vào đây.</span>
+        <span class="tree-note"><code>tracing</code> dựng OTel + xuất OTLP, <code>llm_trace</code> gắn thuộc tính LLM lên span (Langfuse đọc được), <code>logging</code> in JSON ra stdout (Promtail gom về Loki), <code>metrics</code> cho Prometheus. Ba tín hiệu ba câu hỏi: metrics <em>có đang hỏng không</em>, trace <em>hỏng ở đâu</em>, log <em>hỏng vì sao</em> — nối được nhờ <code>trace_id</code> có ở cả ba. Không biết HTTP là gì, nên <code>scheduler</code> và <code>queue</code> cũng import được. Mọi tầng gọi vào đây.
       </div>
 
       <div class="tree-row is-head">
@@ -1395,7 +1419,7 @@ footer {
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Config hạ tầng: OTel, Grafana, init Postgres, <code>inference/</code> cho vLLM, <code>envs/</code> cho từng môi trường.</span>
+        <span class="tree-note">Config hạ tầng: <code>otel/</code> (collector · Tempo · Prometheus · Loki · Promtail), <code>grafana/</code>, init Postgres, <code>inference/</code> cho vLLM, <code>envs/</code>, và phần triển khai cụm: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
@@ -1432,7 +1456,7 @@ footer {
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 400" role="img"
-             aria-label="Tầng AI của Mycel: manager nhận yêu cầu báo cáo và chia cho các worker; worker gọi tool để truy vấn gold; mọi lượt gọi model đi qua module llm, nơi router chọn giữa vLLM chạy local cho việc khối lượng lớn và API cloud cho suy luận cuối; cache và budget nằm trên đường đi; evals chấm điểm kết quả bằng golden set.">
+             aria-label="Tầng AI của Mycel: orchestrator nhận yêu cầu báo cáo và chia cho các agent chuyên môn; agent gọi tool để truy vấn gold; mọi lượt gọi model đi qua module llm, nơi router chọn giữa vLLM chạy local cho việc khối lượng lớn và API cloud cho suy luận cuối; cache và budget nằm trên đường đi; evals chấm điểm kết quả bằng golden set.">
           <defs>
             <marker id="ai-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1447,25 +1471,25 @@ footer {
           <rect x="24" y="42" width="168" height="46" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
           <text x="40" y="62" font-family="JetBrains Mono, monospace" font-size="12"
-                fill="var(--gold)">manager</text>
+                fill="var(--gold)">orchestrator</text>
           <text x="40" y="79" font-family="Inter Tight, sans-serif" font-size="10.5"
                 fill="var(--ink-soft)">chia task, ghép kết quả</text>
 
           <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
             <rect x="24" y="106" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="125">worker — phân tích số liệu</text>
+            <text x="40" y="125">analyst — phân tích số liệu</text>
 
             <rect x="24" y="142" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="161">worker — viết tóm tắt</text>
+            <text x="40" y="161">writer — viết tóm tắt</text>
 
             <rect x="24" y="178" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)" stroke-dasharray="3 3"/>
-            <text x="40" y="197" fill="var(--ink-faint)">worker ×N</text>
+            <text x="40" y="197" fill="var(--ink-faint)">reviewer — đối chiếu nguồn</text>
           </g>
 
-          <!-- manager -> workers -->
+          <!-- orchestrator -> các agent -->
           <g stroke="var(--gold)" stroke-width="1.2" fill="none" color="var(--gold)"
              marker-end="url(#ai-ar)">
             <path d="M 108 88 L 108 102"/>
@@ -1608,15 +1632,16 @@ footer {
   <div class="part" id="p4">
     <span class="part-num">Phần 4</span>
     <h2 class="part-title">Chạy thật</h2>
-    <p class="part-blurb">Docker, quan trắc, và đường từ máy dev lên host. Kèm ranh giới rõ giữa cái đã có và cái mới chỉ là thiết kế.</p>
+    <p class="part-blurb">Docker, theo dõi hệ thống, và đường từ máy dev lên cụm. Kèm ranh giới rõ giữa cái đã có và cái mới chỉ là thiết kế.</p>
   </div>
   <section id="s09">
     <div class="section-head">
       <p class="eyebrow">4.1 · Stack vận hành</p>
       <h2>Stack vận hành</h2>
       <p>
-        Một lệnh <code>docker compose up</code> dựng cả app lẫn tầng quan trắc. Thêm
-        <code>--profile local-llm</code> nếu muốn chạy model 3B ngay trên máy.
+        Một lệnh <code>docker compose up</code> dựng cả app lẫn tầng theo dõi. Thêm
+        <code>--profile local-llm</code> nếu muốn chạy model 3B ngay trên máy. Đây là stack
+        của <em>máy dev</em> — lên cụm thì cùng image đó chạy qua Helm, xem mục sau.
       </p>
     </div>
 
@@ -1634,7 +1659,22 @@ footer {
       <article class="op">
         <span class="op-svc">worker</span>
         <span class="op-role">Tay làm</span>
-        <p>Rút job ra chạy: sync, transform, sinh báo cáo. Thiếu tay thì <code>--scale worker=N</code>.</p>
+        <p>Rút job ra chạy: sync, transform, sinh báo cáo. <code>--scale worker=N</code>, nhưng N vượt số partition thì pod thừa ngồi không.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">kafka</span>
+        <span class="op-role">Hàng đợi job</span>
+        <p>KRaft mode, không cần Zookeeper. Số partition là trần của song song, tăng được nhưng không giảm.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">qdrant</span>
+        <span class="op-role">Vector store</span>
+        <p>Tìm kiếm knowledge base bằng embedding. Tách khỏi Postgres để scale độc lập.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">minio</span>
+        <span class="op-role">Object store</span>
+        <p>File lớn qua S3 API: PDF nguồn, báo cáo đã render. Đổi sang S3 thật chỉ là đổi endpoint.</p>
       </article>
       <article class="op">
         <span class="op-svc">vllm</span>
@@ -1662,15 +1702,25 @@ footer {
         <p>Độ trễ sync, số bản ghi mỗi tầng, token và chi phí theo model, tỷ lệ job lỗi.</p>
       </article>
       <article class="op">
+        <span class="op-svc">loki</span>
+        <span class="op-role">Lưu log</span>
+        <p>Trả lời <em>hỏng vì sao</em>: stack trace, payload provider trả về. Nối với trace nhờ <code>trace_id</code>.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">promtail</span>
+        <span class="op-role">Gom log</span>
+        <p>Đọc stdout của container rồi đẩy sang Loki. App chỉ in JSON, không biết Loki tồn tại.</p>
+      </article>
+      <article class="op">
         <span class="op-svc">grafana</span>
         <span class="op-role">Màn hình</span>
-        <p>Dashboard vận hành, provision từ <code>deploy/grafana/</code> nên versioned theo code.</p>
+        <p>Dashboard và datasource, provision từ <code>deploy/grafana/</code> nên versioned theo code. Bấm từ metric sang trace, từ trace sang log.</p>
       </article>
     </div>
   </section>
   <section id="s10">
     <div class="section-head">
-      <p class="eyebrow">4.2 · Từ máy dev tới host</p>
+      <p class="eyebrow">4.2 · Từ máy dev tới cụm</p>
       <h2>Một image, ba môi trường</h2>
       <p>
         CI build image <em>một lần</em>, tag bằng commit SHA. Staging và prod kéo đúng
@@ -1830,9 +1880,104 @@ footer {
       env — không bao giờ nằm trong <code>config/</code> đã commit.
     </p>
   </section>
+  <section id="s12">
+    <div class="section-head">
+      <p class="eyebrow">4.3 · Trên cụm</p>
+      <h2>Kubernetes on-premise</h2>
+      <p>
+        Toàn bộ hệ chạy trong nhà, không phụ thuộc dịch vụ cloud nào ngoài lượt gọi LLM
+        cuối. <code>docker-compose.yml</code> là stack của máy dev; <code>deploy/helm/</code>
+        là stack của cụm. Hai file khác nhau nhưng <em>cùng một image</em> và cùng một bộ
+        biến môi trường — không có nhánh <code>if env == "prod"</code> trong code.
+      </p>
+    </div>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Cần gì</th>
+          <th>Dùng gì</th>
+          <th>Chỗ dễ sai</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="who">API scale được</td>
+          <td><code>Deployment.replicas</code> — nhiều pod sau một <code>Service</code></td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="who">Pod chết tự sống lại</td>
+          <td>kubelet restart container; Deployment dựng lại pod mất hẳn</td>
+          <td>Pod treo mà vẫn mở cổng thì K8s coi là khoẻ. Self-healing chỉ đúng khi probe đúng</td>
+        </tr>
+        <tr>
+          <td class="who">Traffic tăng thì thêm pod</td>
+          <td><code>HorizontalPodAutoscaler</code></td>
+          <td><code>api</code> theo CPU, nhưng <code>worker</code> phải theo <em>consumer lag của Kafka</em> — nó chờ I/O nên CPU thấp trong khi hàng đợi dồn</td>
+        </tr>
+        <tr>
+          <td class="who">Service gọi nhau</td>
+          <td><code>Service</code> — một DNS name ổn định, load-balance sẵn</td>
+          <td>—</td>
+        </tr>
+        <tr class="tone-gold">
+          <td class="who">Deploy tái lập được</td>
+          <td><b>Helm</b> — chart có version, cùng chart + <code>values-prod.yaml</code> ra cùng kết quả</td>
+          <td><code>version</code> là của chart, <code>appVersion</code> là commit SHA của image. Rollback chart không rollback code</td>
+        </tr>
+        <tr class="tone-gold">
+          <td class="who">Deploy tự động</td>
+          <td><b>Argo CD</b> — git là nguồn sự thật, Argo so cụm với git rồi kéo cho khớp</td>
+          <td><code>prune</code> xoá tài nguyên không còn trong git: một dòng values sai là mất PVC của Postgres</td>
+        </tr>
+        <tr class="tone-gold">
+          <td class="who">Ảnh container riêng</td>
+          <td><b>Harbor</b> — registry nội bộ, kèm quét CVE, ký ảnh, proxy cache</td>
+          <td>Tag = commit SHA, không bao giờ <code>latest</code>: hai pod cùng manifest sẽ chạy hai code khác nhau</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <b>Ba probe, ba câu hỏi khác nhau.</b> <code>readinessProbe</code> quyết định có nhận
+      request (fail thì rút khỏi Service, pod vẫn sống), <code>livenessProbe</code> quyết
+      định có restart, <code>startupProbe</code> hoãn hai cái kia lúc khởi động. Thiếu cái
+      cuối thì <code>vllm</code> bị giết oan vì nạp model mất vài phút — và lặp mãi.
+    </p>
+
+    <p>
+      <b>Trần cứng của <code>worker</code>:</b> số pod chạy thật = min(replica, số partition).
+      Topic 6 partition thì HPA đẩy lên 10 pod cũng chỉ 6 pod có việc, nên
+      <code>maxReplicas</code> đặt bằng số partition. <code>vllm</code> thì không autoscale
+      chút nào: mỗi pod giữ một GPU, không có GPU rảnh thì pod mới chỉ <code>Pending</code>.
+    </p>
+
+    <p>
+      <b><code>scheduler</code> luôn một replica</b>, và <code>strategy: Recreate</code>.
+      Hai scheduler thì mỗi lịch bắn hai lần; mà <code>RollingUpdate</code> dựng pod mới
+      <em>trước</em> khi xoá pod cũ, tức là có một khoảng hai cái cùng sống.
+    </p>
+
+    <p>
+      <b>Kho có state chạy dạng <code>StatefulSet</code> + PVC</b>, không phải
+      <code>Deployment</code>: Postgres, Kafka, Qdrant, MinIO cần danh tính ổn định và volume
+      gắn lại đúng pod cũ. On-prem thì phải tự lo lớp storage — local-path của k3s, hoặc
+      Longhorn nếu muốn volume sang được máy khác. Đây là phần tốn công nhất khi bỏ cloud.
+    </p>
+
+    <p>
+      <b>CI không có quyền vào cụm.</b> Nó build image, đẩy lên Harbor, rồi sửa
+      <code>image.tag</code> trong git. Argo CD thấy git đổi thì tự
+      <code>helm upgrade</code> — credential của cụm nằm ở Argo, không nằm trong CI. Staging
+      tự sync; prod cần người bấm, vì deploy vào 5 giờ chiều thứ Sáu không phải việc của máy.
+      Migration vẫn chạy trước, bằng <code>pre-upgrade</code> hook (Helm) hoặc
+      <code>sync-wave -1</code> (Argo); hook fail thì dừng, pod cũ vẫn chạy.
+    </p>
+  </section>
   <section id="s11">
     <div class="section-head">
-      <p class="eyebrow">4.3 · Trạng thái</p>
+      <p class="eyebrow">4.4 · Trạng thái</p>
       <h2>Cái gì đã có, cái gì chưa</h2>
       <p>
         Trang này mô tả thiết kế, không mô tả một hệ thống đang chạy. Phần dưới nói rõ
@@ -1854,11 +1999,15 @@ footer {
         </tr>
         <tr>
           <td class="who">docker compose · observability</td>
-          <td>Đã viết config: postgres, otel-collector, tempo, prometheus, grafana</td>
+          <td>Đã viết config: postgres, kafka, qdrant, minio, otel-collector, tempo, prometheus, loki, promtail, grafana</td>
         </tr>
         <tr>
           <td class="who">CI · build image</td>
           <td>Đã có workflow: lint, kiểm kiểu, migration, test; build tag theo SHA</td>
+        </tr>
+        <tr class="tone-raw">
+          <td class="who">Helm chart · Argo CD · Harbor</td>
+          <td class="no">Mới có <code>values</code>, <code>Application</code> và tài liệu quyết định. Chưa có manifest thật trong <code>templates/</code>, chưa có cụm nào để deploy</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">sources/ — connector</td>
@@ -1905,7 +2054,7 @@ footer {
       </li>
       <li>
         <strong>Việc lâu thì vào hàng đợi</strong>
-        <span>API không chờ LLM chạy xong. Đẩy vào <code>jobs/</code>, trả job id, retry được khi lỗi.</span>
+        <span>API không chờ LLM chạy xong. Đẩy vào <code>queue/</code>, trả job id, retry được khi lỗi.</span>
       </li>
       <li>
         <strong>Đổi prompt phải chạy eval</strong>

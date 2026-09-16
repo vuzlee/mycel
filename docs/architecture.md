@@ -1,6 +1,7 @@
 # Kiến trúc Mycel
 
 > Bản trực quan có sơ đồ phân tầng: [architecture.html](architecture.html)
+> · Bảng theo dõi tech stack: [stack.html](stack.html)
 
 ## Nguyên tắc
 
@@ -31,9 +32,34 @@ thay vì phải gọi lại provider.
 Config đọc từ env/file, logger, exception gốc, kiểu dữ liệu dùng chung. Không import
 module nào khác trong `mycel` — đây là tầng đáy.
 
+`agents/core/` cùng khuôn nhưng hẹp hơn: nền chung của riêng `agents/`.
+
 ### `storage/`
-Engine và session Postgres, repository cho từng tầng. Mọi câu SQL nằm ở đây, không rải
-rác trong pipeline hay agent.
+Ba kho, ba loại dữ liệu khác nhau. Mọi truy cập đi qua đây.
+
+| | Backend | Chứa gì |
+|---|---|---|
+| `postgres/` | PostgreSQL 16 | State giao dịch: ba tầng raw/silver/gold, job, quyền |
+| `vectors/` | Qdrant | Embedding cho tìm kiếm knowledge base |
+| `objects/` | MinIO (S3 API) | File lớn: PDF nguồn, báo cáo đã render |
+
+Vì sao không nhét hết vào Postgres:
+
+- **Vector.** `pgvector` chạy được, nhưng tới vài triệu vector thì index HNSW ăn RAM
+  tranh với chính workload giao dịch trên cùng instance. Tách ra thì scale độc lập.
+- **File.** Blob trong Postgres làm database phình, backup chậm, và mỗi lần đọc phải kéo
+  cả file qua connection của pool. API trả presigned URL, file 200MB không đi qua process API.
+
+Postgres giữ **metadata** của file (thuộc báo cáo nào, key trong bucket); bucket giữ
+**nội dung**. Không bao giờ ngược lại.
+
+Nguồn của embedding là **gold**, không phải raw — cùng hợp đồng mà agent đọc, nên kết quả
+tìm kiếm và kết quả truy vấn bảng không mâu thuẫn nhau. Quyền xem truyền xuống thành
+filter của Qdrant, không lọc sau khi đã lấy top-k: lấy 10 kết quả rồi mới bỏ cái không
+được phép xem thì có khi còn 2.
+
+Mọi câu SQL, mọi truy vấn vector, mọi thao tác file nằm ở đây, không rải rác trong
+pipeline hay agent. Dùng S3 API nên chuyển sang S3 thật sau này chỉ là đổi endpoint.
 
 ### `sources/`
 Mỗi provider một module: `sources/slack.py`, `sources/gmail.py`... Cùng một interface:
@@ -60,7 +86,11 @@ model, thêm cache hay đặt trần chi phí chỉ sửa một chỗ.
 | File | Việc |
 |---|---|
 | `router.py` | Chọn local hay cloud cho từng lượt gọi |
+| `client.py` | Nơi duy nhất import SDK provider — gọi model thật, trả kết quả hoặc luồng delta |
+| `providers/` | Khác biệt riêng của từng provider: `local.py` (vLLM), `cloud.py` |
 | `cache.py` | Prompt trùng thì trả kết quả cũ, không gọi lại |
+| `tokens.py` | Đếm token *trước* khi gửi, để chặn trước chứ không phải sau khi đã trả tiền |
+| `usage.py` | Đếm *sau* khi gọi: token, cache hit, thời gian. Một chỗ đếm, ba nơi dùng — budget, trace, log |
 | `budget.py` | Cộng dồn token theo job, vượt trần thì raise thay vì gọi tiếp |
 
 Ranh giới local/cloud:
@@ -73,21 +103,95 @@ Model 3B không đủ chất lượng viết báo cáo, nên nó gánh phần s�
 kết luận. Ràng buộc phần cứng cụ thể: `deploy/inference/README.md`.
 
 ### `agents/`
-- **manager** — nhận yêu cầu báo cáo, chia nhỏ thành task, giao cho worker, ghép kết quả.
-- **worker** — agent chuyên một việc (phân tích số liệu, viết tóm tắt, đối chiếu nguồn).
-- **tools/** — năng lực agent gọi được: truy vấn gold, tính toán, dựng biểu đồ.
-- **prompts/** — prompt tách khỏi code, sửa không cần deploy lại, và diff được khi eval tụt điểm.
+Tách hai tầng, vì chúng đổi với nhịp khác nhau: cách stream token hay cách gắn trace gần
+như không đổi, còn prompt thì đổi liên tục.
+
+**Khung — `agents/core/`**, nền chung của riêng `agents/`, không dính nghiệp vụ. Cùng
+khuôn với `mycel/core/` nhưng hẹp hơn một tầng: hễ thấy `core/` lồng trong một package thì
+hiểu là "nền chung của package đó".
+
+
+| | Việc |
+|---|---|
+| `agent.py` | Vòng chạy: dựng message, gọi model, gọi tool, lặp tới khi có output. `run()` và `run_stream()` dùng chung vòng này |
+| `config.py` · `model_builder.py` | Khai model dạng `'<tier>:<model_name>'`; builder dịch spec thành client đã gắn timeout và retry |
+| `run_context.py` | Thứ một lượt chạy mang theo: `job_id`, budget, session DB, trace context |
+| `schemas.py` | Hợp đồng nội bộ giữa agent, tool và streaming (khác `managers/*/schemas.py` là hợp đồng HTTP) |
+| `hooks.py` | Chỗ duy nhất thấy mọi run — gắn trace, log usage, cộng budget |
+| `guards.py` | Chặn vòng lặp vô hạn, model lặp chính nó, retry output sai schema |
+| `streaming/` | Sự kiện thô từ model → sự kiện miền có tên: `reader` · `mapper` · `envelope` · `sink` · `output/` |
+| `integrations/` | `mcp.py` gắn tool từ MCP server ngoài; `agent_protocol.py` để dành cho hệ thứ hai |
+
+**Nghiệp vụ**, tầng trên:
+
+- **`orchestrator.py`** — nhận yêu cầu báo cáo, chia task, giao việc, ghép kết quả. Không tự
+  phân tích hay viết chữ. Không đặt tên `manager.py` để khỏi lẫn với `managers/` — cái kia
+  là điểm vào HTTP theo miền.
+- **`analyst.py` · `writer.py` · `reviewer.py`** — mỗi agent một việc: đọc số từ gold, viết
+  văn bản từ số đó, đối chiếu bản nháp với nguồn. Chuyên một việc thì prompt ngắn, eval chấm
+  được từng cái, hỏng cái nào biết ngay cái đó. Để phẳng cạnh `orchestrator.py`, không bọc
+  thêm một tầng thư mục — khi nào một agent phình ra thì tách thành thư mục.
+- **`registry.py`** — khai báo agent và tool orchestrator được dùng. Thêm agent = thêm một dòng.
+- **`tools/`** — `query_gold` (qua `storage/postgres/`, chỉ đọc gold, có trần số dòng),
+  `search_docs` (qua `storage/vectors/`), `chart`, `compute`. Hai cách tra cứu cho hai loại
+  câu hỏi: `query_gold` trả lời câu có số liệu chính xác, `search_docs` trả lời câu mơ hồ.
+  Nhầm chỗ thì agent đi tìm số bằng tìm kiếm ngữ nghĩa rồi bịa ra con số gần đúng.
+- **`prompts/`** — prompt tách khỏi code, sửa không cần deploy lại, diff được khi eval tụt điểm.
 
 Agent trả về output có cấu trúc và được validate; model trả sai format thì retry, không
 để dữ liệu hỏng đi tiếp.
 
-### `jobs/`
-`scheduler/` trả lời *khi nào chạy*; `jobs/` trả lời *chạy cái gì, lỗi thì sao*. Sinh một
+**Budget cộng ở hook, không cộng ở chỗ gọi model.** Usage của sub-agent không tự cộng lên
+agent cha, nên nếu đếm ở call site thì agent con sẽ lọt sổ. `hooks.py` là chỗ duy nhất nhìn
+thấy mọi run, kể cả run lồng nhau.
+
+**Guard khác budget.** Budget đếm tiền của cả job; guard đếm hành vi của một lượt chạy.
+Vòng lặp hỏng chạm guard trong vài giây, chạm budget thì đã tốn tiền rồi.
+
+### `queue/`
+Tầng job nằm **trên** Kafka, **không phải** bản thân broker — Kafka chạy ngoài, khai trong
+`docker-compose` (KRaft mode, không cần Zookeeper). Đổi broker thì sửa ở đây, phần còn lại
+của hệ thống không biết.
+
+`scheduler/` trả lời *khi nào chạy*; `queue/` trả lời *chạy cái gì, lỗi thì sao*. Sinh một
 báo cáo mất vài phút và sẽ có lúc fail giữa chừng, nên:
 
 - API đẩy việc vào hàng đợi rồi trả `job_id` ngay, không bắt client chờ.
 - Mỗi job có idempotency key — chạy lại không sinh hai báo cáo trùng.
 - Lỗi thì retry; hết lượt thì vào dead-letter để xem lại, không mất âm thầm.
+
+| File | Việc |
+|---|---|
+| `job.py` | Hình dạng một job: payload, idempotency key, số lần đã retry, trace context |
+| `producer.py` | Đẩy job vào topic: chọn partition theo key, `acks=all`, inject trace context |
+| `consumer.py` | Rút job ra chạy, commit sau khi xong |
+| `retry.py` | Topic retry theo bậc và dead-letter |
+| `context.py` | Mang trace context qua ranh giới process — xem mục `observability/` |
+
+**Bốn thứ Kafka không cho sẵn, phải tự làm.** Kafka là log có thứ tự, không phải hàng đợi
+task — nên:
+
+| | Vì sao | Cách làm |
+|---|---|---|
+| Retry không theo từng job | Kafka commit theo offset; `seek` lùi lại thì chặn cả partition | Đẩy sang topic retry rồi commit đi tiếp: `jobs` → `jobs.retry.1m` → `jobs.retry.10m` → `jobs.dlq` |
+| Kafka không đếm số lần retry | Không có khái niệm "lần thử" | Đếm trong header của message |
+| Không có message hẹn giờ | Kafka không delay | Consumer của topic retry ngủ tới khi message đủ tuổi |
+| Job dài bị coi là chết | `max.poll.interval.ms` mặc định 5 phút, báo cáo mất vài phút | Nâng lên (`KAFKA_MAX_POLL_INTERVAL_MS`); quá hạn thì rebalance và job chạy lại từ đầu |
+
+**Số partition là trần của song song, không phải số worker.** Topic 6 partition thì worker
+thứ 7 ngồi không — kể cả khi HPA đã dựng đủ pod. Partition tăng được nhưng không giảm, và
+tăng thì phá thứ tự theo key.
+
+**Commit sau khi xong, không commit lúc nhận.** Worker chết giữa job thì job được giao lại —
+đúng mong muốn, nhưng thành at-least-once, nên idempotency key ở `job.py` là **bắt buộc**
+chứ không phải tuỳ chọn. Key đó phải suy ra từ nội dung việc (miền + khoảng thời gian +
+tham số), không phải UUID sinh mới mỗi lần.
+
+Bù lại Kafka cho hai thứ broker thường không có: log replay được, và thêm consumer group
+mới đọc lại cùng dòng dữ liệu mà không ảnh hưởng group đang chạy.
+
+Trace context nằm trong **header** của message, không nằm trong payload, nên nó theo job
+sang cả topic retry và dead-letter — job vào DLQ vẫn mở lại được trace về đúng lúc bấm nút.
 
 ### `reports/`
 Từ kết quả agent dựng ra artifact cuối: báo cáo văn bản, bảng số liệu, dashboard.
@@ -111,16 +215,17 @@ Vì sao chia theo miền chứ không theo kỹ thuật: sửa một nghiệp v�
 mục, không phải nhảy giữa `routes/`, `services/` và `pipeline/` nằm ở ba nơi.
 
 **Pipeline là chuỗi, service là mắt xích.** `managers/report/pipeline.py` định nghĩa
-*thứ tự*: `permission` → `queue` → *(worker nhận job)* → `gather` → `analyze` →
+*thứ tự*: `permission` → `enqueue` → *(worker rút job ra chạy)* → `gather` → `analyze` →
 `render`. `managers/sync/pipeline.py`: `fetch` → `transform` → `check`. Pipeline không
 tự làm việc gì, chỉ ghép service lại.
 
 ### `services/`
-Một file = một việc đơn lẻ, làm xong một chuyện: `permission_service.py`,
-`queue_service.py`, `fetch_service.py`, `transform_service.py`, `gather_service.py`,
-`analyze_service.py`, `render_service.py`, `check_service.py`.
+Một file = một việc đơn lẻ, làm xong một chuyện: `permission.py`, `enqueue.py`,
+`fetch.py`, `transform.py`, `gather.py`, `analyze.py`, `render.py`, `check.py`.
 
-Service phải dùng lại được — `gather_service` phục vụ cả miền báo cáo lẫn miền đồng bộ.
+Tên file là động từ, không mang hậu tố `_service` — đã nằm trong `services/` rồi.
+
+Service phải dùng lại được — `gather.py` phục vụ cả miền báo cáo lẫn miền đồng bộ.
 Nó không biết mình đang nằm trong chuỗi nào, cũng không biết ai gọi nó: HTTP hay
 scheduler đều như nhau.
 
@@ -139,11 +244,42 @@ Vỏ HTTP, mỏng nhất có thể. Endpoint nghiệp vụ **không** nằm ở 
 | File | Việc |
 |---|---|
 | `app.py` | Nơi ráp: tạo app, gắn controller của từng manager, middleware, observability. `uvicorn mycel.api.app:app` trỏ vào đây |
+| `middleware.py` | Chỉ `request_id` — phần còn lại dùng đồ có sẵn |
+| `dependencies.py` | Thứ controller khai qua `Depends()`: xác thực, session DB, phân trang |
 | `health.py` | `/health/live` cho policy restart container, `/health/ready` cho load balancer (DB tới được, migration đã chạy). Không thuộc miền nghiệp vụ nào |
 
 `app.py` là file duy nhất biết hệ thống có những miền nào.
 
-Có xác thực — dữ liệu bên trong là Slack và Gmail nội bộ.
+**Chỉ tự viết một middleware.** Phần lớn thứ hay bị viết tay đều đã có sẵn, và tự viết
+là bảo trì lại thứ đã chuẩn hoá:
+
+| Việc | Dùng gì |
+|---|---|
+| Span cho mỗi request | `FastAPIInstrumentor.instrument_app(app)` — đúng semantic convention của OTel |
+| CORS | `CORSMiddleware` của Starlette |
+| Một hình dạng lỗi | `@app.exception_handler(...)` — cơ chế riêng của FastAPI, không phải middleware |
+| Rate limit | Nginx/ingress chặn trước khi chạm app; cần theo user thì `slowapi` |
+| Xác thực | `Depends()` — xem bên dưới |
+| **`request_id`** | **Tự viết** |
+
+`request_id` tự viết vì phần giá trị là đặt id vào `contextvars` (built-in của Python, không
+phải của FastAPI) để `observability/logging.py` tự đọc — controller khỏi phải viết
+`log.info(..., request_id=rid)` ở từng dòng. Logger là của mình nên không thư viện nào làm
+hộ đoạn đó.
+
+**Viết dạng pure ASGI, đừng dùng `BaseHTTPMiddleware`.** Cái đó buffer response nên làm
+nghẽn SSE — mà `agents/core/streaming/` sinh ra chính là để stream. Lỗi này không báo gì,
+chỉ là token về thành một cục ở cuối.
+
+**Xác thực là `Depends()`, không phải middleware.** Ba lý do cụ thể: middleware chạy cho
+mọi route nên phải tự duy trì danh sách loại trừ `/health` và `/docs`; dependency vào được
+OpenAPI schema nên `/docs` hiện ổ khoá; và controller nhận thẳng
+`user: User = Depends(current_user)` có kiểu, mypy strict kiểm được — middleware chỉ nhét
+vào `request.state`, mypy không thấy gì.
+
+Có xác thực — dữ liệu bên trong là Slack và Gmail nội bộ. Nó chỉ trả lời *anh là ai*; còn
+*anh được xem báo cáo nào* là việc của `services/permission.py`, vì nó cần ngữ cảnh nghiệp
+vụ mà tầng HTTP không có.
 
 ### Một request đi qua các tầng
 
@@ -164,11 +300,67 @@ theo lịch, tính bằng phút. Trục request `controller → pipeline → ser
 người dùng bấm nút, tính bằng giây. Hai trục gặp nhau đúng một chỗ: ở `gold`.
 
 ### `observability/`
-Log có cấu trúc, trace OpenTelemetry, metrics Prometheus. Đây là module duy nhất cắt
-ngang mọi tầng, nên phải giữ thật mỏng và không chứa logic nghiệp vụ.
+Module duy nhất cắt ngang mọi tầng, nên phải giữ thật mỏng và không chứa logic nghiệp vụ.
 
-Mỗi lần sync nguồn, mỗi bước transform, mỗi lượt gọi LLM đều là một span — khi báo cáo
-sai số hoặc chạy chậm, ta lần ngược được về đúng bước gây ra.
+| File | Việc |
+|---|---|
+| `tracing.py` | Dựng OTel một lần lúc khởi động, xuất OTLP. Chỉ lo phần không dính transport — span cho HTTP là việc của `FastAPIInstrumentor`. Tắt được bằng env |
+| `llm_trace.py` | Thuộc tính riêng của LLM trên span theo quy ước Langfuse đọc được: model, input, output, token, chi phí |
+| `logging.py` | Log JSON, mỗi dòng kèm `trace_id` · `request_id` · `job_id`. In ra stdout, Promtail gom về Loki |
+| `metrics.py` | Độ trễ sync, số bản ghi mỗi tầng, token đã dùng, tỷ lệ job lỗi |
+
+**Ba tín hiệu, ba câu hỏi khác nhau** — cần cả ba, không cái nào thay được cái nào:
+
+| | Backend | Trả lời |
+|---|---|---|
+| Metrics | Prometheus | *Có đang hỏng không* — độ trễ vọt lên, tỷ lệ job lỗi tăng |
+| Trace | Tempo | *Hỏng ở đâu* — chậm ở lượt gọi model nào, ở service nào trong năm service |
+| Log | Loki | *Hỏng vì sao* — stack trace, payload provider trả về |
+
+Nối được ba cái là nhờ `trace_id` có mặt ở cả ba: từ metric vọt bấm sang trace chậm nhất,
+từ span bấm sang đúng những dòng log của trace đó. Grafana provision hai chiều đó trong
+`deploy/grafana/datasources/`.
+
+`trace_id` nằm trong **nội dung** dòng log JSON, không phải label của Loki — label có bao
+nhiêu giá trị khác nhau thì Loki tạo bấy nhiêu stream, mà `trace_id` gần như không lặp lại.
+Grafana bắt bằng derived field.
+
+App chỉ **in log ra stdout**, không tự gửi đi đâu: Promtail gom stdout của container rồi
+đẩy sang Loki, và trong K8s cũng đúng cơ chế đó. Nhờ vậy không module nào biết Loki tồn tại.
+
+Không có gì ở đây biết HTTP là gì — phần dính HTTP nằm ở `api/`, và `api/app.py` gọi
+`tracing.setup()` rồi để `FastAPIInstrumentor` lo span cho request. Nhờ vậy `scheduler`,
+`queue` và `etl` import được module này mà không kéo theo tầng web.
+
+**Ba id, ba nguồn khác nhau** — chỗ này hay nhầm:
+
+| | Ai sinh | Dùng để |
+|---|---|---|
+| `trace_id` | OTel tự, sau khi instrument. Đọc từ span hiện tại | Nối log ↔ trace |
+| `request_id` | Mình, ở `api/middleware.py` | Trả cho client — người báo lỗi đưa đúng id này |
+| `job_id` | Mình, khi đẩy vào `queue/` | Nối request với việc chạy nền sau đó |
+
+Logger **không** tự biết `trace_id`: mỗi lần log phải đọc span hiện tại rồi gắn vào. Đó là
+đoạn nối duy nhất phải viết tay, và cũng là thứ khiến từ một dòng log nhảy thẳng sang trace
+tương ứng được.
+
+Một yêu cầu báo cáo là một cây span: HTTP → pipeline → queue → worker → orchestrator → từng
+agent → từng lượt gọi model. Báo cáo sai số hoặc chạy chậm thì lần ngược được về đúng lượt
+gọi gây ra.
+
+**Chỗ trace dễ đứt nhất là hàng đợi.** Worker là process khác, `contextvars` không vượt qua
+ranh giới process, nên trace context **không** tự đi theo job. Không làm gì thì Grafana hiện
+hai trace rời nhau — một cái HTTP kết thúc ở chữ "đã nhận", một cái báo cáo mọc lên từ hư
+không. Không lỗi nào báo cả.
+
+Cách nối: `queue/context.py` inject trace context vào **header** của message lúc enqueue,
+extract lúc worker nhận, dùng chuẩn W3C `traceparent` của OTel — cùng chuẩn với header HTTP.
+Phải làm tay ở cả hai đầu; quên một đầu thì không lỗi nào báo, chỉ là hai cây trace rời nhau.
+
+Chỗ gọi vào `llm_trace.py` là `agents/core/hooks.py`; phần còn lại của hệ thống không cần
+biết tên thuộc tính.
+
+Metrics trả lời *có đang hỏng không*, trace trả lời *hỏng ở đâu*. Cần cả hai.
 
 ## Thứ tự phụ thuộc
 
@@ -180,7 +372,7 @@ core ◄── storage ◄── sources
                         ▲  ▲
                  reports┘  └ services ◄── managers ◄── api, scheduler
                                             ▲
-                                          jobs
+                                         queue
 ```
 
 Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` và `scheduler` ngồi trên cùng, cả hai đều đi qua `managers`.
@@ -188,7 +380,7 @@ Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` v�
 
 ## Vận hành
 
-`docker compose up` dựng cả app lẫn tầng quan trắc:
+`docker compose up` dựng cả app lẫn tầng theo dõi hệ thống:
 
 | Service | Vai trò |
 |---|---|
@@ -198,39 +390,119 @@ Mũi tên là "được import bởi". `core` không phụ thuộc gì; `api` v�
 | `otel-collector` | Điểm gom duy nhất; chia trace về Tempo, metrics về Prometheus |
 | `tempo` | Lưu trace — một yêu cầu báo cáo là một trace, từ HTTP tới từng lượt gọi LLM |
 | `prometheus` | Lưu metrics — độ trễ sync, số bản ghi mỗi tầng, token đã dùng, tỷ lệ job lỗi |
-| `worker` | Rút job ra chạy. Scale ngang bằng `--scale worker=N` |
+| `worker` | Rút job ra chạy. `--scale worker=N`, nhưng N vượt số partition thì pod thừa ngồi không |
+| `kafka` | Hàng đợi job. KRaft mode, không cần Zookeeper |
+| `qdrant` | Vector store — tìm kiếm knowledge base |
+| `minio` | Object store, S3 API — file lớn và báo cáo đã render |
+| `loki` | Lưu log |
+| `promtail` | Gom stdout của container đẩy sang Loki. App không biết Loki tồn tại |
 | `vllm` | Model local, tuỳ chọn — bật bằng `--profile local-llm` |
-| `grafana` | Dashboard, provision từ `deploy/grafana/` nên versioned theo code |
+| `grafana` | Dashboard + datasource, provision từ `deploy/grafana/` nên versioned theo code |
 
-App chỉ gửi OTLP tới một địa chỉ (`otel-collector:4317`); đổi backend quan trắc về sau
-chỉ cần sửa `deploy/otel/config.yaml`, không đụng code.
+App chỉ gửi OTLP tới một địa chỉ (`otel-collector:4317`); đổi backend theo dõi về sau
+chỉ cần sửa `deploy/otel/collector.yaml`, không đụng code. Tương tự app chỉ in log ra
+stdout — đổi backend log thì sửa `deploy/otel/promtail.yaml`.
 
-## Từ máy dev tới host
+## Từ máy dev tới cụm
 
-CI build image **một lần**, tag bằng commit SHA. Staging và prod kéo đúng image đó về
-chạy — không build lại, nên không có chuyện "máy tôi chạy được".
+Toàn bộ hệ chạy **on-premise**, không phụ thuộc dịch vụ cloud nào ngoài lượt gọi LLM cuối.
+
+| | Chạy ở | Dùng khi |
+|---|---|---|
+| `docker-compose.yml` | máy lập trình viên | code, debug, chạy thử |
+| `deploy/helm/` | cụm Kubernetes on-prem | staging, prod |
+
+Hai file khác nhau nhưng **cùng một image** và cùng một bộ biến môi trường. Không có nhánh
+`if env == "prod"` nào trong code.
 
 ```
 git push ──► CI (lint · kiểu · migration · test) ──► build image (tag = SHA)
-                     └─ eval chỉ chạy khi đụng prompt/ hoặc llm/
-                                                          │
-                                         registry ◄───────┘
-                                            ├──► staging  (dữ liệu ẩn danh)
-                                            └──► prod
+                  └─ eval chỉ chạy khi đụng prompt/ hoặc llm/     │
+                                                                  ▼
+                                                      Harbor (registry nội bộ)
+                                                                  │
+                          CI sửa image.tag trong values ◄─────────┘
+                                      │
+                          Argo CD thấy git đổi ──► helm upgrade ──► cụm K8s
+                                                        ├──► staging (tự sync)
+                                                        └──► prod   (người bấm)
 ```
 
-Thứ tự deploy không đổi:
+CI **không** có quyền vào cụm — nó chỉ build image và sửa một dòng trong git. Credential
+của cụm nằm ở Argo CD.
 
-```bash
-docker compose pull            # lấy image theo SHA
-alembic upgrade head           # migration chạy trước code mới
-docker compose up -d           # rồi mới đổi container
-```
+### Vì sao cần Kubernetes chứ không phải compose trên host thật
 
-Migration chạy trước container mới, nên mọi thay đổi schema phải để code cũ vẫn chạy
-được: muốn xoá cột thì làm hai lần release — lần đầu bỏ code dùng nó, lần sau mới drop.
+Bốn thứ compose không làm được:
 
-Rollback = trỏ về tag SHA cũ. Chi tiết biến môi trường và secret: `deploy/envs/README.md`.
+| Cần | K8s làm bằng |
+|---|---|
+| API scale được | `Deployment.replicas` — nhiều pod sau một Service |
+| Pod chết thì tự sống lại | kubelet restart container; Deployment dựng lại pod mất hẳn |
+| Traffic tăng thì tự thêm pod | `HorizontalPodAutoscaler` |
+| Service gọi nhau | `Service` — một DNS name ổn định, load-balance sẵn |
+
+`docker compose up -d` restart container chết được, nhưng không dời việc sang máy khác khi
+**máy** chết, và không tự tăng giảm theo tải.
+
+**Self-healing chỉ hoạt động khi probe đúng.** Pod treo mà vẫn mở cổng thì K8s coi là khoẻ:
+không restart, và Service vẫn đẩy request vào. `readinessProbe` quyết định có nhận request,
+`livenessProbe` quyết định có restart, `startupProbe` hoãn hai cái kia lúc khởi động — thiếu
+cái cuối thì `vllm` bị giết oan vì nạp model mất vài phút.
+
+**HPA: mỗi service một cách đo.** `api` theo CPU. `worker` theo **consumer lag của Kafka**,
+vì worker chờ I/O là chính nên CPU thấp trong khi hàng đợi dồn — cần KEDA hoặc
+prometheus-adapter. `vllm` **không** autoscale: mỗi pod giữ một GPU, không có GPU rảnh thì
+pod mới chỉ Pending.
+
+**Trần cứng của `worker`:** số pod chạy thật = min(replica, số partition). Nên `maxReplicas`
+đặt bằng số partition, không đặt cao hơn.
+
+**Stateful chạy dạng `StatefulSet` + PVC**, không phải `Deployment`: Postgres, Kafka, Qdrant,
+MinIO cần danh tính ổn định và volume gắn lại đúng pod cũ. On-prem thì phải tự lo lớp
+storage (local-path của k3s, hoặc Longhorn nếu muốn volume sang được máy khác) — đây là
+phần tốn công nhất khi bỏ cloud. Chi tiết: `deploy/kubernetes/README.md`.
+
+### Helm — deploy tái lập được
+
+Viết tay YAML thì mỗi môi trường một bản sao, sửa một chỗ quên hai chỗ, và không ai trả lời
+được "prod đang chạy cấu hình nào". Helm đóng gói thành chart có version: cùng chart +
+`values-prod.yaml` luôn ra cùng kết quả.
+
+Hai version đừng nhầm: `version` là của chart (sửa template), `appVersion` là commit SHA của
+image (build mới). Rollback chart không tự rollback code.
+
+`scheduler` luôn `replicas: 1` và `strategy: Recreate` — hai scheduler thì mỗi lịch bắn hai
+lần, mà `RollingUpdate` dựng pod mới trước khi xoá pod cũ nên có một khoảng hai cái cùng sống.
+
+Migration vẫn chạy trước, khai bằng `pre-upgrade` hook chạy `alembic upgrade head`. Hook fail
+thì Helm dừng, pod mới không lên. Secret không nằm trong values — chart chỉ tham chiếu tên
+`Secret`. Chi tiết: `deploy/helm/README.md`.
+
+### Argo CD — GitOps
+
+Deploy bằng tay thì không ai trả lời được *prod đang chạy cái gì* và *ai đổi lúc nào*. Argo
+lật ngược chiều: git là nguồn sự thật, Argo so cụm với git rồi tự kéo cho khớp.
+
+Hai chỗ cần cẩn thận: `prune` xoá tài nguyên không còn trong git — đặt `false` cho mọi thứ
+có state, vì một dòng values sai mà prune mất PVC của Postgres là tai nạn git không cứu
+được. Và `selfHeal` ghi đè mọi `kubectl edit` — tiện lúc bình thường, mất đường vá nóng lúc
+sự cố. Nên **staging tự sync, prod cần người bấm**. Chi tiết: `deploy/argocd/README.md`.
+
+### Harbor — registry nội bộ
+
+Cụm on-prem thì ảnh cũng phải ở trong nhà: không đụng rate limit Docker Hub, và ảnh chứa
+code nội bộ thì không đẩy lên registry công cộng. Ngoài chỗ chứa ảnh, Harbor cho thêm quét
+CVE (Trivy), ký ảnh (Cosign), RBAC + audit log, và chính sách dọn tag — mỗi commit một tag,
+không dọn thì đĩa đầy trong vài tháng.
+
+Lý do thực dụng nhất là **proxy cache**: mọi image bên thứ ba (postgres, kafka, qdrant,
+minio, grafana...) đi qua Harbor, nên cụm dựng lại được kể cả khi mất mạng ra ngoài.
+
+Tag = commit SHA, không bao giờ `latest`: `latest` khiến hai pod cùng manifest chạy hai code
+khác nhau, và rollback thì không biết lùi về đâu. Chi tiết: `deploy/registry/README.md`.
+
+Chi tiết biến môi trường và secret: `deploy/envs/README.md`.
 
 ## Mở rộng sau này
 

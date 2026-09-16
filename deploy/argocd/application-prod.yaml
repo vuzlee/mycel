@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mycel-prod
+  namespace: argocd
+spec:
+  project: mycel
+  source:
+    repoURL: https://git.internal/mycel.git
+    targetRevision: main
+    path: deploy/helm/mycel
+    helm:
+      valueFiles: [values.yaml, values-prod.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mycel-prod
+  # Prod KHÔNG auto-sync: người bấm, và bấm lúc tỉnh táo.
+  # selfHeal cũng tắt — lúc sự cố còn vá nóng bằng kubectl được.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      # Không bao giờ prune tài nguyên có state ở prod. PVC của Postgres
+      # bị xoá vì một dòng values sai là tai nạn git không cứu được.
+      - PrunePropagationPolicy=foreground

@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mycel-staging
+  namespace: argocd
+spec:
+  project: mycel
+  source:
+    repoURL: https://git.internal/mycel.git
+    targetRevision: main
+    path: deploy/helm/mycel
+    helm:
+      valueFiles: [values.yaml, values-staging.yaml]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mycel-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

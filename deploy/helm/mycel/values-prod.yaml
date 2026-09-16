@@ -1,0 +1,18 @@
+# Đè lên values.yaml. Chỉ ghi cái KHÁC mặc định.
+# Không có secret nào trong file này — chart chỉ tham chiếu tên Secret.
+
+api:
+  replicas: 4
+  autoscaling: {minReplicas: 4, maxReplicas: 20}
+
+worker:
+  replicas: 6
+  autoscaling: {minReplicas: 4, maxReplicas: 6}
+
+kafka:    {storage: 200Gi, partitions: 6}
+postgres: {storage: 500Gi}
+minio:    {storage: 2Ti}
+
+vllm: {enabled: true}
+
+ingress: {host: mycel.company.internal}

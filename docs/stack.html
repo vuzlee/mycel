@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root{color-scheme:light dark}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none!important}
+</style>
+<title>Mycel Stack</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#F2F3F1; --panel:#FFFFFF; --panel-2:#E9EBE7;
+  --ink:#1B211E; --ink-2:#4B534E; --ink-faint:#868E88;
+  --line:#D4D8D2; --line-soft:#E3E6E1;
+  --accent:#1F6F63;          /* mycelium teal */
+  --accent-soft:#DCEAE6;
+  --live:#2F7A4F; --live-bg:#E2F0E6;
+  --draft:#9A6A12; --draft-bg:#F6EBD3;
+  --absent:#8A8F8B; --absent-bg:#E6E8E5;
+  --warn:#A33A28;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131816; --panel:#1A201D; --panel-2:#222925;
+    --ink:#E6EAE6; --ink-2:#A8B1AB; --ink-faint:#6F7A74;
+    --line:#2C332F; --line-soft:#242B27;
+    --accent:#5FBFAC; --accent-soft:#1B322D;
+    --live:#63BE86; --live-bg:#17301F;
+    --draft:#D7A54A; --draft-bg:#302512;
+    --absent:#7C847E; --absent-bg:#222724;
+    --warn:#E08571;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131816; --panel:#1A201D; --panel-2:#222925;
+  --ink:#E6EAE6; --ink-2:#A8B1AB; --ink-faint:#6F7A74;
+  --line:#2C332F; --line-soft:#242B27;
+  --accent:#5FBFAC; --accent-soft:#1B322D;
+  --live:#63BE86; --live-bg:#17301F;
+  --draft:#D7A54A; --draft-bg:#302512;
+  --absent:#7C847E; --absent-bg:#222724;
+  --warn:#E08571;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding-inline:20px; padding-block:0 72px}
+code,.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- header ---------- */
+header.top{padding-block:44px 28px; border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px
+}
+h1{
+  font-size:clamp(2rem,5.2vw,2.9rem); line-height:1.04; margin:0 0 14px;
+  font-weight:600; letter-spacing:-.022em; text-wrap:balance;
+}
+h1 .fil{color:var(--accent)}
+.lede{margin:0; max-width:62ch; color:var(--ink-2); font-size:16px}
+.lede em{color:var(--ink); font-style:normal; font-weight:500}
+
+/* ---------- tally ---------- */
+.tally{display:flex; flex-wrap:wrap; gap:10px; margin-top:26px}
+.tally button{
+  all:unset; cursor:pointer; display:flex; align-items:baseline; gap:9px;
+  padding:9px 14px; border:1px solid var(--line); border-radius:2px;
+  background:var(--panel); transition:border-color .14s, background .14s;
+}
+.tally button:hover{border-color:var(--accent)}
+.tally button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.tally button[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent)}
+.tally .n{font-family:"JetBrains Mono",monospace; font-weight:700; font-size:19px; font-variant-numeric:tabular-nums}
+.tally .lab{font-size:12.5px; color:var(--ink-2)}
+.tally .dot{width:7px;height:7px;border-radius:50%;align-self:center}
+.d-live{background:var(--live)} .d-draft{background:var(--draft)} .d-absent{background:var(--absent)}
+
+.searchrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px}
+#q{
+  flex:1 1 220px; min-width:0; font:inherit; font-size:14px; color:var(--ink);
+  background:var(--panel); border:1px solid var(--line); border-radius:2px; padding:9px 12px;
+}
+#q:focus{outline:none; border-color:var(--accent)}
+#q::placeholder{color:var(--ink-faint)}
+.clearbtn{
+  all:unset; cursor:pointer; font-size:12.5px; color:var(--ink-faint);
+  border-bottom:1px solid var(--line); padding-bottom:1px;
+}
+.clearbtn:hover{color:var(--accent); border-color:var(--accent)}
+.clearbtn:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+
+/* ---------- layer sections ---------- */
+section.layer{padding-block:34px 4px; border-bottom:1px solid var(--line-soft)}
+.layer-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+.layer-head h2{
+  margin:0; font-size:17px; font-weight:600; letter-spacing:-.01em;
+}
+.layer-head .idx{
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--accent);
+  letter-spacing:.1em;
+}
+.layer-head .sub{margin:0; font-size:13px; color:var(--ink-faint); flex:1 1 240px}
+
+.rows{display:flex; flex-direction:column; gap:0; margin-top:14px}
+.row{
+  display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1.9fr) auto;
+  gap:6px 20px; align-items:start;
+  padding-block:15px; border-top:1px solid var(--line-soft);
+}
+.row:first-child{border-top:none}
+.nm{display:flex; flex-direction:column; gap:4px; min-width:0}
+.nm b{font-weight:600; font-size:14.5px; letter-spacing:-.005em}
+.meta{display:flex; flex-wrap:wrap; gap:4px 10px; font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink-faint)}
+.meta .port{color:var(--accent)}
+.role{margin:0; font-size:13.5px; color:var(--ink-2); min-width:0}
+.role .path{font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink-faint)}
+
+.chip{
+  font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.09em;
+  text-transform:uppercase; padding:4px 8px; border-radius:2px; white-space:nowrap;
+  align-self:start; font-weight:500;
+}
+.c-live{background:var(--live-bg); color:var(--live)}
+.c-draft{background:var(--draft-bg); color:var(--draft)}
+.c-absent{background:var(--absent-bg); color:var(--absent)}
+
+/* the gotcha: a hanging note, not a card */
+.note{
+  grid-column:1 / -1; margin:8px 0 0; padding-left:13px;
+  border-left:2px solid var(--warn); font-size:13px; color:var(--ink-2);
+  max-width:78ch;
+}
+.note b{color:var(--ink); font-weight:600}
+
+.empty{padding:34px 0; color:var(--ink-faint); font-size:14px}
+
+/* ---------- decisions ---------- */
+.block{padding-block:44px}
+.block > h2{
+  font-size:20px; margin:0 0 6px; font-weight:600; letter-spacing:-.015em;
+}
+.block > .sub{margin:0 0 22px; color:var(--ink-2); font-size:14px; max-width:64ch}
+.scroll-x{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table.dec{border-collapse:collapse; width:100%; min-width:560px; font-size:13.5px}
+table.dec th{
+  text-align:left; font-family:"JetBrains Mono",monospace; font-size:10.5px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint);
+  font-weight:500; padding:0 16px 9px 0; border-bottom:1px solid var(--line);
+}
+table.dec td{padding:11px 16px 11px 0; border-bottom:1px solid var(--line-soft); vertical-align:top}
+table.dec td:first-child{color:var(--ink-2); width:38%}
+table.dec td.pick{font-weight:500}
+table.dec td.pick .via{
+  display:block; font-family:"JetBrains Mono",monospace; font-size:11px;
+  color:var(--ink-faint); font-weight:400; margin-top:2px;
+}
+
+/* ---------- ports ---------- */
+.ports{display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:1px; background:var(--line-soft); border:1px solid var(--line-soft)}
+.pcell{background:var(--panel); padding:12px 13px; display:flex; flex-direction:column; gap:2px}
+.pcell .p{font-family:"JetBrains Mono",monospace; font-weight:700; font-size:15px; color:var(--accent); font-variant-numeric:tabular-nums}
+.pcell .s{font-size:12.5px; color:var(--ink)}
+.pcell .w{font-size:11.5px; color:var(--ink-faint)}
+
+/* ---------- limits ---------- */
+.limits{display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); gap:26px 34px}
+.limit h3{
+  margin:0 0 5px; font-size:14px; font-weight:600;
+  display:flex; align-items:baseline; gap:8px;
+}
+.limit h3 .num{
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--warn);
+  letter-spacing:.06em;
+}
+.limit p{margin:0; font-size:13.5px; color:var(--ink-2)}
+.limit p code{font-size:12px; color:var(--ink)}
+
+footer{padding-block:34px 0; border-top:1px solid var(--line); color:var(--ink-faint); font-size:12.5px}
+footer p{margin:0 0 6px; max-width:70ch}
+
+@media (max-width:640px){
+  .row{grid-template-columns:1fr auto; gap:5px 12px}
+  .role{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="eyebrow">Repo mycel</p>
+  <h1>Mycel <span class="fil">Stack</span></h1>
+  <p class="lede">
+    <em>Compose</em> — dựng được ngay. <em>Thiết kế</em> — mới có config, chưa chạy.
+    <em>Chưa cài</em> — đã chốt, <code>pyproject.toml</code> vẫn rỗng.
+  </p>
+
+  <div class="tally" id="tally"></div>
+  <div class="searchrow">
+    <input id="q" type="search" placeholder="Tìm: kafka, qdrant, probe…" autocomplete="off">
+    <button class="clearbtn" id="reset" type="button">Bỏ lọc</button>
+  </div>
+</header>
+
+<main id="layers"></main>
+
+<section class="block">
+  <h2>Vấn đề → quyết định</h2>
+  <div class="scroll-x">
+    <table class="dec">
+      <thead><tr><th>Vấn đề</th><th>Quyết định</th></tr></thead>
+      <tbody id="dec"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="block">
+  <h2>Cổng đang chiếm</h2>
+  <div class="ports" id="ports"></div>
+</section>
+
+<section class="block">
+  <h2>Trần cứng và bẫy im lặng</h2>
+  <p class="sub">Sáu thứ không báo lỗi khi sai — chỉ chạy sai.</p>
+  <div class="limits" id="limits"></div>
+</section>
+
+<footer>
+  <p>
+    Nguồn: <code>docker-compose.yml</code> · <code>deploy/</code> · <code>src/mycel/</code>.
+    Mục tiêu: on-premise hết — ngoài lượt gọi LLM cuối, không gì cần cloud.
+  </p>
+</footer>
+</div>
+
+<script>
+const S = {live:'Compose', draft:'Thiết kế', absent:'Chưa cài'};
+
+const LAYERS = [
+ {id:'app', idx:'L1', name:'Ứng dụng', sub:'Đường request — tính bằng giây', items:[
+  {n:'FastAPI', v:'', port:'8000', role:'Vỏ HTTP. Endpoint nằm trong <span class="path">managers/*/controller.py</span>.', st:'absent',
+   note:'Chỉ tự viết <b>một</b> middleware: <code>request_id</code>. Và pure ASGI — <code>BaseHTTPMiddleware</code> buffer response nên nghẽn SSE.'},
+  {n:'uvicorn', v:'', port:'8000', role:'ASGI server.', st:'absent'},
+  {n:'Pydantic AI', v:'', port:'', role:'Khung chạy agent: vòng lặp tool, streaming, hook, MCP, retry schema.', st:'absent',
+   note:'Đã chốt nhưng <b>chưa phản ánh vào code</b> — <span class="path">agents/core/</span> vẫn viết như phải tự dựng hết.'},
+  {n:'Pydantic', v:'v2', port:'', role:'Hợp đồng dữ liệu: schema HTTP và schema nội bộ.', st:'absent'},
+ ]},
+
+ {id:'data', idx:'L2', name:'Lưu trữ', sub:'Ba kho, ba loại dữ liệu', items:[
+  {n:'PostgreSQL', v:'16-alpine', port:'5432', role:'State giao dịch. Một DB, ba schema <code>raw</code> · <code>silver</code> · <code>gold</code>. Agent chỉ đọc gold.', st:'live',
+   note:'Pool size tính theo <b>tổng số process</b>, không theo từng process. Vượt <code>max_connections</code> thì chỉ lỗi lúc tải cao.'},
+  {n:'Qdrant', v:'latest', port:'6333', role:'Vector store. Embedding sinh từ gold.', st:'live',
+   note:'Quyền xem là <b>filter của Qdrant</b>, không lọc sau khi lấy top-k.'},
+  {n:'MinIO', v:'latest', port:'9000 · 9001', role:'Object store S3 API. Postgres giữ metadata, bucket giữ nội dung.', st:'live',
+   note:'Luôn stream. <code>read()</code> cả file thì OOM worker, mà Kafka giao lại đúng job đó — lặp vô hạn.'},
+  {n:'Alembic', v:'', port:'', role:'Migration, mỗi thay đổi schema một revision.', st:'absent',
+   note:'Chạy <b>trước</b> code mới ⇒ schema phải tương thích ngược một bậc.'},
+ ]},
+
+ {id:'queue', idx:'L3', name:'Hàng đợi job', sub:'API không chờ LLM', items:[
+  {n:'Apache Kafka', v:'3.9.0 · KRaft', port:'9092', role:'Topic <code>jobs</code>. Tầng job ở <span class="path">src/mycel/queue/</span>.', st:'live',
+   note:'Là <b>log có thứ tự, không phải hàng đợi task</b>. Tự làm: retry bằng topic theo bậc, đếm retry trong header, delay bằng consumer ngủ, nâng <code>max.poll.interval.ms</code> (mặc định 5 phút &lt; thời gian sinh báo cáo).'},
+  {n:'Kafka consumer', v:'', port:'', role:'Service <code>worker</code>.', st:'live',
+   note:'Commit <b>sau</b> khi job xong ⇒ at-least-once ⇒ idempotency key bắt buộc, và phải suy từ nội dung việc, không phải UUID mới.'},
+ ]},
+
+ {id:'ai', idx:'L4', name:'Inference', sub:'Local gánh số lượng, cloud lo suy luận', items:[
+  {n:'vLLM', v:'profile local-llm', port:'8001', role:'Endpoint OpenAI-compatible. Tắt mặc định.', st:'live',
+   note:'Máy dev GTX 1660 Ti 6GB: Turing không bf16 nên <code>--dtype float16</code>, context phải ngắn.'},
+  {n:'Qwen2.5-3B-Instruct', v:'AWQ 4-bit', port:'', role:'Phân loại, trích entity, tóm tắt, sinh embedding.', st:'live',
+   note:'3B <b>không</b> đủ viết báo cáo — gánh số lượng, không gánh kết luận.'},
+  {n:'Cloud LLM', v:'để mở', port:'', role:'Suy luận cuối. Chọn qua env.', st:'absent',
+   note:'<span class="path">llm/client.py</span> là file <b>duy nhất</b> được import SDK provider.'},
+ ]},
+
+ {id:'obs', idx:'L5', name:'Theo dõi hệ thống', sub:'Biết hệ đang chạy thế nào, và hỏng thì hỏng ở đâu', items:[
+  {n:'OpenTelemetry SDK', v:'', port:'', role:'Chuẩn chung để app ghi lại nó đang làm gì.', st:'absent',
+   note:'<code>tracing.setup()</code> phải chạy <b>trước</b> <code>instrument_app()</code>, không thì span rơi vào provider rỗng — im lặng.'},
+  {n:'OTel Collector', v:'contrib', port:'4317', role:'Điểm gom duy nhất. App chỉ biết một địa chỉ OTLP.', st:'live'},
+  {n:'Tempo', v:'latest', port:'3200', role:'Lưu <b>trace</b> — đường đi của một request. Trả lời <em>hỏng ở đâu</em>.', st:'live',
+   note:'Một yêu cầu báo cáo là <b>một</b> cây span: HTTP → queue → worker → agent → lượt gọi model.'},
+  {n:'Prometheus', v:'latest', port:'9090', role:'Lưu <b>số đo</b> theo thời gian — độ trễ, tỷ lệ lỗi. Trả lời <em>có đang hỏng không</em>.', st:'live'},
+  {n:'Loki', v:'latest', port:'3100', role:'Lưu <b>log</b> — stack trace, payload provider trả về. Trả lời <em>hỏng vì sao</em>.', st:'live',
+   note:'<code>trace_id</code> nằm trong <b>nội dung</b> dòng JSON, không làm label — label vô hạn giá trị thì Loki sinh vô hạn stream.'},
+  {n:'Promtail', v:'latest', port:'', role:'Gom stdout container đẩy sang Loki.', st:'live',
+   note:'App chỉ in JSON ra stdout, nên không module nào biết Loki tồn tại.'},
+  {n:'Grafana', v:'latest', port:'3000', role:'Dashboard + datasource, provision từ <span class="path">deploy/grafana/</span>.', st:'live',
+   note:'Nối ba tín hiệu nhờ <code>trace_id</code> có ở cả ba.'},
+  {n:'Langfuse (quy ước)', v:'', port:'', role:'Thuộc tính LLM trên span: model, token, chi phí.', st:'absent'},
+ ]},
+
+ {id:'platform', idx:'L6', name:'Nền tảng on-prem', sub:'Compose cho máy dev; cụm dùng cùng image qua Helm', items:[
+  {n:'Kubernetes (k3s)', v:'', port:'', role:'replicas · self-healing · autoscale · Service có DNS ổn định.', st:'draft',
+   note:'Self-healing chỉ đúng khi probe đúng: pod treo mà mở cổng thì K8s coi là khoẻ. <code>vllm</code> bắt buộc có <code>startupProbe</code>.'},
+  {n:'HPA + KEDA', v:'', port:'', role:'Tự thêm pod khi tải tăng.', st:'draft',
+   note:'<code>api</code> theo CPU; <code>worker</code> theo <b>Kafka lag</b> (chờ I/O nên CPU thấp); <code>vllm</code> không autoscale.'},
+  {n:'StatefulSet + PVC', v:'', port:'', role:'Postgres, Kafka, Qdrant, MinIO.', st:'draft',
+   note:'On-prem tự lo lớp storage (local-path hoặc Longhorn) — phần tốn công nhất khi bỏ cloud.'},
+  {n:'Helm', v:'chart 0.1.0', port:'', role:'Chart có version + values theo env. <span class="path">deploy/helm/</span>', st:'draft',
+   note:'<code>version</code> là của chart, <code>appVersion</code> là SHA image — rollback chart không rollback code. <code>templates/</code> chưa có manifest thật.'},
+  {n:'Argo CD', v:'', port:'', role:'Git là nguồn sự thật. <span class="path">deploy/argocd/</span>', st:'draft',
+   note:'<code>prune</code> đặt <code>false</code> cho mọi thứ có state — prune mất PVC Postgres thì git không cứu được. Staging tự sync, prod người bấm.'},
+  {n:'Harbor', v:'', port:'', role:'Registry nội bộ + quét CVE, ký ảnh, proxy cache. <span class="path">deploy/registry/</span>', st:'draft',
+   note:'Proxy cache là lý do thực dụng nhất: cụm dựng lại được khi mất mạng ra ngoài. Tag = SHA, không <code>latest</code>.'},
+ ]},
+
+ {id:'dev', idx:'L7', name:'Công cụ', sub:'CI và máy dev', items:[
+  {n:'uv', v:'', port:'', role:'Dependency + venv.', st:'live'},
+  {n:'ruff', v:'E·F·I·UP·B', port:'', role:'Lint + sắp import, line-length 100.', st:'live'},
+  {n:'mypy', v:'strict', port:'', role:'Kiểm kiểu trên <code>src</code>.', st:'live'},
+  {n:'pytest', v:'', port:'', role:'Test code.', st:'live',
+   note:'Không bắt được báo cáo kém đi — đó là việc của <span class="path">evals/</span>.'},
+  {n:'GitHub Actions', v:'', port:'', role:'Lint · kiểu · migration · test. Build image tag theo SHA.', st:'live',
+   note:'Eval gọi model thật nên chỉ chạy khi PR đụng <span class="path">prompts/</span> hoặc <span class="path">llm/</span>.'},
+  {n:'Docker', v:'python:3.11-slim', port:'', role:'Một image cho mọi môi trường.', st:'live'},
+ ]},
+];
+
+const DEC = [
+ ['User request cần response ngay','FastAPI','trả job_id, không chờ'],
+ ['Document ingestion mất vài phút','Kafka + worker','commit sau khi xong'],
+ ['Search knowledge base','Qdrant','embedding từ gold'],
+ ['Transactional state','PostgreSQL 16','một DB, ba schema'],
+ ['Large files','MinIO','S3 API, presigned URL'],
+ ['LLM inference đắt','vLLM + gọi theo lô','local gánh việc khối lượng lớn'],
+ ['API cần scale','Deployment.replicas','nhiều pod sau một Service'],
+ ['Pod chết','K8s self-healing','ba probe, không phải một'],
+ ['Traffic tăng','HPA','worker theo Kafka lag'],
+ ['Service gọi nhau','K8s Service','DNS name ổn định'],
+ ['Deployment reproducibility','Helm','chart version + values theo env'],
+ ['Deployment automation','Argo CD','git là nguồn sự thật'],
+ ['Debug request qua 5 service','OpenTelemetry','một trace, W3C traceparent'],
+ ['Detect latency spike','Prometheus','kéo metrics từ collector'],
+ ['Debug application error','Loki','Promtail gom stdout'],
+ ['Private container images','Harbor','+ proxy cache, quét CVE'],
+];
+
+const PORTS = [
+ ['8000','api','FastAPI'],['5432','postgres','PostgreSQL 16'],['9092','kafka','broker'],
+ ['6333','qdrant','HTTP + dashboard'],['9000','minio','S3 API'],['9001','minio','console'],
+ ['8001','vllm','OpenAI-compatible'],['4317','otel-collector','OTLP gRPC'],
+ ['9090','prometheus','UI + query'],['3100','loki','push + query'],['3000','grafana','dashboard'],
+];
+
+const LIMITS = [
+ ['01','Partition là trần của song song','6 partition thì worker thứ 7 ngồi không. Tăng được, <b>không giảm</b>.'],
+ ['02','scheduler luôn 1 replica','Hai cái thì mỗi lịch bắn hai lần. Phải <code>Recreate</code>, không <code>RollingUpdate</code>.'],
+ ['03','Trace đứt ở ranh giới process','<code>contextvars</code> không qua được process. Không inject/extract thì Grafana hiện <b>hai</b> trace rời nhau — không lỗi nào báo.'],
+ ['04','Budget cộng ở hook','Usage sub-agent không tự cộng lên agent cha. Đếm ở call site thì agent con lọt sổ.'],
+ ['05','BaseHTTPMiddleware nghẽn SSE','Nó buffer response. Token về thành một cục ở cuối, không báo gì.'],
+ ['06','vllm không autoscale','Mỗi pod giữ một GPU. Hết GPU thì pod mới chỉ <code>Pending</code>.'],
+];
+
+let filter = null;
+
+function counts(){
+  const c = {live:0, draft:0, absent:0};
+  LAYERS.forEach(l => l.items.forEach(i => c[i.st]++));
+  return c;
+}
+
+function renderTally(){
+  const c = counts();
+  document.getElementById('tally').innerHTML = ['live','draft','absent'].map(k =>
+    `<button type="button" data-st="${k}" aria-pressed="${filter===k}">
+       <span class="dot d-${k}"></span>
+       <span class="n">${c[k]}</span>
+       <span class="lab">${S[k]}</span>
+     </button>`).join('');
+  document.querySelectorAll('#tally button').forEach(b => b.onclick = () => {
+    filter = (filter === b.dataset.st) ? null : b.dataset.st;
+    renderTally(); renderLayers();
+  });
+}
+
+function renderLayers(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const strip = h => h.replace(/<[^>]+>/g,'');
+  const html = LAYERS.map(L => {
+    const items = L.items.filter(i => {
+      if (filter && i.st !== filter) return false;
+      if (!q) return true;
+      return strip(i.n+' '+i.v+' '+i.role+' '+(i.note||'')+' '+L.name).toLowerCase().includes(q);
+    });
+    if (!items.length) return '';
+    return `<section class="layer">
+      <div class="layer-head">
+        <span class="idx">${L.idx}</span>
+        <h2>${L.name}</h2>
+        <p class="sub">${L.sub}</p>
+      </div>
+      <div class="rows">${items.map(i => `
+        <div class="row">
+          <div class="nm">
+            <b>${i.n}</b>
+            <span class="meta">${i.v?`<span>${i.v}</span>`:''}${i.port?`<span class="port">:${i.port}</span>`:''}</span>
+          </div>
+          <p class="role">${i.role}</p>
+          <span class="chip c-${i.st}">${S[i.st]}</span>
+          ${i.note?`<p class="note">${i.note}</p>`:''}
+        </div>`).join('')}</div>
+    </section>`;
+  }).join('');
+  document.getElementById('layers').innerHTML = html ||
+    `<p class="empty">Không khớp gì. <button class="clearbtn" type="button" onclick="document.getElementById('reset').click()">Bỏ lọc</button></p>`;
+}
+
+document.getElementById('dec').innerHTML = DEC.map(([p,c,v]) =>
+  `<tr><td>${p}</td><td class="pick">${c}<span class="via">${v}</span></td></tr>`).join('');
+
+document.getElementById('ports').innerHTML = PORTS.map(([p,s,w]) =>
+  `<div class="pcell"><span class="p">${p}</span><span class="s">${s}</span><span class="w">${w}</span></div>`).join('');
+
+document.getElementById('limits').innerHTML = LIMITS.map(([n,h,b]) =>
+  `<div class="limit"><h3><span class="num">${n}</span>${h}</h3><p>${b}</p></div>`).join('');
+
+document.getElementById('q').addEventListener('input', renderLayers);
+document.getElementById('reset').onclick = () => {
+  filter = null; document.getElementById('q').value = '';
+  renderTally(); renderLayers();
+};
+
+renderTally(); renderLayers();
+</script>
+</body>
+</html>

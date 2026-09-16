@@ -1,0 +1,30 @@
+# Đọc log stdout của mọi container rồi đẩy sang Loki.
+# App in JSON ra stdout là đủ — không module nào phải biết Loki tồn tại.
+
+server:
+  http_listen_port: 9080
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 10s
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container
+    pipeline_stages:
+      # Log của app là JSON có sẵn trace_id — bóc ra làm label để nhảy
+      # thẳng từ dòng log sang trace trong Tempo.
+      - json:
+          expressions:
+            level: level
+            trace_id: trace_id
+            job_id: job_id
+      - labels:
+          level:
+      # trace_id KHÔNG làm label: cardinality vô hạn sẽ giết index của Loki.
+      # Nó nằm trong nội dung dòng log, Grafana vẫn bắt được bằng derived field.
