@@ -5,6 +5,10 @@ description = "Multi-agent system tổng hợp báo cáo và dashboard từ nhi�
 requires-python = ">=3.11"
 dependencies = []
 
+# Công cụ dev: CI chạy trên runner sạch, không khai ở đây thì không có gì để chạy.
+[dependency-groups]
+dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8.0"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

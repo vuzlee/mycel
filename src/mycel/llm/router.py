@@ -8,9 +8,9 @@ Ranh giới:
 Gọi LLM ở nơi khác đều phải đi qua đây, không import thẳng SDK provider.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class Tier(str, Enum):
+class Tier(StrEnum):
     LOCAL = "local"
     CLOUD = "cloud"

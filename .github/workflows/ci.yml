@@ -27,11 +27,13 @@ jobs:
       - name: Kiểu dữ liệu
         run: uv run mypy
 
-      - name: Migration chạy được
-        run: uv run alembic upgrade head
+      # Migration: bật lại khi có alembic.ini và migrations/env.py.
+      # - name: Migration chạy được
+      #   run: uv run alembic upgrade head
 
+      # Exit 5 = chưa có test nào. Bỏ dòng `|| [ $? -eq 5 ]` khi tests/ có bài đầu tiên.
       - name: Test
-        run: uv run pytest
+        run: uv run pytest || [ $? -eq 5 ]
 
   # Eval tốn tiền (gọi model thật) nên chỉ chạy khi PR đụng vào prompt hoặc tầng llm.
   evals:
