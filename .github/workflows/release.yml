@@ -19,6 +19,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # type=gha cache needs the docker-container driver; the default docker
+      # driver cannot export cache.
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
           push: true
