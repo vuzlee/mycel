@@ -1,21 +1,27 @@
-"""Nền chung của riêng `agents/`: khung chạy agent, phần không dính nghiệp vụ.
+"""Shared foundation for `agents/` alone: the agent runtime, everything with no business
+logic in it.
 
-Cùng khuôn với `mycel/core/` nhưng hẹp hơn một tầng — cái kia là nền chung của toàn hệ.
+Same shape as `mycel/core/` but one level narrower — that one is the foundation for the
+whole system.
 
-Tách khỏi các agent cùng cấp trên (`orchestrator.py`, `analyst.py`...) vì hai thứ đổi với
-nhịp khác nhau: cách stream token hay cách gắn trace gần như không đổi, còn prompt thì đổi
-liên tục. Lẫn vào nhau thì mỗi lần sửa prompt phải đọc lại code streaming.
+Kept apart from the agents one level up (`orchestrator.py`, `analyst.py`...) because the
+two change at different rates: how runs are wired barely changes, while prompts change
+constantly. Mixed together, every prompt edit means re-reading runtime code.
 
-  agent.py         vòng chạy: message -> model -> tool -> output
-  run_context.py   thứ một lượt chạy mang theo: job_id, budget, session DB, trace
-  config.py        chọn model, tham số sinh, giới hạn vòng lặp
-  model_builder.py spec '<tier>:<model_name>' -> client đã sẵn sàng gọi
-  schemas.py       hợp đồng nội bộ giữa agent, tool và streaming
-  hooks.py         trước/sau mỗi run: gắn trace, log usage, cộng budget
-  guards.py        chặn vòng lặp vô hạn, model lặp chính nó, output sai schema
-  exceptions.py    lỗi của khung
-  streaming/       trả kết quả dần
-  integrations/    nối với tool và agent bên ngoài
+  config.py        model choice, generation parameters, loop limits
+  model_builder.py spec '<tier>:<model_name>' -> a client ready to call
+  deps.py          what a single run carries: job_id, budget, settings
+  guards.py        stop a model repeating itself
+  runner.py        the one place a top-level run starts: budget, limits, error translation
+  exceptions.py    the framework's errors
+  integrations/    wiring to external tools and agents
 
-Không import ngược lên các agent hay `tools/` — chiều phụ thuộc một hướng.
+**Built on pydantic-ai.** The agent loop, message types, streaming and usage accounting are
+the framework's; this package is only the part that is specific to Mycel. That is why there
+is no `agent.py`, no `schemas.py` and no `streaming/` — `Agent`, `ModelMessage` and
+`run_stream_events()` replace them outright. Mycel code imports `RunContext`, `ModelRetry`
+and `UsageLimits` directly rather than wrapping them; a pass-through layer would only add
+bugs on top of theirs.
+
+Never imports back up into the agents or `tools/` — dependencies point one way.
 """
