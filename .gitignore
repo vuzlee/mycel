@@ -9,12 +9,12 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
-# Môi trường - không bao giờ commit
+# Environment - never commit
 .env
 config/*-local.ini
 
-# Claude - giữ memory, bỏ setting cá nhân
-.claude/settings.local.json
+# Local assistant/editor state, not part of the project
+.claude/
 
 # OS / editor
 .DS_Store
