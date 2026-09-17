@@ -24,18 +24,18 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
-      - name: Kiểu dữ liệu
+      - name: Type check
         run: uv run mypy
 
-      # Migration: bật lại khi có alembic.ini và migrations/env.py.
-      # - name: Migration chạy được
+      # Migrations: re-enable once alembic.ini and migrations/env.py exist.
+      # - name: Migrations apply cleanly
       #   run: uv run alembic upgrade head
 
-      # Exit 5 = chưa có test nào. Bỏ dòng `|| [ $? -eq 5 ]` khi tests/ có bài đầu tiên.
       - name: Test
-        run: uv run pytest || [ $? -eq 5 ]
+        run: uv run pytest
 
-  # Eval tốn tiền (gọi model thật) nên chỉ chạy khi PR đụng vào prompt hoặc tầng llm.
+  # Evals cost money (they call the real model), so only run when a PR touches
+  # prompts or the llm layer.
   evals:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

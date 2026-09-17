@@ -1,33 +1,38 @@
-"""Middleware tự viết — chỉ có một: gắn `request_id` cho mỗi request.
+"""Hand-written middleware — exactly one: attach a `request_id` to every request.
 
-Những thứ còn lại **không tự viết**, vì đã có sẵn và tự viết là bảo trì lại thứ đã chuẩn hoá:
+Everything else is **not** hand-written, because it already exists and rewriting it
+means maintaining a re-implementation of something already standardised:
 
-  tracing      `FastAPIInstrumentor.instrument_app(app)` — theo đúng semantic convention
-               của OTel (`http.route`, `http.status_code`), tự viết sẽ lệch
-  CORS         `CORSMiddleware` của Starlette
-  lỗi          `@app.exception_handler(...)` — cơ chế riêng của FastAPI, không phải middleware
-  rate limit   Nginx/ingress chặn trước khi chạm app; cần theo user thì dùng `slowapi`
-  xác thực     `Depends()` — xem `dependencies.py`, ở đó nói vì sao không để ở đây
+  tracing      `FastAPIInstrumentor.instrument_app(app)` — follows OTel semantic
+               conventions (`http.route`, `http.status_code`); a hand-rolled one drifts
+  CORS         Starlette's `CORSMiddleware`
+  errors       `@app.exception_handler(...)` — FastAPI's own mechanism, not middleware
+  rate limit   Nginx/ingress blocks before reaching the app; use `slowapi` for per-user
+  auth         `Depends()` — see `dependencies.py`, which explains why it is not here
 
-Vì sao `request_id` vẫn phải tự viết: phần giá trị là đặt id vào `contextvars` để
-`observability/logging.py` tự đọc, nhờ vậy controller không phải viết
-`log.info(..., request_id=rid)` ở từng dòng. Logger là của mình nên đoạn nối đó không
-thư viện nào làm hộ; đã vậy thì viết luôn, khỏi thêm dependency.
+Why `request_id` still has to be hand-written: the value is in putting the id into
+`contextvars` so `observability/logging.py` picks it up on its own, which keeps
+controllers from writing `log.info(..., request_id=rid)` on every line. The logger is
+ours, so no library can wire that up for us; given that, writing it directly beats
+adding a dependency.
 
-Có sẵn trong header thì dùng lại id đó (giữ được chuỗi khi đi qua nhiều service), không
-thì sinh mới. Trả về trong response header để người báo lỗi đưa đúng id cần tra.
+Reuse the id from the header when present (preserving the chain across services),
+otherwise generate one. Return it in the response header so whoever reports a problem
+has the exact id to look up.
 
-**Viết dạng pure ASGI, đừng dùng `BaseHTTPMiddleware`.** Cái đó buffer response nên làm
-nghẽn SSE — mà `agents/core/streaming/` sinh ra chính là để stream. Lỗi này không báo gì,
-chỉ là token về thành một cục ở cuối.
+**Write it as pure ASGI, not `BaseHTTPMiddleware`.** That one buffers the response and
+so stalls SSE, and agent output is meant to reach the client as it is produced. This
+failure is silent: tokens just arrive as one lump at the end.
 
-**`contextvars` (built-in của Python, không phải của FastAPI) chỉ đi theo async task.**
-Ranh giới nó không vượt qua:
+**`contextvars` (Python built-in, not a FastAPI feature) follows the async task only.**
+Boundaries it does not cross:
 
-    await                   giữ nguyên — cùng task
-    create_task()           task con copy context lúc tạo; con set lại thì cha không thấy
-    run_in_executor/thread  KHÔNG tự mang theo, phải truyền tay
-    process khác            mất hẳn — xem `queue/__init__.py`
+    await                   preserved — same task
+    create_task()           child copies the context at creation; a child's set is
+                            invisible to the parent
+    run_in_executor/thread  NOT carried over, must be passed explicitly
+    another process         gone entirely — see `queue/__init__.py`
 
-Dòng cuối là chỗ gặp thật: job chạy ở worker process khác, nên id không tự đi theo.
+That last line is the one we actually hit: jobs run in a separate worker process, so the
+id does not travel with them.
 """

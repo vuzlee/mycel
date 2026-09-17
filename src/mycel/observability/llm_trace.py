@@ -1,14 +1,21 @@
-"""Gắn thuộc tính riêng của LLM lên span, theo quy ước Langfuse đọc được.
+"""Attach LLM-specific attributes to spans, following the conventions Langfuse reads.
 
-Một lượt gọi model là một span con; input, output, model, token, chi phí nằm trên đó.
-Một yêu cầu báo cáo vì vậy là một cây: HTTP -> pipeline -> queue -> worker ->
-orchestrator -> từng agent -> từng lượt gọi model. Báo cáo sai số thì lần ngược được về
-đúng lượt gọi đã sinh ra nó.
+One model call is one child span; input, output, model, tokens and cost live on it. A
+report request is therefore a tree: HTTP -> pipeline -> queue -> worker -> orchestrator ->
+each agent -> each model call. When a report gets a number wrong, it can be traced back to
+the exact call that produced it.
 
-Cây đó chỉ liền khi hai chỗ làm đúng: `queue/context.py` nối qua ranh giới process, và
-`agents/core/hooks.py` gọi vào đây cho mọi run kể cả agent con. Thiếu một chỗ là trace
-gãy làm đôi mà không báo lỗi.
+**pydantic-ai already emits most of this.** `Agent.instrument_all()`, called from
+`observability/tracing.py`, produces a span per agent run and per model call carrying the
+GenAI semantic-convention attributes — model, tokens, cost. So this module is not the
+source of those spans, and there is no hook here that every run must remember to call.
 
-Chỗ gọi vào là `agents/core/hooks.py`; phần còn lại của hệ thống không cần biết tên
-thuộc tính.
+What is left for this file is the part upstream cannot know: Mycel's own attributes
+(`job_id`, budget remaining, which tier the router picked) and any Langfuse-specific
+naming that the GenAI conventions do not cover. It is docstring-only until something
+needs one of those.
+
+The tree is still only whole if `queue/context.py` bridges the process boundary — a
+worker that starts a fresh trace leaves the request half of the story unlinked, and
+nothing raises an error when it happens.
 """
