@@ -1,8 +1,8 @@
-"""Truy vấn: k-NN kèm lọc theo metadata (nguồn, khoảng thời gian, quyền xem).
+"""Queries: k-NN with metadata filters (source, time window, view permissions).
 
-Lọc phải làm **trong** Qdrant chứ không lọc sau khi lấy top-k: lấy 10 kết quả rồi
-mới bỏ những cái không được phép xem thì có khi còn 2. Quyền là filter, không phải
-bước hậu xử lý.
+Filtering must happen **inside** Qdrant, not after top-k comes back: fetch 10 results, then
+drop the ones the user may not see, and you might be left with 2. Permissions are a filter,
+not a post-processing step.
 
-Agent gọi qua tool `agents/tools/`, không import thẳng module này.
+Agents call this through a tool in `agents/tools/`, never by importing this module directly.
 """

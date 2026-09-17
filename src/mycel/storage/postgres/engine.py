@@ -1,6 +1,6 @@
-"""Tạo engine và connection pool, một lần lúc khởi động.
+"""Create the engine and connection pool, once at startup.
 
-Pool size phải tính theo tổng số process, không theo từng process: `api` chạy
-N worker uvicorn, `worker` scale theo partition Kafka — mỗi cái giữ pool riêng.
-Cộng lại vượt `max_connections` của Postgres thì lỗi chỉ hiện lúc tải cao.
+Pool size must be sized against the total process count, not per process: `api` runs N
+uvicorn workers and `worker` scales with Kafka partitions — each holds its own pool. Summed
+past Postgres's `max_connections`, the error only shows up under load.
 """

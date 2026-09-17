@@ -1,33 +1,34 @@
-"""Nơi ráp toàn bộ tầng HTTP lại.
+"""Where the whole HTTP layer is assembled.
 
-`uvicorn mycel.api.app:app` trỏ vào đây. Đây là file duy nhất biết hệ thống có
-những miền nào:
+`uvicorn mycel.api.app:app` points here. This is the only file that knows which
+domains the system has:
 
     include_router(managers.report.controller.router)
     include_router(managers.sync.controller.router)
     include_router(health.router)
 
-Thêm một miền = thêm một thư mục trong managers/ và một dòng ở đây. Không đụng
-miền đang có.
+Adding a domain = one directory under managers/ and one line here. Existing domains
+stay untouched.
 
-File này chỉ lắp ráp: tạo app, gắn router, bật middleware, nối observability.
-Không chứa endpoint, không chứa nghiệp vụ.
+This file only assembles: create the app, mount routers, enable middleware, wire
+observability. No endpoints, no business logic.
 
-Phần lắp ráp, gần như toàn là gọi thư viện có sẵn:
+The assembly, almost entirely off-the-shelf calls:
 
-    observability.tracing.setup()          dựng OTel một lần, TRƯỚC mọi thứ khác
-    FastAPIInstrumentor.instrument_app()   span gốc cho mỗi request
-    add_middleware(RequestIdMiddleware)    cái duy nhất tự viết
-    add_middleware(CORSMiddleware)         origin đọc từ config theo môi trường
-    add_exception_handler(...)             một hình dạng lỗi duy nhất, kèm request_id,
-                                           không rò traceback ra ngoài
+    observability.tracing.setup()          set up OTel once, BEFORE anything else
+    FastAPIInstrumentor.instrument_app()   root span per request
+    add_middleware(RequestIdMiddleware)    the only hand-written one
+    add_middleware(CORSMiddleware)         origins read from per-environment config
+    add_exception_handler(...)             one error shape, carrying request_id,
+                                           never leaking a traceback
 
-`tracing.setup()` phải chạy trước khi instrument, nếu không span rơi vào provider rỗng —
-không lỗi, chỉ là trace trống.
+`tracing.setup()` must run before instrumenting, otherwise spans land in an empty
+provider — no error, just empty traces.
 
-Thứ tự gắn có ý nghĩa: `request_id` phải ngoài cùng, để span và mọi dòng log sinh ra sau
-đó đều có id mà gắn vào. Starlette chạy middleware theo thứ tự **ngược** với lúc
-`add_middleware` — cái thêm sau nằm ngoài, nên `request_id` thêm *sau* các middleware khác.
+Mount order matters: `request_id` must be outermost, so spans and every log line
+produced afterwards have an id to attach. Starlette runs middleware in **reverse**
+order of `add_middleware`, so what is added last sits outermost — which is why
+`request_id` is added *after* the others.
 
-Xác thực không nằm ở đây: nó là `Depends()`, xem `dependencies.py`.
+Auth is not here: it is a `Depends()`, see `dependencies.py`.
 """

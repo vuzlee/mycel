@@ -1,4 +1,5 @@
-"""Nói chuyện với agent của hệ khác qua giao thức agent-to-agent.
+"""Talk to another system's agent over an agent-to-agent protocol.
 
-Để sau, khi có hệ thứ hai cần gọi tới. Đặt file ở đây để biết chỗ, chưa dùng.
+Deferred until there is a second system to call. The file is here to mark the place; not
+in use.
 """

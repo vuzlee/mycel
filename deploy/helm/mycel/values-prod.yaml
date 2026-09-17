@@ -1,5 +1,5 @@
-# Đè lên values.yaml. Chỉ ghi cái KHÁC mặc định.
-# Không có secret nào trong file này — chart chỉ tham chiếu tên Secret.
+# Overrides values.yaml. Lists only what DIFFERS from the defaults.
+# No secrets in this file — the chart only references Secret names.
 
 api:
   replicas: 4

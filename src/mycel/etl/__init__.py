@@ -1,8 +1,8 @@
-"""Các bước biến đổi dữ liệu: raw -> silver -> gold.
+"""The data transformation steps: raw -> silver -> gold.
 
-Đây là ETL chạy nền theo lịch, không phải chuỗi xử lý request. Chuỗi nghiệp vụ
-của một request nằm ở managers/<miền>/pipeline.py.
+This is scheduled background ETL, not a request-handling chain. A request's business chain
+lives in managers/<domain>/pipeline.py.
 
-Mỗi bước là một hàm thuần: đọc tầng dưới, ghi tầng trên, idempotent — chạy lại
-hai lần cho cùng kết quả. checks/ kiểm tra sau mỗi bước.
+Each step is a pure function: read the layer below, write the layer above, idempotent —
+running it twice gives the same result. checks/ verifies after each step.
 """

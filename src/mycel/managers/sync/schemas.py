@@ -1,1 +1,1 @@
-"""Hình dạng dữ liệu vào/ra qua HTTP của miền đồng bộ."""
+"""The shape of data in and out over HTTP for the sync domain."""

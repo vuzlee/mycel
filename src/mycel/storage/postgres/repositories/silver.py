@@ -1,5 +1,5 @@
-"""Đọc raw, ghi silver: đã chuẩn hoá schema, khử trùng lặp, ép kiểu.
+"""Read raw, write silver: normalised schema, deduplicated, types coerced.
 
-Khử trùng lặp dựa trên khoá tự nhiên của nguồn (message id, thread id), không
-dựa trên hash cả bản ghi — provider sửa một trường là hash đổi, thành bản ghi mới.
+Deduplicate on the source's natural key (message id, thread id), not on a hash of the whole
+record — a provider editing one field changes the hash and it becomes a new record.
 """

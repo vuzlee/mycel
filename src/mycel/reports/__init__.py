@@ -1,4 +1,4 @@
-"""Dựng artifact cuối từ kết quả agent: báo cáo văn bản, bảng số liệu, dashboard.
+"""Build the final artifact from agent results: prose reports, data tables, dashboards.
 
-Agent trả về nội dung; tầng này quyết định nó trông như thế nào và lưu ở đâu.
+Agents return content; this layer decides what it looks like and where it is stored.
 """

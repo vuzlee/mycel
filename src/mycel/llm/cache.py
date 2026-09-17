@@ -1,5 +1,5 @@
-"""Cache theo nội dung prompt.
+"""Cache keyed on prompt content.
 
-Cùng prompt + cùng model + cùng tham số = trả lại kết quả cũ, không gọi lại.
-Chạy lại pipeline hay debug một báo cáo không phải trả tiền hai lần.
+Same prompt + same model + same parameters = return the previous result without calling
+again. Re-running a pipeline or debugging a report does not pay twice.
 """

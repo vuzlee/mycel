@@ -1,9 +1,9 @@
 apiVersion: v2
 name: mycel
-description: Multi-agent system tổng hợp báo cáo từ nhiều nguồn dữ liệu
+description: Multi-agent system that builds reports from multiple data sources
 type: application
 
-# version = version của chart (sửa template thì tăng)
-# appVersion = commit SHA của image (CI ghi đè lúc build)
+# version = the chart's version (bump it when templates change)
+# appVersion = the image's commit SHA (CI overwrites it at build time)
 version: 0.1.0
 appVersion: "0.1.0"

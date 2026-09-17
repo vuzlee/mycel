@@ -1,8 +1,8 @@
-"""Endpoint HTTP của miền đồng bộ.
+"""HTTP endpoints for the sync domain.
 
-  POST /sync/{source}   kéo một nguồn ngay, không đợi lịch
-  GET  /sync/status     lần sync gần nhất của từng nguồn
+  POST /sync/{source}   pull one source now, without waiting for the schedule
+  GET  /sync/status     the most recent sync per source
 
-Chủ yếu dùng khi debug hoặc khi cần dữ liệu mới gấp. Đường chính là
-scheduler/ tự gọi pipeline theo giờ, không qua HTTP.
+Mostly used when debugging or when fresh data is needed urgently. The main path is
+scheduler/ calling the pipeline on a timer, with no HTTP involved.
 """

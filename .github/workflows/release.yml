@@ -1,7 +1,7 @@
 name: Release
 
-# Build image một lần, tag bằng commit SHA. Mọi môi trường deploy đúng image đó -
-# không build lại, nên staging và prod chạy cùng bytes.
+# Build the image once, tagged by commit SHA. Every environment deploys that exact
+# image instead of rebuilding, so staging and prod run identical bytes.
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     permissions: {contents: read}
     steps:
       - uses: actions/checkout@v4
-      # Token Docker Hub scope Read & Write, lưu ở repo secrets.
+      # Docker Hub token with Read & Write scope, stored in repo secrets.
       - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}

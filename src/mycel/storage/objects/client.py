@@ -1,5 +1,6 @@
-"""Client S3 dùng chung, và ký presigned URL.
+"""The shared S3 client, and presigned URL signing.
 
-Presigned URL là lý do chính để tách object store: API trả cho client một URL có
-hạn thay vì tự đọc file rồi stream lại. File 200MB không đi qua process API.
+Presigned URLs are the main reason to separate the object store: the API hands the client a
+time-limited URL instead of reading the file and streaming it back itself. A 200MB file
+never passes through the API process.
 """

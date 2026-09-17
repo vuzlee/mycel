@@ -1,5 +1,7 @@
-"""Kiểm tra sau mỗi bước ETL: thiếu cột, null bất thường, số đếm lệch quá ngưỡng.
+"""Verification after each ETL step: missing columns, unexpected nulls, row counts off
+beyond the threshold.
 
-Fail thì dừng, không ghi lên tầng trên. Provider đổi schema mà không báo là chuyện
-thường; không check thì gold hỏng lặng lẽ và agent tự tin báo cáo số sai.
+On failure it stops and does not write to the layer above. Providers change schema without
+warning all the time; without checks, gold breaks silently and the agent confidently reports
+wrong numbers.
 """

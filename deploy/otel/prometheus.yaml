@@ -1,5 +1,5 @@
-# Prometheus kéo metrics từ collector, không kéo thẳng từ app.
-# App chỉ gửi OTLP tới một địa chỉ duy nhất; collector lo phần còn lại.
+# Prometheus scrapes metrics from the collector, not from the app directly.
+# The app ships OTLP to one address; the collector handles the rest.
 
 global:
   scrape_interval: 15s

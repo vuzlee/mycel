@@ -1,6 +1,6 @@
-"""put/get/xoá, đọc ghi theo luồng.
+"""put/get/delete, streaming reads and writes.
 
-Luôn stream, không `read()` cả file vào RAM: một PDF 200MB nhân với vài job chạy
-song song là đủ giết worker bằng OOM — mà Kafka sẽ coi đó là worker chết rồi chạy
-lại chính job đó, lặp vô hạn.
+Always stream, never `read()` a whole file into RAM: one 200MB PDF times a few concurrent
+jobs is enough to kill a worker with OOM — and Kafka will read that as a dead worker and
+re-run the very same job, looping forever.
 """

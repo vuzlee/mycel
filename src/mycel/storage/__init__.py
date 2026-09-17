@@ -1,17 +1,17 @@
-"""Ba kho lưu trữ, ba loại dữ liệu khác nhau. Mọi truy cập đi qua đây.
+"""Three stores, three kinds of data. All access goes through here.
 
-  postgres/    state giao dịch: ba tầng raw/silver/gold, job, quyền
-  vectors/     embedding cho tìm kiếm knowledge base (Qdrant)
-  objects/     file lớn: PDF nguồn, báo cáo đã render (MinIO, S3 API)
+  postgres/    transactional state: the raw/silver/gold layers, jobs, permissions
+  vectors/     embeddings for knowledge base search (Qdrant)
+  objects/     large files: source PDFs, rendered reports (MinIO, S3 API)
 
-Vì sao tách ba chỗ mà không nhét hết vào Postgres:
+Why three stores rather than putting everything in Postgres:
 
-- **Vector.** `pgvector` chạy được nhưng tới vài triệu vector thì index HNSW ăn
-  RAM tranh với chính workload giao dịch trên cùng instance. Tách ra thì scale
-  hai bên độc lập.
-- **File.** Blob trong Postgres làm database phình, backup chậm, và mỗi lần đọc
-  phải kéo cả file qua connection của pool. Object store sinh ra để làm việc đó.
+- **Vectors.** `pgvector` works, but at a few million vectors the HNSW index competes for
+  RAM with the transactional workload on the same instance. Separated, the two scale
+  independently.
+- **Files.** Blobs in Postgres bloat the database, slow down backups, and every read pulls
+  the whole file through a pooled connection. Object stores exist for this.
 
-Mọi câu SQL, mọi truy vấn vector, mọi thao tác file nằm ở đây — không rải rác
-trong pipeline hay agent. Đổi schema hay đổi kho thì sửa một chỗ.
+Every SQL query, every vector query, every file operation lives here — not scattered through
+pipelines or agents. Changing schema or changing store means editing one place.
 """

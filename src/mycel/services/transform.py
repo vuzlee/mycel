@@ -1,4 +1,4 @@
-"""Chạy các bước trong etl/: raw -> silver -> gold.
+"""Run the steps in etl/: raw -> silver -> gold.
 
-Idempotent: chạy lại cùng khoảng thời gian cho cùng kết quả.
+Idempotent: re-running the same time window gives the same result.
 """

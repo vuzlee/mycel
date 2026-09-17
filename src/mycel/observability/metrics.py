@@ -1,4 +1,4 @@
-"""Metrics Prometheus: độ trễ sync, số bản ghi mỗi tầng, token đã dùng, tỷ lệ job lỗi.
+"""Prometheus metrics: sync latency, record counts per layer, tokens spent, job failure rate.
 
-Metrics trả lời "có đang hỏng không", trace trả lời "hỏng ở đâu". Cần cả hai.
+Metrics answer "is something broken", traces answer "where". Both are needed.
 """

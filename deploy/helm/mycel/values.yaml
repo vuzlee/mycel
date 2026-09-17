@@ -1,10 +1,10 @@
-# Mặc định: đủ để chart chạy được, không hợp với môi trường thật nào.
-# Mỗi môi trường đè lên bằng values-<env>.yaml.
+# Defaults: enough to make the chart run, suited to no real environment.
+# Each environment overrides them with values-<env>.yaml.
 
 image:
-  # Registry nội bộ — xem deploy/registry/
+  # Internal registry — see deploy/registry/
   repository: harbor.internal/mycel/mycel
-  tag: ""            # CI set = commit SHA. Để trống thì fallback về appVersion
+  tag: ""            # CI sets this to the commit SHA. Empty falls back to appVersion
   pullPolicy: IfNotPresent
   pullSecret: harbor-creds
 
@@ -27,28 +27,28 @@ worker:
   autoscaling:
     enabled: true
     minReplicas: 2
-    # KHÔNG vượt số partition của topic: pod thừa sẽ ngồi không.
+    # Do NOT exceed the topic's partition count: surplus pods sit idle.
     maxReplicas: 6
-    # Scale theo consumer lag, không theo CPU — worker chờ I/O là chính.
+    # Scale on consumer lag, not CPU — workers are mostly waiting on I/O.
     kafkaLagThreshold: 100
 
 scheduler:
-  # Luôn 1. Hai scheduler = mỗi lịch bắn hai lần.
+  # Always 1. Two schedulers = every schedule fires twice.
   replicas: 1
   strategy: Recreate
 
 vllm:
-  # Tắt mặc định. Bật thì cụm phải có node gắn GPU + device plugin của NVIDIA.
+  # Off by default. Enabling it requires GPU nodes plus NVIDIA's device plugin.
   enabled: false
   gpuCount: 1
   model: Qwen/Qwen2.5-3B-Instruct-AWQ
-  # Nạp model mất vài phút — không có startupProbe thì liveness giết pod
-  # trước khi nó kịp sẵn sàng, và lặp mãi.
+  # Loading the model takes minutes — without a startupProbe, liveness kills the pod
+  # before it is ready, forever.
   startupProbe:
     failureThreshold: 60
     periodSeconds: 10
 
-# Kho có state: StatefulSet + PVC, không phải Deployment.
+# Stateful stores: StatefulSet + PVC, not Deployment.
 postgres: {enabled: true, storage: 50Gi}
 kafka:    {enabled: true, storage: 20Gi, partitions: 6}
 qdrant:   {enabled: true, storage: 20Gi}

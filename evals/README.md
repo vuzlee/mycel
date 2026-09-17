@@ -1,26 +1,26 @@
 # Evals
 
-Test thường bắt lỗi code. Eval bắt lỗi **chất lượng** — báo cáo không sai cú pháp,
-chỉ là kém hơn bản trước. Không có eval thì đổi prompt là đoán mò.
+Tests catch broken code. Evals catch broken **quality** — a report with no syntax error that
+is simply worse than the last one. Without evals, changing a prompt is guesswork.
 
 ## Golden set
 
-`golden/` chứa các cặp *đầu vào → đầu ra mong đợi* lấy từ ca thật:
+`golden/` holds *input → expected output* pairs taken from real cases:
 
 ```
 golden/
-  weekly-summary-01.yaml    # dữ liệu gold mẫu + báo cáo con người chấp nhận được
+  weekly-summary-01.yaml    # sample gold data + a report a human found acceptable
 ```
 
-Mỗi lần đổi prompt, đổi model, hay nâng version agent: chạy lại toàn bộ golden set,
-so điểm với lần chạy trước.
+Every time a prompt changes, a model changes, or an agent version is bumped: re-run the whole
+golden set and compare scores against the previous run.
 
-## Chấm điểm
+## Scoring
 
-| Loại | Chấm thế nào |
+| Kind | How it is scored |
 |---|---|
-| Có cấu trúc | So trực tiếp — trích đúng số liệu, đúng ngày, đúng tên |
-| Văn xuôi | LLM chấm theo rubric, kèm người xem lại mẫu ngẫu nhiên |
+| Structured | Direct comparison — right figures, right dates, right names |
+| Prose | An LLM scores against a rubric, with humans reviewing a random sample |
 
-Ghi điểm từng lần chạy để thấy xu hướng. Một bản prompt làm điểm tụt là chặn merge,
-không phải để bàn cảm tính.
+Record each run's scores to see the trend. A prompt that drops the score blocks the merge; it
+is not a matter of taste.

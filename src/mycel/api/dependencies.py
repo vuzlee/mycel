@@ -1,13 +1,15 @@
-"""Thứ controller khai qua `Depends()`: xác thực, session DB, phân trang.
+"""What controllers declare via `Depends()`: auth, DB session, pagination.
 
-**Xác thực để ở đây chứ không phải middleware**, vì `Depends()` hơn ở ba điểm:
+**Auth lives here rather than in middleware**, because `Depends()` wins on three counts:
 
-  - Middleware chạy cho *mọi* route, nên phải tự duy trì danh sách loại trừ `/health`,
-    `/docs`, `/openapi.json`. Dependency thì route nào khai mới có.
-  - Dependency vào được OpenAPI schema — `/docs` hiện ổ khoá, client sinh code biết cần token.
-  - Controller nhận thẳng `user: User = Depends(current_user)`, có kiểu, mypy strict kiểm
-    được. Middleware chỉ nhét vào `request.state` — mypy không thấy gì.
+  - Middleware runs for *every* route, so it has to carry its own exclusion list for
+    `/health`, `/docs`, `/openapi.json`. A dependency applies only where declared.
+  - Dependencies reach the OpenAPI schema — `/docs` shows a padlock, and generated
+    clients know a token is required.
+  - A controller receives `user: User = Depends(current_user)` directly: typed, and
+    checkable under mypy strict. Middleware only stuffs things into `request.state`,
+    where mypy sees nothing.
 
-Dependency chỉ trả lời *anh là ai*; còn *anh được xem báo cáo nào* là việc của
-`services/permission.py`, vì nó cần ngữ cảnh nghiệp vụ mà tầng HTTP không có.
+A dependency answers only *who you are*; *which reports you may see* belongs to
+`services/permission.py`, which needs business context the HTTP layer does not have.
 """

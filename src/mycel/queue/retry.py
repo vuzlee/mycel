@@ -1,18 +1,19 @@
-"""Retry theo tầng và dead-letter — trên Kafka phải tự dựng, không có sẵn.
+"""Tiered retry and dead-letter — on Kafka these must be built by hand.
 
-Không seek lại offset cũ: một job hỏng sẽ chặn mọi job sau nó trong cùng partition. Thay
-vào đó chuyển job sang topic khác rồi commit tiếp, partition chảy tiếp bình thường:
+Do not seek back to an old offset: one bad job would block every job behind it in the same
+partition. Instead move the job to another topic and commit onward, so the partition keeps
+flowing:
 
-    jobs            lần đầu
-    jobs.retry.1m   chờ ~1 phút rồi thử lại
-    jobs.retry.10m  lâu hơn
-    jobs.dlq        hết lượt — giữ lại để xem, không mất âm thầm
+    jobs            first attempt
+    jobs.retry.1m   wait ~1 minute, then retry
+    jobs.retry.10m  longer
+    jobs.dlq        out of attempts — kept for inspection, not silently dropped
 
-Số lần đã retry đếm trong header của message, vì bản thân Kafka không đếm hộ.
+The retry count is tracked in the message headers, since Kafka does not count for us.
 
-Chờ thực hiện bằng cách consumer của topic retry ngủ tới khi message đủ tuổi rồi mới xử
-lý — Kafka không có delayed message như RabbitMQ.
+The wait is implemented by the retry topic's consumer sleeping until the message is old
+enough — Kafka has no delayed messages like RabbitMQ.
 
-Trace context đi theo header qua cả bốn topic, nên một job vào được `jobs.dlq` vẫn mở lại
-được trace từ lúc người dùng bấm nút.
+Trace context travels in the headers across all four topics, so a job that lands in
+`jobs.dlq` can still have its trace reopened from the moment the user pressed the button.
 """

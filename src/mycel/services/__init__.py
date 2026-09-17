@@ -1,11 +1,11 @@
-"""Một file = một việc đơn lẻ, làm xong một chuyện.
+"""One file = one single job, done once.
 
-Service là mắt xích; pipeline trong managers/ là chuỗi ghép các mắt xích lại.
-Vì vậy service phải dùng lại được: `gather.py` phục vụ cả miền báo cáo lẫn miền đồng bộ.
+A service is a link; the pipelines in managers/ chain those links together. So a service
+must be reusable: `gather.py` serves both the report domain and the sync domain.
 
-Service không biết mình đang nằm trong chuỗi nào, cũng không biết ai gọi nó — HTTP hay
-scheduler đều như nhau. Luật nghiệp vụ phức tạp (transform, suy luận, dựng artifact) nằm
-ở etl/, agents/, reports/; service chỉ gọi tới.
+A service does not know which chain it sits in, nor who called it — HTTP and scheduler
+look the same. Complex business rules (transforms, reasoning, building artifacts) live in
+etl/, agents/, reports/; a service only calls into them.
 
-Tên file là động từ, không có hậu tố `_service` — đã nằm trong `services/` rồi.
+File names are verbs, with no `_service` suffix — they are already in `services/`.
 """

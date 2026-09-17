@@ -1,6 +1,7 @@
-"""Health check.
+"""Health checks.
 
-  /health/live   — process còn sống không. Dùng cho restart policy.
-  /health/ready  — có sẵn sàng nhận request không (DB kết nối được, migration đã chạy).
-                   Dùng cho load balancer, tránh đẩy traffic vào instance chưa sẵn sàng.
+  /health/live   — is the process alive. Used by the restart policy.
+  /health/ready  — is it ready to take requests (DB reachable, migrations applied).
+                   Used by the load balancer, to avoid sending traffic to an instance
+                   that is not ready yet.
 """

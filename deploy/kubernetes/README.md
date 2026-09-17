@@ -1,75 +1,76 @@
 # Kubernetes — on-premise
 
-Toàn bộ stack chạy trên cụm tự dựng, không phụ thuộc cloud nào.
+The whole stack runs on a self-hosted cluster, with no dependency on any cloud.
 
-## Compose và Kubernetes dùng để làm gì
+## What Compose and Kubernetes are each for
 
-| | Chạy ở | Dùng khi |
+| | Runs on | Used for |
 |---|---|---|
-| `docker-compose.yml` | máy lập trình viên | code, debug, chạy thử |
-| `deploy/helm/` | cụm K8s on-prem | staging, prod |
+| `docker-compose.yml` | a developer's machine | writing code, debugging, trying things out |
+| `deploy/helm/` | the on-prem K8s cluster | staging, prod |
 
-Hai file khác nhau nhưng **cùng một image** và cùng một bộ biến môi trường. Không
-có nhánh `if env == "prod"` trong code.
+Two different files, but the **same image** and the same set of environment variables. There is
+no `if env == "prod"` branch in the code.
 
-## Dựng cụm
+## Standing up a cluster
 
-Chưa có cụm thì chọn một trong hai:
+With no cluster yet, pick one of two:
 
-| | Hợp với |
+| | Suits |
 |---|---|
-| **k3s** | 1–3 máy vật lý. Một binary, kèm sẵn ingress và local-path storage |
-| **kubeadm** | cụm nhiều node, cần kiểm soát từng thành phần |
+| **k3s** | 1–3 physical machines. One binary, ingress and local-path storage included |
+| **kubeadm** | multi-node clusters where every component needs to be controlled |
 
-Dự án đang nhắm **k3s**: đủ cho vài node, và ít thứ phải bảo trì.
+This project targets **k3s**: enough for a few nodes, and less to maintain.
 
-## Vì sao cần K8s chứ không phải compose trên host thật
+## Why K8s rather than compose on a real host
 
-Bốn thứ compose không làm được, và cũng là bốn dòng cuối trong bảng yêu cầu:
+Four things compose cannot do — and the same four requirements at the bottom of the list:
 
-| Cần | K8s làm bằng |
+| Requirement | How K8s does it |
 |---|---|
-| API scale được | `Deployment.replicas` — nhiều pod sau một Service |
-| Pod chết thì tự sống lại | kubelet restart container; Deployment dựng lại pod mất hẳn |
-| Traffic tăng thì tự thêm pod | `HorizontalPodAutoscaler` theo CPU hoặc metric tuỳ chỉnh |
-| Service gọi nhau | `Service` — một DNS name ổn định, load-balance sẵn |
+| The API can scale | `Deployment.replicas` — many pods behind one Service |
+| A dead pod comes back | kubelet restarts the container; the Deployment recreates a lost pod |
+| More traffic adds pods | `HorizontalPodAutoscaler` on CPU or a custom metric |
+| Services can reach each other | `Service` — one stable DNS name, load-balanced already |
 
-`docker compose up -d` restart container chết được, nhưng không dời việc sang máy
-khác khi **máy** chết, và không tự tăng giảm theo tải.
+`docker compose up -d` can restart a dead container, but it cannot move the work to another
+machine when the **machine** dies, and it does not scale with load.
 
-## Self-healing chỉ hoạt động khi probe đúng
+## Self-healing only works when the probes are right
 
-Pod treo mà vẫn mở cổng thì K8s coi là khoẻ — không restart, và Service vẫn đẩy
-request vào đó. Nên mỗi service phải khai:
+A hung pod that still has its port open looks healthy to K8s — no restart, and the Service keeps
+sending requests to it. So every service must declare:
 
-| Probe | Trả lời câu | Fail thì |
+| Probe | Answers | On failure |
 |---|---|---|
-| `readinessProbe` | nhận request được chưa | rút khỏi Service, pod vẫn sống |
-| `livenessProbe` | còn cứu được không | restart container |
-| `startupProbe` | khởi động xong chưa | hoãn hai probe trên |
+| `readinessProbe` | can it take requests yet | pulled from the Service, pod stays alive |
+| `livenessProbe` | is it still recoverable | container restarted |
+| `startupProbe` | has it finished booting | delays the other two |
 
-`startupProbe` quan trọng với `vllm`: nạp model mất vài phút, không có nó thì
-liveness giết pod trước khi nó kịp sẵn sàng, lặp mãi.
+`startupProbe` matters for `vllm`: loading the model takes minutes, and without it liveness
+kills the pod before it is ever ready, forever.
 
-## HPA: mỗi service một cách đo
+## HPA: a different measure per service
 
-| Service | Scale theo | Vì sao không theo CPU |
+| Service | Scales on | Why not CPU |
 |---|---|---|
-| `api` | CPU | đúng loại tải: nhiều request nhỏ |
-| `worker` | **consumer lag của Kafka** | worker ngồi chờ I/O, CPU thấp trong khi hàng đợi dồn |
-| `vllm` | **không autoscale** | mỗi pod giữ một GPU; không có GPU rảnh thì thêm pod cũng chỉ Pending |
+| `api` | CPU | the right kind of load: many small requests |
+| `worker` | **Kafka consumer lag** | workers wait on I/O, CPU stays low while the queue backs up |
+| `vllm` | **no autoscaling** | each pod holds a GPU; with no free GPU an extra pod only sits Pending |
 
-Scale `worker` theo lag cần metric ngoài, lấy qua KEDA hoặc prometheus-adapter.
+Scaling `worker` on lag needs an external metric, via KEDA or prometheus-adapter.
 
-**Trần cứng:** số worker chạy thật = min(replica, số partition). Topic 6 partition
-thì HPA đẩy lên 10 pod cũng chỉ 6 pod có việc — xem `KAFKA_NUM_PARTITIONS` trong
-`docker-compose.yml`. Đặt `maxReplicas` bằng số partition.
+**Hard ceiling:** actual working workers = min(replicas, partition count). With a 6-partition
+topic, an HPA pushing to 10 pods still leaves only 6 with work — see `KAFKA_NUM_PARTITIONS` in
+`docker-compose.yml`. Set `maxReplicas` to the partition count.
 
-## Stateful chạy ở đâu
+## Where the stateful services run
 
-Postgres, Kafka, Qdrant, MinIO đều giữ dữ liệu. Trong cụm thì chạy dạng
-`StatefulSet` + `PersistentVolumeClaim`, **không** phải `Deployment`: cần danh tính
-ổn định và volume gắn đúng pod cũ sau khi restart.
+Postgres, Kafka, Qdrant and MinIO all hold data. In the cluster they run as `StatefulSet` +
+`PersistentVolumeClaim`, **not** `Deployment`: they need a stable identity and a volume that
+reattaches to the same pod after a restart.
 
-On-prem thì phải tự lo lớp storage (local-path của k3s, hoặc Longhorn nếu muốn
-volume theo pod sang được máy khác). Đây là phần tốn công nhất khi bỏ cloud.
+On-prem means providing the storage layer yourself (k3s local-path, or Longhorn if a pod's
+volume should be able to follow it to another machine). This is the most labour-intensive part
+of leaving the cloud.

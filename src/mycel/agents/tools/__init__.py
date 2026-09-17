@@ -1,11 +1,12 @@
-"""Tool: năng lực agent gọi được.
+"""Tools: the capabilities an agent can call.
 
-  query_gold.py     truy vấn tầng gold qua storage/postgres/
-  search_docs.py    tìm knowledge base qua storage/vectors/
-  chart.py          dựng spec biểu đồ
-  compute.py        phần trăm, tăng trưởng, thống kê cơ bản
+  query_gold.py     query the gold layer via storage/postgres/
+  search_docs.py    search the knowledge base via storage/vectors/
+  chart.py          build a chart spec
+  compute.py        percentages, growth, basic statistics
 
-Hai cách tra cứu, hai loại câu hỏi: `query_gold` trả lời câu có số liệu chính xác
-("doanh thu quý 3"), `search_docs` trả lời câu mơ hồ ("ai đã bàn về vụ này").
-Nhầm chỗ thì agent đi tìm số bằng tìm kiếm ngữ nghĩa và bịa ra con số gần đúng.
+Two ways to look things up, two kinds of question: `query_gold` answers anything needing
+exact figures ("Q3 revenue"), `search_docs` answers vague ones ("who discussed this").
+Pick the wrong one and the agent goes looking for numbers via semantic search, then
+invents one that looks about right.
 """

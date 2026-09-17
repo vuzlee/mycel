@@ -1,12 +1,12 @@
-"""File lớn: PDF nguồn, ảnh đính kèm, báo cáo đã render. Backend: MinIO (S3 API).
+"""Large files: source PDFs, attachments, rendered reports. Backend: MinIO (S3 API).
 
-  client.py    kết nối, ký URL
-  buckets.py   khai báo bucket và vòng đời lưu trữ
-  files.py     put/get/xoá, đọc ghi theo luồng
+  client.py    connection, URL signing
+  buckets.py   bucket declarations and storage lifecycle
+  files.py     put/get/delete, streaming reads and writes
 
-Dùng S3 API nên chuyển sang S3 thật (hoặc R2, GCS-compat) chỉ là đổi endpoint và
-credential — không sửa code.
+Using the S3 API means moving to real S3 (or R2, or a GCS-compatible store) is an endpoint
+and credential change — no code change.
 
-Postgres giữ **metadata** của file (ai sở hữu, thuộc báo cáo nào, key trong bucket);
-bucket giữ **nội dung**. Không bao giờ ngược lại.
+Postgres holds a file's **metadata** (who owns it, which report it belongs to, its key in
+the bucket); the bucket holds the **content**. Never the other way round.
 """

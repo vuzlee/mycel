@@ -1,15 +1,15 @@
-"""Chuỗi nghiệp vụ của miền báo cáo.
+"""The report domain's business chain.
 
-Pipeline định nghĩa *thứ tự* các bước; mỗi bước là một service làm một việc:
+A pipeline defines the *order* of steps; each step is a service doing one thing:
 
   request_report()
-    1. permission_service    người này được xem nguồn này không
-    2. queue_service         đẩy job, trả job_id
-                             --- worker nhận job, chạy tiếp ---
-    3. gather_service        truy vấn gold lấy dữ liệu cần
-    4. analyze_service       giao cho agents/ phân tích
-    5. render_service        dựng artifact qua reports/
+    1. permission service    may this person see this source
+    2. enqueue service       push the job, return a job_id
+                             --- a worker picks the job up and continues ---
+    3. gather service        query gold for the data needed
+    4. analyze service       hand it to agents/ for analysis
+    5. render service        build the artifact via reports/
 
-Pipeline không tự làm việc gì, chỉ ghép service lại. Service dùng lại được ở
-pipeline khác — gather_service cũng phục vụ miền sync.
+The pipeline does no work itself, it only chains services together. Services are reusable
+across pipelines — the gather service also serves the sync domain.
 """

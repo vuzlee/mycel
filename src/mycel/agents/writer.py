@@ -1,4 +1,5 @@
-"""Agent viết phần chữ của báo cáo từ kết quả của `analyst.py`.
+"""Agent that writes the prose of a report from `analyst.py`'s results.
 
-Chỉ được dùng số đã có sẵn trong input. Cần thêm số thì trả về yêu cầu, không tự suy ra.
+May only use numbers already present in its input. If it needs more, it returns a request
+rather than deriving them itself.
 """

@@ -1,8 +1,8 @@
-"""Connector tới từng provider: Slack, Gmail, Confluence...
+"""Connectors to individual providers: Slack, Gmail, Confluence...
 
-Mỗi provider một module, cùng một interface: nhận khoảng thời gian cần sync, trả bản ghi
-thô, ghi xuống `raw`. Không làm sạch, không chuẩn hoá — việc đó của `etl/`.
+One module per provider, all with the same interface: take the time window to sync, return
+raw records, write them down to `raw`. No cleaning, no normalising — that is `etl/`'s job.
 
-Thêm nguồn mới = thêm một file ở đây, không sửa code cũ. Cấu hình riêng của từng nguồn
-(endpoint, scope, rate limit) nằm ở `config/sources/`.
+Adding a source = adding a file here, with no changes to existing code. Per-source
+configuration (endpoint, scopes, rate limits) lives in `config/sources/`.
 """

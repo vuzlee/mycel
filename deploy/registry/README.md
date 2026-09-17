@@ -1,44 +1,44 @@
-# Harbor — registry ảnh nội bộ
+# Harbor — internal image registry
 
-Cụm on-prem thì ảnh cũng phải ở trong nhà: không phụ thuộc Docker Hub, không đụng
-rate limit, và ảnh chứa code nội bộ thì không đẩy lên registry công cộng.
+An on-prem cluster needs its images in-house too: no dependency on Docker Hub, no rate limits,
+and images containing internal code do not go to a public registry.
 
-## Ngoài chỗ chứa ảnh, Harbor cho thêm
+## What Harbor adds beyond storing images
 
-| | Vì sao cần |
+| | Why it is needed |
 |---|---|
-| Quét lỗ hổng (Trivy) | chặn đẩy ảnh có CVE nghiêm trọng, tự quét lại khi có CVE mới |
-| Ký ảnh (Cosign) | cụm chỉ chạy ảnh CI ký — ai đó push tay thì không lên được |
-| Proxy cache | `docker.io/postgres:16` kéo một lần, lần sau lấy trong nhà |
-| Chính sách dọn | mỗi commit một tag, không dọn thì đĩa đầy trong vài tháng |
-| RBAC + audit log | ai đẩy ảnh nào lúc nào |
+| Vulnerability scanning (Trivy) | blocks pushing images with critical CVEs, rescans when new CVEs land |
+| Image signing (Cosign) | the cluster only runs CI-signed images — a hand-pushed one never starts |
+| Proxy cache | `docker.io/postgres:16` is pulled once, then served locally |
+| Retention policy | one tag per commit; without cleanup the disk fills within months |
+| RBAC + audit log | who pushed which image when |
 
-Proxy cache là lý do thực dụng nhất: mọi image bên thứ ba trong `docker-compose.yml`
-(postgres, kafka, qdrant, minio, grafana...) đều đi qua Harbor, nên cụm dựng lại
-được kể cả khi mất mạng ra ngoài.
+The proxy cache is the most practical reason: every third-party image in `docker-compose.yml`
+(postgres, kafka, qdrant, minio, grafana, …) goes through Harbor, so the cluster can be rebuilt
+even with no outbound network.
 
-## Project
+## Projects
 
 ```
-mycel/           ảnh của app, tag = commit SHA
-dockerhub/       proxy cache của docker.io
-ghcr/            proxy cache của ghcr.io
+mycel/           the app's images, tag = commit SHA
+dockerhub/       proxy cache for docker.io
+ghcr/            proxy cache for ghcr.io
 ```
 
-## Quy tắc tag
+## Tagging rule
 
-Tag = **commit SHA**, không bao giờ `latest`. `latest` khiến hai pod cùng manifest
-chạy hai code khác nhau, và rollback thì không biết lùi về đâu.
+Tag = **commit SHA**, never `latest`. `latest` lets two pods with the same manifest run
+different code, and leaves rollback with no version to go back to.
 
-## Cụm kéo ảnh thế nào
+## How the cluster pulls images
 
-Harbor dùng TLS nội bộ, nên mọi node phải tin CA đó — thiếu bước này thì pod
-`ImagePullBackOff` với lỗi chứng chỉ, không phải lỗi quyền. Credential nằm trong
-`imagePullSecret` (`harbor-creds` trong `values.yaml`), tài khoản chỉ có quyền đọc:
-CI đẩy ảnh, cụm chỉ kéo.
+Harbor uses an internal TLS certificate, so every node must trust that CA — skip this and pods
+land in `ImagePullBackOff` with a certificate error, not a permissions error. Credentials live in
+an `imagePullSecret` (`harbor-creds` in `values.yaml`) on a read-only account: CI pushes, the
+cluster only pulls.
 
-## Dựng
+## Deploying it
 
-Harbor chạy ngoài stack app (compose riêng hoặc chart riêng), vì nó phải sống
-trước khi cụm kéo được ảnh đầu tiên. Không đưa vào `docker-compose.yml` của dự án —
-dev build ảnh tại chỗ, không cần registry.
+Harbor runs outside the app stack (its own compose file or chart), because it has to be alive
+before the cluster can pull its first image. It is not part of the project's
+`docker-compose.yml` — dev builds images locally and needs no registry.

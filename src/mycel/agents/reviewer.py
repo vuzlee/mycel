@@ -1,4 +1,5 @@
-"""Agent đối chiếu bản nháp với dữ liệu gốc: số có khớp không, câu nào không dẫn được về nguồn.
+"""Agent that checks the draft against the source data: do the numbers match, which
+sentences cannot be traced back to a source.
 
-Chạy sau `writer.py`, trước khi `reports/` dựng artifact cuối.
+Runs after `writer.py`, before `reports/` builds the final artifact.
 """

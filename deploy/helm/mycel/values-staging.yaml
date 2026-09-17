@@ -1,4 +1,4 @@
-# Đè lên values.yaml. Dữ liệu ẩn danh, key LLM riêng có hạn mức.
+# Overrides values.yaml. Anonymised data, its own rate-limited LLM key.
 
 api:    {replicas: 1, autoscaling: {enabled: false}}
 worker: {replicas: 1, autoscaling: {enabled: false}}

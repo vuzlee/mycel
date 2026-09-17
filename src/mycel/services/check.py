@@ -1,6 +1,7 @@
-"""Chạy etl/checks/ sau mỗi bước transform.
+"""Run etl/checks/ after every transform step.
 
-Thiếu cột, null bất thường, số đếm lệch quá ngưỡng thì raise — pipeline dừng,
-không ghi lên tầng trên. Provider đổi schema mà không báo là chuyện thường;
-không check thì gold hỏng lặng lẽ và agent tự tin báo cáo số sai.
+Missing columns, unexpected nulls, row counts off beyond the threshold — raise, so the
+pipeline stops instead of writing to the layer above. Providers change schema without
+warning all the time; without checks, gold breaks silently and the agent confidently
+reports wrong numbers.
 """

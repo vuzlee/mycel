@@ -1,3 +1,3 @@
-"""Mycel - multi-agent tổng hợp báo cáo từ nhiều nguồn dữ liệu."""
+"""Mycel - multi-agent system that builds reports from multiple data sources."""
 
 __version__ = "0.1.0"

@@ -1,14 +1,15 @@
-"""Điểm vào của hệ thống, chia theo miền nghiệp vụ.
+"""The system's entry points, split by business domain.
 
-HTTP không gọi thẳng service. Nó gọi vào manager của miền tương ứng; bên trong
-manager mới có endpoint và chuỗi nghiệp vụ:
+HTTP does not call services directly. It calls into the relevant domain's manager, and the
+endpoints and business chain live inside that manager:
 
-  managers/report/      mọi thứ liên quan tới báo cáo
-    controller.py       endpoint HTTP — nhận, validate, trả
-    pipeline.py         chuỗi nghiệp vụ — gọi lần lượt các service
+  managers/report/      everything to do with reports
+    controller.py       HTTP endpoints — receive, validate, return
+    pipeline.py         the business chain — calls services in order
 
-Thêm một miền mới = thêm một thư mục ở đây. Không đụng miền đang có.
+Adding a domain = adding a directory here. Existing domains stay untouched.
 
-Vì sao chia theo miền chứ không theo kỹ thuật: sửa một nghiệp vụ thì mở đúng
-một thư mục, không phải nhảy giữa routes/, services/ và pipeline/.
+Why split by domain rather than by technical role: changing one piece of business logic
+means opening exactly one directory, instead of hopping between routes/, services/ and
+pipeline/.
 """

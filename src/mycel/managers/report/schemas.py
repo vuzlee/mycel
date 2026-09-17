@@ -1,4 +1,4 @@
-"""Hình dạng dữ liệu vào/ra qua HTTP của miền báo cáo.
+"""The shape of data in and out over HTTP for the report domain.
 
-Khác với bảng DB — đổi cột trong gold không làm vỡ hợp đồng API.
+Distinct from the DB tables — changing a column in gold does not break the API contract.
 """

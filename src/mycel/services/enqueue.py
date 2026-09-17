@@ -1,5 +1,6 @@
-"""Đẩy một việc vào hàng đợi và trả job_id.
+"""Push one job onto the queue and return its job_id.
 
-Gói `queue/` lại thành một lời gọi: pipeline không cần biết hàng đợi chạy bằng gì.
-Mỗi job có idempotency key nên gọi hai lần không sinh hai báo cáo trùng.
+Wraps `queue/` into a single call: the pipeline need not know what the queue runs on.
+Every job carries an idempotency key, so calling twice does not produce two duplicate
+reports.
 """

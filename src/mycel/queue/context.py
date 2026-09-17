@@ -1,16 +1,19 @@
-"""Mang trace context và request_id qua ranh giới process, để trace không đứt ở hàng đợi.
+"""Carry trace context and request_id across the process boundary, so traces do not break
+at the queue.
 
-`contextvars` chỉ sống trong một process. Job đi qua Kafka sang worker là mất hết, nên
-phải đóng gói thủ công ở hai đầu:
+`contextvars` lives inside one process only. A job crossing Kafka into a worker loses all
+of it, so it has to be packed and unpacked by hand at both ends:
 
-    producer  inject()  — ghi trace context vào header của message
-    consumer  extract() — khôi phục trước khi chạy, span của job thành con của span request
+    producer  inject()  — write trace context into the message headers
+    consumer  extract() — restore it before running, making the job's span a child of the
+                          request's span
 
-Đặt ở **header**, không phải payload: header đi theo message qua cả topic retry và
-dead-letter mà không phải chạm vào nội dung job.
+Kept in **headers**, not the payload: headers travel with the message through the retry and
+dead-letter topics without anyone touching the job body.
 
-Dùng `TraceContextTextMapPropagator` của OTel (chuẩn W3C traceparent), không tự bịa
-format — cùng chuẩn với header HTTP nên sau này thêm service khác vẫn nối được.
+Uses OTel's `TraceContextTextMapPropagator` (W3C traceparent), not an invented format — the
+same standard as the HTTP header, so adding another service later still joins up.
 
-Quên một đầu thì không có lỗi nào báo: trace vẫn ghi, chỉ là thành hai cây rời nhau.
+Forget either end and nothing reports an error: traces still get written, they just become
+two disconnected trees.
 """

@@ -5,7 +5,7 @@
 
 <style>
 :root {
-  /* Đất rừng sáng */
+  /* Light forest floor */
   --ground:      #FBFAF7;
   --surface:     #F2F0E9;
   --surface-alt: #E8E5DB;
@@ -15,7 +15,7 @@
   --ink-soft:    #5A5F52;
   --ink-faint:   #868B79;
 
-  /* Ba tầng dữ liệu */
+  /* Three data layers */
   --raw:    #8B6F47;
   --silver: #5E8159;
   --gold:   #A8861B;
@@ -213,7 +213,7 @@ figcaption {
 
 .scroll-x .diagram { min-width: 620px; }
 
-/* ---------- Bảng ba tầng ---------- */
+/* ---------- Three-layer table ---------- */
 
 .layers {
   display: grid;
@@ -258,7 +258,7 @@ figcaption {
 .layer dt { color: var(--ink-faint); }
 .layer dd { margin: 0; color: var(--ink-soft); }
 
-/* ---------- Cây thư mục ---------- */
+/* ---------- Directory tree ---------- */
 
 .tree {
   display: grid;
@@ -317,7 +317,7 @@ figcaption {
 .tree-row[data-tone="silver"] .tree-path { color: var(--silver); }
 .tree-row[data-tone="gold"]   .tree-path { color: var(--gold); }
 
-/* ---------- Nguyên tắc ---------- */
+/* ---------- Principles ---------- */
 
 .rules {
   list-style: none;
@@ -347,7 +347,7 @@ figcaption {
   color: var(--ink-soft);
 }
 
-/* ---------- Bảng vận hành ---------- */
+/* ---------- Operations table ---------- */
 
 .ops {
   border: 1px solid var(--line);
@@ -375,7 +375,7 @@ figcaption {
 
 .op p { font-size: 0.8125rem; color: var(--ink-soft); }
 
-/* ---------- Mục lục ---------- */
+/* ---------- Table of contents ---------- */
 
 .toc {
   padding-top: 1.25rem;
@@ -409,7 +409,7 @@ figcaption {
 
 section, .part { scroll-margin-top: 1.5rem; }
 
-/* ---------- Mốc phần ---------- */
+/* ---------- Part markers ---------- */
 
 .part {
   display: flex;
@@ -448,7 +448,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 
 .path-note b { font-weight: 500; color: var(--ink); }
 
-/* ---------- Bảng gọn dùng chung ---------- */
+/* ---------- Shared compact table ---------- */
 
 .tbl {
   width: 100%;
@@ -528,49 +528,49 @@ footer {
 <div class="page">
 
   <header class="hero">
-    <p class="eyebrow">Bản thiết kế kiến trúc · v0.1</p>
+    <p class="eyebrow">Architecture design · v0.1</p>
     <h1>Mycel</h1>
     <p class="hero-lede">
-      Hệ multi-agent tổng hợp báo cáo và dashboard từ nhiều nguồn dữ liệu rời rạc.
-      Tên lấy từ <em>mycelium</em> — mạng sợi nấm ngầm kết nối cả khu rừng: chạy nền,
-      âm thầm gom dữ liệu, rồi mới trồi lên thành báo cáo.
+      A multi-agent system that assembles reports and dashboards from scattered data sources.
+      Named after <em>mycelium</em> — the underground fungal network connecting a whole forest: running
+      in the background, quietly gathering data, and only then surfacing as a report.
     </p>
     <div class="hero-meta">
       <span><b>Storage</b> PostgreSQL · 3 schema</span>
       <span><b>LLM</b> vLLM 3B local + cloud</span>
       <span><b>Runtime</b> Python 3.11 · Docker</span>
-      <span><b>Theo dõi</b> OTel → Tempo · Prometheus · Loki → Grafana</span>
+      <span><b>Observability</b> OTel → Tempo · Prometheus · Loki → Grafana</span>
     </div>
 
     <nav class="toc">
-      <a href="#p1"><b>Phần 1</b><span>Ý tưởng</span></a>
-      <a href="#p2"><b>Phần 2</b><span>Luồng code</span></a>
-      <a href="#p3"><b>Phần 3</b><span>Cấu trúc thư mục</span></a>
-      <a href="#p4"><b>Phần 4</b><span>Chạy thật</span></a>
+      <a href="#p1"><b>Part 1</b><span>The idea</span></a>
+      <a href="#p2"><b>Part 2</b><span>Code flow</span></a>
+      <a href="#p3"><b>Part 3</b><span>Directory layout</span></a>
+      <a href="#p4"><b>Part 4</b><span>Running for real</span></a>
     </nav>
   </header>
 
-  <!-- ============ SƠ ĐỒ PHÂN TẦNG ============ -->
+  <!-- ============ LAYER DIAGRAM ============ -->
 
   <div class="part" id="p1">
-    <span class="part-num">Phần 1</span>
-    <h2 class="part-title">Ý tưởng</h2>
-    <p class="part-blurb">Dữ liệu từ nhiều nguồn rời rạc chảy một chiều qua bốn tầng, cuối cùng thành báo cáo. Hiểu phần này là hiểu cả hệ thống làm gì.</p>
+    <span class="part-num">Part 1</span>
+    <h2 class="part-title">The idea</h2>
+    <p class="part-blurb">Data from scattered sources flows one way through four layers and ends as a report. Understand this part and you understand what the system does.</p>
   </div>
   <section id="s01">
     <div class="section-head">
-      <p class="eyebrow">1.1 · Luồng dữ liệu</p>
-      <h2>Dữ liệu chảy một chiều qua bốn tầng</h2>
+      <p class="eyebrow">1.1 · Data flow</p>
+      <h2>Data flows one way through four layers</h2>
       <p>
-        Mỗi tầng chỉ đọc tầng ngay dưới nó và ghi lên tầng ngay trên. Không có đường tắt:
-        agent không bao giờ chạm <code>raw</code> hay <code>silver</code>.
+        Each layer only reads the layer directly below it and writes to the one directly above. No shortcuts:
+        agents never touch <code>raw</code> or <code>silver</code>.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 560" role="img"
-             aria-label="Sơ đồ bốn tầng của Mycel: các provider bên ngoài đổ vào tầng thu thập sources, ghi xuống schema raw trong PostgreSQL; etl biến đổi raw thành silver rồi thành gold; agents chỉ đọc gold để sinh báo cáo; scheduler và api điều khiển từ bên cạnh; mọi tầng phát trace về OpenTelemetry Collector.">
+             aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the raw schema in PostgreSQL; etl transforms raw into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits traces to the OpenTelemetry Collector.">
           <defs>
             <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -586,9 +586,9 @@ footer {
             </marker>
           </defs>
 
-          <!-- ===== Cột trái: provider ngoài ===== -->
+          <!-- ===== Left column: external providers ===== -->
           <text x="24" y="30" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">NGUỒN NGOÀI</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">EXTERNAL SOURCES</text>
 
           <g font-family="Inter Tight, sans-serif" font-size="12" fill="var(--ink-soft)">
             <rect x="24" y="44" width="118" height="34" rx="2" fill="var(--surface)"
@@ -605,10 +605,10 @@ footer {
 
             <rect x="24" y="170" width="118" height="34" rx="2" fill="var(--surface)"
                   stroke="var(--line)" stroke-dasharray="3 3"/>
-            <text x="83" y="191" text-anchor="middle" fill="var(--ink-faint)">…provider mới</text>
+            <text x="83" y="191" text-anchor="middle" fill="var(--ink-faint)">…new provider</text>
           </g>
 
-          <!-- mũi tên provider -> sources -->
+          <!-- provider -> sources arrows -->
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none" marker-end="url(#ar-faint)">
             <path d="M 142 61  L 168 61  L 168 118 L 214 118"/>
             <path d="M 142 103 L 176 103 L 176 118 L 214 118"/>
@@ -618,25 +618,25 @@ footer {
           <text x="178" y="82" font-family="JetBrains Mono, monospace" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="middle">HTTP</text>
 
-          <!-- ===== Tầng 1: sources ===== -->
+          <!-- ===== Layer 1: sources ===== -->
           <rect x="218" y="86" width="200" height="64" rx="2"
                 fill="var(--raw-wash)" stroke="var(--raw)" stroke-width="1.4"/>
           <text x="234" y="110" font-family="JetBrains Mono, monospace" font-size="12.5"
                 fill="var(--raw)">sources/</text>
           <text x="234" y="130" font-family="Inter Tight, sans-serif" font-size="11.5"
-                fill="var(--ink-soft)">kéo về, không xử lý</text>
+                fill="var(--ink-soft)">pull in, no processing</text>
 
           <!-- sources -> raw -->
           <path d="M 318 150 L 318 196" stroke="var(--raw)" stroke-width="1.4"
                 fill="none" marker-end="url(#ar)" color="var(--raw)"/>
           <text x="328" y="177" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--raw)">ghi nguyên bản</text>
+                fill="var(--raw)">write verbatim</text>
 
-          <!-- ===== Khối PostgreSQL ===== -->
+          <!-- ===== PostgreSQL block ===== -->
           <rect x="190" y="196" width="500" height="214" rx="3"
                 fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="4 4"/>
           <text x="206" y="217" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">POSTGRESQL — MỘT DATABASE, BA SCHEMA</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">POSTGRESQL — ONE DATABASE, THREE SCHEMAS</text>
 
           <!-- raw -->
           <rect x="214" y="232" width="200" height="52" rx="2"
@@ -644,7 +644,7 @@ footer {
           <text x="230" y="254" font-family="JetBrains Mono, monospace" font-size="12.5"
                 fill="var(--raw)">raw</text>
           <text x="230" y="272" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">payload gốc, bất biến</text>
+                fill="var(--ink-soft)">original payload, immutable</text>
 
           <!-- silver -->
           <rect x="214" y="298" width="200" height="52" rx="2"
@@ -652,7 +652,7 @@ footer {
           <text x="230" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
                 fill="var(--silver)">silver</text>
           <text x="230" y="338" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">chuẩn hoá, khử trùng lặp</text>
+                fill="var(--ink-soft)">normalised, deduplicated</text>
 
           <!-- gold -->
           <rect x="450" y="298" width="200" height="52" rx="2"
@@ -660,7 +660,7 @@ footer {
           <text x="466" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
                 fill="var(--gold)">gold</text>
           <text x="466" y="338" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">bảng nghiệp vụ, sẵn dùng</text>
+                fill="var(--ink-soft)">business tables, ready to use</text>
 
           <!-- etl: raw -> silver -->
           <path d="M 314 284 L 314 298" stroke="var(--silver)" stroke-width="1.4"
@@ -670,27 +670,27 @@ footer {
           <path d="M 414 324 L 450 324" stroke="var(--gold)" stroke-width="1.4"
                 fill="none" marker-end="url(#ar-gold)"/>
 
-          <!-- nhãn etl -->
+          <!-- etl label -->
           <rect x="434" y="232" width="216" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="450" y="252" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--ink)">etl/</text>
           <text x="450" y="268" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">bước transform idempotent</text>
+                fill="var(--ink-soft)">idempotent transform steps</text>
           <g stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 3" fill="none">
             <path d="M 434 254 L 324 254"/>
             <path d="M 500 276 L 432 320"/>
           </g>
 
-          <!-- gold -> agents : đường duy nhất ra khỏi DB -->
+          <!-- gold -> agents : the only way out of the DB -->
           <path d="M 650 324 L 700 324 L 700 152 L 738 152"
                 stroke="var(--gold)" stroke-width="2" fill="none" marker-end="url(#ar-gold)"/>
           <text x="664" y="240" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--gold)" transform="rotate(-90 664 240)" text-anchor="middle">chỉ đọc gold</text>
+                fill="var(--gold)" transform="rotate(-90 664 240)" text-anchor="middle">reads gold only</text>
 
-          <!-- ===== Tầng agents ===== -->
+          <!-- ===== Agent layer ===== -->
           <text x="742" y="30" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">TẦNG AI</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">AI LAYER</text>
 
           <rect x="742" y="44" width="174" height="180" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
@@ -710,7 +710,7 @@ footer {
                   fill="var(--ground)" stroke="var(--line)"/>
             <text x="770" y="169">tools — query, chart</text>
 
-            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">orchestrator ghép kết quả lại</text>
+            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">the orchestrator merges the results</text>
           </g>
 
           <!-- agents -> reports -->
@@ -722,25 +722,25 @@ footer {
           <text x="758" y="280" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--ink)">reports/</text>
           <text x="758" y="299" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">báo cáo · dashboard</text>
+                fill="var(--ink-soft)">reports · dashboards</text>
 
-          <!-- ===== Tầng điều khiển ===== -->
+          <!-- ===== Control layer ===== -->
           <text x="24" y="462" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">TẦNG ĐIỀU KHIỂN &amp; VẬN HÀNH</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">CONTROL &amp; OPERATIONS LAYER</text>
 
           <rect x="24" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="40" y="497" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--ink)">scheduler/</text>
           <text x="40" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">chạy job theo lịch</text>
+                fill="var(--ink-soft)">runs jobs on a schedule</text>
 
           <rect x="216" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="232" y="497" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--ink)">api/</text>
           <text x="232" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">trigger thủ công · đọc báo cáo</text>
+                fill="var(--ink-soft)">manual trigger · read reports</text>
 
           <rect x="408" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
@@ -754,20 +754,20 @@ footer {
           <text x="616" y="497" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--accent)">observability/</text>
           <text x="616" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">log · trace · metrics — mọi tầng đều phát</text>
+                fill="var(--ink-soft)">logs · traces · metrics — every layer emits</text>
 
-          <!-- scheduler/api kích hoạt -->
+          <!-- scheduler/api triggers -->
           <g stroke="var(--ink-faint)" stroke-width="1.2" stroke-dasharray="3 3"
              fill="none" marker-end="url(#ar-faint)">
             <path d="M 112 476 L 112 436 L 318 436 L 318 152" opacity="0.75"/>
             <path d="M 304 476 L 304 448 L 700 448 L 700 340" opacity="0.75"/>
           </g>
           <text x="128" y="431" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--ink-faint)">kích hoạt sync + transform</text>
+                fill="var(--ink-faint)">triggers sync + transform</text>
           <text x="470" y="443" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--ink-faint)">yêu cầu báo cáo</text>
+                fill="var(--ink-faint)">report request</text>
 
-          <!-- observability thu thập -->
+          <!-- observability collection -->
           <path d="M 758 476 L 758 330" stroke="var(--accent)" stroke-width="1"
                 stroke-dasharray="2 4" fill="none" opacity="0.6"/>
           <path d="M 690 476 L 690 372 L 440 372" stroke="var(--accent)" stroke-width="1"
@@ -775,82 +775,82 @@ footer {
         </svg>
       </div>
       <figcaption>
-        Đường vàng đậm từ <code>gold</code> sang <code>agents/</code> là lối duy nhất dữ liệu
-        rời khỏi database để vào tầng AI. Đường đứt nét là điều khiển và theo dõi, không phải
-        dữ liệu nghiệp vụ.
+        The bold gold line from <code>gold</code> to <code>agents/</code> is the only way data
+        leaves the database for the AI layer. Dashed lines are control and observability, not
+        business data.
       </figcaption>
     </figure>
     <p class="path-note">
-      <b>Đây là trục dữ liệu, không phải trục request.</b> Luồng
-      <code>sources → raw → etl → silver → gold</code> chạy nền theo lịch, tính bằng phút.
-      Còn khi người dùng bấm nút, request đi theo một trục khác —
-      <code>controller → pipeline → service</code>, tính bằng giây. Hai trục gặp nhau đúng
-      một chỗ: ở <code>gold</code>. Phần 2 nói về trục request.
+      <b>This is the data axis, not the request axis.</b> The flow
+      <code>sources → raw → etl → silver → gold</code> runs in the background on a schedule, measured in minutes.
+      When a user presses a button the request takes a different axis —
+      <code>controller → pipeline → service</code>, measured in seconds. The two meet in exactly
+      one place: at <code>gold</code>. Part 2 covers the request axis.
     </p>
   </section>
   <section id="s02">
     <div class="section-head">
-      <p class="eyebrow">1.2 · Hợp đồng giữa các tầng</p>
-      <h2>Vì sao giữ nguyên <code>raw</code></h2>
+      <p class="eyebrow">1.2 · The contract between layers</p>
+      <h2>Why <code>raw</code> is kept untouched</h2>
       <p>
-        Khi logic transform sai — và nó sẽ sai — ta chạy lại từ <code>raw</code> thay vì
-        phải gọi lại provider. Provider có rate limit, có dữ liệu đã bị xoá, có API đổi
-        schema. <code>raw</code> là bản sao ta kiểm soát được.
+        When transform logic is wrong — and it will be — it can be re-run from <code>raw</code> instead of
+        calling the provider again. Providers have rate limits, deleted data, and APIs that change
+        schema. <code>raw</code> is the copy we control.
       </p>
     </div>
 
     <div class="layers">
       <article class="layer">
         <div class="layer-name">raw</div>
-        <p>Payload nguyên bản, chưa đụng vào. Chỉ thêm, không sửa, không xoá.</p>
+        <p>The original payload, untouched. Append only — never edited, never deleted.</p>
         <dl>
-          <dt>ghi bởi</dt><dd>sources/</dd>
-          <dt>đọc bởi</dt><dd>etl/</dd>
-          <dt>kiểu</dt><dd>JSONB + metadata</dd>
+          <dt>written by</dt><dd>sources/</dd>
+          <dt>read by</dt><dd>etl/</dd>
+          <dt>type</dt><dd>JSONB + metadata</dd>
         </dl>
       </article>
 
       <article class="layer">
         <div class="layer-name">silver</div>
-        <p>Chuẩn hoá schema, khử trùng lặp, ép kiểu, thống nhất timestamp về UTC.</p>
+        <p>Schema normalised, deduplicated, types coerced, timestamps unified to UTC.</p>
         <dl>
-          <dt>ghi bởi</dt><dd>etl/</dd>
-          <dt>đọc bởi</dt><dd>etl/</dd>
-          <dt>kiểu</dt><dd>cột định kiểu</dd>
+          <dt>written by</dt><dd>etl/</dd>
+          <dt>read by</dt><dd>etl/</dd>
+          <dt>type</dt><dd>typed columns</dd>
         </dl>
       </article>
 
       <article class="layer">
         <div class="layer-name">gold</div>
-        <p>Bảng tổng hợp theo nghiệp vụ. Đây là hợp đồng duy nhất với tầng AI.</p>
+        <p>Business aggregate tables. This is the only contract with the AI layer.</p>
         <dl>
-          <dt>ghi bởi</dt><dd>etl/</dd>
-          <dt>đọc bởi</dt><dd>agents/ · reports/</dd>
-          <dt>kiểu</dt><dd>bảng tổng hợp</dd>
+          <dt>written by</dt><dd>etl/</dd>
+          <dt>read by</dt><dd>agents/ · reports/</dd>
+          <dt>type</dt><dd>aggregate tables</dd>
         </dl>
       </article>
     </div>
   </section>
 
   <div class="part" id="p2">
-    <span class="part-num">Phần 2</span>
-    <h2 class="part-title">Luồng code</h2>
-    <p class="part-blurb">Một yêu cầu đi qua những tầng nào, tầng nào gọi tầng nào, và module nào được phép import module nào.</p>
+    <span class="part-num">Part 2</span>
+    <h2 class="part-title">Code flow</h2>
+    <p class="part-blurb">Which layers a request passes through, which layer calls which, and which module may import which.</p>
   </div>
   <section id="s06">
     <div class="section-head">
-      <p class="eyebrow">2.1 · Trách nhiệm từng tầng</p>
-      <h2>Ai làm gì trong một request</h2>
+      <p class="eyebrow">2.1 · Each layer's responsibility</p>
+      <h2>Who does what in a request</h2>
       <p>
-        HTTP không gọi thẳng service. Nó vào <code>managers/</code> — mỗi miền nghiệp vụ
-        một thư mục, bên trong có controller nhận request và pipeline ghép các service lại.
+        HTTP does not call services directly. It enters <code>managers/</code> — one directory per
+        business domain, holding a controller that receives the request and a pipeline that wires services together.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 470" role="img"
-             aria-label="Sáu tầng trong một request của Mycel: UI gọi HTTP vào api/app.py; app.py gắn controller của từng manager; mỗi manager là một miền nghiệp vụ gồm controller nhận request và pipeline ghép chuỗi service; pipeline gọi lần lượt các service đơn lẻ; service gọi xuống các module miền là etl, agents, reports; dưới cùng storage giữ mọi câu SQL. Scheduler gọi thẳng pipeline, bỏ qua controller.">
+             aria-label="Six layers in a Mycel request: the UI makes an HTTP call into api/app.py; app.py mounts each manager's controller; each manager is one business domain with a controller that receives requests and a pipeline that chains services; the pipeline calls single-purpose services in order; services call down into the domain modules etl, agents and reports; at the bottom storage holds every SQL statement. The scheduler calls the pipeline directly, skipping the controller.">
           <defs>
             <marker id="m6" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -858,27 +858,27 @@ footer {
             </marker>
           </defs>
 
-          <!-- nhãn cột trái -->
+          <!-- left column labels -->
           <g font-family="JetBrains Mono, monospace" font-size="9" fill="var(--ink-faint)"
              text-anchor="end" letter-spacing="1.2">
-            <text x="120" y="36">NGƯỜI DÙNG</text>
-            <text x="120" y="96">VỎ HTTP</text>
-            <text x="120" y="196">MIỀN NGHIỆP VỤ</text>
+            <text x="120" y="36">USERS</text>
+            <text x="120" y="96">HTTP SHELL</text>
+            <text x="120" y="196">BUSINESS DOMAINS</text>
             <text x="120" y="320">SERVICES/</text>
-            <text x="120" y="382">NĂNG LỰC</text>
-            <text x="120" y="440">DỮ LIỆU</text>
+            <text x="120" y="382">CAPABILITIES</text>
+            <text x="120" y="440">DATA</text>
           </g>
 
           <!-- UI -->
           <rect x="136" y="18" width="180" height="30" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="226" y="38" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink)" text-anchor="middle">UI · người bấm nút</text>
+                fill="var(--ink)" text-anchor="middle">UI · someone presses a button</text>
 
           <rect x="660" y="18" width="180" height="30" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="750" y="38" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink)" text-anchor="middle">scheduler — tới giờ</text>
+                fill="var(--ink)" text-anchor="middle">scheduler — time is up</text>
 
           <!-- app.py -->
           <rect x="136" y="72" width="360" height="46" rx="2"
@@ -886,7 +886,7 @@ footer {
           <text x="152" y="92" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">api/app.py</text>
           <text x="152" y="109" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">gắn controller của từng manager · middleware · trace</text>
+                fill="var(--ink-soft)">mounts each manager's controller · middleware · tracing</text>
 
           <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -899,9 +899,9 @@ footer {
           <rect x="136" y="140" width="704" height="128" rx="3"
                 fill="none" stroke="var(--accent)" stroke-width="1.6"/>
           <text x="840" y="134" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.5" fill="var(--accent)" text-anchor="end">MANAGERS/ — MỖI MIỀN MỘT THƯ MỤC</text>
+                letter-spacing="1.5" fill="var(--accent)" text-anchor="end">MANAGERS/ — ONE DIRECTORY PER DOMAIN</text>
 
-          <!-- miền report -->
+          <!-- report domain -->
           <rect x="160" y="174" width="300" height="76" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.3"/>
           <text x="176" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
@@ -911,19 +911,19 @@ footer {
           <text x="186" y="217" font-family="JetBrains Mono, monospace" font-size="10"
                 fill="var(--ink)">controller.py</text>
           <text x="186" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">nhận · validate · trả</text>
+                fill="var(--ink-faint)">receive · validate · return</text>
           <rect x="316" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="326" y="217" font-family="JetBrains Mono, monospace" font-size="10"
                 fill="var(--accent)">pipeline.py</text>
           <text x="326" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">chuỗi nghiệp vụ</text>
+                fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 308 220 L 312 220"/>
           </g>
 
-          <!-- miền sync -->
+          <!-- sync domain -->
           <rect x="484" y="174" width="300" height="76" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.3"/>
           <text x="500" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
@@ -933,13 +933,13 @@ footer {
           <text x="510" y="217" font-family="JetBrains Mono, monospace" font-size="10"
                 fill="var(--ink)">controller.py</text>
           <text x="510" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">nhận · validate · trả</text>
+                fill="var(--ink-faint)">receive · validate · return</text>
           <rect x="640" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="650" y="217" font-family="JetBrains Mono, monospace" font-size="10"
                 fill="var(--accent)">pipeline.py</text>
           <text x="650" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">chuỗi nghiệp vụ</text>
+                fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 632 220 L 636 220"/>
@@ -952,12 +952,12 @@ footer {
             <path d="M 420 118 L 566 118 L 566 170"/>
           </g>
 
-          <!-- scheduler -> pipeline (bỏ qua controller) -->
+          <!-- scheduler -> pipeline (skips the controller) -->
           <path d="M 750 48 L 750 62 L 906 62 L 906 220 L 772 220"
                 stroke="var(--silver)" stroke-width="1.4" stroke-dasharray="4 3"
                 fill="none" color="var(--silver)" marker-end="url(#m6)"/>
           <text x="900" y="84" font-family="JetBrains Mono, monospace" font-size="9"
-                fill="var(--silver)" text-anchor="end">gọi thẳng pipeline, không qua HTTP</text>
+                fill="var(--silver)" text-anchor="end">calls the pipeline directly, no HTTP</text>
 
           <!-- services -->
           <g font-family="JetBrains Mono, monospace" font-size="9.5" text-anchor="middle"
@@ -992,7 +992,7 @@ footer {
             <path d="M 704 250 L 704 282 L 768 282 L 768 298"/>
           </g>
 
-          <!-- năng lực -->
+          <!-- capabilities -->
           <g font-family="JetBrains Mono, monospace" font-size="10.5" text-anchor="middle">
             <rect x="136" y="364" width="164" height="32" rx="2"
                   fill="var(--silver-wash)" stroke="var(--silver)"/>
@@ -1022,7 +1022,7 @@ footer {
           <rect x="136" y="422" width="704" height="32" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="488" y="442" font-family="JetBrains Mono, monospace" font-size="11"
-                fill="var(--ink)" text-anchor="middle">storage/ — mọi câu SQL</text>
+                fill="var(--ink)" text-anchor="middle">storage/ — every SQL statement</text>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 218 396 L 218 418"/>
@@ -1033,78 +1033,78 @@ footer {
         </svg>
       </div>
       <figcaption>
-        <code>managers/</code> chia theo <em>miền nghiệp vụ</em>, không chia theo kỹ thuật.
-        Sửa luồng báo cáo thì mở đúng một thư mục <code>managers/report/</code>, không phải
-        nhảy qua lại giữa ba tầng nằm ở ba nơi.
+        <code>managers/</code> is split by <em>business domain</em>, not by technical role.
+        Changing the report flow means opening exactly one directory, <code>managers/report/</code>, instead of
+        jumping between three layers in three different places.
       </figcaption>
     </figure>
 
     <table class="tbl">
       <thead>
         <tr>
-          <th>Tầng</th>
-          <th>Được làm</th>
-          <th>Không được làm</th>
+          <th>Layer</th>
+          <th>May</th>
+          <th>May not</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="who">api/app.py</td>
-          <td>Tạo app, gắn controller của từng manager, middleware, observability</td>
-          <td class="no">Chứa endpoint · chứa nghiệp vụ</td>
+          <td>Create the app, mount each manager's controller, middleware, observability</td>
+          <td class="no">Hold endpoints · hold business logic</td>
         </tr>
         <tr>
           <td class="who">managers/·/controller.py</td>
-          <td>Nhận request, validate, gọi pipeline, trả response</td>
-          <td class="no">SQL · gọi LLM · <code>if/else</code> nghiệp vụ</td>
+          <td>Receive the request, validate, call the pipeline, return the response</td>
+          <td class="no">SQL · call an LLM · business <code>if/else</code></td>
         </tr>
         <tr class="tone-accent">
           <td class="who">managers/·/pipeline.py</td>
-          <td>Định nghĩa <em>thứ tự</em> các bước, gọi lần lượt service</td>
-          <td class="no">Tự làm việc của service · biết mình được gọi từ HTTP hay cron</td>
+          <td>Define the <em>order</em> of the steps, calling services in turn</td>
+          <td class="no">Do a service's work · know whether it was called from HTTP or cron</td>
         </tr>
         <tr>
           <td class="who">services/</td>
-          <td>Một việc đơn lẻ, làm xong một chuyện, dùng lại được ở nhiều pipeline</td>
-          <td class="no">Gọi service khác thành chuỗi — đó là việc của pipeline</td>
+          <td>One single job, done end to end, reusable across pipelines</td>
+          <td class="no">Chain other services together — that is the pipeline's job</td>
         </tr>
         <tr class="tone-gold">
           <td class="who">etl/ agents/ reports/</td>
-          <td>Năng lực nặng: transform, suy luận, dựng artifact</td>
-          <td class="no">Đọc request HTTP · viết SQL tay</td>
+          <td>The heavy lifting: transforms, reasoning, artifact building</td>
+          <td class="no">Read the HTTP request · write SQL by hand</td>
         </tr>
         <tr>
           <td class="who">storage/</td>
-          <td>Mọi câu SQL, session, transaction</td>
-          <td class="no">Chứa quyết định nghiệp vụ</td>
+          <td>Every SQL statement, session and transaction</td>
+          <td class="no">Hold business decisions</td>
         </tr>
       </tbody>
     </table>
 
     <p class="path-note">
-      <b>Pipeline khác service thế nào:</b> pipeline là <em>chuỗi</em>, service là
-      <em>mắt xích</em>. <code>managers/report/pipeline.py</code> gọi lần lượt
+      <b>How a pipeline differs from a service:</b> the pipeline is the <em>chain</em>, a service is
+      a <em>link</em>. <code>managers/report/pipeline.py</code> calls, in order,
       <code>permission</code> → <code>queue</code> → <code>gather</code> →
       <code>analyze</code> → <code>render</code>.
-      <code>managers/sync/pipeline.py</code> gọi <code>fetch</code> →
-      <code>transform</code> → <code>check</code>. Service dùng lại được ở cả hai;
-      bản thân nó không biết mình đang nằm trong chuỗi nào.
+      <code>managers/sync/pipeline.py</code> calls <code>fetch</code> →
+      <code>transform</code> → <code>check</code>. Services are reused by both;
+      a service itself does not know which chain it is in.
     </p>
   </section>
   <section id="s07">
     <div class="section-head">
-      <p class="eyebrow">2.2 · Vòng đời một yêu cầu</p>
-      <h2>Từ lúc bấm cho tới lúc có báo cáo</h2>
+      <p class="eyebrow">2.2 · The life of a request</p>
+      <h2>From the button press to the finished report</h2>
       <p>
-        Sinh báo cáo mất vài phút và sẽ có lúc lỗi giữa chừng. Vì vậy API không tự chạy —
-        nó đẩy việc vào hàng đợi rồi trả về ngay. Toàn bộ đường đi là <em>một</em> trace.
+        Producing a report takes minutes and will sometimes fail halfway. So the API does not run it —
+        it pushes the work onto the queue and returns immediately. The whole path is <em>one</em> trace.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="Vòng đời một yêu cầu báo cáo: pipeline của miền báo cáo đẩy việc vào hàng đợi rồi trả về job id ngay; worker rút job ra chạy, orchestrator chia task cho các agent chuyên môn, các agent truy vấn gold và gọi model qua tầng llm, kết quả dựng thành báo cáo và lưu lại; nếu lỗi thì job được retry, hết lượt thì rơi vào dead-letter; toàn bộ đường đi là một trace duy nhất.">
+             aria-label="The life of a report request: the report domain's pipeline pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits tasks across specialist agents, the agents query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
           <defs>
             <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1117,13 +1117,13 @@ footer {
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="79" y="75" fill="var(--ink)">pipeline</text>
             <text x="79" y="91" font-family="Inter Tight, sans-serif" font-size="10"
-                  fill="var(--ink-soft)">miền báo cáo</text>
+                  fill="var(--ink-soft)">report domain</text>
 
             <rect x="182" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="245" y="75" fill="var(--ink)">queue</text>
             <text x="245" y="91" font-family="Inter Tight, sans-serif" font-size="10"
-                  fill="var(--ink-soft)">hàng đợi</text>
+                  fill="var(--ink-soft)">queue</text>
 
             <rect x="348" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
@@ -1141,11 +1141,11 @@ footer {
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="743" y="75" fill="var(--ink)">reports</text>
             <text x="743" y="91" font-family="Inter Tight, sans-serif" font-size="10"
-                  fill="var(--ink-soft)">dựng artifact</text>
+                  fill="var(--ink-soft)">build the artifact</text>
 
             <rect x="846" y="56" width="78" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.6"/>
-            <text x="885" y="82" fill="var(--gold)">lưu</text>
+            <text x="885" y="82" fill="var(--gold)">store</text>
           </g>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -1157,19 +1157,19 @@ footer {
             <path d="M 806 78 L 842 78"/>
           </g>
 
-          <!-- trả job id ngay -->
+          <!-- return the job id immediately -->
           <path d="M 245 56 L 245 40 L 79 40 L 79 52"
                 stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
                 fill="none" color="var(--ink-faint)" marker-end="url(#lc-ar)"/>
           <text x="162" y="34" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--ink-faint)" text-anchor="middle">trả job id ngay, không chờ</text>
+                fill="var(--ink-faint)" text-anchor="middle">returns the job id immediately, no waiting</text>
 
           <!-- retry -->
           <path d="M 411 100 L 411 124 L 268 124 L 268 104"
                 stroke="var(--raw)" stroke-width="1.2" fill="none"
                 color="var(--raw)" marker-end="url(#lc-ar)"/>
           <text x="348" y="139" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--raw)" text-anchor="middle">lỗi → retry</text>
+                fill="var(--raw)" text-anchor="middle">failure → retry</text>
 
           <!-- dead letter -->
           <rect x="182" y="178" width="126" height="34" rx="2"
@@ -1179,35 +1179,35 @@ footer {
           <path d="M 245 148 L 245 174" stroke="var(--raw)" stroke-width="1.2"
                 fill="none" color="var(--raw)" marker-end="url(#lc-ar)"/>
           <text x="320" y="200" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-faint)">hết lượt retry — giữ lại để xem, không mất</text>
+                fill="var(--ink-faint)">out of retries — kept for inspection, not lost</text>
 
-          <!-- trace bao trùm -->
+          <!-- the enclosing trace -->
           <text x="16" y="16" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--accent)">một trace duy nhất — mỗi bước là một span</text>
+                fill="var(--accent)">a single trace — every step is a span</text>
           <path d="M 292 12 L 924 12" stroke="var(--accent)" stroke-width="1"
                 stroke-dasharray="2 4" opacity="0.55" fill="none"/>
         </svg>
       </div>
       <figcaption>
-        Mỗi lượt gọi model là một span trong cùng trace đó, kèm số token và model đã dùng.
-        Báo cáo chạy chậm hay tốn tiền bất thường thì mở trace ra là thấy bước nào gây ra.
+        Every model call is a span in that same trace, with the tokens and the model used.
+        When a report is slow or unexpectedly expensive, opening the trace shows which step caused it.
       </figcaption>
     </figure>
   </section>
   <section id="s05">
     <div class="section-head">
-      <p class="eyebrow">2.3 · Thứ tự phụ thuộc</p>
-      <h2>Thứ tự phụ thuộc</h2>
+      <p class="eyebrow">2.3 · Dependency order</p>
+      <h2>Dependency order</h2>
       <p>
-        Mũi tên đọc là <em>“được import bởi”</em>. Không có mũi tên nào đi ngược lên —
-        nếu bạn thấy mình cần import ngược, thiết kế đã sai chỗ nào đó.
+        Arrows read as <em>“is imported by”</em>. No arrow points back upwards —
+        if you find yourself needing an upward import, the design is wrong somewhere.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Đồ thị phụ thuộc của Mycel: core là tầng đáy được storage import; storage được sources và etl import; llm là cổng gọi model, được agents import; agents được reports import; jobs chạy các việc trên, còn managers, scheduler và api ngồi trên cùng; observability nằm ngang bên dưới, được mọi tầng import.">
+             aria-label="Mycel's dependency graph: core is the bottom layer, imported by storage; storage is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by reports; jobs runs all of the above, while managers, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1261,11 +1261,11 @@ footer {
           </g>
 
           <text x="474" y="92" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--ink-faint)" text-anchor="middle">chỉ đọc gold</text>
+                fill="var(--ink-faint)" text-anchor="middle">reads gold only</text>
 
-          <!-- observability cắt ngang -->
+          <!-- observability cuts across -->
           <text x="20" y="246" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-faint)">mọi tầng ở trên đều import</text>
+                fill="var(--ink-faint)">imported by every layer above</text>
           <line x1="20" y1="272" x2="920" y2="272" stroke="var(--accent)"
                 stroke-width="1.2" stroke-dasharray="3 4"/>
           <rect x="380" y="256" width="180" height="32" rx="2"
@@ -1275,31 +1275,31 @@ footer {
         </svg>
       </div>
       <figcaption>
-        <code>observability</code> là ngoại lệ có chủ đích: nó cắt ngang mọi tầng, nên phải
-        giữ thật mỏng và không chứa logic nghiệp vụ.
+        <code>observability</code> is a deliberate exception: it cuts across every layer, so it has to
+        stay very thin and hold no business logic.
       </figcaption>
     </figure>
   </section>
 
   <div class="part" id="p3">
-    <span class="part-num">Phần 3</span>
-    <h2 class="part-title">Cấu trúc thư mục</h2>
-    <p class="part-blurb">Mỗi folder một việc, nhìn tên là biết. Phần cuối đi sâu vào tầng AI — chỗ dễ làm sai nhất.</p>
+    <span class="part-num">Part 3</span>
+    <h2 class="part-title">Directory layout</h2>
+    <p class="part-blurb">One job per folder, obvious from the name. The last section goes deep into the AI layer — the easiest place to get wrong.</p>
   </div>
   <section id="s04">
     <div class="section-head">
-      <p class="eyebrow">3.1 · Cấu trúc thư mục</p>
-      <h2>Nhìn tên là biết việc</h2>
+      <p class="eyebrow">3.1 · Directory layout</p>
+      <h2>The name tells you the job</h2>
       <p>
-        Module phẳng, một tầng. Khi một module phình to thì tách thành thư mục và giữ nguyên
-        tên: <code>sources/slack.py</code> → <code>sources/slack/{client,parser}.py</code>.
-        Không dựng sẵn tầng trừu tượng khi chưa có gì để bỏ vào.
+        Modules are flat, one level deep. When a module outgrows a file it becomes a directory with the same
+        name: <code>sources/slack.py</code> → <code>sources/slack/{client,parser}.py</code>.
+        No abstraction layer is built before there is anything to put in it.
       </p>
     </div>
 
     <div class="tree-col">
       <div class="tree-row is-head">
-        <span class="tree-path">Mã nguồn</span>
+        <span class="tree-path">Source</span>
         <span></span>
       </div>
 
@@ -1309,154 +1309,154 @@ footer {
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>core/</span>
-        <span class="tree-note">Config, logging, exception, kiểu dùng chung. Tầng đáy — không import module nào khác.</span>
+        <span class="tree-note">Config, logging, exceptions, shared types. The bottom layer — imports no other module.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>storage/</span>
-        <span class="tree-note">Ba kho, ba loại dữ liệu. Mọi truy cập đi qua đây — không rải rác trong pipeline hay agent.</span>
+        <span class="tree-note">Three stores, three kinds of data. Every access goes through here — not scattered through pipelines and agents.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>storage/postgres/</span>
-        <span class="tree-note">State giao dịch: engine, session, repository cho từng tầng <code>raw</code> · <code>silver</code> · <code>gold</code>. Mọi câu SQL nằm ở đây.</span>
+        <span class="tree-note">Transactional state: engine, session, a repository per <code>raw</code> · <code>silver</code> · <code>gold</code> layer. Every SQL statement lives here.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>storage/vectors/</span>
-        <span class="tree-note">Tìm kiếm knowledge base bằng embedding (Qdrant). Nguồn embedding là <code>gold</code>, không phải raw. Quyền xem là filter của Qdrant, không lọc sau khi lấy top-k.</span>
+        <span class="tree-note">Knowledge base search over embeddings (Qdrant). Embeddings come from <code>gold</code>, not raw. View permissions are a Qdrant filter, not a post-filter after top-k.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>storage/objects/</span>
-        <span class="tree-note">File lớn: PDF nguồn, báo cáo đã render (MinIO, S3 API). Postgres giữ metadata, bucket giữ nội dung. API trả presigned URL nên file không đi qua process API.</span>
+        <span class="tree-note">Large files: source PDFs, rendered reports (MinIO, S3 API). Postgres holds the metadata, the bucket holds the content. The API returns a presigned URL so files never pass through the API process.</span>
       </div>
       <div class="tree-row" data-tone="raw">
         <span class="tree-path"><span class="dim">├─ </span>sources/</span>
-        <span class="tree-note">Mỗi provider một file. Cùng interface: nhận khoảng thời gian, trả bản ghi thô, ghi xuống <code>raw</code>.</span>
+        <span class="tree-note">One file per provider. Same interface: take a time range, return raw records, write to <code>raw</code>.</span>
       </div>
       <div class="tree-row" data-tone="silver">
         <span class="tree-path"><span class="dim">├─ </span>etl/</span>
-        <span class="tree-note">Các bước transform <code>raw → silver → gold</code>. Chạy nền theo lịch — không phải chuỗi xử lý request. Mỗi bước idempotent.</span>
+        <span class="tree-note">The <code>raw → silver → gold</code> transform steps. Scheduled background work — not the request-handling chain. Every step is idempotent.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>etl/checks/</span>
-        <span class="tree-note">Kiểm tra sau mỗi bước: thiếu cột, null bất thường, số đếm lệch. Fail thì dừng, không ghi lên tầng trên.</span>
+        <span class="tree-note">Validation after each step: missing columns, unexpected nulls, row counts off. On failure it stops and does not write to the layer above.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>llm/</span>
-        <span class="tree-note">Cổng duy nhất tới mọi model. <code>router</code> chọn local hay cloud, <code>client</code> là nơi duy nhất import SDK provider, <code>cache</code> tránh gọi lại, <code>tokens</code>/<code>usage</code> đếm trước và sau, <code>budget</code> chặn vượt trần.</span>
+        <span class="tree-note">The only gateway to any model. <code>router</code> picks local or cloud, <code>client</code> is the only place that imports a provider SDK, <code>cache</code> avoids repeat calls, <code>tokens</code>/<code>usage</code> count before and after, <code>budget</code> blocks going over the ceiling.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note"><code>orchestrator</code> điều phối; <code>analyst</code> · <code>writer</code> · <code>reviewer</code> mỗi agent một việc; <code>tools/</code> là năng lực agent gọi được (<code>query_gold</code> cho câu có số liệu chính xác, <code>search_docs</code> cho câu mơ hồ); <code>prompts/</code> tách khỏi code để sửa không cần deploy.</span>
+        <span class="tree-note"><code>orchestrator</code> coordinates; <code>analyst</code> · <code>writer</code> · <code>reviewer</code> do one job each; <code>tools/</code> are the capabilities an agent can call (<code>query_gold</code> for exact-number questions, <code>search_docs</code> for vague ones); <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
-        <span class="tree-note">Nền chung của riêng <code>agents/</code>, không dính nghiệp vụ: vòng lặp agent, <code>streaming/</code>, <code>hooks</code> (gắn trace · log usage · cộng budget), <code>guards</code>, <code>integrations/mcp</code>.</span>
+        <span class="tree-note">The shared foundation for <code>agents/</code> alone, with no business logic: the agent loop, <code>streaming/</code>, <code>hooks</code> (attach traces · log usage · add to budget), <code>guards</code>, <code>integrations/mcp</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>queue/</span>
-        <span class="tree-note">Tầng job <em>trên</em> Kafka (broker chạy ngoài, KRaft mode). Kafka là log có thứ tự chứ không phải hàng đợi task, nên phải tự làm: retry bằng topic theo bậc <code>jobs → jobs.retry.1m → jobs.retry.10m → jobs.dlq</code>, đếm số lần retry trong header, nâng <code>max.poll.interval.ms</code>. Commit sau khi job xong ⇒ at-least-once ⇒ idempotency key là bắt buộc. Cửa vào là <code>services/enqueue.py</code>.</span>
+        <span class="tree-note">The job layer <em>on top of</em> Kafka (the broker runs outside, KRaft mode). Kafka is an ordered log, not a task queue, so this is built by hand: tiered retry topics <code>jobs → jobs.retry.1m → jobs.retry.10m → jobs.dlq</code>, retry counts in the header, a raised <code>max.poll.interval.ms</code>. Commit after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>managers/</span>
-        <span class="tree-note"><b>Điểm vào, chia theo miền nghiệp vụ.</b> Thêm một miền = thêm một thư mục, không đụng miền đang có.</span>
+        <span class="tree-note"><b>Entry points, split by business domain.</b> Adding a domain = adding a directory, with existing domains untouched.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>managers/report/</span>
-        <span class="tree-note">Miền báo cáo: <code>controller.py</code> (endpoint HTTP) · <code>pipeline.py</code> (chuỗi nghiệp vụ) · <code>schemas.py</code>.</span>
+        <span class="tree-note">The report domain: <code>controller.py</code> (HTTP endpoints) · <code>pipeline.py</code> (the business chain) · <code>schemas.py</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>managers/sync/</span>
-        <span class="tree-note">Miền đồng bộ: cùng ba file đó, cho luồng <code>fetch → transform → check</code>.</span>
+        <span class="tree-note">The sync domain: the same three files, for the <code>fetch → transform → check</code> flow.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>services/</span>
-        <span class="tree-note">Mắt xích đơn lẻ, mỗi file một việc: <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>. Tên là động từ, không hậu tố <code>_service</code>. Dùng lại được ở nhiều pipeline.</span>
+        <span class="tree-note">Single links, one job per file: <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>. Names are verbs with no <code>_service</code> suffix. Reusable across pipelines.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>
-        <span class="tree-note">Dựng artifact cuối từ kết quả agent: văn bản, bảng số liệu, dashboard.</span>
+        <span class="tree-note">Builds the final artifacts from agent output: prose, data tables, dashboards.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
-        <span class="tree-note">Trả lời <em>khi nào chạy</em>. Gọi thẳng <code>pipeline</code> trong <code>managers/</code> — đúng chỗ controller gọi, chỉ bỏ qua mắt xích HTTP.</span>
+        <span class="tree-note">Answers <em>when to run</em>. Calls <code>pipeline</code> in <code>managers/</code> directly — the same place controllers call, just without the HTTP link.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>api/</span>
-        <span class="tree-note">Vỏ HTTP, mỏng nhất có thể. Endpoint nghiệp vụ nằm trong <code>managers/</code>, đây chỉ gom lại. Có xác thực — dữ liệu là Slack và Gmail nội bộ.</span>
+        <span class="tree-note">The HTTP shell, as thin as possible. Business endpoints live in <code>managers/</code>; this only assembles them. There is authentication — the data is internal Slack and Gmail.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>app.py</span>
-        <span class="tree-note">Nơi ráp: tạo app, gắn controller của từng manager, middleware, observability. File duy nhất biết hệ thống có những miền nào. <code>uvicorn</code> trỏ vào đây.</span>
+        <span class="tree-note">The assembly point: create the app, mount each manager's controller, middleware, observability. The only file that knows which domains exist. <code>uvicorn</code> points here.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>middleware.py</span>
-        <span class="tree-note">Chỉ <code>request_id</code> — tracing, CORS, lỗi, rate limit đều dùng đồ có sẵn. Viết pure ASGI, không <code>BaseHTTPMiddleware</code> (nó buffer response, nghẽn SSE).</span>
+        <span class="tree-note">Only <code>request_id</code> — tracing, CORS, errors and rate limiting all use what already exists. Written as pure ASGI, not <code>BaseHTTPMiddleware</code> (which buffers the response and blocks SSE).</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>dependencies.py</span>
-        <span class="tree-note">Thứ controller khai qua <code>Depends()</code>: xác thực, session DB, phân trang. Xác thực ở đây chứ không ở middleware — vào được OpenAPI schema và mypy kiểm được.</span>
+        <span class="tree-note">What controllers declare via <code>Depends()</code>: authentication, DB session, pagination. Authentication lives here rather than in middleware — it reaches the OpenAPI schema and mypy can check it.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>health.py</span>
-        <span class="tree-note"><code>/health/live</code> cho policy restart container, <code>/health/ready</code> cho load balancer. Không thuộc miền nghiệp vụ nào.</span>
+        <span class="tree-note"><code>/health/live</code> for the container restart policy, <code>/health/ready</code> for the load balancer. Belongs to no business domain.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>observability/</span>
-        <span class="tree-note"><code>tracing</code> dựng OTel + xuất OTLP, <code>llm_trace</code> gắn thuộc tính LLM lên span (Langfuse đọc được), <code>logging</code> in JSON ra stdout (Promtail gom về Loki), <code>metrics</code> cho Prometheus. Ba tín hiệu ba câu hỏi: metrics <em>có đang hỏng không</em>, trace <em>hỏng ở đâu</em>, log <em>hỏng vì sao</em> — nối được nhờ <code>trace_id</code> có ở cả ba. Không biết HTTP là gì, nên <code>scheduler</code> và <code>queue</code> cũng import được. Mọi tầng gọi vào đây.
+        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus. Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.
       </div>
 
       <div class="tree-row is-head">
-        <span class="tree-path">Vận hành</span>
+        <span class="tree-path">Operations</span>
         <span></span>
       </div>
 
       <div class="tree-row">
         <span class="tree-path">.github/workflows/</span>
-        <span class="tree-note">CI chạy mọi PR; build image tag theo commit SHA khi vào <code>main</code>.</span>
+        <span class="tree-note">CI runs on every PR; builds an image tagged by commit SHA on <code>main</code>.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path">evals/</span>
-        <span class="tree-note">Golden set chấm chất lượng báo cáo. Đổi prompt hay đổi model mà điểm tụt là chặn merge.</span>
+        <span class="tree-note">The golden set that scores report quality. A prompt or model change that drops the score blocks the merge.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Config hạ tầng: <code>otel/</code> (collector · Tempo · Prometheus · Loki · Promtail), <code>grafana/</code>, init Postgres, <code>inference/</code> cho vLLM, <code>envs/</code>, và phần triển khai cụm: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
+        <span class="tree-note">Infrastructure config: <code>otel/</code> (collector · Tempo · Prometheus · Loki · Promtail), <code>grafana/</code>, Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
-        <span class="tree-note">Cấu hình theo môi trường và theo nguồn. Bí mật ở <code>.env</code>, không bao giờ ở đây.</span>
+        <span class="tree-note">Per-environment and per-source configuration. Secrets live in <code>.env</code>, never here.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">migrations/</span>
-        <span class="tree-note">Alembic. Mỗi thay đổi schema là một revision, không sửa DB bằng tay.</span>
+        <span class="tree-note">Alembic. Every schema change is a revision; the DB is never edited by hand.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">docs/</span>
-        <span class="tree-note">Tài liệu thiết kế — bao gồm chính trang này.</span>
+        <span class="tree-note">Design documentation — including this page.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">tests/</span>
-        <span class="tree-note">Test code, cấu trúc soi gương <code>src/mycel/</code>. Chất lượng báo cáo do <code>evals/</code> lo.</span>
+        <span class="tree-note">Code tests, mirroring the structure of <code>src/mycel/</code>. Report quality is <code>evals/</code>&rsquo;s job.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">scripts/</span>
-        <span class="tree-note">Script vận hành chạy một lần. Không phải nơi để logic nghiệp vụ.</span>
+        <span class="tree-note">One-off operational scripts. Not a place for business logic.</span>
       </div>
     </div>
   </section>
   <section id="s03">
     <div class="section-head">
-      <p class="eyebrow">3.2 · Tầng AI</p>
-      <h2>Local gánh số lượng, cloud lo suy luận</h2>
+      <p class="eyebrow">3.2 · The AI layer</p>
+      <h2>Local carries the volume, cloud does the reasoning</h2>
       <p>
-        Mọi lượt gọi model đều đi qua <code>llm/</code> — không module nào import thẳng SDK
-        của provider. Nhờ vậy đổi model, thêm cache, đặt trần chi phí chỉ sửa một chỗ.
+        Every model call goes through <code>llm/</code> — no module imports a provider SDK
+        directly. That way switching models, adding a cache or setting a spend ceiling is one change.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 400" role="img"
-             aria-label="Tầng AI của Mycel: orchestrator nhận yêu cầu báo cáo và chia cho các agent chuyên môn; agent gọi tool để truy vấn gold; mọi lượt gọi model đi qua module llm, nơi router chọn giữa vLLM chạy local cho việc khối lượng lớn và API cloud cho suy luận cuối; cache và budget nằm trên đường đi; evals chấm điểm kết quả bằng golden set.">
+             aria-label="Mycel's AI layer: the orchestrator takes a report request and splits it across specialist agents; agents call tools to query gold; every model call goes through the llm module, where the router chooses between vLLM running locally for high-volume work and a cloud API for the final reasoning; cache and budget sit on the path; evals score the results against a golden set.">
           <defs>
             <marker id="ai-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1473,23 +1473,23 @@ footer {
           <text x="40" y="62" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--gold)">orchestrator</text>
           <text x="40" y="79" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">chia task, ghép kết quả</text>
+                fill="var(--ink-soft)">splits tasks, merges results</text>
 
           <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
             <rect x="24" y="106" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="125">analyst — phân tích số liệu</text>
+            <text x="40" y="125">analyst — analyses the numbers</text>
 
             <rect x="24" y="142" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="161">writer — viết tóm tắt</text>
+            <text x="40" y="161">writer — writes the summary</text>
 
             <rect x="24" y="178" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)" stroke-dasharray="3 3"/>
-            <text x="40" y="197" fill="var(--ink-faint)">reviewer — đối chiếu nguồn</text>
+            <text x="40" y="197" fill="var(--ink-faint)">reviewer — checks against sources</text>
           </g>
 
-          <!-- orchestrator -> các agent -->
+          <!-- orchestrator -> agents -->
           <g stroke="var(--gold)" stroke-width="1.2" fill="none" color="var(--gold)"
              marker-end="url(#ai-ar)">
             <path d="M 108 88 L 108 102"/>
@@ -1501,7 +1501,7 @@ footer {
           <text x="40" y="252" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">tools/</text>
           <text x="40" y="269" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">query gold · tính · vẽ chart</text>
+                fill="var(--ink-soft)">query gold · compute · draw charts</text>
 
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none" color="var(--ink-faint)"
              marker-end="url(#ai-ar)">
@@ -1518,9 +1518,9 @@ footer {
             <path d="M 108 278 L 108 312"/>
           </g>
 
-          <!-- ===== llm/ : cổng duy nhất ===== -->
+          <!-- ===== llm/ : the only gateway ===== -->
           <text x="256" y="28" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">LLM/ — CỔNG DUY NHẤT</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">LLM/ — THE ONLY GATEWAY</text>
 
           <rect x="256" y="42" width="236" height="314" rx="3"
                 fill="none" stroke="var(--accent)" stroke-width="1.4"/>
@@ -1530,14 +1530,14 @@ footer {
           <text x="296" y="90" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">cache</text>
           <text x="296" y="106" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-soft)">prompt trùng → không gọi lại</text>
+                fill="var(--ink-soft)">repeated prompt → no second call</text>
 
           <rect x="280" y="130" width="188" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="296" y="150" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">budget</text>
           <text x="296" y="166" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-soft)">vượt trần token → dừng</text>
+                fill="var(--ink-soft)">over the token ceiling → stop</text>
 
           <rect x="280" y="190" width="188" height="44" rx="2"
                 fill="var(--accent)" stroke="var(--accent)" opacity="0.14"/>
@@ -1546,7 +1546,7 @@ footer {
           <text x="296" y="210" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--accent)">router</text>
           <text x="296" y="226" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-soft)">chọn local hay cloud</text>
+                fill="var(--ink-soft)">picks local or cloud</text>
 
           <!-- agents -> llm -->
           <g stroke="var(--gold)" stroke-width="1.6" fill="none" color="var(--gold)"
@@ -1554,9 +1554,9 @@ footer {
             <path d="M 192 65 L 224 65 L 224 92 L 276 92"/>
           </g>
           <text x="200" y="58" font-family="JetBrains Mono, monospace" font-size="9"
-                fill="var(--gold)">mọi lượt gọi</text>
+                fill="var(--gold)">every call</text>
 
-          <!-- luồng trong llm -->
+          <!-- flow inside llm -->
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none" color="var(--ink-faint)"
              marker-end="url(#ai-ar)">
             <path d="M 374 114 L 374 126"/>
@@ -1565,7 +1565,7 @@ footer {
 
           <!-- ===== backend ===== -->
           <text x="556" y="28" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">NƠI MODEL THỰC SỰ CHẠY</text>
+                letter-spacing="1.6" fill="var(--ink-faint)">WHERE THE MODEL ACTUALLY RUNS</text>
 
           <!-- local -->
           <rect x="556" y="42" width="360" height="130" rx="2"
@@ -1576,11 +1576,11 @@ footer {
                 fill="var(--ink-soft)">Qwen 2.5 3B · AWQ 4-bit · GTX 1660 Ti 6GB</text>
           <line x1="576" y1="98" x2="896" y2="98" stroke="var(--silver)" opacity="0.35"/>
           <text x="576" y="118" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink)">Việc khối lượng lớn, đầu ra ngắn:</text>
+                fill="var(--ink)">High-volume work, short output:</text>
           <text x="576" y="136" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">phân loại · trích entity · chấm điểm liên quan</text>
+                fill="var(--ink-soft)">classification · entity extraction · relevance scoring</text>
           <text x="576" y="154" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">tóm tắt từng bản ghi · dữ liệu không rời máy</text>
+                fill="var(--ink-soft)">per-record summaries · data never leaves the machine</text>
 
           <!-- cloud -->
           <rect x="556" y="192" width="360" height="130" rx="2"
@@ -1588,14 +1588,14 @@ footer {
           <text x="576" y="216" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--gold)">API cloud</text>
           <text x="576" y="236" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">model lớn · ngữ cảnh dài</text>
+                fill="var(--ink-soft)">large model · long context</text>
           <line x1="576" y1="248" x2="896" y2="248" stroke="var(--gold)" opacity="0.35"/>
           <text x="576" y="268" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink)">Suy luận cuối:</text>
+                fill="var(--ink)">The final reasoning:</text>
           <text x="576" y="286" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">tổng hợp nhiều nguồn · viết báo cáo</text>
+                fill="var(--ink-soft)">synthesising sources · writing the report</text>
           <text x="576" y="304" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">quyết định cần đọc nhiều ngữ cảnh</text>
+                fill="var(--ink-soft)">decisions needing lots of context</text>
 
           <!-- router -> backends -->
           <g stroke="var(--silver)" stroke-width="1.6" fill="none" color="var(--silver)"
@@ -1613,7 +1613,7 @@ footer {
           <text x="576" y="363" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--accent)">evals/</text>
           <text x="648" y="363" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">golden set — đổi prompt mà điểm tụt là chặn merge</text>
+                fill="var(--ink-soft)">golden set — a prompt change that drops the score blocks the merge</text>
           <g stroke="var(--accent)" stroke-width="1.1" stroke-dasharray="3 3" fill="none"
              color="var(--accent)" marker-end="url(#ai-ar)" opacity="0.8">
             <path d="M 736 322 L 736 334"/>
@@ -1621,8 +1621,8 @@ footer {
         </svg>
       </div>
       <figcaption>
-        <code>router</code> là chỗ duy nhất biết model nào chạy ở đâu. Không bật container
-        vLLM thì mọi lượt gọi đi cloud — code không đổi, vì cả hai đều là endpoint
+        <code>router</code> is the only place that knows which model runs where. Without the vLLM
+        container enabled, every call goes to the cloud — no code change, because both are
         OpenAI-compatible.
       </figcaption>
     </figure>
@@ -1630,108 +1630,108 @@ footer {
   </section>
 
   <div class="part" id="p4">
-    <span class="part-num">Phần 4</span>
-    <h2 class="part-title">Chạy thật</h2>
-    <p class="part-blurb">Docker, theo dõi hệ thống, và đường từ máy dev lên cụm. Kèm ranh giới rõ giữa cái đã có và cái mới chỉ là thiết kế.</p>
+    <span class="part-num">Part 4</span>
+    <h2 class="part-title">Running for real</h2>
+    <p class="part-blurb">Docker, observability, and the path from dev machine to cluster. With a clear line between what exists and what is still only design.</p>
   </div>
   <section id="s09">
     <div class="section-head">
-      <p class="eyebrow">4.1 · Stack vận hành</p>
-      <h2>Stack vận hành</h2>
+      <p class="eyebrow">4.1 · The operational stack</p>
+      <h2>The operational stack</h2>
       <p>
-        Một lệnh <code>docker compose up</code> dựng cả app lẫn tầng theo dõi. Thêm
-        <code>--profile local-llm</code> nếu muốn chạy model 3B ngay trên máy. Đây là stack
-        của <em>máy dev</em> — lên cụm thì cùng image đó chạy qua Helm, xem mục sau.
+        One <code>docker compose up</code> brings up both the app and the observability layer. Add
+        <code>--profile local-llm</code> to run the 3B model on the machine itself. This is the <em>dev machine</em>
+        stack — on a cluster the same image runs through Helm, see the next section.
       </p>
     </div>
 
     <div class="ops">
       <article class="op">
         <span class="op-svc">api</span>
-        <span class="op-role">Cổng vào</span>
-        <p>Nhận yêu cầu báo cáo, trả kết quả đã sinh, health check cho load balancer.</p>
+        <span class="op-role">Front door</span>
+        <p>Takes report requests, returns finished results, health checks for the load balancer.</p>
       </article>
       <article class="op">
         <span class="op-svc">scheduler</span>
-        <span class="op-role">Đồng hồ</span>
-        <p>Tới giờ thì đẩy việc vào hàng đợi. Không tự thực thi, nên chết không mất job.</p>
+        <span class="op-role">The clock</span>
+        <p>Pushes work onto the queue when the time comes. It does not execute anything, so its death loses no jobs.</p>
       </article>
       <article class="op">
         <span class="op-svc">worker</span>
-        <span class="op-role">Tay làm</span>
-        <p>Rút job ra chạy: sync, transform, sinh báo cáo. <code>--scale worker=N</code>, nhưng N vượt số partition thì pod thừa ngồi không.</p>
+        <span class="op-role">The hands</span>
+        <p>Pulls jobs and runs them: syncs, transforms, report generation. <code>--scale worker=N</code>, but pods beyond the partition count sit idle.</p>
       </article>
       <article class="op">
         <span class="op-svc">kafka</span>
-        <span class="op-role">Hàng đợi job</span>
-        <p>KRaft mode, không cần Zookeeper. Số partition là trần của song song, tăng được nhưng không giảm.</p>
+        <span class="op-role">Job queue</span>
+        <p>KRaft mode, no Zookeeper. The partition count is the parallelism ceiling; it can be increased but not decreased.</p>
       </article>
       <article class="op">
         <span class="op-svc">qdrant</span>
         <span class="op-role">Vector store</span>
-        <p>Tìm kiếm knowledge base bằng embedding. Tách khỏi Postgres để scale độc lập.</p>
+        <p>Knowledge base search over embeddings. Kept out of Postgres so it scales independently.</p>
       </article>
       <article class="op">
         <span class="op-svc">minio</span>
         <span class="op-role">Object store</span>
-        <p>File lớn qua S3 API: PDF nguồn, báo cáo đã render. Đổi sang S3 thật chỉ là đổi endpoint.</p>
+        <p>Large files over the S3 API: source PDFs, rendered reports. Moving to real S3 is just an endpoint change.</p>
       </article>
       <article class="op">
         <span class="op-svc">vllm</span>
         <span class="op-role">Model local</span>
-        <p>Tuỳ chọn, bật bằng profile <code>local-llm</code>. Không bật thì mọi lượt gọi đi cloud.</p>
+        <p>Optional, enabled with the <code>local-llm</code> profile. Without it every call goes to the cloud.</p>
       </article>
       <article class="op">
         <span class="op-svc">postgres</span>
-        <span class="op-role">Kho dữ liệu</span>
-        <p>Một database, ba schema. Volume tách rời để nâng cấp image không mất dữ liệu.</p>
+        <span class="op-role">Data store</span>
+        <p>One database, three schemas. A separate volume so upgrading the image does not lose data.</p>
       </article>
       <article class="op">
         <span class="op-svc">otel-collector</span>
-        <span class="op-role">Điểm gom</span>
-        <p>App chỉ gửi OTLP tới một chỗ; collector chia về Tempo và Prometheus.</p>
+        <span class="op-role">Collection point</span>
+        <p>The app sends OTLP to one place; the collector routes it to Tempo and Prometheus.</p>
       </article>
       <article class="op">
         <span class="op-svc">tempo</span>
-        <span class="op-role">Lưu trace</span>
-        <p>Một yêu cầu báo cáo là một trace: từ HTTP, qua query gold, tới từng lượt gọi model.</p>
+        <span class="op-role">Trace storage</span>
+        <p>One report request is one trace: from HTTP, through the gold query, down to each model call.</p>
       </article>
       <article class="op">
         <span class="op-svc">prometheus</span>
-        <span class="op-role">Lưu metrics</span>
-        <p>Độ trễ sync, số bản ghi mỗi tầng, token và chi phí theo model, tỷ lệ job lỗi.</p>
+        <span class="op-role">Metrics storage</span>
+        <p>Sync latency, record counts per layer, tokens and cost per model, job failure rate.</p>
       </article>
       <article class="op">
         <span class="op-svc">loki</span>
-        <span class="op-role">Lưu log</span>
-        <p>Trả lời <em>hỏng vì sao</em>: stack trace, payload provider trả về. Nối với trace nhờ <code>trace_id</code>.</p>
+        <span class="op-role">Log storage</span>
+        <p>Answers <em>why it broke</em>: stack traces, the payload the provider returned. Joined to traces by <code>trace_id</code>.</p>
       </article>
       <article class="op">
         <span class="op-svc">promtail</span>
         <span class="op-role">Gom log</span>
-        <p>Đọc stdout của container rồi đẩy sang Loki. App chỉ in JSON, không biết Loki tồn tại.</p>
+        <p>Reads container stdout and ships it to Loki. The app only prints JSON and does not know Loki exists.</p>
       </article>
       <article class="op">
         <span class="op-svc">grafana</span>
-        <span class="op-role">Màn hình</span>
-        <p>Dashboard và datasource, provision từ <code>deploy/grafana/</code> nên versioned theo code. Bấm từ metric sang trace, từ trace sang log.</p>
+        <span class="op-role">The screen</span>
+        <p>Dashboards and datasources, provisioned from <code>deploy/grafana/</code> so they are versioned with the code. Click from a metric to a trace, from a trace to logs.</p>
       </article>
     </div>
   </section>
   <section id="s10">
     <div class="section-head">
-      <p class="eyebrow">4.2 · Từ máy dev tới cụm</p>
-      <h2>Một image, ba môi trường</h2>
+      <p class="eyebrow">4.2 · From dev machine to cluster</p>
+      <h2>One image, three environments</h2>
       <p>
-        CI build image <em>một lần</em>, tag bằng commit SHA. Staging và prod kéo đúng
-        image đó về chạy — không build lại, nên không có chuyện “máy tôi chạy được”.
+        CI builds the image <em>once</em>, tagged by commit SHA. Staging and prod pull that exact
+        image and run it — no rebuild, so there is no “works on my machine”.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Đường ra production của Mycel: lập trình viên push code, CI chạy lint, kiểm kiểu, migration, test, và chạy eval golden set khi pull request đụng vào prompt hoặc tầng llm; merge vào main thì CI build một image tag theo commit SHA và đẩy lên registry; staging rồi prod cùng kéo image đó về, chạy migration trước rồi mới đổi container; rollback là quay về tag SHA cũ.">
+             aria-label="Mycel's path to production: a developer pushes code, CI runs lint, type checks, migrations and tests, and runs the golden-set evals when the pull request touches prompts or the llm layer; merging to main has CI build one image tagged by commit SHA and push it to the registry; staging and then prod pull that image, run migrations first and only then swap containers; rollback is going back to the previous SHA tag.">
           <defs>
             <marker id="sh-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1751,15 +1751,15 @@ footer {
           <rect x="180" y="42" width="216" height="132" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="196" y="64" font-family="JetBrains Mono, monospace" font-size="11.5"
-                fill="var(--ink)">CI — mọi PR</text>
+                fill="var(--ink)">CI — every PR</text>
           <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
-            <text x="196" y="86">lint · kiểm kiểu</text>
-            <text x="196" y="106">migration chạy được</text>
+            <text x="196" y="86">lint · type check</text>
+            <text x="196" y="106">migrations apply</text>
             <text x="196" y="126">test</text>
           </g>
           <line x1="196" y1="138" x2="380" y2="138" stroke="var(--line)"/>
           <text x="196" y="158" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--accent)">eval — chỉ khi đụng prompt / llm</text>
+                fill="var(--accent)">evals — only when prompts / llm change</text>
 
           <!-- build -->
           <rect x="436" y="86" width="180" height="44" rx="2"
@@ -1790,14 +1790,14 @@ footer {
           <text x="672" y="201" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">staging</text>
           <text x="672" y="217" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-soft)">dữ liệu ẩn danh · key hạn mức riêng</text>
+                fill="var(--ink-soft)">anonymised data · its own rate-limited key</text>
 
           <rect x="656" y="240" width="268" height="44" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
           <text x="672" y="259" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--gold)">prod</text>
           <text x="672" y="275" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--ink-soft)">postgres có backup</text>
+                fill="var(--ink-soft)">postgres with backups</text>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
              marker-end="url(#sh-ar)">
@@ -1805,13 +1805,13 @@ footer {
             <path d="M 790 226 L 790 236"/>
           </g>
           <text x="800" y="163" font-family="JetBrains Mono, monospace" font-size="9"
-                fill="var(--ink-faint)">cùng một image</text>
+                fill="var(--ink-faint)">the same image</text>
 
-          <!-- thứ tự deploy -->
+          <!-- deploy order -->
           <rect x="16" y="182" width="600" height="102" rx="2"
                 fill="none" stroke="var(--accent)" stroke-width="1.2"/>
           <text x="36" y="204" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.4" fill="var(--accent)">THỨ TỰ DEPLOY — KHÔNG ĐỔI</text>
+                letter-spacing="1.4" fill="var(--accent)">DEPLOY ORDER — NEVER CHANGES</text>
 
           <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink)">
             <text x="36" y="230">1 · compose pull</text>
@@ -1819,264 +1819,264 @@ footer {
             <text x="36" y="270">3 · compose up -d</text>
           </g>
           <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
-            <text x="230" y="230">lấy image theo SHA</text>
-            <text x="230" y="250">migration chạy trước code mới</text>
-            <text x="230" y="270">rồi mới đổi container</text>
+            <text x="230" y="230">pull the image by SHA</text>
+            <text x="230" y="250">migrations run before the new code</text>
+            <text x="230" y="270">only then swap containers</text>
           </g>
           <text x="432" y="250" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--raw)">nên schema phải</text>
+                fill="var(--raw)">so the schema must be</text>
           <text x="432" y="266" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--raw)">tương thích ngược một bậc</text>
+                fill="var(--raw)">backward compatible by one step</text>
 
           <!-- rollback -->
           <path d="M 924 262 L 936 262 L 936 108 L 786 108"
                 stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
                 fill="none" color="var(--ink-faint)" marker-end="url(#sh-ar)"/>
           <text x="880" y="26" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--ink-faint)" text-anchor="end">rollback = quay về tag SHA cũ</text>
+                fill="var(--ink-faint)" text-anchor="end">rollback = back to the previous SHA tag</text>
         </svg>
       </div>
       <figcaption>
-        Migration chạy trước container mới, nên mọi thay đổi schema phải để code cũ vẫn
-        chạy được. Muốn xoá một cột thì làm hai lần release: lần đầu bỏ code dùng nó,
-        lần sau mới <code>drop</code>.
+        Migrations run before the new containers, so every schema change has to leave the old code
+        working. Dropping a column takes two releases: first remove the code using it,
+        then <code>drop</code> it.
       </figcaption>
     </figure>
 
     <table class="tbl">
       <thead>
         <tr>
-          <th>Môi trường</th>
-          <th>Dữ liệu</th>
+          <th>Environment</th>
+          <th>Data</th>
           <th>Model</th>
-          <th>Khác biệt</th>
+          <th>Difference</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="who">dev</td>
-          <td>Máy cá nhân, dữ liệu thật hoặc mẫu</td>
-          <td>vLLM local nếu có GPU</td>
-          <td>Chạy từ source, hot reload</td>
+          <td>Personal machine, real or sample data</td>
+          <td>local vLLM if there is a GPU</td>
+          <td>Runs from source, hot reload</td>
         </tr>
         <tr>
           <td class="who">staging</td>
-          <td>Ẩn danh</td>
-          <td>Cloud, key hạn mức riêng</td>
-          <td>Cùng image với prod, khác biến môi trường</td>
+          <td>Anonymised</td>
+          <td>Cloud, its own rate-limited key</td>
+          <td>Same image as prod, different environment variables</td>
         </tr>
         <tr class="tone-gold">
           <td class="who">prod</td>
-          <td>Thật, postgres có backup</td>
+          <td>Real, postgres with backups</td>
           <td>Cloud, key production</td>
-          <td>Chỉ deploy tag SHA đã qua staging</td>
+          <td>Only deploys SHA tags that passed staging</td>
         </tr>
       </tbody>
     </table>
 
     <p>
-      Ba môi trường chạy <em>cùng một image</em>. Mọi khác biệt nằm ở biến môi trường:
-      chuỗi kết nối DB, API key, có bật <code>vllm</code> hay không. Secret luôn đọc từ
-      env — không bao giờ nằm trong <code>config/</code> đã commit.
+      All three environments run <em>the same image</em>. Every difference is an environment variable:
+      the DB connection string, API keys, whether <code>vllm</code> is enabled. Secrets are always read from
+      env — never from a committed <code>config/</code>.
     </p>
   </section>
   <section id="s12">
     <div class="section-head">
-      <p class="eyebrow">4.3 · Trên cụm</p>
+      <p class="eyebrow">4.3 · On the cluster</p>
       <h2>Kubernetes on-premise</h2>
       <p>
-        Toàn bộ hệ chạy trong nhà, không phụ thuộc dịch vụ cloud nào ngoài lượt gọi LLM
-        cuối. <code>docker-compose.yml</code> là stack của máy dev; <code>deploy/helm/</code>
-        là stack của cụm. Hai file khác nhau nhưng <em>cùng một image</em> và cùng một bộ
-        biến môi trường — không có nhánh <code>if env == "prod"</code> trong code.
+        The whole system runs in-house, with no dependency on a cloud service beyond the final LLM
+        call. <code>docker-compose.yml</code> is the dev machine's stack; <code>deploy/helm/</code>
+        is the cluster's. Two different files, but <em>the same image</em> and the same set of
+        environment variables — there is no <code>if env == "prod"</code> branch in the code.
       </p>
     </div>
 
     <table class="tbl">
       <thead>
         <tr>
-          <th>Cần gì</th>
-          <th>Dùng gì</th>
-          <th>Chỗ dễ sai</th>
+          <th>Requirement</th>
+          <th>Solution</th>
+          <th>Easy to get wrong</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td class="who">API scale được</td>
-          <td><code>Deployment.replicas</code> — nhiều pod sau một <code>Service</code></td>
+          <td class="who">The API can scale</td>
+          <td><code>Deployment.replicas</code> — many pods behind one <code>Service</code></td>
           <td>—</td>
         </tr>
         <tr>
-          <td class="who">Pod chết tự sống lại</td>
-          <td>kubelet restart container; Deployment dựng lại pod mất hẳn</td>
-          <td>Pod treo mà vẫn mở cổng thì K8s coi là khoẻ. Self-healing chỉ đúng khi probe đúng</td>
+          <td class="who">A dead pod comes back</td>
+          <td>kubelet restarts the container; the Deployment recreates a lost pod</td>
+          <td>A hung pod with an open port looks healthy to K8s. Self-healing is only correct when the probes are</td>
         </tr>
         <tr>
-          <td class="who">Traffic tăng thì thêm pod</td>
+          <td class="who">More traffic adds pods</td>
           <td><code>HorizontalPodAutoscaler</code></td>
-          <td><code>api</code> theo CPU, nhưng <code>worker</code> phải theo <em>consumer lag của Kafka</em> — nó chờ I/O nên CPU thấp trong khi hàng đợi dồn</td>
+          <td><code>api</code> on CPU, but <code>worker</code> has to scale on <em>Kafka consumer lag</em> — it waits on I/O, so CPU stays low while the queue backs up</td>
         </tr>
         <tr>
-          <td class="who">Service gọi nhau</td>
-          <td><code>Service</code> — một DNS name ổn định, load-balance sẵn</td>
+          <td class="who">Services can reach each other</td>
+          <td><code>Service</code> — one stable DNS name, load-balanced already</td>
           <td>—</td>
         </tr>
         <tr class="tone-gold">
-          <td class="who">Deploy tái lập được</td>
-          <td><b>Helm</b> — chart có version, cùng chart + <code>values-prod.yaml</code> ra cùng kết quả</td>
-          <td><code>version</code> là của chart, <code>appVersion</code> là commit SHA của image. Rollback chart không rollback code</td>
+          <td class="who">Reproducible deploys</td>
+          <td><b>Helm</b> — a versioned chart; the same chart + <code>values-prod.yaml</code> gives the same result</td>
+          <td><code>version</code> is the chart's, <code>appVersion</code> is the image's commit SHA. Rolling back the chart does not roll back the code</td>
         </tr>
         <tr class="tone-gold">
-          <td class="who">Deploy tự động</td>
-          <td><b>Argo CD</b> — git là nguồn sự thật, Argo so cụm với git rồi kéo cho khớp</td>
-          <td><code>prune</code> xoá tài nguyên không còn trong git: một dòng values sai là mất PVC của Postgres</td>
+          <td class="who">Automated deploys</td>
+          <td><b>Argo CD</b> — git is the source of truth; Argo compares the cluster to git and pulls it into line</td>
+          <td><code>prune</code> deletes resources no longer in git: one wrong line in values loses Postgres's PVC</td>
         </tr>
         <tr class="tone-gold">
-          <td class="who">Ảnh container riêng</td>
-          <td><b>Harbor</b> — registry nội bộ, kèm quét CVE, ký ảnh, proxy cache</td>
-          <td>Tag = commit SHA, không bao giờ <code>latest</code>: hai pod cùng manifest sẽ chạy hai code khác nhau</td>
+          <td class="who">Private container images</td>
+          <td><b>Harbor</b> — an internal registry with CVE scanning, image signing and a proxy cache</td>
+          <td>Tag = commit SHA, never <code>latest</code>: two pods with the same manifest would run different code</td>
         </tr>
       </tbody>
     </table>
 
     <p>
-      <b>Ba probe, ba câu hỏi khác nhau.</b> <code>readinessProbe</code> quyết định có nhận
-      request (fail thì rút khỏi Service, pod vẫn sống), <code>livenessProbe</code> quyết
-      định có restart, <code>startupProbe</code> hoãn hai cái kia lúc khởi động. Thiếu cái
-      cuối thì <code>vllm</code> bị giết oan vì nạp model mất vài phút — và lặp mãi.
+      <b>Three probes, three different questions.</b> <code>readinessProbe</code> decides whether it takes
+      requests (on failure it is pulled from the Service, the pod stays alive), <code>livenessProbe</code> decides
+      whether it restarts, <code>startupProbe</code> delays the other two during boot. Without the last one
+      <code>vllm</code> is killed unfairly because loading the model takes minutes — forever.
     </p>
 
     <p>
-      <b>Trần cứng của <code>worker</code>:</b> số pod chạy thật = min(replica, số partition).
-      Topic 6 partition thì HPA đẩy lên 10 pod cũng chỉ 6 pod có việc, nên
-      <code>maxReplicas</code> đặt bằng số partition. <code>vllm</code> thì không autoscale
-      chút nào: mỗi pod giữ một GPU, không có GPU rảnh thì pod mới chỉ <code>Pending</code>.
+      <b><code>worker</code>&rsquo;s hard ceiling:</b> actual running pods = min(replicas, partition count).
+      With a 6-partition topic, an HPA pushing to 10 pods still leaves only 6 with work, so set
+      <code>maxReplicas</code> to the partition count. <code>vllm</code> does not autoscale
+      at all: each pod holds a GPU, and with none free a new pod only sits <code>Pending</code>.
     </p>
 
     <p>
-      <b><code>scheduler</code> luôn một replica</b>, và <code>strategy: Recreate</code>.
-      Hai scheduler thì mỗi lịch bắn hai lần; mà <code>RollingUpdate</code> dựng pod mới
-      <em>trước</em> khi xoá pod cũ, tức là có một khoảng hai cái cùng sống.
+      <b><code>scheduler</code> is always one replica</b>, with <code>strategy: Recreate</code>.
+      Two schedulers fire every schedule twice; and <code>RollingUpdate</code> starts the new pod
+      <em>before</em> removing the old one, leaving a window with two alive.
     </p>
 
     <p>
-      <b>Kho có state chạy dạng <code>StatefulSet</code> + PVC</b>, không phải
-      <code>Deployment</code>: Postgres, Kafka, Qdrant, MinIO cần danh tính ổn định và volume
-      gắn lại đúng pod cũ. On-prem thì phải tự lo lớp storage — local-path của k3s, hoặc
-      Longhorn nếu muốn volume sang được máy khác. Đây là phần tốn công nhất khi bỏ cloud.
+      <b>Stateful stores run as <code>StatefulSet</code> + PVC</b>, not
+      <code>Deployment</code>: Postgres, Kafka, Qdrant and MinIO need a stable identity and a volume that
+      reattaches to the same pod. On-prem means providing the storage layer yourself — k3s local-path, or
+      Longhorn if volumes should be able to move between machines. This is the most labour-intensive part of leaving the cloud.
     </p>
 
     <p>
-      <b>CI không có quyền vào cụm.</b> Nó build image, đẩy lên Harbor, rồi sửa
-      <code>image.tag</code> trong git. Argo CD thấy git đổi thì tự
-      <code>helm upgrade</code> — credential của cụm nằm ở Argo, không nằm trong CI. Staging
-      tự sync; prod cần người bấm, vì deploy vào 5 giờ chiều thứ Sáu không phải việc của máy.
-      Migration vẫn chạy trước, bằng <code>pre-upgrade</code> hook (Helm) hoặc
-      <code>sync-wave -1</code> (Argo); hook fail thì dừng, pod cũ vẫn chạy.
+      <b>CI has no access to the cluster.</b> It builds the image, pushes it to Harbor, then edits
+      <code>image.tag</code> in git. Argo CD sees the git change and runs
+      <code>helm upgrade</code> itself — the cluster credentials live in Argo, not in CI. Staging
+      auto-syncs; prod needs a human, because deploying at 5pm on a Friday is not a machine's decision.
+      Migrations still run first, via a <code>pre-upgrade</code> hook (Helm) or
+      <code>sync-wave -1</code> (Argo); if the hook fails everything stops and the old pods keep running.
     </p>
   </section>
   <section id="s11">
     <div class="section-head">
-      <p class="eyebrow">4.4 · Trạng thái</p>
-      <h2>Cái gì đã có, cái gì chưa</h2>
+      <p class="eyebrow">4.4 · Status</p>
+      <h2>What exists and what does not</h2>
       <p>
-        Trang này mô tả thiết kế, không mô tả một hệ thống đang chạy. Phần dưới nói rõ
-        ranh giới để không ai đọc nhầm.
+        This page describes a design, not a running system. The section below draws the line
+        so nobody reads it the wrong way.
       </p>
     </div>
 
     <table class="tbl">
       <thead>
         <tr>
-          <th>Hạng mục</th>
-          <th>Trạng thái</th>
+          <th>Item</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td class="who">Khung thư mục · quy ước tầng</td>
-          <td>Đã dựng — module có sẵn, docstring nói rõ trách nhiệm</td>
+          <td class="who">Directory skeleton · layer conventions</td>
+          <td>Built — the modules exist, docstrings state their responsibilities</td>
         </tr>
         <tr>
           <td class="who">docker compose · observability</td>
-          <td>Đã viết config: postgres, kafka, qdrant, minio, otel-collector, tempo, prometheus, loki, promtail, grafana</td>
+          <td>Config written: postgres, kafka, qdrant, minio, otel-collector, tempo, prometheus, loki, promtail, grafana</td>
         </tr>
         <tr>
           <td class="who">CI · build image</td>
-          <td>Đã có workflow: lint, kiểm kiểu, migration, test; build tag theo SHA</td>
+          <td>Workflows exist: lint, type check, migrations, tests; builds an image tagged by SHA</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">Helm chart · Argo CD · Harbor</td>
-          <td class="no">Mới có <code>values</code>, <code>Application</code> và tài liệu quyết định. Chưa có manifest thật trong <code>templates/</code>, chưa có cụm nào để deploy</td>
+          <td class="no">Only <code>values</code>, <code>Application</code> and the decision docs. No real manifests in <code>templates/</code> yet, and no cluster to deploy to</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">sources/ — connector</td>
-          <td class="no">Chưa có provider nào chạy thật. Slack/Gmail/Confluence mới là dự định</td>
+          <td class="no">No provider runs for real yet. Slack/Gmail/Confluence are still intentions</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">etl/ · agents/ · reports/</td>
-          <td class="no">Chưa có bước transform hay agent nào được cài đặt</td>
+          <td class="no">No transform step or agent has been implemented</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">evals/ — golden set</td>
-          <td class="no">Có khung và luật chặn merge, chưa có cặp dữ liệu nào</td>
+          <td class="no">The skeleton and the merge-blocking rule exist, but no data pairs yet</td>
         </tr>
         <tr class="tone-raw">
           <td class="who">Model local 3B</td>
-          <td class="no">Chưa chốt việc cụ thể nó gánh. Không có việc khối lượng lớn thật thì bỏ hẳn tầng local</td>
+          <td class="no">The specific work it carries is undecided. With no real high-volume work, the local layer can be dropped entirely</td>
         </tr>
       </tbody>
     </table>
   </section>
   <section id="s08">
     <div class="section-head">
-      <p class="eyebrow">Tóm tắt</p>
-      <h2>Chín quy ước bất di bất dịch</h2>
-      <p>Nếu chỉ nhớ một phần của trang này, nhớ phần này.</p>
+      <p class="eyebrow">Summary</p>
+      <h2>Nine rules that do not bend</h2>
+      <p>If only one part of this page sticks, make it this one.</p>
     </div>
 
     <ul class="rules">
       <li>
-        <strong>Một chiều</strong>
-        <span>Dữ liệu chỉ chảy raw → silver → gold. Không tầng nào đọc ngược lên.</span>
+        <strong>One direction</strong>
+        <span>Data only flows raw → silver → gold. No layer reads back upwards.</span>
       </li>
       <li>
-        <strong>Agent chỉ đọc gold</strong>
-        <span>Agent không bao giờ chạm raw hay silver. Gold là hợp đồng duy nhất.</span>
+        <strong>Agents read gold only</strong>
+        <span>Agents never touch raw or silver. Gold is the only contract.</span>
       </li>
       <li>
-        <strong>Thêm nguồn không sửa code cũ</strong>
-        <span>Một provider mới = một file trong <code>sources/</code> + một file config.</span>
+        <strong>Adding a source does not change existing code</strong>
+        <span>A new provider = one file in <code>sources/</code> + one config file.</span>
       </li>
       <li>
-        <strong>Gọi model chỉ qua <code>llm/</code></strong>
-        <span>Không module nào import thẳng SDK provider. Đổi model, thêm cache, đặt trần chi phí — sửa một chỗ.</span>
+        <strong>Models are called only through <code>llm/</code></strong>
+        <span>No module imports a provider SDK directly. Switching models, adding a cache, setting a spend ceiling — one change.</span>
       </li>
       <li>
-        <strong>Việc lâu thì vào hàng đợi</strong>
-        <span>API không chờ LLM chạy xong. Đẩy vào <code>queue/</code>, trả job id, retry được khi lỗi.</span>
+        <strong>Slow work goes on the queue</strong>
+        <span>The API does not wait for an LLM. Push to <code>queue/</code>, return a job id, retry on failure.</span>
       </li>
       <li>
-        <strong>Đổi prompt phải chạy eval</strong>
-        <span>Báo cáo kém đi không làm test đỏ. Chỉ golden set bắt được.</span>
+        <strong>Changing a prompt means running the evals</strong>
+        <span>A worse report does not turn a test red. Only the golden set catches it.</span>
       </li>
       <li>
-        <strong>Controller mỏng, pipeline dày</strong>
-        <span>Bỏ hẳn <code>api/</code> mà <code>scheduler</code> vẫn sinh được báo cáo thì tầng đang đúng chỗ.</span>
+        <strong>Thin controllers, thick pipelines</strong>
+        <span>If <code>api/</code> could be deleted entirely and <code>scheduler</code> would still produce reports, the layers are in the right place.</span>
       </li>
       <li>
-        <strong>Một image cho mọi môi trường</strong>
-        <span>Build một lần, tag theo commit SHA. Khác nhau chỉ ở biến môi trường.</span>
+        <strong>One image for every environment</strong>
+        <span>Built once, tagged by commit SHA. Only environment variables differ.</span>
       </li>
       <li>
-        <strong>Tên module = việc nó làm</strong>
-        <span>Không viết tắt, không tầng trừu tượng dựng sẵn cho tương lai chưa tới.</span>
+        <strong>Module name = what it does</strong>
+        <span>No abbreviations, no abstraction layers built for a future that has not arrived.</span>
       </li>
     </ul>
   </section>
   <footer>
-    <span>Mycel v0.1 — bản thiết kế. Khung đã dựng, chưa có connector nào chạy thật.</span>
-    <span>Bản chữ: <code>docs/architecture.md</code></span>
+    <span>Mycel v0.1 — a design. The skeleton is built; no connector runs for real yet.</span>
+    <span>Text version: <code>docs/architecture.md</code></span>
     <span class="mono">docs/architecture.html</span>
   </footer>
 

@@ -1,4 +1,5 @@
-# OpenTelemetry Collector: nhận trace + metrics từ app, chuyển tới Tempo và Prometheus.
+# OpenTelemetry Collector: receives traces + metrics from the app, forwards them to
+# Tempo and Prometheus.
 
 receivers:
   otlp:

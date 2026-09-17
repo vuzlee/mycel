@@ -1,5 +1,5 @@
-# Loki đơn node, lưu xuống filesystem. Prod thì đổi storage sang S3/MinIO,
-# phần còn lại giữ nguyên.
+# Single-node Loki, stored on the filesystem. In prod, switch storage to S3/MinIO and
+# leave the rest as is.
 
 auth_enabled: false
 
@@ -25,5 +25,5 @@ schema_config:
       index: {prefix: index_, period: 24h}
 
 limits_config:
-  # Log của job chạy lâu có thể tới muộn vài phút so với lúc job bắt đầu.
+  # Logs from long-running jobs can arrive minutes after the job started.
   reject_old_samples: false

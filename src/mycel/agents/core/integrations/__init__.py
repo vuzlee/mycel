@@ -1,5 +1,5 @@
-"""Nối agent với tool và agent bên ngoài Mycel.
+"""Wiring agents to tools and agents outside Mycel.
 
-  mcp.py             gắn tool từ MCP server ngoài
-  agent_protocol.py  gọi agent của hệ khác — để dành, chưa dùng
+  mcp.py             mount tools from an external MCP server
+  agent_protocol.py  call another system's agent — reserved, not in use yet
 """

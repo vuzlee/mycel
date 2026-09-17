@@ -1,13 +1,15 @@
-"""Tầng agent: orchestrator điều phối, mỗi agent chuyên một việc, tool là năng lực agent gọi được.
+"""Agent layer: an orchestrator coordinates, each agent specialises, tools are the
+capabilities an agent can call.
 
-  core/            khung chạy — vòng lặp agent, streaming, hook trace/budget, MCP
-  orchestrator.py  điều phối: chia task, giao việc, ghép kết quả
-  analyst.py       phân tích số liệu
-  writer.py        viết văn bản
-  reviewer.py      đối chiếu với nguồn
-  registry.py      khai báo agent và tool orchestrator được dùng
-  tools/           năng lực agent gọi được: query_gold, chart, compute
-  prompts/         prompt tách khỏi code
+  core/            the runtime — agent loop, streaming, trace/budget hooks, MCP
+  orchestrator.py  coordination: split tasks, assign work, merge results
+  analyst.py       analyses figures
+  writer.py        writes prose
+  reviewer.py      cross-checks against sources
+  registry.py      declares which agents and tools the orchestrator may use
+  tools/           capabilities an agent can call: query_gold, chart, compute
+  prompts/         prompts kept out of the code
 
-Agent chuyên một việc thì prompt ngắn, eval chấm được từng cái, hỏng cái nào biết ngay cái đó.
+One job per agent keeps prompts short, lets evals score each one separately, and makes a
+failure point at the exact agent that broke.
 """

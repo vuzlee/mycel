@@ -1,8 +1,9 @@
-"""Từ gold sinh embedding rồi upsert vào Qdrant. Chạy nền, không chạy trong request.
+"""Generate embeddings from gold and upsert them into Qdrant. Runs in the background, never
+inside a request.
 
-Upsert theo id ổn định lấy từ khoá của bản ghi gold, nên chạy lại không sinh bản
-trùng — cùng tinh thần idempotent với `etl/`.
+Upserts use a stable id derived from the gold record's key, so re-running produces no
+duplicates — the same idempotent spirit as `etl/`.
 
-Sinh embedding là việc khối lượng lớn, gọi theo lô: đúng loại việc để đẩy sang
-model local (`llm/router.py` chọn tier LOCAL) thay vì đốt quota cloud.
+Generating embeddings is high-volume batch work: exactly the kind of job to push to a local
+model (`llm/router.py` picks tier LOCAL) instead of burning cloud quota.
 """

@@ -1,16 +1,18 @@
-"""Hình dạng một job: loại việc, payload, idempotency key, số lần đã retry, trace context.
+"""A job's shape: kind of work, payload, idempotency key, retry count, trace context.
 
-**Idempotency key là bắt buộc trên Kafka**, không phải tuỳ chọn. Kafka cho đảm bảo
-at-least-once: commit sau khi xong nghĩa là worker chết giữa đường thì job chạy lại, và
-nó *đã* làm xong một phần. Không có key thì một báo cáo sinh ra hai lần.
+**The idempotency key is mandatory on Kafka**, not optional. Kafka gives at-least-once:
+committing after finishing means a worker dying mid-job causes a re-run, and it had *already*
+done part of the work. Without a key, one report gets produced twice.
 
-Key nên suy ra từ nội dung việc (miền + khoảng thời gian + tham số), không phải UUID sinh
-mới mỗi lần — UUID thì hai lần gọi là hai key khác nhau, đúng cái đang muốn tránh.
+The key should be derived from the work itself (domain + time window + parameters), not a
+freshly generated UUID — with a UUID, two calls produce two different keys, which is exactly
+what we are trying to avoid.
 
-Kafka message key thì dùng cho việc khác: nó quyết định partition, tức là quyết định thứ
-tự. Cùng một nguồn dữ liệu nên vào cùng partition để hai job sync không chạy chồng nhau.
+The Kafka message key serves a different purpose: it picks the partition, and therefore the
+ordering. The same data source should land on the same partition so two sync jobs do not
+overlap.
 
-Trace context nằm trong header của message (xem `context.py`), không nằm trong payload:
-header đi theo message qua cả topic retry và dead-letter, nên job hỏng vẫn mở lại được
-trace để xem vì sao.
+Trace context lives in the message headers (see `context.py`), not the payload: headers
+travel with the message through the retry and dead-letter topics, so even a failed job can
+have its trace reopened to find out why.
 """

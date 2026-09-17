@@ -1,31 +1,35 @@
-"""Tầng job chạy nền trên Kafka: định nghĩa job, retry, dead-letter, idempotency key.
+"""Background job layer on Kafka: job definitions, retry, dead-letter, idempotency keys.
 
-**Không phải broker.** Kafka chạy ngoài, khai trong `docker-compose`. Thư mục này là tầng
-nằm *trên* Kafka — đổi broker thì sửa ở đây, phần còn lại của hệ thống không biết.
+**Not a broker.** Kafka runs outside, declared in `docker-compose`. This directory is the
+layer *on top of* Kafka — swapping brokers means changing things here, and the rest of the
+system never notices.
 
-Trả lời *chạy cái gì, lỗi thì sao*; `scheduler/` trả lời *khi nào chạy*.
+Answers *what runs and what happens on failure*; `scheduler/` answers *when*.
 
-  job.py       hình dạng một job: payload, idempotency key, số lần đã retry, trace context
-  producer.py  đẩy job lên topic — cửa vào là `services/enqueue.py`
-  consumer.py  vòng lặp poll/commit của worker
-  retry.py     topic retry theo tầng + dead-letter
-  context.py   mang trace context qua ranh giới process
+  job.py       a job's shape: payload, idempotency key, retry count, trace context
+  producer.py  push a job onto a topic — the entry point is `services/enqueue.py`
+  consumer.py  the worker's poll/commit loop
+  retry.py     tiered retry topics + dead-letter
+  context.py   carry trace context across the process boundary
 
-**Kafka là log có thứ tự, không phải hàng đợi việc**, nên bốn thứ dưới đây phải tự dựng —
-không có cái nào là mặc định, và cả bốn đều hỏng lặng lẽ nếu làm sai:
+**Kafka is an ordered log, not a work queue**, so the four things below have to be built by
+hand — none is a default, and all four fail silently when done wrong:
 
-1. **Retry không lẻ được.** Consumer commit theo offset, nên job lỗi mà `seek` lại thì
-   chặn cả partition. Cách làm: đẩy sang topic retry rồi commit tiếp — xem `retry.py`.
-2. **Số partition chặn song song, không phải số worker.** 3 partition thì worker thứ 4
-   ngồi không. Đặt partition theo mức scale tối đa *dự kiến* ngay từ đầu: tăng được nhưng
-   không giảm, và tăng thì phá thứ tự theo key.
-3. **Job chạy lâu bị coi là chết.** `max.poll.interval.ms` mặc định 5 phút; sinh báo cáo
-   mất "vài phút" nên nằm đúng vùng nguy hiểm — quá hạn là rebalance và job chạy lại từ
-   đầu. Phải nâng hẳn giá trị này, hoặc tách việc ra khỏi vòng poll.
-4. **Commit sau khi xong, không phải sau khi nhận.** Commit sớm thì worker chết giữa
-   đường là mất job. Commit muộn thì job có thể chạy hai lần — nên idempotency key trong
-   `job.py` là bắt buộc, không phải tuỳ chọn.
+1. **Retries cannot be per-message.** Consumers commit by offset, so `seek`-ing back on a
+   failed job blocks the whole partition. Instead: push to a retry topic and commit onward —
+   see `retry.py`.
+2. **Partition count caps parallelism, not worker count.** With 3 partitions a 4th worker
+   sits idle. Set partitions to the maximum scale you *expect* from the start: they can be
+   increased but not decreased, and increasing them breaks per-key ordering.
+3. **Long jobs look dead.** `max.poll.interval.ms` defaults to 5 minutes; generating a
+   report takes "a few minutes", squarely in the danger zone — exceeding it triggers a
+   rebalance and the job restarts from scratch. Raise this value substantially, or move the
+   work off the poll loop.
+4. **Commit after finishing, not after receiving.** Commit early and a worker dying mid-job
+   loses it. Commit late and a job may run twice — which is why the idempotency key in
+   `job.py` is mandatory, not optional.
 
-Đổi lại, Kafka cho thứ hàng đợi thường không có: giữ lại log nên replay được, và thêm
-consumer group khác đọc cùng luồng mà không ảnh hưởng worker hiện tại.
+In exchange, Kafka gives what an ordinary queue does not: the log is retained so it can be
+replayed, and another consumer group can read the same stream without affecting existing
+workers.
 """

@@ -1,16 +1,17 @@
-"""Vòng lặp poll của worker: nhận job, chạy, commit.
+"""The worker's poll loop: receive a job, run it, commit.
 
-Ba ràng buộc của Kafka phải tôn trọng ở đây, cả ba đều hỏng lặng lẽ:
+Three Kafka constraints have to be respected here, and all three fail silently:
 
-  enable_auto_commit=False   tự commit là commit trước khi job xong -> chết giữa đường
-                             là mất job
-  commit sau khi xong        thứ tự đúng: chạy -> commit. Không phải ngược lại
-  max_poll_interval_ms       nâng hẳn lên (mặc định 5 phút) vì sinh báo cáo mất vài phút.
-                             Quá hạn là Kafka coi worker này chết, rebalance, job chạy lại
+  enable_auto_commit=False   auto-commit commits before the job finishes -> dying mid-job
+                             loses it
+  commit after finishing     the order is: run, then commit. Not the reverse
+  max_poll_interval_ms       raise it well above the 5-minute default, since generating a
+                             report takes minutes. Exceed it and Kafka considers this
+                             worker dead, rebalances, and the job runs again
 
-Job lỗi thì **không** seek lại — làm vậy chặn cả partition. Đẩy sang topic retry rồi
-commit tiếp, xem `retry.py`.
+A failed job is **not** seek-ed back — that blocks the whole partition. Push it to a retry
+topic and commit onward; see `retry.py`.
 
-Gọi `context.extract()` ngay khi nhận, trước khi chạy, để span của job nối vào span của
-request đã tạo ra nó.
+Call `context.extract()` on receipt, before running, so the job's span attaches to the span
+of the request that created it.
 """

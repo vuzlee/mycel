@@ -14,11 +14,11 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: mycel-prod
-  # Prod KHÔNG auto-sync: người bấm, và bấm lúc tỉnh táo.
-  # selfHeal cũng tắt — lúc sự cố còn vá nóng bằng kubectl được.
+  # Prod does NOT auto-sync: a human presses the button, while well rested.
+  # selfHeal is off too — during an incident you still want to hotfix with kubectl.
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
-      # Không bao giờ prune tài nguyên có state ở prod. PVC của Postgres
-      # bị xoá vì một dòng values sai là tai nạn git không cứu được.
+      # Never prune stateful resources in prod. Losing Postgres's PVC to one wrong
+      # line in values is an accident git cannot undo.
       - PrunePropagationPolicy=foreground

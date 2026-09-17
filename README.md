@@ -1,59 +1,60 @@
 # Mycel
 
-Hệ multi-agent tự động tổng hợp **báo cáo và dashboard** từ nhiều nguồn dữ liệu rời rạc
-— Slack, Gmail, Confluence.
+A multi-agent system that automatically assembles **reports and dashboards** from scattered
+data sources — Slack, Gmail, Confluence.
 
-Tên lấy từ *mycelium*, mạng sợi nấm ngầm kết nối cả khu rừng. Mycel cũng vậy: chạy nền,
-âm thầm gom dữ liệu, xử lý qua nhiều tầng, rồi mới "trồi lên" thành báo cáo.
+Named after *mycelium*, the underground fungal network that connects a whole forest. Mycel
+works the same way: running in the background, quietly gathering data, processing it through
+several layers, and only then surfacing as a report.
 
-> **Trạng thái:** đang dựng khung. Chưa có connector nào chạy thật.
+> **Status:** scaffolding. No connector runs for real yet.
 
-## Nó làm gì
+## What it does
 
 ```
-Slack · Gmail · … ──► raw ──► silver ──► gold ──► Agents ──► Báo cáo / Dashboard
-                      thô     sạch      sẵn dùng
+Slack · Gmail · … ──► raw ──► silver ──► gold ──► Agents ──► Reports / Dashboards
+                      raw     cleaned   ready
 ```
 
-Ba tầng đều nằm trong một **PostgreSQL**, mỗi tầng một schema. Agent chỉ đọc `gold`.
+All three layers live in one **PostgreSQL**, one schema each. Agents read `gold` only.
 
-Phần suy luận đi qua `llm/` — việc khối lượng lớn chạy model local, suy luận cuối gọi
-model cloud. Không module nào import thẳng SDK provider.
+Reasoning goes through `llm/` — high-volume work runs on a local model, final reasoning calls
+a cloud model. No module imports a provider SDK directly.
 
-## Chạy thử
+## Running it
 
 ```bash
-cp .env.example .env      # điền DB và API key
+cp .env.example .env      # fill in DB and API keys
 docker compose up -d      # app + postgres + observability
 ```
 
-| Dịch vụ | URL |
+| Service | URL |
 |---|---|
 | API | http://localhost:8000 |
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
 
-Không qua Docker: `uv sync` rồi `uvicorn mycel.api.app:app --reload`.
-Muốn bật model local (cần GPU): thêm `--profile local-llm`.
+Without Docker: `uv sync`, then `uvicorn mycel.api.app:app --reload`.
+To enable the local model (needs a GPU): add `--profile local-llm`.
 
-## Cây thư mục
+## Directory tree
 
 ```
-src/mycel/     Mã nguồn — xem docs/ để biết tầng nào làm gì
-config/        Cấu hình theo môi trường và theo nguồn (bí mật ở .env)
-deploy/        Config hạ tầng: OTel, Grafana, vLLM, môi trường deploy
-evals/         Golden set chấm chất lượng báo cáo
-migrations/    Alembic migration
-docs/          Tài liệu thiết kế
-tests/         Test
+src/mycel/     Source — see docs/ for what each layer does
+config/        Per-environment and per-source config (secrets live in .env)
+deploy/        Infrastructure config: OTel, Grafana, vLLM, deploy environments
+evals/         Golden set for scoring report quality
+migrations/    Alembic migrations
+docs/          Design documentation
+tests/         Tests
 ```
 
-## Tài liệu
+## Documentation
 
 | | |
 |---|---|
-| **[docs/architecture.html](docs/architecture.html)** | Bản đầy đủ có sơ đồ — đọc cái này trước |
-| [docs/architecture.md](docs/architecture.md) | Cùng nội dung, bản chữ |
-| [deploy/inference/](deploy/inference/README.md) | Ràng buộc phần cứng cho model local |
-| [deploy/envs/](deploy/envs/README.md) | Biến môi trường và cách lên staging/prod |
-| [evals/](evals/README.md) | Đổi prompt hay đổi model thì chạy lại trước khi merge |
+| **[docs/architecture.html](docs/architecture.html)** | The full version with diagrams — read this first |
+| [docs/architecture.md](docs/architecture.md) | Same content, plain text |
+| [deploy/inference/](deploy/inference/README.md) | Hardware constraints for the local model |
+| [deploy/envs/](deploy/envs/README.md) | Environment variables and how to reach staging/prod |
+| [evals/](evals/README.md) | Re-run before merging any prompt or model change |

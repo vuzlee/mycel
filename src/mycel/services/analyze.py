@@ -1,4 +1,4 @@
-"""Giao dữ liệu cho agents/ phân tích, nhận lại kết quả có cấu trúc.
+"""Hand data to agents/ for analysis, get structured results back.
 
-Model trả sai format thì retry ở đây, không để dữ liệu hỏng đi tiếp.
+If the model returns the wrong format, retry here rather than letting bad data move on.
 """

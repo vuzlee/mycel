@@ -1,9 +1,9 @@
-"""Chuỗi nghiệp vụ của miền đồng bộ.
+"""The sync domain's business chain.
 
-  sync_source(name, khoảng_thời_gian)
-    1. fetch_service      gọi sources/, ghi payload nguyên bản xuống raw
-    2. transform_service  chạy etl/ raw -> silver -> gold
-    3. check_service      chạy etl/checks/; fail thì dừng, không ghi lên tầng trên
+  sync_source(name, time_window)
+    1. fetch service      call sources/, write the raw payload down to raw
+    2. transform service  run etl/ raw -> silver -> gold
+    3. check service      run etl/checks/; on failure stop, do not write the layer above
 
-Mỗi bước idempotent — chạy lại cùng khoảng thời gian cho cùng kết quả.
+Every step is idempotent — re-running the same time window gives the same result.
 """

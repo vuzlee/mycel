@@ -1,5 +1,6 @@
-"""Bảng đã tổng hợp theo nghiệp vụ. Hợp đồng duy nhất mà agent được đọc.
+"""Business-aggregated tables. The only contract agents are allowed to read.
 
-Đổi cột ở đây là đổi hợp đồng: agent và báo cáo hỏng theo. Thêm cột thì thoải
-mái, xoá hoặc đổi nghĩa cột phải làm hai bước release như migration.
+Changing a column here changes the contract: agents and reports break with it. Adding
+columns is free; dropping one or changing its meaning needs a two-release process, like a
+migration.
 """

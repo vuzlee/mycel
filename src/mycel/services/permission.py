@@ -1,5 +1,5 @@
-"""Người này được xem nguồn dữ liệu này không.
+"""May this person see this data source.
 
-Dữ liệu là Slack và Gmail nội bộ, nên quyền phải kiểm trước khi đụng gold —
-không phải sau khi báo cáo đã sinh xong.
+The data is internal Slack and Gmail, so permissions must be checked before touching
+gold — not after the report has already been produced.
 """

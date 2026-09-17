@@ -1,5 +1,5 @@
-"""Gọi một connector trong sources/, ghi payload nguyên bản xuống raw.
+"""Call one connector in sources/, write the raw payload down to raw.
 
-Không xử lý, không làm sạch — giữ nguyên bản để khi transform sai còn chạy lại
-được từ raw thay vì phải gọi lại provider.
+No processing, no cleaning — keeping the original means a bad transform can be re-run
+from raw instead of hitting the provider again.
 """

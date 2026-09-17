@@ -1,4 +1,5 @@
-# Grafana provision từ file nên cấu hình versioned theo code, không click tay.
+# Grafana provisions from files, so this config is versioned with the code rather than
+# clicked together by hand.
 
 apiVersion: 1
 
@@ -14,7 +15,7 @@ datasources:
     uid: tempo
     url: http://tempo:3200
     jsonData:
-      # Từ một span nhảy sang đúng những dòng log của trace đó.
+      # From a span, jump to exactly that trace's log lines.
       tracesToLogsV2:
         datasourceUid: loki
         filterByTraceID: true
@@ -24,9 +25,9 @@ datasources:
     uid: loki
     url: http://loki:3100
     jsonData:
-      # Chiều ngược lại: thấy dòng log lỗi thì bấm thẳng sang trace.
-      # trace_id nằm trong nội dung log JSON, không phải label — làm label
-      # thì cardinality vô hạn sẽ giết index của Loki.
+      # The reverse direction: from an error log line, click straight through to the trace.
+      # trace_id lives in the JSON log body, not a label — as a label its unbounded
+      # cardinality would kill Loki's index.
       derivedFields:
         - name: TraceID
           matcherRegex: '"trace_id"\s*:\s*"([a-f0-9]+)"'

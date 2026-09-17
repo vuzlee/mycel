@@ -1,4 +1,4 @@
-# Tempo: lưu trace. Nhận OTLP từ collector, không nhận thẳng từ app.
+# Tempo: trace storage. Receives OTLP from the collector, not from the app directly.
 
 server:
   http_listen_port: 3200

@@ -1,8 +1,8 @@
-"""Client MCP: gắn tool từ server ngoài vào agent mà không phải viết wrapper.
+"""MCP client: mount tools from an external server without writing a wrapper.
 
-Kết nối server đã khai trong config, đọc danh sách tool, dựng thành tool agent gọi
-được. Tool MCP đi qua đúng đường như tool nội bộ — cùng chỗ log, cùng chỗ tính trace,
-cùng guard đếm số lần gọi.
+Connect to the servers declared in config, read their tool list, turn them into tools the
+agent can call. MCP tools travel the same path as internal ones — same logging, same
+tracing, same guard counting calls.
 
-Tool ngoài là mã người khác viết: cần timeout, cần giới hạn kích thước kết quả trả về.
+External tools are someone else's code: they need a timeout and a cap on result size.
 """

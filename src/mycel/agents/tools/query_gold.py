@@ -1,5 +1,6 @@
-"""Tool truy vấn tầng gold.
+"""Tool that queries the gold layer.
 
-Đi qua `storage/` chứ không tự viết SQL, và chỉ đọc gold — agent không chạm raw/silver.
-Có trần số dòng trả về: một câu quét cả bảng sẽ làm tràn context và tốn tiền vô ích.
+Goes through `storage/` rather than writing SQL itself, and reads gold only — agents never
+touch raw/silver. There is a cap on rows returned: one table-scanning question would blow
+up the context and burn money for nothing.
 """

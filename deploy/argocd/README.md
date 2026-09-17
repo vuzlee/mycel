@@ -1,66 +1,68 @@
 # Argo CD — GitOps
 
-## Vấn đề nó giải
+## The problem it solves
 
-Deploy bằng tay (`helm upgrade` từ máy ai đó) thì không ai trả lời được hai câu:
-*prod đang chạy đúng cái gì* và *ai đổi lúc nào*. Argo CD lật ngược chiều: git là
-nguồn sự thật duy nhất, Argo so cụm với git rồi tự kéo cho khớp.
+Deploying by hand (`helm upgrade` from someone's machine) leaves two questions nobody can
+answer: *what exactly is prod running* and *who changed it when*. Argo CD flips the direction:
+git is the single source of truth, Argo compares the cluster against git and pulls it into
+line.
 
 ```
-git push ──► CI: lint · test · build image (tag = SHA) ──► push lên Harbor
+git push ──► CI: lint · test · build image (tag = SHA) ──► push to Harbor
                                                               │
-             CI sửa image.tag trong values ◄──────────────────┘
+             CI edits image.tag in values ◄───────────────────┘
                      │
-                     └─► commit vào repo config
+                     └─► commit to the config repo
                                 │
-                     Argo CD thấy git đổi ──► helm upgrade vào cụm
+                     Argo CD sees git change ──► helm upgrade into the cluster
 ```
 
-CI **không** có quyền vào cụm. Nó chỉ build image và sửa một dòng trong git.
-Credential của cụm nằm ở Argo, không nằm trong CI.
+CI has **no** access to the cluster. It only builds the image and edits one line in git.
+Cluster credentials live in Argo, not in CI.
 
-## Vì sao tách repo config
+## Why a separate config repo
 
-`image.tag` đổi mỗi lần build. Để chung repo code thì CI commit vào chính repo đó
-và kích hoạt lại CI — vòng lặp. Hai cách thoát:
+`image.tag` changes on every build. Keeping it in the code repo means CI commits to that same
+repo and triggers CI again — a loop. Two ways out:
 
 | | |
 |---|---|
-| Repo config riêng | sạch nhất, nhưng thêm một repo phải đồng bộ |
-| Cùng repo, CI bỏ qua commit của chính nó (`[skip ci]`) | đơn giản hơn, dễ quên |
+| Separate config repo | cleanest, but one more repo to keep in sync |
+| Same repo, CI skips its own commits (`[skip ci]`) | simpler, easy to forget |
 
-Dự án đang dùng **cùng repo**, thư mục `deploy/helm/`, CI đánh dấu `[skip ci]`.
+This project uses the **same repo**, directory `deploy/helm/`, with CI marking `[skip ci]`.
 
-## Auto-sync và chỗ cần cẩn thận
+## Auto-sync and where to be careful
 
-| Tuỳ chọn | Làm gì | Rủi ro |
+| Option | What it does | Risk |
 |---|---|---|
-| `automated.prune` | xoá tài nguyên không còn trong git | xoá nhầm PVC → mất dữ liệu |
-| `automated.selfHeal` | ai đó `kubectl edit` thì Argo ghi đè lại | mất đường vá nóng khi sự cố |
+| `automated.prune` | deletes resources no longer in git | deleting a PVC by mistake → data loss |
+| `automated.selfHeal` | if someone runs `kubectl edit`, Argo overwrites it | no hot-patch route during an incident |
 
-Đặt `prune: false` cho mọi thứ có state (Postgres, Kafka, Qdrant, MinIO), hoặc gắn
-`Prune=false` lên từng tài nguyên đó. Ghi nhầm một dòng trong values rồi Argo prune
-mất PVC của Postgres là kiểu tai nạn không rollback được bằng git.
+Set `prune: false` for anything with state (Postgres, Kafka, Qdrant, MinIO), or mark those
+resources individually with `Prune=false`. Mistyping one line in values and having Argo prune
+Postgres's PVC is the kind of accident git cannot roll back.
 
-**Staging tự sync, prod cần người bấm.** Prod để `syncPolicy` thủ công hoặc bật
-sync window — deploy vào 5 giờ chiều thứ Sáu không phải việc của máy.
+**Staging syncs itself, prod needs a human.** Leave prod on a manual `syncPolicy` or enable a
+sync window — deploying at 5pm on a Friday is not a machine's decision.
 
-## Migration và sync wave
+## Migrations and sync waves
 
-Argo áp dụng manifest theo `sync-wave`, số nhỏ trước:
+Argo applies manifests by `sync-wave`, lowest first:
 
-| Wave | Gì |
+| Wave | What |
 |---|---|
-| `-1` | Job migration (`alembic upgrade head`) — hook `PreSync` |
-| `0` | Deployment api, worker, scheduler |
+| `-1` | Migration job (`alembic upgrade head`) — `PreSync` hook |
+| `0` | api, worker and scheduler Deployments |
 
-Migration fail thì sync dừng, pod cũ vẫn chạy. Vẫn giữ quy tắc schema tương thích
-ngược một bậc: có một khoảng code cũ chạy với schema mới.
+If the migration fails the sync stops and the old pods keep running. The one-step
+backward-compatible schema rule still holds: there is a window where old code runs against the
+new schema.
 
-## File
+## Files
 
 ```
-application-staging.yaml   Application: theo dõi deploy/helm, values-staging, auto-sync
-application-prod.yaml      Application: values-prod, sync thủ công
-project.yaml               AppProject: giới hạn repo và namespace được phép đụng
+application-staging.yaml   Application: watches deploy/helm, values-staging, auto-sync
+application-prod.yaml      Application: values-prod, manual sync
+project.yaml               AppProject: limits which repos and namespaces may be touched
 ```

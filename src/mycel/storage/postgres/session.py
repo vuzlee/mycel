@@ -1,5 +1,5 @@
-"""Vòng đời một session: mở, commit khi xong, rollback khi lỗi, luôn đóng.
+"""A session's lifetime: open, commit on success, rollback on error, always close.
 
-Một request = một session. Đừng chia sẻ session giữa các task chạy song song —
-session của SQLAlchemy không an toàn với concurrency.
+One request = one session. Do not share a session across concurrent tasks — SQLAlchemy
+sessions are not concurrency-safe.
 """

@@ -1,7 +1,9 @@
-"""Trả lời *khi nào chạy*: sync nguồn theo giờ, transform sau khi sync xong, báo cáo định kỳ.
+"""Answers *when to run*: sync sources on a timer, transform after a sync completes,
+periodic reports.
 
-Gọi thẳng pipeline trong `managers/` — đúng chỗ controller gọi, chỉ bỏ qua mắt xích HTTP.
-Không tự gọi HTTP vào chính mình.
+Calls pipelines in `managers/` directly — the same place the controller calls, just without
+the HTTP link in between. It never makes an HTTP call to itself.
 
-Khác `queue/`: ở đây là lịch, bên kia là job và cách xử lý khi job fail.
+Different from `queue/`: this is the schedule, that is the job and what happens when a job
+fails.
 """

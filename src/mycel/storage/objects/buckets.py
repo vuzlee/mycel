@@ -1,8 +1,8 @@
-"""Khai báo bucket và vòng đời lưu trữ.
+"""Bucket declarations and storage lifecycle.
 
-  mycel-raw        file nguyên bản tải từ provider
-  mycel-reports    báo cáo đã render (PDF, HTML)
+  mycel-raw        original files downloaded from providers
+  mycel-reports    rendered reports (PDF, HTML)
 
-Đặt lifecycle rule ngay từ đầu: không có nó thì bucket chỉ lớn lên, và chi phí là
-thứ không ai nhìn cho tới lúc hoá đơn về.
+Set lifecycle rules from the start: without them a bucket only grows, and cost is the thing
+nobody looks at until the bill arrives.
 """

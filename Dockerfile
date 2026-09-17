@@ -5,7 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Cài dependency trước, copy source sau - đổi code không phải cài lại
+# Install dependencies first, copy source after - a code change skips the reinstall
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev
 

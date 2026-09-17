@@ -1,9 +1,9 @@
-"""Engine, session, repository cho ba tầng raw/silver/gold.
+"""Engine, session and repositories for the raw/silver/gold layers.
 
-  engine.py       tạo engine + connection pool, đọc DSN từ config
-  session.py      scope của một session, commit/rollback
-  repositories/   mỗi tầng một repository: raw, silver, gold
+  engine.py       create the engine + connection pool, DSN read from config
+  session.py      a session's scope, commit/rollback
+  repositories/   one repository per layer: raw, silver, gold
 
-Giữ nguyên tắc: mọi câu SQL nằm trong repository. Pipeline và agent gọi hàm có
-tên nghiệp vụ, không tự ghép SQL.
+Keep the rule: all SQL lives in a repository. Pipelines and agents call functions with
+business names; they never assemble SQL themselves.
 """

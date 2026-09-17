@@ -1,5 +1,5 @@
-# Đọc log stdout của mọi container rồi đẩy sang Loki.
-# App in JSON ra stdout là đủ — không module nào phải biết Loki tồn tại.
+# Reads stdout from every container and pushes it to Loki.
+# The app printing JSON to stdout is enough — no module needs to know Loki exists.
 
 server:
   http_listen_port: 9080
@@ -17,8 +17,8 @@ scrape_configs:
         regex: "/(.*)"
         target_label: container
     pipeline_stages:
-      # Log của app là JSON có sẵn trace_id — bóc ra làm label để nhảy
-      # thẳng từ dòng log sang trace trong Tempo.
+      # App logs are JSON already carrying trace_id — extract it so you can jump
+      # straight from a log line to the trace in Tempo.
       - json:
           expressions:
             level: level
@@ -26,5 +26,5 @@ scrape_configs:
             job_id: job_id
       - labels:
           level:
-      # trace_id KHÔNG làm label: cardinality vô hạn sẽ giết index của Loki.
-      # Nó nằm trong nội dung dòng log, Grafana vẫn bắt được bằng derived field.
+      # trace_id is NOT a label: unbounded cardinality would kill Loki's index.
+      # It stays in the log line body, and Grafana still picks it up via a derived field.

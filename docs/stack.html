@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -199,151 +199,151 @@ footer p{margin:0 0 6px; max-width:70ch}
 <body>
 <div class="wrap">
 <header class="top">
-  <p class="eyebrow">Repo mycel</p>
+  <p class="eyebrow">mycel repo</p>
   <h1>Mycel <span class="fil">Stack</span></h1>
   <p class="lede">
-    <em>Compose</em> — dựng được ngay. <em>Thiết kế</em> — mới có config, chưa chạy.
-    <em>Chưa cài</em> — đã chốt, <code>pyproject.toml</code> vẫn rỗng.
+    <em>Compose</em> — runs today. <em>Designed</em> — config only, not running yet.
+    <em>Not installed</em> — decided, but <code>pyproject.toml</code> is still empty.
   </p>
 
   <div class="tally" id="tally"></div>
   <div class="searchrow">
-    <input id="q" type="search" placeholder="Tìm: kafka, qdrant, probe…" autocomplete="off">
-    <button class="clearbtn" id="reset" type="button">Bỏ lọc</button>
+    <input id="q" type="search" placeholder="Search: kafka, qdrant, probe…" autocomplete="off">
+    <button class="clearbtn" id="reset" type="button">Clear filters</button>
   </div>
 </header>
 
 <main id="layers"></main>
 
 <section class="block">
-  <h2>Vấn đề → quyết định</h2>
+  <h2>Problem → decision</h2>
   <div class="scroll-x">
     <table class="dec">
-      <thead><tr><th>Vấn đề</th><th>Quyết định</th></tr></thead>
+      <thead><tr><th>Problem</th><th>Decision</th></tr></thead>
       <tbody id="dec"></tbody>
     </table>
   </div>
 </section>
 
 <section class="block">
-  <h2>Cổng đang chiếm</h2>
+  <h2>Ports in use</h2>
   <div class="ports" id="ports"></div>
 </section>
 
 <section class="block">
-  <h2>Trần cứng và bẫy im lặng</h2>
-  <p class="sub">Sáu thứ không báo lỗi khi sai — chỉ chạy sai.</p>
+  <h2>Hard ceilings and silent traps</h2>
+  <p class="sub">Six things that raise no error when they are wrong — they just behave wrongly.</p>
   <div class="limits" id="limits"></div>
 </section>
 
 <footer>
   <p>
-    Nguồn: <code>docker-compose.yml</code> · <code>deploy/</code> · <code>src/mycel/</code>.
-    Mục tiêu: on-premise hết — ngoài lượt gọi LLM cuối, không gì cần cloud.
+    Sources: <code>docker-compose.yml</code> · <code>deploy/</code> · <code>src/mycel/</code>.
+    Goal: fully on-premise — beyond the final LLM call, nothing needs the cloud.
   </p>
 </footer>
 </div>
 
 <script>
-const S = {live:'Compose', draft:'Thiết kế', absent:'Chưa cài'};
+const S = {live:'Compose', draft:'Designed', absent:'Not installed'};
 
 const LAYERS = [
- {id:'app', idx:'L1', name:'Ứng dụng', sub:'Đường request — tính bằng giây', items:[
-  {n:'FastAPI', v:'', port:'8000', role:'Vỏ HTTP. Endpoint nằm trong <span class="path">managers/*/controller.py</span>.', st:'absent',
-   note:'Chỉ tự viết <b>một</b> middleware: <code>request_id</code>. Và pure ASGI — <code>BaseHTTPMiddleware</code> buffer response nên nghẽn SSE.'},
+ {id:'app', idx:'L1', name:'Application', sub:'The request path — measured in seconds', items:[
+  {n:'FastAPI', v:'', port:'8000', role:'The HTTP shell. Endpoints live in <span class="path">managers/*/controller.py</span>.', st:'absent',
+   note:'Exactly <b>one</b> hand-written middleware: <code>request_id</code>. And pure ASGI — <code>BaseHTTPMiddleware</code> buffers the response and blocks SSE.'},
   {n:'uvicorn', v:'', port:'8000', role:'ASGI server.', st:'absent'},
-  {n:'Pydantic AI', v:'', port:'', role:'Khung chạy agent: vòng lặp tool, streaming, hook, MCP, retry schema.', st:'absent',
-   note:'Đã chốt nhưng <b>chưa phản ánh vào code</b> — <span class="path">agents/core/</span> vẫn viết như phải tự dựng hết.'},
-  {n:'Pydantic', v:'v2', port:'', role:'Hợp đồng dữ liệu: schema HTTP và schema nội bộ.', st:'absent'},
+  {n:'Pydantic AI', v:'', port:'', role:'Agent framework: tool loop, streaming, hooks, MCP, schema retries.', st:'absent',
+   note:'Decided but <b>not yet reflected in the code</b> — <span class="path">agents/core/</span> is still written as if everything had to be built by hand.'},
+  {n:'Pydantic', v:'v2', port:'', role:'Data contracts: HTTP schemas and internal schemas.', st:'absent'},
  ]},
 
- {id:'data', idx:'L2', name:'Lưu trữ', sub:'Ba kho, ba loại dữ liệu', items:[
-  {n:'PostgreSQL', v:'16-alpine', port:'5432', role:'State giao dịch. Một DB, ba schema <code>raw</code> · <code>silver</code> · <code>gold</code>. Agent chỉ đọc gold.', st:'live',
-   note:'Pool size tính theo <b>tổng số process</b>, không theo từng process. Vượt <code>max_connections</code> thì chỉ lỗi lúc tải cao.'},
-  {n:'Qdrant', v:'latest', port:'6333', role:'Vector store. Embedding sinh từ gold.', st:'live',
-   note:'Quyền xem là <b>filter của Qdrant</b>, không lọc sau khi lấy top-k.'},
-  {n:'MinIO', v:'latest', port:'9000 · 9001', role:'Object store S3 API. Postgres giữ metadata, bucket giữ nội dung.', st:'live',
-   note:'Luôn stream. <code>read()</code> cả file thì OOM worker, mà Kafka giao lại đúng job đó — lặp vô hạn.'},
-  {n:'Alembic', v:'', port:'', role:'Migration, mỗi thay đổi schema một revision.', st:'absent',
-   note:'Chạy <b>trước</b> code mới ⇒ schema phải tương thích ngược một bậc.'},
+ {id:'data', idx:'L2', name:'Storage', sub:'Three stores, three kinds of data', items:[
+  {n:'PostgreSQL', v:'16-alpine', port:'5432', role:'Transactional state. One DB, three schemas <code>raw</code> · <code>silver</code> · <code>gold</code>. Agents read gold only.', st:'live',
+   note:'Pool size is sized against the <b>total process count</b>, not per process. Exceeding <code>max_connections</code> only fails under load.'},
+  {n:'Qdrant', v:'latest', port:'6333', role:'Vector store. Embeddings built from gold.', st:'live',
+   note:'View permissions are a <b>Qdrant filter</b>, not a post-filter applied after top-k.'},
+  {n:'MinIO', v:'latest', port:'9000 · 9001', role:'S3-API object store. Postgres holds the metadata, the bucket holds the content.', st:'live',
+   note:'Always stream. A whole-file <code>read()</code> OOMs the worker, and Kafka hands that same job back — an infinite loop.'},
+  {n:'Alembic', v:'', port:'', role:'Migrations, one revision per schema change.', st:'absent',
+   note:'Runs <b>before</b> the new code ⇒ the schema must be backward compatible by one step.'},
  ]},
 
- {id:'queue', idx:'L3', name:'Hàng đợi job', sub:'API không chờ LLM', items:[
-  {n:'Apache Kafka', v:'3.9.0 · KRaft', port:'9092', role:'Topic <code>jobs</code>. Tầng job ở <span class="path">src/mycel/queue/</span>.', st:'live',
-   note:'Là <b>log có thứ tự, không phải hàng đợi task</b>. Tự làm: retry bằng topic theo bậc, đếm retry trong header, delay bằng consumer ngủ, nâng <code>max.poll.interval.ms</code> (mặc định 5 phút &lt; thời gian sinh báo cáo).'},
-  {n:'Kafka consumer', v:'', port:'', role:'Service <code>worker</code>.', st:'live',
-   note:'Commit <b>sau</b> khi job xong ⇒ at-least-once ⇒ idempotency key bắt buộc, và phải suy từ nội dung việc, không phải UUID mới.'},
+ {id:'queue', idx:'L3', name:'Job queue', sub:'The API does not wait for the LLM', items:[
+  {n:'Apache Kafka', v:'3.9.0 · KRaft', port:'9092', role:'The <code>jobs</code> topic. The job layer is in <span class="path">src/mycel/queue/</span>.', st:'live',
+   note:'It is an <b>ordered log, not a task queue</b>. Built by hand: tiered retry topics, retry count in the header, delay via a sleeping consumer, raised <code>max.poll.interval.ms</code> (the 5-minute default &lt; the time a report takes).'},
+  {n:'Kafka consumer', v:'', port:'', role:'The <code>worker</code> service.', st:'live',
+   note:'Commits <b>after</b> the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory, and must be derived from the work, not a fresh UUID.'},
  ]},
 
- {id:'ai', idx:'L4', name:'Inference', sub:'Local gánh số lượng, cloud lo suy luận', items:[
-  {n:'vLLM', v:'profile local-llm', port:'8001', role:'Endpoint OpenAI-compatible. Tắt mặc định.', st:'live',
-   note:'Máy dev GTX 1660 Ti 6GB: Turing không bf16 nên <code>--dtype float16</code>, context phải ngắn.'},
-  {n:'Qwen2.5-3B-Instruct', v:'AWQ 4-bit', port:'', role:'Phân loại, trích entity, tóm tắt, sinh embedding.', st:'live',
-   note:'3B <b>không</b> đủ viết báo cáo — gánh số lượng, không gánh kết luận.'},
-  {n:'Cloud LLM', v:'để mở', port:'', role:'Suy luận cuối. Chọn qua env.', st:'absent',
-   note:'<span class="path">llm/client.py</span> là file <b>duy nhất</b> được import SDK provider.'},
+ {id:'ai', idx:'L4', name:'Inference', sub:'Local carries the volume, cloud does the reasoning', items:[
+  {n:'vLLM', v:'local-llm profile', port:'8001', role:'OpenAI-compatible endpoint. Off by default.', st:'live',
+   note:'Dev machine GTX 1660 Ti 6GB: Turing has no bf16, so <code>--dtype float16</code> and the context has to stay short.'},
+  {n:'Qwen2.5-3B-Instruct', v:'AWQ 4-bit', port:'', role:'Classification, entity extraction, summarisation, embeddings.', st:'live',
+   note:'3B is <b>not</b> good enough to write a report — it carries volume, not conclusions.'},
+  {n:'Cloud LLM', v:'left open', port:'', role:'The final reasoning. Selected by env.', st:'absent',
+   note:'<span class="path">llm/client.py</span> is the <b>only</b> file allowed to import a provider SDK.'},
  ]},
 
- {id:'obs', idx:'L5', name:'Theo dõi hệ thống', sub:'Biết hệ đang chạy thế nào, và hỏng thì hỏng ở đâu', items:[
-  {n:'OpenTelemetry SDK', v:'', port:'', role:'Chuẩn chung để app ghi lại nó đang làm gì.', st:'absent',
-   note:'<code>tracing.setup()</code> phải chạy <b>trước</b> <code>instrument_app()</code>, không thì span rơi vào provider rỗng — im lặng.'},
-  {n:'OTel Collector', v:'contrib', port:'4317', role:'Điểm gom duy nhất. App chỉ biết một địa chỉ OTLP.', st:'live'},
-  {n:'Tempo', v:'latest', port:'3200', role:'Lưu <b>trace</b> — đường đi của một request. Trả lời <em>hỏng ở đâu</em>.', st:'live',
-   note:'Một yêu cầu báo cáo là <b>một</b> cây span: HTTP → queue → worker → agent → lượt gọi model.'},
-  {n:'Prometheus', v:'latest', port:'9090', role:'Lưu <b>số đo</b> theo thời gian — độ trễ, tỷ lệ lỗi. Trả lời <em>có đang hỏng không</em>.', st:'live'},
-  {n:'Loki', v:'latest', port:'3100', role:'Lưu <b>log</b> — stack trace, payload provider trả về. Trả lời <em>hỏng vì sao</em>.', st:'live',
-   note:'<code>trace_id</code> nằm trong <b>nội dung</b> dòng JSON, không làm label — label vô hạn giá trị thì Loki sinh vô hạn stream.'},
-  {n:'Promtail', v:'latest', port:'', role:'Gom stdout container đẩy sang Loki.', st:'live',
-   note:'App chỉ in JSON ra stdout, nên không module nào biết Loki tồn tại.'},
-  {n:'Grafana', v:'latest', port:'3000', role:'Dashboard + datasource, provision từ <span class="path">deploy/grafana/</span>.', st:'live',
-   note:'Nối ba tín hiệu nhờ <code>trace_id</code> có ở cả ba.'},
-  {n:'Langfuse (quy ước)', v:'', port:'', role:'Thuộc tính LLM trên span: model, token, chi phí.', st:'absent'},
+ {id:'obs', idx:'L5', name:'Observability', sub:'Know how the system is running, and where it broke', items:[
+  {n:'OpenTelemetry SDK', v:'', port:'', role:'The common standard for the app to record what it is doing.', st:'absent',
+   note:'<code>tracing.setup()</code> must run <b>before</b> <code>instrument_app()</code>, or spans fall into an empty provider — silently.'},
+  {n:'OTel Collector', v:'contrib', port:'4317', role:'The single collection point. The app knows only one OTLP address.', st:'live'},
+  {n:'Tempo', v:'latest', port:'3200', role:'Stores <b>traces</b> — the path of one request. Answers <em>where it broke</em>.', st:'live',
+   note:'One report request is <b>one</b> span tree: HTTP → queue → worker → agent → model call.'},
+  {n:'Prometheus', v:'latest', port:'9090', role:'Stores <b>measurements</b> over time — latency, error rate. Answers <em>is something broken</em>.', st:'live'},
+  {n:'Loki', v:'latest', port:'3100', role:'Stores <b>logs</b> — stack traces, the payload the provider returned. Answers <em>why it broke</em>.', st:'live',
+   note:'<code>trace_id</code> lives in the <b>body</b> of the JSON line, not as a label — an unbounded label value makes Loki create unbounded streams.'},
+  {n:'Promtail', v:'latest', port:'', role:'Collects container stdout and ships it to Loki.', st:'live',
+   note:'The app only prints JSON to stdout, so no module knows Loki exists.'},
+  {n:'Grafana', v:'latest', port:'3000', role:'Dashboards + datasources, provisioned from <span class="path">deploy/grafana/</span>.', st:'live',
+   note:'The three signals join up because <code>trace_id</code> is in all three.'},
+  {n:'Langfuse (convention)', v:'', port:'', role:'LLM span attributes: model, tokens, cost.', st:'absent'},
  ]},
 
- {id:'platform', idx:'L6', name:'Nền tảng on-prem', sub:'Compose cho máy dev; cụm dùng cùng image qua Helm', items:[
-  {n:'Kubernetes (k3s)', v:'', port:'', role:'replicas · self-healing · autoscale · Service có DNS ổn định.', st:'draft',
-   note:'Self-healing chỉ đúng khi probe đúng: pod treo mà mở cổng thì K8s coi là khoẻ. <code>vllm</code> bắt buộc có <code>startupProbe</code>.'},
-  {n:'HPA + KEDA', v:'', port:'', role:'Tự thêm pod khi tải tăng.', st:'draft',
-   note:'<code>api</code> theo CPU; <code>worker</code> theo <b>Kafka lag</b> (chờ I/O nên CPU thấp); <code>vllm</code> không autoscale.'},
+ {id:'platform', idx:'L6', name:'On-prem platform', sub:'Compose for the dev machine; the cluster runs the same image via Helm', items:[
+  {n:'Kubernetes (k3s)', v:'', port:'', role:'replicas · self-healing · autoscaling · a Service with stable DNS.', st:'draft',
+   note:'Self-healing is only correct when the probes are: a hung pod with an open port looks healthy to K8s. <code>vllm</code> must have a <code>startupProbe</code>.'},
+  {n:'HPA + KEDA', v:'', port:'', role:'Adds pods as load rises.', st:'draft',
+   note:'<code>api</code> on CPU; <code>worker</code> on <b>Kafka lag</b> (it waits on I/O, so CPU stays low); <code>vllm</code> does not autoscale.'},
   {n:'StatefulSet + PVC', v:'', port:'', role:'Postgres, Kafka, Qdrant, MinIO.', st:'draft',
-   note:'On-prem tự lo lớp storage (local-path hoặc Longhorn) — phần tốn công nhất khi bỏ cloud.'},
-  {n:'Helm', v:'chart 0.1.0', port:'', role:'Chart có version + values theo env. <span class="path">deploy/helm/</span>', st:'draft',
-   note:'<code>version</code> là của chart, <code>appVersion</code> là SHA image — rollback chart không rollback code. <code>templates/</code> chưa có manifest thật.'},
-  {n:'Argo CD', v:'', port:'', role:'Git là nguồn sự thật. <span class="path">deploy/argocd/</span>', st:'draft',
-   note:'<code>prune</code> đặt <code>false</code> cho mọi thứ có state — prune mất PVC Postgres thì git không cứu được. Staging tự sync, prod người bấm.'},
-  {n:'Harbor', v:'', port:'', role:'Registry nội bộ + quét CVE, ký ảnh, proxy cache. <span class="path">deploy/registry/</span>', st:'draft',
-   note:'Proxy cache là lý do thực dụng nhất: cụm dựng lại được khi mất mạng ra ngoài. Tag = SHA, không <code>latest</code>.'},
+   note:'On-prem means providing the storage layer yourself (local-path or Longhorn) — the most labour-intensive part of leaving the cloud.'},
+  {n:'Helm', v:'chart 0.1.0', port:'', role:'Versioned chart + per-env values. <span class="path">deploy/helm/</span>', st:'draft',
+   note:'<code>version</code> is the chart, <code>appVersion</code> is the image SHA — rolling back the chart does not roll back the code. <code>templates/</code> has no real manifests yet.'},
+  {n:'Argo CD', v:'', port:'', role:'Git is the source of truth. <span class="path">deploy/argocd/</span>', st:'draft',
+   note:'Set <code>prune</code> to <code>false</code> for anything with state — git cannot recover a pruned Postgres PVC. Staging auto-syncs, prod needs a human.'},
+  {n:'Harbor', v:'', port:'', role:'Internal registry + CVE scanning, image signing, proxy cache. <span class="path">deploy/registry/</span>', st:'draft',
+   note:'The proxy cache is the most practical reason: the cluster can be rebuilt with no outbound network. Tag = SHA, never <code>latest</code>.'},
  ]},
 
- {id:'dev', idx:'L7', name:'Công cụ', sub:'CI và máy dev', items:[
-  {n:'uv', v:'', port:'', role:'Dependency + venv.', st:'live'},
-  {n:'ruff', v:'E·F·I·UP·B', port:'', role:'Lint + sắp import, line-length 100.', st:'live'},
-  {n:'mypy', v:'strict', port:'', role:'Kiểm kiểu trên <code>src</code>.', st:'live'},
-  {n:'pytest', v:'', port:'', role:'Test code.', st:'live',
-   note:'Không bắt được báo cáo kém đi — đó là việc của <span class="path">evals/</span>.'},
-  {n:'GitHub Actions', v:'', port:'', role:'Lint · kiểu · migration · test. Build image tag theo SHA.', st:'live',
-   note:'Eval gọi model thật nên chỉ chạy khi PR đụng <span class="path">prompts/</span> hoặc <span class="path">llm/</span>.'},
-  {n:'Docker', v:'python:3.11-slim', port:'', role:'Một image cho mọi môi trường.', st:'live'},
+ {id:'dev', idx:'L7', name:'Tooling', sub:'CI and the dev machine', items:[
+  {n:'uv', v:'', port:'', role:'Dependencies + venv.', st:'live'},
+  {n:'ruff', v:'E·F·I·UP·B', port:'', role:'Lint + import sorting, line-length 100.', st:'live'},
+  {n:'mypy', v:'strict', port:'', role:'Type checking over <code>src</code>.', st:'live'},
+  {n:'pytest', v:'', port:'', role:'Code tests.', st:'live',
+   note:'Cannot catch a report getting worse — that is <span class="path">evals/</span>&rsquo;s job.'},
+  {n:'GitHub Actions', v:'', port:'', role:'Lint · types · migrations · test. Builds the image tagged by SHA.', st:'live',
+   note:'Evals call the real model, so they only run when a PR touches <span class="path">prompts/</span> or <span class="path">llm/</span>.'},
+  {n:'Docker', v:'python:3.11-slim', port:'', role:'One image for every environment.', st:'live'},
  ]},
 ];
 
 const DEC = [
- ['User request cần response ngay','FastAPI','trả job_id, không chờ'],
- ['Document ingestion mất vài phút','Kafka + worker','commit sau khi xong'],
- ['Search knowledge base','Qdrant','embedding từ gold'],
- ['Transactional state','PostgreSQL 16','một DB, ba schema'],
+ ['A user request needs an immediate response','FastAPI','returns job_id, does not wait'],
+ ['Document ingestion takes minutes','Kafka + worker','commit after finishing'],
+ ['Knowledge base search','Qdrant','embeddings from gold'],
+ ['Transactional state','PostgreSQL 16','one DB, three schemas'],
  ['Large files','MinIO','S3 API, presigned URL'],
- ['LLM inference đắt','vLLM + gọi theo lô','local gánh việc khối lượng lớn'],
- ['API cần scale','Deployment.replicas','nhiều pod sau một Service'],
- ['Pod chết','K8s self-healing','ba probe, không phải một'],
- ['Traffic tăng','HPA','worker theo Kafka lag'],
- ['Service gọi nhau','K8s Service','DNS name ổn định'],
- ['Deployment reproducibility','Helm','chart version + values theo env'],
- ['Deployment automation','Argo CD','git là nguồn sự thật'],
- ['Debug request qua 5 service','OpenTelemetry','một trace, W3C traceparent'],
- ['Detect latency spike','Prometheus','kéo metrics từ collector'],
- ['Debug application error','Loki','Promtail gom stdout'],
- ['Private container images','Harbor','+ proxy cache, quét CVE'],
+ ['LLM inference is expensive','vLLM + batched calls','local carries the high-volume work'],
+ ['The API has to scale','Deployment.replicas','many pods behind one Service'],
+ ['A pod dies','K8s self-healing','three probes, not one'],
+ ['Traffic rises','HPA','worker scales on Kafka lag'],
+ ['Services call each other','K8s Service','stable DNS name'],
+ ['Deployment reproducibility','Helm','chart version + per-env values'],
+ ['Deployment automation','Argo CD','git is the source of truth'],
+ ['Debugging a request across 5 services','OpenTelemetry','one trace, W3C traceparent'],
+ ['Detecting a latency spike','Prometheus','scrapes metrics from the collector'],
+ ['Debugging an application error','Loki','Promtail collects stdout'],
+ ['Private container images','Harbor','+ proxy cache, CVE scanning'],
 ];
 
 const PORTS = [
@@ -354,12 +354,12 @@ const PORTS = [
 ];
 
 const LIMITS = [
- ['01','Partition là trần của song song','6 partition thì worker thứ 7 ngồi không. Tăng được, <b>không giảm</b>.'],
- ['02','scheduler luôn 1 replica','Hai cái thì mỗi lịch bắn hai lần. Phải <code>Recreate</code>, không <code>RollingUpdate</code>.'],
- ['03','Trace đứt ở ranh giới process','<code>contextvars</code> không qua được process. Không inject/extract thì Grafana hiện <b>hai</b> trace rời nhau — không lỗi nào báo.'],
- ['04','Budget cộng ở hook','Usage sub-agent không tự cộng lên agent cha. Đếm ở call site thì agent con lọt sổ.'],
- ['05','BaseHTTPMiddleware nghẽn SSE','Nó buffer response. Token về thành một cục ở cuối, không báo gì.'],
- ['06','vllm không autoscale','Mỗi pod giữ một GPU. Hết GPU thì pod mới chỉ <code>Pending</code>.'],
+ ['01','Partitions are the parallelism ceiling','With 6 partitions the 7th worker sits idle. They can be increased, <b>not decreased</b>.'],
+ ['02','scheduler is always 1 replica','Two of them fire every schedule twice. Must be <code>Recreate</code>, not <code>RollingUpdate</code>.'],
+ ['03','Traces break at the process boundary','<code>contextvars</code> do not cross a process. Without inject/extract, Grafana shows <b>two</b> unrelated traces — and nothing errors.'],
+ ['04','Budget accumulates in the hook','Sub-agent usage does not roll up to the parent. Counting at the call site loses the child agents.'],
+ ['05','BaseHTTPMiddleware blocks SSE','It buffers the response. The tokens arrive in one lump at the end, with no error.'],
+ ['06','vllm does not autoscale','Each pod holds a GPU. With none free, a new pod only sits <code>Pending</code>.'],
 ];
 
 let filter = null;
@@ -413,7 +413,7 @@ function renderLayers(){
     </section>`;
   }).join('');
   document.getElementById('layers').innerHTML = html ||
-    `<p class="empty">Không khớp gì. <button class="clearbtn" type="button" onclick="document.getElementById('reset').click()">Bỏ lọc</button></p>`;
+    `<p class="empty">No matches. <button class="clearbtn" type="button" onclick="document.getElementById('reset').click()">Clear filters</button></p>`;
 }
 
 document.getElementById('dec').innerHTML = DEC.map(([p,c,v]) =>

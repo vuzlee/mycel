@@ -1,8 +1,10 @@
-"""Agent điều phối: nhận yêu cầu báo cáo, chia thành task, giao agent chuyên môn, ghép kết quả.
+"""Coordinating agent: takes a report request, splits it into tasks, assigns them to
+specialist agents, merges the results.
 
-Không tự phân tích số liệu hay viết chữ — nó quyết định *cần những gì* rồi giao việc.
-Task độc lập thì chạy song song; task nào fail thì báo cáo vẫn ra được, phần thiếu được
-ghi rõ thay vì bịa.
+It does not analyse figures or write prose itself — it decides *what is needed* and hands
+the work out. Independent tasks run in parallel; if one fails the report still comes out,
+with the gap stated explicitly rather than invented.
 
-Tên không phải "manager" để khỏi lẫn với `managers/` — cái kia là điểm vào HTTP theo miền.
+Not called "manager" to avoid confusion with `managers/` — that one is the per-domain HTTP
+entry point.
 """

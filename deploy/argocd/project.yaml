@@ -4,14 +4,14 @@ metadata:
   name: mycel
   namespace: argocd
 spec:
-  description: Mycel — báo cáo đa nguồn
+  description: Mycel — multi-source reporting
 
-  # Giới hạn để một Application cấu hình sai không với sang được chỗ khác.
+  # Scoped so a misconfigured Application cannot reach anywhere else.
   sourceRepos:
     - https://git.internal/mycel.git
   destinations:
     - {server: https://kubernetes.default.svc, namespace: mycel-staging}
     - {server: https://kubernetes.default.svc, namespace: mycel-prod}
 
-  # Chart này không cần tạo tài nguyên cấp cụm.
+  # This chart creates no cluster-scoped resources.
   clusterResourceWhitelist: []

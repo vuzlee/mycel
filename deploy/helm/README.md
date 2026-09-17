@@ -1,65 +1,66 @@
-# Helm — deploy tái lập được
+# Helm — reproducible deploys
 
-## Vấn đề nó giải
+## The problem it solves
 
-Viết tay YAML cho K8s thì mỗi môi trường một bản sao, sửa một chỗ quên hai chỗ,
-và không ai nói được "prod đang chạy đúng cấu hình nào". Helm đóng gói toàn bộ
-thành một chart có version: cùng chart + `values-prod.yaml` luôn ra cùng kết quả.
+Hand-written K8s YAML means one copy per environment, edits applied in one place and forgotten
+in two others, and nobody able to say "prod is running exactly this configuration". Helm packs
+the whole thing into a versioned chart: the same chart + `values-prod.yaml` always produces the
+same result.
 
-## Cấu trúc
+## Layout
 
 ```
 deploy/helm/mycel/
-  Chart.yaml            tên, version chart, version app
-  values.yaml           mặc định — đủ chạy, không hợp với môi trường nào
-  values-staging.yaml   đè lên mặc định
-  values-prod.yaml      đè lên mặc định
+  Chart.yaml            chart name, chart version, app version
+  values.yaml           defaults — enough to run, right for no environment
+  values-staging.yaml   overrides the defaults
+  values-prod.yaml      overrides the defaults
   templates/
     api/                Deployment, Service, HPA, Ingress
-    worker/             Deployment, HPA (theo Kafka lag)
-    scheduler/          Deployment (luôn replicas: 1 — xem bên dưới)
-    vllm/               Deployment + GPU, chỉ bật khi values cho phép
+    worker/             Deployment, HPA (on Kafka lag)
+    scheduler/          Deployment (always replicas: 1 — see below)
+    vllm/               Deployment + GPU, only when values enable it
     stateful/           Postgres, Kafka, Qdrant, MinIO
     observability/      collector, Tempo, Prometheus, Loki, Grafana
 ```
 
-## Hai version, đừng nhầm
+## Two versions, do not mix them up
 
-| | Nghĩa | Đổi khi |
+| | Means | Changes when |
 |---|---|---|
-| `version` | version của chart | sửa template hay values |
-| `appVersion` | commit SHA của image | build image mới |
+| `version` | the chart's version | templates or values change |
+| `appVersion` | the image's commit SHA | a new image is built |
 
-Deploy code mới mà không sửa manifest thì chỉ `appVersion` đổi. Rollback chart
-không tự rollback code, và ngược lại — nên luôn ghi cả hai vào log release.
+Deploying new code without touching manifests changes only `appVersion`. Rolling back the chart
+does not roll back the code, and vice versa — so always record both in the release log.
 
-## `scheduler` luôn một replica
+## `scheduler` is always one replica
 
-Hai scheduler cùng chạy thì mỗi lịch bắn hai lần: hai lần sync, hai báo cáo trùng.
-Idempotency key ở `queue/job.py` đỡ được phần lớn hậu quả, nhưng đúng cách vẫn là
-không chạy hai cái. Đặt `replicas: 1` và `strategy: Recreate` — `RollingUpdate` dựng
-pod mới **trước** khi xoá pod cũ, tức là có một khoảng hai scheduler cùng sống.
+Two schedulers running means every schedule fires twice: two syncs, two duplicate reports. The
+idempotency key in `queue/job.py` absorbs most of the damage, but the correct fix is still not
+running two. Set `replicas: 1` and `strategy: Recreate` — `RollingUpdate` starts the new pod
+**before** removing the old one, which means a window with two live schedulers.
 
-## Secret không nằm trong values
+## Secrets do not live in values
 
-`values-prod.yaml` nằm trong git. Mật khẩu Postgres, API key cloud LLM thì không.
-Chart chỉ tham chiếu tên của `Secret`; giá trị nạp riêng (sealed-secrets hoặc Vault).
+`values-prod.yaml` is in git. The Postgres password and the cloud LLM API key are not. The chart
+only references `Secret` names; the values are loaded separately (sealed-secrets or Vault).
 
-## Chạy
+## Running it
 
 ```bash
 helm upgrade --install mycel deploy/helm/mycel \
   -f deploy/helm/mycel/values-prod.yaml \
   --set image.tag=$GIT_SHA
 
-helm diff upgrade ...   # xem trước thay đổi, nên chạy trước mọi lần deploy
-helm rollback mycel     # về release trước
+helm diff upgrade ...   # preview the change, worth running before every deploy
+helm rollback mycel     # back to the previous release
 ```
 
-Thực tế thì Argo CD chạy những lệnh này, không phải người — xem `deploy/argocd/`.
+In practice Argo CD runs these commands, not a person — see `deploy/argocd/`.
 
-## Migration vẫn chạy trước
+## Migrations still run first
 
-Helm không biết thứ tự này, phải khai bằng `pre-upgrade` hook chạy
-`alembic upgrade head`. Hook fail thì Helm dừng, pod mới không lên. Vẫn giữ quy
-tắc tương thích ngược một bậc: pod cũ còn sống trong lúc migration chạy.
+Helm does not know about this ordering; it has to be declared with a `pre-upgrade` hook running
+`alembic upgrade head`. If the hook fails Helm stops and the new pods never start. The one-step
+backward-compatibility rule still holds: the old pods are alive while the migration runs.

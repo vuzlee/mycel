@@ -1,5 +1,5 @@
-# Stack dev đầy đủ: app + database + observability.
-# Prod dùng cùng file này với image đã build sẵn thay vì build tại chỗ.
+# Full dev stack: app + databases + observability.
+# Prod uses this same file with a prebuilt image instead of building in place.
 
 services:
   postgres:
@@ -35,9 +35,9 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
-  # Chạy job nền: sync, transform, sinh báo cáo.
-  # --scale worker=N chỉ có tác dụng tới số partition của topic: 3 partition thì
-  # worker thứ 4 ngồi không.
+  # Runs background jobs: sync, transform, report generation.
+  # --scale worker=N only helps up to the topic's partition count: with 3 partitions
+  # the 4th worker sits idle.
   worker:
     build: .
     command: python -m mycel.queue.consumer
@@ -48,8 +48,8 @@ services:
       qdrant: {condition: service_healthy}
       minio: {condition: service_healthy}
 
-  # --- Hàng đợi job ---
-  # KRaft mode: không cần Zookeeper.
+  # --- Job queue ---
+  # KRaft mode: no Zookeeper needed.
   kafka:
     image: apache/kafka:3.9.0
     environment:
@@ -61,11 +61,11 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      # Sinh báo cáo mất vài phút. Mặc định 5 phút là quá ngắn — quá hạn thì
-      # Kafka coi worker đã chết, rebalance, và job chạy lại từ đầu.
+      # Generating a report takes minutes. The 5-minute default is too short — exceed it
+      # and Kafka considers the worker dead, rebalances, and the job restarts.
       KAFKA_MAX_POLL_INTERVAL_MS: 1800000
-      # Số partition mặc định = mức scale worker tối đa. Tăng được nhưng không
-      # giảm, và tăng thì phá thứ tự theo key.
+      # Default partition count = maximum worker scale. It can be increased but not
+      # decreased, and increasing it breaks per-key ordering.
       KAFKA_NUM_PARTITIONS: 6
     volumes: ["kafkadata:/var/lib/kafka/data"]
     ports: ["9092:9092"]
@@ -74,10 +74,10 @@ services:
       interval: 10s
       retries: 10
 
-  # --- Lưu trữ ---
+  # --- Storage ---
 
-  # Vector store cho tìm kiếm knowledge base. Postgres giữ state giao dịch,
-  # Qdrant giữ embedding — hai việc khác nhau, đừng nhét chung.
+  # Vector store for knowledge base search. Postgres holds transactional state,
+  # Qdrant holds embeddings — two different jobs, do not merge them.
   qdrant:
     image: qdrant/qdrant:latest
     volumes: ["qdrantdata:/qdrant/storage"]
@@ -87,9 +87,9 @@ services:
       interval: 10s
       retries: 10
 
-  # File lớn (PDF nguồn, báo cáo đã render) không nằm trong Postgres:
-  # database phình, backup chậm, và mỗi lần đọc phải kéo cả blob qua connection.
-  # S3 API nên đổi sang S3 thật sau này chỉ là đổi endpoint.
+  # Large files (source PDFs, rendered reports) stay out of Postgres: it bloats the
+  # database, slows backups, and every read pulls the whole blob through a connection.
+  # Using the S3 API means moving to real S3 later is just an endpoint change.
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -103,9 +103,9 @@ services:
       interval: 10s
       retries: 10
 
-  # --- Inference local (tuỳ chọn) ---
-  # Chỉ chạy khi bật profile: docker compose --profile local-llm up -d
-  # Không bật thì mọi lượt gọi LLM đi cloud.
+  # --- Local inference (optional) ---
+  # Only runs with the profile enabled: docker compose --profile local-llm up -d
+  # Without it, every LLM call goes to the cloud.
 
   vllm:
     image: vllm/vllm-openai:latest
@@ -142,16 +142,16 @@ services:
     volumes: ["./deploy/otel:/etc/prometheus", "promdata:/prometheus"]
     ports: ["9090:9090"]
 
-  # Prometheus trả lời "có đang hỏng không", Tempo "hỏng ở đâu",
-  # Loki "hỏng vì sao" — đọc đúng dòng log của trace đó.
+  # Prometheus answers "is something broken", Tempo "where", and Loki "why" —
+  # reading exactly that trace's log lines.
   loki:
     image: grafana/loki:latest
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes: ["./deploy/otel:/etc/loki", "lokidata:/loki"]
     ports: ["3100:3100"]
 
-  # Gom log stdout của container rồi đẩy sang Loki. App chỉ cần in log JSON
-  # ra stdout, không tự gửi đi đâu cả.
+  # Collects container stdout and ships it to Loki. The app only prints JSON logs to
+  # stdout and sends them nowhere itself.
   promtail:
     image: grafana/promtail:latest
     command: ["-config.file=/etc/promtail/promtail.yaml"]

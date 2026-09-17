@@ -1,4 +1,4 @@
-"""Truy vấn gold lấy dữ liệu cho một yêu cầu cụ thể.
+"""Query gold for the data one specific request needs.
 
-Chỉ đọc gold. Đây là điểm duy nhất dữ liệu rời database để vào tầng AI.
+Reads gold only. This is the single point where data leaves the database for the AI layer.
 """

@@ -1,23 +1,25 @@
-"""Logging có cấu trúc, trace OpenTelemetry, metrics Prometheus.
+"""Structured logging, OpenTelemetry traces, Prometheus metrics.
 
-  tracing.py     dựng OTel + xuất OTLP, một lần lúc khởi động
-  llm_trace.py   thuộc tính LLM trên span (Langfuse đọc được)
-  logging.py     log JSON kèm job_id, trace_id — in ra stdout, Promtail gom về Loki
-  metrics.py     counter, histogram cho Prometheus
+  tracing.py     set up OTel + OTLP export, once at startup
+  llm_trace.py   LLM attributes on spans (readable by Langfuse)
+  logging.py     JSON logs carrying job_id, trace_id — printed to stdout, Promtail ships
+                 them to Loki
+  metrics.py     counters and histograms for Prometheus
 
-Ba tín hiệu, ba câu hỏi khác nhau — cần cả ba:
+Three signals, three different questions — all three are needed:
 
-    metrics (Prometheus)  có đang hỏng không   độ trễ vọt lên, tỷ lệ job lỗi tăng
-    trace   (Tempo)       hỏng ở đâu           chậm ở lượt gọi model nào
-    log     (Loki)        hỏng vì sao          stack trace, payload provider trả về
+    metrics (Prometheus)  is something broken   latency spike, job failure rate climbing
+    trace   (Tempo)       where is it broken    which model call is slow
+    log     (Loki)        why is it broken      stack trace, provider payload
 
-Nối được ba cái là nhờ `trace_id` có mặt ở cả ba. Grafana đi từ metric vọt → trace
-chậm nhất → đúng những dòng log của trace đó.
+They join up because `trace_id` appears in all three. Grafana goes from a metric spike →
+the slowest trace → exactly that trace's log lines.
 
-Không có gì ở đây biết HTTP là gì — phần dính HTTP nằm ở `api/`: `app.py` gọi
-`tracing.setup()` rồi để `FastAPIInstrumentor` lo span cho từng request. Nhờ vậy
-`scheduler`, `queue` và `etl` import được module này mà không kéo theo tầng web.
+Nothing here knows what HTTP is — the HTTP-specific part lives in `api/`: `app.py` calls
+`tracing.setup()` and lets `FastAPIInstrumentor` handle per-request spans. That way
+`scheduler`, `queue` and `etl` can import this module without pulling in the web layer.
 
-App chỉ gửi OTLP tới một địa chỉ (`otel-collector:4317`); collector chia trace về
-Tempo, metrics về Prometheus. Đổi backend thì sửa `deploy/otel/collector.yaml`.
+The app only ships OTLP to one address (`otel-collector:4317`); the collector routes traces
+to Tempo and metrics to Prometheus. Changing backend means editing
+`deploy/otel/collector.yaml`.
 """

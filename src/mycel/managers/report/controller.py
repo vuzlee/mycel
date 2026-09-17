@@ -1,12 +1,12 @@
-"""Endpoint HTTP của miền báo cáo.
+"""HTTP endpoints for the report domain.
 
-  POST /reports        xin sinh một báo cáo  -> trả job_id ngay
-  GET  /reports/{id}   đọc báo cáo đã sinh
-  GET  /jobs/{id}      hỏi job chạy tới đâu
+  POST /reports        request a report  -> returns a job_id immediately
+  GET  /reports/{id}   read a generated report
+  GET  /jobs/{id}      ask how far a job has got
 
-Controller chỉ làm 4 việc: nhận, validate, gọi pipeline, trả response.
-Không câu SQL, không gọi LLM, không if/else nghiệp vụ.
+A controller does exactly four things: receive, validate, call the pipeline, return a
+response. No SQL, no LLM calls, no business branching.
 
-Không tự chạy pipeline tới cùng: sinh báo cáo mất vài phút nên pipeline đẩy
-việc vào jobs/ rồi trả job_id. Client hỏi lại sau.
+It does not run the pipeline to completion: generating a report takes minutes, so the
+pipeline enqueues the work and returns a job_id. The client asks again later.
 """

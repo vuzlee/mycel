@@ -1,1 +1,1 @@
-"""Dựng artifact cuối qua reports/: văn bản, bảng số liệu, dashboard."""
+"""Build the final artifact via reports/: prose, data tables, dashboards."""

@@ -1,5 +1,5 @@
-"""Ghi payload nguyên bản từ provider. Chỉ `sources/` gọi.
+"""Write the original payload from a provider. Called only by `sources/`.
 
-Không transform, không validate schema — sai thì cũng ghi, vì mục đích của raw là
-replay được khi logic transform hoá ra sai.
+No transforms, no schema validation — malformed data is written too, because the point of
+raw is being able to replay it when the transform logic turns out to be wrong.
 """
