@@ -1,8 +1,23 @@
-"""Nền chung của toàn hệ: config đọc từ env/file, logger, exception gốc, kiểu dùng chung.
+"""Shared foundation for the whole system: config from env/file, logger, base
+exception, common types.
 
-Tầng đáy: **không import module nào khác trong `mycel`**. Mọi tầng khác đều import được
-nó, nên hễ nó phụ thuộc ngược lên là sinh vòng tròn.
+Bottom layer: **imports no other module in `mycel`**. Every other layer imports it,
+so any dependency pointing back up creates a cycle.
 
-Cùng khuôn với `agents/core/`, khác phạm vi: cái kia là nền chung của riêng `agents/`.
-Hễ thấy `core/` lồng trong một package thì hiểu là "nền chung của package đó".
+Same shape as `agents/core/`, different scope: that one is the shared foundation for
+`agents/` alone. A `core/` nested inside a package always means "shared foundation of
+that package".
 """
+
+from mycel.core.config import Settings, get_settings
+from mycel.core.exceptions import ConfigError, MycelError
+from mycel.core.logging import get_logger, setup_logging
+
+__all__ = [
+    "ConfigError",
+    "MycelError",
+    "Settings",
+    "get_logger",
+    "get_settings",
+    "setup_logging",
+]
