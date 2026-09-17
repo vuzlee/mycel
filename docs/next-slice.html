@@ -1,0 +1,424 @@
+<title>Mycel Next Slice</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root{
+    --ground:#F4F6F3; --surface:#FFFFFF; --sunk:#EBEEE8;
+    --ink:#171B18; --muted:#5A635C; --rule:#DCE1D9;
+    --accent:#1F6B57; --accent-soft:#E2EFE9; --flag:#8F5410; --flag-soft:#F6EBDC;
+    --serif:"IBM Plex Serif",Georgia,serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#121513; --surface:#1A1E1B; --sunk:#171B18;
+      --ink:#E8ECE7; --muted:#98A39B; --rule:#2B322D;
+      --accent:#5FBFA0; --accent-soft:#1D2A25; --flag:#D99A44; --flag-soft:#2A2118;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#121513; --surface:#1A1E1B; --sunk:#171B18;
+    --ink:#E8ECE7; --muted:#98A39B; --rule:#2B322D;
+    --accent:#5FBFA0; --accent-soft:#1D2A25; --flag:#D99A44; --flag-soft:#2A2118;
+  }
+
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:var(--sans); font-size:15px; line-height:1.62;
+    padding:0 20px; margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding-block:0 96px;}
+
+  header.top{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:10;
+    background:color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--rule);
+    margin:0 -20px; padding:10px 20px;
+    display:flex; gap:14px; align-items:baseline; flex-wrap:wrap;
+  }
+  header.top b{font-family:var(--mono); font-weight:500; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+  header.top nav{display:flex; gap:10px; flex-wrap:wrap;}
+  header.top a{font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none; border-bottom:1px solid transparent;}
+  header.top a:hover,header.top a:focus-visible{color:var(--accent); border-bottom-color:var(--accent);}
+
+  .lede{padding-block:44px 8px; border-bottom:1px solid var(--rule);}
+  .lede h1{font-family:var(--serif); font-weight:600; font-size:2.05rem; line-height:1.18; margin:0 0 10px; text-wrap:balance; letter-spacing:-.01em;}
+  .lede p{margin:0 0 20px; color:var(--muted); max-width:62ch;}
+
+  .facts{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--rule); border:1px solid var(--rule); margin-bottom:28px;}
+  .facts div{background:var(--surface); padding:12px 14px;}
+  .facts dt{font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin:0 0 3px;}
+  .facts dd{margin:0; font-size:14px; font-variant-numeric:tabular-nums;}
+
+  section{padding-block:40px; border-bottom:1px solid var(--rule);}
+  section > h2{
+    font-family:var(--serif); font-weight:600; font-size:1.3rem; margin:0 0 6px; text-wrap:balance;
+    display:flex; gap:12px; align-items:baseline;
+  }
+  section > h2 .n{font-family:var(--mono); font-size:.8rem; font-weight:500; color:var(--accent); flex:none;}
+  .sub{margin:0 0 22px 32px; color:var(--muted); max-width:58ch;}
+  .body{margin-left:32px;}
+  @media (max-width:520px){ .sub,.body{margin-left:0;} }
+
+  h3{font-family:var(--mono); font-size:11.5px; font-weight:500; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin:26px 0 8px;}
+  p{margin:0 0 12px; max-width:64ch;}
+  ul{margin:0 0 12px; padding-left:18px;} li{margin-bottom:5px; max-width:62ch;}
+  code{font-family:var(--mono); font-size:.86em; background:var(--sunk); padding:1px 5px; border-radius:3px;}
+  strong{font-weight:600;}
+  a{color:var(--accent);}
+
+  pre{font-family:var(--mono); font-size:12.5px; line-height:1.6; background:var(--sunk); border-left:2px solid var(--accent);
+      padding:12px 14px; margin:0 0 14px; overflow-x:auto;}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px; margin:0 0 14px;}
+  th,td{text-align:left; padding:7px 10px 7px 0; border-bottom:1px solid var(--rule); vertical-align:top;}
+  th{font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:500;}
+  td code{background:none; padding:0;}
+  .tw{overflow-x:auto;}
+
+  .verdict{background:var(--accent-soft); padding:11px 14px; margin:0 0 16px; font-size:14px;}
+  .verdict b{font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:3px;}
+  .ask{background:var(--flag-soft); border-left:2px solid var(--flag); padding:11px 14px; margin:0 0 16px; font-size:14px;}
+  .ask b{font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--flag); display:block; margin-bottom:3px;}
+  .del{color:var(--muted); text-decoration:line-through;}
+</style>
+
+<header class="top">
+  <b>mycel · next slice</b>
+  <nav>
+    <a href="#llm">1 LLM</a><a href="#obs">2 Langfuse</a><a href="#stack">2b Stack</a><a href="#agents">3 Agents</a>
+    <a href="#mcp">4 MCP</a><a href="#stream">5 Stream</a><a href="#config">6 Config</a>
+    <a href="#ask">Từ bạn</a><a href="#order">Thứ tự</a>
+  </nav>
+</header>
+
+<div class="wrap">
+
+<div class="lede">
+  <h1>Next slice: một đường LLM, một đường trace, một luồng chạy được</h1>
+  <p>Sáu thay đổi, đọc trước khi code. Mỗi mục nói rõ: đổi gì, tại sao, và cái gì <em>không</em> làm trong slice này.</p>
+  <dl class="facts">
+    <div><dt>Hiện có</dt><dd>129 tests · ruff + mypy clean</dd></div>
+    <div><dt>Đã chạy thật</dt><dd>chưa — 0 model call</dd></div>
+    <div><dt>Agent thật</dt><dd>1 (analyst)</dd></div>
+    <div><dt>File chỉ có docstring</dt><dd>~85</dd></div>
+    <div><dt>Container sau slice</dt><dd>6 · ~1.5 GiB</dd></div>
+  </dl>
+</div>
+
+<section id="llm">
+  <h2><span class="n">01</span> LiteLLM là đường duy nhất tới model</h2>
+  <p class="sub">Local và cloud đi chung một code path, một chỗ đặt timeout/retry, một chỗ lấy giá.</p>
+  <div class="body">
+
+    <div class="verdict"><b>Không cần thêm dependency</b>
+      pydantic-ai 2.44 đã có sẵn <code>pydantic_ai.providers.litellm.LiteLLMProvider(api_key, api_base, …)</code>. Đây là sửa <code>model_builder.py</code>, không phải thay framework.</div>
+
+    <h3>Trước / sau</h3>
+    <pre># trước: hai nhánh, hai SDK
+cloud:  AnthropicModel(name, provider=AnthropicProvider(api_key=…))
+local:  OpenAIChatModel(name, provider=OpenAIProvider(base_url=…))
+
+# sau: một nhánh
+OpenAIChatModel(litellm_id, provider=LiteLLMProvider(api_key=…, api_base=…))</pre>
+
+    <h3>Spec string đổi sang id của LiteLLM</h3>
+    <div class="tw"><table>
+      <tr><th>Mycel spec</th><th>LiteLLM model id</th><th>Key</th></tr>
+      <tr><td><code>cloud:claude-sonnet-5</code></td><td><code>anthropic/claude-sonnet-5</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+      <tr><td><code>cloud:gemini-2.5-flash</code></td><td><code>gemini/gemini-2.5-flash</code></td><td><code>GEMINI_API_KEY</code></td></tr>
+      <tr><td><code>local:qwen3-4b</code></td><td><code>hosted_vllm/Qwen/Qwen2.5-3B-Instruct-AWQ</code></td><td>— <em>(không bật)</em></td></tr>
+    </table></div>
+
+    <h3>Được gì</h3>
+    <ul>
+      <li><code>GEMINI_API_KEY</code> trong <code>.env</code> của bạn <strong>dùng được ngay</strong> — hiện <code>Settings</code> chưa có field cho nó và <code>google-genai</code> chưa cài. LiteLLM route Gemini mà không cần cài SDK Google.</li>
+      <li>Giá/cost do LiteLLM cung cấp → <code>cost_limit</code> của <code>JobBudget</code> mới thật sự có hiệu lực (hiện đang cảnh báo <code>CostNotFoundWarning</code>).</li>
+      <li><code>_LOCAL_ALIASES</code> giữ nguyên vai trò: tên người-đọc-được → tên container phục vụ.</li>
+    </ul>
+
+    <h3>Không làm</h3>
+    <p>Không dựng LiteLLM proxy server. Dùng chế độ SDK trong tiến trình — proxy chỉ cần khi có nhiều service khác cùng gọi model.</p>
+  </div>
+</section>
+
+<section id="obs">
+  <h2><span class="n">02</span> Langfuse Cloud, không self-host</h2>
+  <p class="sub">Để nhìn được agent gọi gì trước khi tin vào nó — mà không tốn RAM nào.</p>
+  <div class="body">
+
+    <div class="verdict"><b>Không cần SDK, không cần container</b>
+      pydantic-ai đã phát span OpenTelemetry (<code>Agent.instrument_all()</code> — đã có trong <code>tracing.py</code>). Langfuse nhận OTLP tại <code>/api/public/otel</code> với Basic auth <code>pk:sk</code>. Chỉ là đổi endpoint của exporter — code agent không đổi một dòng nào.</div>
+
+    <h3>Langfuse khuyến nghị cài skill của họ — bỏ qua</h3>
+    <p>Skill đó cài SDK <code>langfuse</code> và bọc lại từng call. Không cần: pydantic-ai đã phát đúng GenAI semantic conventions mà Langfuse đọc được. Thêm SDK là thêm một lớp nữa làm cùng một việc.</p>
+
+    <h3>Sửa đúng hai thứ trong <code>tracing.py</code></h3>
+    <div class="tw"><table>
+      <tr><th></th><th>Hiện tại</th><th>Cần</th></tr>
+      <tr><td>Giao thức</td><td>OTLP gRPC</td><td>OTLP HTTP/protobuf — Langfuse chỉ nhận HTTP</td></tr>
+      <tr><td>Đích</td><td><code>otel-collector</code></td><td><code>{LANGFUSE_BASE_URL}/api/public/otel</code> + header <code>Authorization: Basic base64(pk:sk)</code></td></tr>
+    </table></div>
+    <p><code>BatchSpanProcessor</code>, resource attributes, cờ <code>otel_enabled</code>, <code>instrument_agents()</code> — giữ nguyên hết.</p>
+
+    <div class="verdict"><b>Kéo theo: bỏ luôn <code>otel-collector</code></b>
+      Nó chỉ là chỗ trung chuyển span sang Tempo, mà Tempo đã bỏ. App gửi thẳng lên Langfuse. Còn <strong>6 container</strong>. Dựng lại collector khi nào có nhiều backend cần fan-out.</div>
+
+    <h3>Field mới trong <code>Settings</code></h3>
+    <pre>gemini_api_key:       SecretStr | None
+langfuse_public_key:  SecretStr | None
+langfuse_secret_key:  SecretStr | None
+langfuse_base_url:    str = "https://jp.cloud.langfuse.com"</pre>
+    <p>Cả bốn đã có trong <code>.env</code>. <code>.env.example</code> chỉ ghi tên biến, không bao giờ ghi giá trị.</p>
+
+    <h3>Vì sao không self-host</h3>
+    <p>Langfuse v3 cần 6 container: web, worker, ClickHouse, Postgres riêng, Redis, MinIO riêng — khoảng <strong>5.3 GiB</strong>. Máy có 15 GiB, đang dùng 8. Không vừa, và v3 không cho bỏ bớt cái nào.</p>
+    <p>Bản Cloud free cho 50k trace/tháng. MVP dùng không hết.</p>
+
+    <h3>Được gì mà Grafana không cho</h3>
+    <ul>
+      <li>Cây lồng nhau: orchestrator → analyst → tool <code>percent_change</code>. Đúng thứ <code>runner.delegate()</code> tạo ra.</li>
+      <li>Prompt vào / output ra ở <strong>từng bước</strong>, không chỉ kết quả cuối.</li>
+      <li>Token và tiền từng call, cộng theo run — khớp với <code>JobBudget</code>.</li>
+      <li>Retry hiện ra: model gọi tool sai 3 lần rồi mới đúng, thấy ngay.</li>
+    </ul>
+    <p>Grafana không biết "agent" hay "tool call" là gì — với nó tất cả là span vô danh.</p>
+
+    <h3>Đánh đổi</h3>
+    <p>Trace đi ra server ngoài. Prompt và output của report nằm trên hạ tầng Langfuse. Chấp nhận được ở MVP; khi nào dữ liệu nhạy cảm thì self-host v3 trên máy to hơn — code không đổi, chỉ đổi endpoint.</p>
+  </div>
+</section>
+
+<section id="stack">
+  <h2><span class="n">02b</span> Stack gọn lại: 15 GiB là ràng buộc thật</h2>
+  <p class="sub">Máy có 15 GiB, đang dùng 8, còn ~6. Mọi container phải trả lời được "ai dùng nó trong slice này".</p>
+  <div class="body">
+
+    <h3>Toàn bộ service, và trạng thái của từng cái</h3>
+    <div class="tw"><table>
+      <tr><th>Service</th><th>Bản chất</th><th>RAM</th><th>Trạng thái</th><th>Ai dùng / vì sao tắt</th></tr>
+
+      <tr><td><code>postgres</code></td><td>Image <code>postgres:16</code></td><td>~250 MiB</td><td>✅ Bật</td><td>data + report markdown</td></tr>
+      <tr><td><code>rabbitmq</code></td><td>Image <code>rabbitmq:4</code></td><td>~200 MiB</td><td>✅ Bật <em>(mới)</em></td><td>Broker cho <code>queue/</code>. Thay kafka</td></tr>
+      <tr><td><code>redis</code></td><td>Image <code>redis:7</code></td><td>~200 MiB</td><td>✅ Bật <em>(mới)</em></td><td>Stream thinking worker → api (mục 05)</td></tr>
+      <tr><td><code>qdrant</code></td><td>Image <code>qdrant/qdrant</code></td><td>~200 MiB</td><td>✅ Bật</td><td><code>rag_search</code> (mục 03)</td></tr>
+      <tr><td><code>worker</code></td><td><strong>Code mình</strong> · <code>build: .</code><br><code>python -m mycel.queue.consumer</code></td><td>~400 MiB</td><td>✅ Bật</td><td>Chỗ agent thật sự chạy</td></tr>
+      <tr><td><code>scheduler</code></td><td><strong>Code mình</strong> · <code>build: .</code><br><code>python -m mycel.scheduler</code></td><td>~250 MiB</td><td>✅ Bật</td><td>Hẹn giờ job định kỳ</td></tr>
+      <tr><td><code>api</code></td><td><strong>Code mình</strong> · <code>build: .</code><br><code>uvicorn mycel.api.app:app</code></td><td>~300 MiB</td><td>⚙️ Dev: chạy ngoài</td><td>Chạy thẳng trên máy, reload nhanh hơn. Giữ trong compose cho prod</td></tr>
+
+      <tr><td><code>prometheus</code></td><td>Image <code>prom/prometheus</code></td><td>~350 MiB</td><td>💤 <code>monitoring</code></td><td>App chưa expose <code>/metrics</code> — bật lên là dashboard rỗng</td></tr>
+      <tr><td><code>grafana</code></td><td>Image <code>grafana/grafana</code></td><td>~250 MiB</td><td>💤 <code>monitoring</code></td><td>UI cho prometheus/loki. Không dữ liệu thì không có gì xem</td></tr>
+      <tr><td><code>loki</code></td><td>Image <code>grafana/loki</code></td><td>~400 MiB</td><td>💤 <code>monitoring</code></td><td>Gom log nhiều máy. Một máy thì <code>docker compose logs</code> đủ</td></tr>
+      <tr><td><code>promtail</code></td><td>Image <code>grafana/promtail</code></td><td>~100 MiB</td><td>💤 <code>monitoring</code></td><td>Ống đẩy log vào loki. Không loki thì vô nghĩa</td></tr>
+      <tr><td><code>tempo</code></td><td>Image <code>grafana/tempo</code></td><td>~300 MiB</td><td>💤 <code>monitoring</code></td><td>Kho trace. Langfuse thay, và hiểu agent hơn</td></tr>
+      <tr><td><code>otel-collector</code></td><td>Image <code>otel/opentelemetry-collector</code></td><td>~150 MiB</td><td>💤 <code>monitoring</code></td><td>Chỉ trung chuyển sang tempo. App gửi thẳng Langfuse</td></tr>
+      <tr><td><code>vllm</code></td><td>Image <code>vllm/vllm-openai</code></td><td>~8 GiB</td><td>💤 <code>local-llm</code></td><td>Tier cloud là Gemini. Máy không gánh nổi</td></tr>
+
+      <tr><td class="del">kafka</td><td>Image <code>apache/kafka</code> (JVM)</td><td>~1.2 GiB</td><td>❌ Xóa</td><td>→ RabbitMQ. JVM cho vài report/giờ là dao mổ trâu</td></tr>
+      <tr><td class="del">minio</td><td>Image <code>minio/minio</code></td><td>~250 MiB</td><td>❌ Xóa</td><td>Report là markdown — một cột <code>TEXT</code> trong Postgres</td></tr>
+    </table></div>
+
+    <p>Ba dòng <strong>Code mình</strong> dùng chung một image <code>build: .</code> — cùng source, khác lệnh chạy. Mười một dòng còn lại là image có sẵn, mình chỉ cấu hình.</p>
+    <p><strong>💤 = còn nguyên trong <code>docker-compose.yml</code>, chỉ không nằm trong <code>up</code> mặc định.</strong> Bật lại: <code>docker compose --profile monitoring up -d</code>. Không service nào bị <code>git rm</code> ngoài hai dòng ❌.</p>
+
+    <div class="tw"><table>
+      <tr><th></th><th>Container</th><th>RAM</th></tr>
+      <tr><td>Trước</td><td>13</td><td>~4.4 GiB</td></tr>
+      <tr><td><code>docker compose up</code> sau slice</td><td><strong>6</strong></td><td><strong>~1.5 GiB</strong></td></tr>
+      <tr><td>+ <code>uvicorn</code> ngoài</td><td>—</td><td>~1.8 GiB</td></tr>
+      <tr><td>Nếu bật cả profile <code>monitoring</code></td><td>12</td><td>~3.1 GiB</td></tr>
+    </table></div>
+    <p>Máy 15 GiB, đang dùng 8, còn ~6. Bản mặc định chiếm dưới một phần ba chỗ trống — còn dư cho IDE và browser.</p>
+
+    <div class="ask"><b>Redis quay lại vì lý do khác</b>
+      Bỏ Langfuse self-host nghĩa là mất Redis "miễn phí" đi kèm. Nhưng mục 05 vẫn cần một chỗ bắc token từ <code>worker</code> sang <code>api</code> — nên Redis vào stack như một service riêng, ~200 MiB.</div>
+  </div>
+</section>
+
+<section id="agents">
+  <h2><span class="n">03</span> Ít agent hơn, nhưng chạy thật</h2>
+  <p class="sub">Mục tiêu là orchestrator gọi được hai specialist và trả về kết quả — không phải là có nhiều file.</p>
+  <div class="body">
+
+    <h3>Xóa (đang chỉ có docstring)</h3>
+    <div class="tw"><table>
+      <tr><th>File</th><th>Lý do</th></tr>
+      <tr><td class="del">agent/writer.py</td><td>Cần output schema của analyst đã ổn định trước</td></tr>
+      <tr><td class="del">agent/reviewer.py</td><td>Chỉ có nghĩa khi có writer</td></tr>
+      <tr><td class="del">tools/chart.py</td><td>Không có report renderer để vẽ vào</td></tr>
+      <tr><td class="del">tools/query_gold.py</td><td>Chờ <code>storage/</code></td></tr>
+      <tr><td class="del">tools/search_docs.py</td><td>Gộp vào <code>rag_search.py</code></td></tr>
+    </table></div>
+    <p>Docstring của chúng là spec thiết kế — chuyển nguyên văn vào <code>docs/architecture.md</code> trước khi <code>git rm</code>, để ý tưởng không mất theo file.</p>
+
+    <h3>Giữ và làm thật</h3>
+    <div class="tw"><table>
+      <tr><th>Agent</th><th>Toolset</th><th>Vai trò trong luồng</th></tr>
+      <tr><td><code>agent/analyst.py</code></td><td><code>tools/compute.py</code></td><td>Đã có. Số liệu + nguồn.</td></tr>
+      <tr><td><code>agent/researcher.py</code></td><td><code>tools/web_search.py</code></td><td>Mới. Đơn giản: tìm, trích, kèm URL.</td></tr>
+      <tr><td><code>agent/librarian.py</code></td><td><code>tools/rag_search.py</code></td><td>Mới. Qdrant, trả đoạn kèm doc id.</td></tr>
+      <tr><td><code>orchestrator.py</code></td><td><code>runner.delegate()</code> × 3</td><td>Mới. Thứ chứng minh multi-agent chạy.</td></tr>
+    </table></div>
+    <p>Ba specialist đều có hình dạng giống nhau — nhận câu hỏi, trả về danh sách phát biểu kèm nguồn — nên orchestrator ghép chúng mà không cần biết chúng khác nhau chỗ nào. Đó là điều khiến luồng thông được sớm.</p>
+
+    <h3>Đổi tên trong <code>runner.py</code></h3>
+    <div class="tw"><table>
+      <tr><th>Cũ</th><th>Mới</th><th>Ai gọi</th><th>Tiền</th></tr>
+      <tr><td><code>run_agent</code></td><td><code>runner.run</code> · <code>runner.run_sync</code></td><td>api, worker, script</td><td>tính một lần</td></tr>
+      <tr><td><code>run_child</code></td><td><code>runner.delegate</code></td><td>tool bên trong một agent</td><td>không tính</td></tr>
+    </table></div>
+    <p>"child" là quan hệ, không phải hành động — đọc <code>run_child()</code> không biết ai chạy cái gì. <code>delegate</code> là từ pydantic-ai dùng cho chính pattern này.</p>
+    <p>Khác nhau ở tham số cuối: <code>deps</code> nghĩa là vào từ ngoài, <code>ctx</code> nghĩa là đang ở trong một run. Đó cũng là lý do <code>delegate</code> không tính tiền — nó truyền <code>usage=ctx.usage</code> nên token cộng thẳng vào cha; tính nữa là job ba agent bị charge bốn lần.</p>
+    <p><code>run_sync</code> bọc <code>run</code> — cho script và test đồng bộ. <code>delegate</code> chỉ có async vì nó luôn chạy bên trong một run đang chạy.</p>
+
+    <h3>Không phải handoff</h3>
+    <p>Handoff là agent B tiếp quản và A biến mất. Ở đây orchestrator giữ quyền suốt: gọi analyst, nhận <code>Analysis</code> về làm tool result, rồi tự tổng hợp. Specialist không bao giờ nói trực tiếp với user.</p>
+
+    <h3>Quy ước lỗi cho tool có I/O</h3>
+    <p><code>compute.py</code> raise <code>ModelRetry</code> vì lỗi của nó là lỗi <em>đối số</em> — model sửa được. Web/RAG thì không: khi hết quota hoặc Qdrant chết, <code>ModelRetry</code> làm model quay vòng cho tới khi cháy <code>max_retries</code>. Tool I/O raise <code>ToolFailed</code>.</p>
+  </div>
+</section>
+
+<section id="mcp">
+  <h2><span class="n">04</span> MCP: chỉ làm client, chưa host</h2>
+  <p class="sub">Gọi tool của người khác thì có việc ngay. Host tool của mình thì chưa ai gọi.</p>
+  <div class="body">
+
+    <div class="verdict"><b>Không thêm dependency nào</b>
+      pydantic-ai có sẵn <code>MCPServerStreamableHTTP</code> / <code>MCPServerStdio</code> — chúng <em>là</em> toolset, truyền thẳng vào <code>Agent(toolsets=[…])</code> cạnh <code>compute.build_toolset()</code>. Agent không phân biệt tool nội bộ với tool MCP. <code>fastmcp</code> không cần cho slice này.</div>
+
+    <h3>Chỗ đặt</h3>
+    <div class="tw"><table>
+      <tr><th>Path</th><th>Nội dung</th></tr>
+      <tr><td><code>src/mycel/mcp/clients.py</code></td><td>Đọc YAML → list toolset MCP bên ngoài</td></tr>
+      <tr><td><code>config/mcp.yaml</code></td><td>Tên, url, transport, <em>tên biến env</em> chứa token</td></tr>
+    </table></div>
+    <p><code>agents/core/integrations/mcp.py</code> bị xóa — MCP không phải chi tiết nội bộ của agent core, nó là một biên của hệ thống.</p>
+
+    <h3>Hoãn: chiều host</h3>
+    <p>Chưa có client bên ngoài nào muốn gọi tool của mycel, nên một server chạy không là thêm process để bảo trì mà không đổi lại được gì.</p>
+    <p>Nhưng thiết kế hiện tại đã sẵn sàng cho nó: <code>tools/compute.py::build_toolset()</code> là một nguồn sự thật duy nhất. Khi nào cần host, <code>mcp/server.py</code> duyệt các <code>FunctionToolset</code> và đăng ký lên fastmcp — không có bản copy nào để lệch nhau.</p>
+    <pre>tools/compute.py::build_toolset()   ← định nghĩa một lần
+        ├── agent/analyst.py           dùng trong tiến trình   ✅ nay
+        └── mcp/server.py              fastmcp expose ra ngoài 💤 sau</pre>
+
+    <div class="ask"><b>Rủi ro của chiều client</b>
+      Tool từ server người khác mang theo description do họ viết, và description đó đi thẳng vào prompt. Nên client chỉ load server có trong <code>config/mcp.yaml</code>, không bao giờ tự discover.</div>
+  </div>
+</section>
+
+<section id="stream">
+  <h2><span class="n">05</span> Stream: phần khó là qua process, không phải envelope</h2>
+  <p class="sub">Đây là món nợ thiết kế đã ghi trong <code>api/__init__.py</code>. Giải ở đây.</p>
+  <div class="body">
+
+    <p>Job chạy trong <code>worker</code> container, browser nối vào <code>api</code> container. Biến trong RAM của worker không sang được api — nên chọn transport trước, wire format sau.</p>
+
+    <h3>Kafka chở job, Redis chở token — hai việc khác nhau</h3>
+    <div class="tw"><table>
+      <tr><th></th><th>RabbitMQ (<code>queue/</code>)</th><th>Redis Streams (mới)</th></tr>
+      <tr><td>Chở gì</td><td>job: "chạy report này"</td><td>event: token, tool call</td></tr>
+      <tr><td>Ai đọc</td><td>một worker lấy</td><td>mọi browser đang mở run đó</td></tr>
+      <tr><td>Tách theo run</td><td>không — queue là tài nguyên nặng</td><td>key <code>run:{id}</code>, tạo/xóa tự do</td></tr>
+      <tr><td>Sống bao lâu</td><td>giữ để replay</td><td>TTL vài phút rồi tự dọn</td></tr>
+    </table></div>
+    <p>Broker giữ nguyên vai trò giao việc cho worker. Nó không làm được phần stream vì mỗi message chỉ <strong>một</strong> consumer lấy, và không tách được theo run.</p>
+
+    <div class="verdict"><b>Redis: một container, ~200 MiB</b>
+      Langfuse dùng bản Cloud nên không còn Redis đi kèm (mục 02b). Vẫn chọn Redis vì nó rẻ và đúng việc. Thay thế nếu muốn 0 container: Postgres <code>LISTEN/NOTIFY</code> — mất replay khi client F5, payload giới hạn 8KB.</div>
+
+    <h3>Đường đi</h3>
+    <pre>worker   agent events → XADD  run:{run_id}
+api      XREAD BLOCK          → SSE → client</pre>
+    <p>Redis Streams cho sẵn thứ tự, id, và replay từ một id — client F5 giữa chừng không mất event, thứ pub/sub thuần không làm được.</p>
+
+    <h3>Envelope</h3>
+    <div class="tw"><table>
+      <tr><th>Field</th><th>Vì sao có</th></tr>
+      <tr><td><code>run_id</code></td><td>khóa stream</td></tr>
+      <tr><td><code>seq</code></td><td>phân biệt "im lặng" với "mất kết nối"</td></tr>
+      <tr><td><code>agent</code></td><td>một connection, nhiều nguồn</td></tr>
+      <tr><td><code>depth</code>, <code>parent_tool_call_id</code></td><td>để việc delegate lồng vào nhau, không trộn thành nhiễu</td></tr>
+      <tr><td><code>type</code>, <code>payload</code>, <code>ts_ms</code></td><td>nội dung</td></tr>
+    </table></div>
+    <p>Thứ tự chỉ đảm bảo <strong>trong một agent</strong>. Hai agent chạy song song thì không có thứ tự chung nào là thật — client nest theo <code>parent_tool_call_id</code> chứ không xếp theo thời gian.</p>
+
+    <h3>Sinh event ở đâu</h3>
+    <ul>
+      <li><code>runner.run()</code> đổi sang <code>run_stream_events()</code>, bọc mỗi event thành envelope. Việc tính tiền trong <code>finally</code> giữ nguyên.</li>
+      <li><code>runner.delegate()</code> gắn <code>depth + 1</code> và tool call id của cha.</li>
+      <li><code>MycelDeps.sink</code>: ghi được thì ghi, không thì bỏ qua — stream hỏng không được làm hỏng run.</li>
+      <li>Sink bounded. Không có sink thì agent nhanh hơn client là một buffer vô hạn.</li>
+    </ul>
+    <p>Đây là contract với client: thêm field thì được, đổi field là breaking.</p>
+  </div>
+</section>
+
+<section id="config">
+  <h2><span class="n">06</span> Config: YAML cho cái không bí mật, env cho cái bí mật</h2>
+  <p class="sub">Một quy tắc duy nhất, không có ngoại lệ.</p>
+  <div class="body">
+
+    <div class="verdict"><b>YAML, không phải INI</b>
+      Config agent có cấu trúc lồng và danh sách (toolsets, limits, mcp servers). INI phẳng, sẽ phải mã hóa lồng nhau bằng quy ước tên section — YAML hết chuyện đó. <code>config/config-dev.ini</code> bị xóa.</div>
+
+    <pre>config/
+  base.yaml          mặc định chung
+  dev.yaml           đè lên base
+  prod.yaml          đè lên base
+  agents/
+    analyst.yaml     model spec, limits, tool nào
+    researcher.yaml
+    librarian.yaml
+  mcp.yaml           server ngoài</pre>
+
+    <h3>Ranh giới</h3>
+    <div class="tw"><table>
+      <tr><th></th><th>Ở đâu</th><th>Ví dụ</th></tr>
+      <tr><td>Không bí mật</td><td>YAML, commit</td><td>model spec, max_workers, batch_size, retries, ceiling USD</td></tr>
+      <tr><td>Bí mật</td><td>env / GitHub Secrets</td><td>API key, DSN, password</td></tr>
+    </table></div>
+    <p>YAML được phép <em>nhắc tên</em> biến env (<code>api_key_env: GEMINI_API_KEY</code>) nhưng không bao giờ chứa giá trị. Nếu một file trong <code>config/</code> lộ ra ngoài thì cũng không mất gì — đó là bài kiểm tra cho ranh giới này.</p>
+
+    <h3>Sửa được luôn một thứ đang sai</h3>
+    <p><code>ANALYST_SETTINGS</code> đang hardcode model spec ngay trong <code>analyst.py</code>, trong khi docstring nói <code>registry.py</code> đọc từ env. <code>config/agents/analyst.yaml</code> giải quyết: registry đọc YAML, agent nhận <code>AgentSettings</code> qua tham số.</p>
+  </div>
+</section>
+
+<section id="ask">
+  <h2><span class="n">07</span> Thứ tôi cần từ bạn</h2>
+  <div class="body">
+    <div class="tw"><table>
+      <tr><th>Thứ</th><th>Ai làm</th><th>Ghi chú</th></tr>
+      <tr><td><code>GEMINI_API_KEY</code></td><td>Đã có trong <code>.env</code></td><td>Tier cloud mặc định. Chỉ cần thêm field vào <code>Settings</code></td></tr>
+      <tr><td><code>ANTHROPIC_API_KEY</code></td><td><strong>Bạn</strong>, chỉ khi muốn thêm Anthropic</td><td>Không cần cho slice này</td></tr>
+      <tr><td><code>LANGFUSE_*</code> (public, secret, base_url)</td><td>✅ Đã có trong <code>.env</code></td><td>Region JP. Chỉ cần thêm field vào <code>Settings</code></td></tr>
+      <tr><td>Token MCP bên ngoài</td><td><strong>Bạn</strong>, khi nào cần server cụ thể</td><td>Chưa cần slice này</td></tr>
+    </table></div>
+    <div class="verdict"><b>Không còn gì chặn</b>
+      Mọi key cần cho slice này đã nằm trong <code>.env</code>. Mặc định <code>cloud:gemini-2.5-flash</code>, vLLM không bật, Langfuse Cloud region JP.</div>
+  </div>
+</section>
+
+<section id="order" style="border-bottom:none;">
+  <h2><span class="n">08</span> Thứ tự làm</h2>
+  <p class="sub">Mỗi bước kết thúc xanh trên <code>ruff && mypy && pytest</code>, và là một commit riêng.</p>
+  <div class="body">
+    <div class="tw"><table>
+      <tr><th>#</th><th>Việc</th><th>Chứng minh xong</th></tr>
+      <tr><td>1</td><td>Xóa agent/tool nháp; monitoring + vllm sang profile</td><td><code>docker compose up</code> ra đúng 6 container</td></tr>
+      <tr><td>2</td><td><code>config/</code> YAML + loader, xóa <code>.ini</code></td><td><code>test_config.py</code> đọc được cả 3 tầng</td></tr>
+      <tr><td>3</td><td><code>model_builder.py</code> → LiteLLM + field Gemini trong <code>Settings</code></td><td><strong>Lần gọi model thật đầu tiên</strong> — analyst với Gemini</td></tr>
+      <tr><td>4</td><td>OTLP exporter → Langfuse Cloud</td><td>Run ở bước 3 hiện lên trong UI</td></tr>
+      <tr><td>5</td><td><code>web_search</code> + <code>rag_search</code>, hai agent mới</td><td>Mỗi agent chạy riêng được</td></tr>
+      <tr><td>6</td><td><code>orchestrator.py</code> qua <code>runner.delegate()</code></td><td>Một budget, một trace, ba agent</td></tr>
+      <tr><td>7</td><td>Kafka → RabbitMQ, envelope + Redis Streams + SSE</td><td><code>curl</code> thấy event chảy ra theo thời gian thực</td></tr>
+      <tr><td>8</td><td><code>mcp/clients.py</code> + <code>config/mcp.yaml</code></td><td>Agent gọi được tool từ một MCP server ngoài</td></tr>
+    </table></div>
+    <p>Bước 3 là mốc quan trọng nhất: sau nó, hệ thống đã từng tiêu tiền thật ít nhất một lần, và mọi thứ sau đó là mở rộng chứ không còn là giả định.</p>
+  </div>
+</section>
+
+</div>

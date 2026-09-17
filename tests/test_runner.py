@@ -1,4 +1,4 @@
-"""`run_agent` and `run_child`, which between them decide what a job is charged.
+"""`runner.run` and `runner.delegate`, which between them decide what a job is charged.
 
 The tests that matter here are about arithmetic, not about models: that a run is charged
 once, that a run stopped part-way is still charged, and that delegation does not bill the
@@ -14,10 +14,10 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 
+from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import RunawayStopped
-from mycel.agents.core.runner import run_agent, run_child
 from mycel.llm.budget import BudgetExceeded, JobBudget
 
 pytestmark = pytest.mark.anyio
@@ -48,7 +48,7 @@ class TestCharging:
         deps = _deps()
         agent = Agent(deps_type=MycelDeps, output_type=str)
         with agent.override(model=_says("done", tokens=10)):
-            out = await run_agent(agent, "go", deps)
+            out = await runner.run(agent, "go", deps)
 
         assert out == "done"
         assert deps.budget.tokens == 20
@@ -59,8 +59,8 @@ class TestCharging:
         deps = _deps()
         agent = Agent(deps_type=MycelDeps, output_type=str)
         with agent.override(model=_says("done", tokens=10)):
-            await run_agent(agent, "go", deps)
-            await run_agent(agent, "again", deps)
+            await runner.run(agent, "go", deps)
+            await runner.run(agent, "again", deps)
 
         assert deps.budget.tokens == 40
         assert deps.budget.requests == 2
@@ -77,14 +77,14 @@ class TestCharging:
         agent = Agent(deps_type=MycelDeps, output_type=str)
         with pytest.raises(BudgetExceeded):
             with agent.override(model=FunctionModel(respond)):
-                await run_agent(agent, "go", deps)
+                await runner.run(agent, "go", deps)
 
         assert not calls, "no model call may be made once the budget is gone"
 
 
 class TestStoppedRunsAreStillCharged:
     async def test_a_runaway_run_records_what_it_spent(self) -> None:
-        """The reason run_agent uses iter() rather than run(): tokens spent before the
+        """The reason runner.run uses iter() rather than run(): tokens spent before the
         limit tripped are real money, and must not vanish."""
         settings = AgentSettings(model_spec="local:qwen3-4b", request_limit=3)
         deps = _deps(settings=settings)
@@ -104,7 +104,7 @@ class TestStoppedRunsAreStillCharged:
 
         with pytest.raises(RunawayStopped):
             with agent.override(model=FunctionModel(respond)):
-                await run_agent(agent, "go", deps)
+                await runner.run(agent, "go", deps)
 
         assert deps.budget.requests == 3
         assert deps.budget.tokens == 30
@@ -123,7 +123,7 @@ class TestDelegation:
         async def ask_child(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the child agent."""
             with child.override(model=child_model):
-                return await run_child(child, "sub-question", ctx)
+                return await runner.delegate(child, "sub-question", ctx)
 
         step = [0]
 
@@ -135,7 +135,7 @@ class TestDelegation:
             return ModelResponse(parts=[TextPart("final")], usage=usage)
 
         with parent.override(model=FunctionModel(respond)):
-            out = await run_agent(parent, "go", deps)
+            out = await runner.run(parent, "go", deps)
 
         assert out == "final"
         # parent: 2 requests x 20 tokens; child: 1 request x 14 tokens.
@@ -152,7 +152,7 @@ class TestDelegation:
         async def ask_child(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the child agent."""
             with child.override(model=_says("child answer", tokens=100)):
-                return await run_child(child, "sub-question", ctx)
+                return await runner.delegate(child, "sub-question", ctx)
 
         step = [0]
 
@@ -163,6 +163,84 @@ class TestDelegation:
             return ModelResponse(parts=[TextPart("final")])
 
         with parent.override(model=FunctionModel(respond)):
-            await run_agent(parent, "go", deps)
+            await runner.run(parent, "go", deps)
 
         assert deps.budget.tokens >= 200, "the child's tokens must reach the job budget"
+
+
+def _priced(text: str, *, cost: str, tokens: int = 10) -> Any:
+    """A model that answers immediately at a known price."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(
+            parts=[TextPart(text)],
+            usage=RequestUsage(
+                input_tokens=tokens, output_tokens=tokens, cost=Decimal(cost)
+            ),
+        )
+
+    return FunctionModel(respond)
+
+
+class TestCostAccounting:
+    """The token counts above are incidental; money is what the ceiling is made of."""
+
+    async def test_a_priced_run_is_charged_in_dollars(self) -> None:
+        deps = _deps(ceiling="1.00")
+        agent = Agent(deps_type=MycelDeps, output_type=str)
+        with agent.override(model=_priced("done", cost="0.25")):
+            await runner.run(agent, "go", deps)
+
+        assert deps.budget.spent_usd == Decimal("0.25")
+        assert deps.budget.remaining_usd() == Decimal("0.75")
+
+    async def test_a_job_with_no_headroom_never_calls_the_model(self) -> None:
+        deps = _deps(ceiling="0.10")
+        agent = Agent(deps_type=MycelDeps, output_type=str)
+        with agent.override(model=_priced("done", cost="0.10")):
+            with pytest.raises(BudgetExceeded):
+                await runner.run(agent, "go", deps)
+
+            with pytest.raises(BudgetExceeded):
+                await runner.run(agent, "again", deps)
+
+        assert deps.budget.requests == 1, "the second run must not reach the model"
+
+
+class TestBookkeepingNeverMasks:
+    """The budget is recorded in a `finally`. An exception from there would replace
+    whatever actually stopped the run, leaving the caller with a bookkeeping error in
+    place of the diagnosis."""
+
+    async def test_a_runaway_survives_a_failing_charge(self) -> None:
+        """The caller must hear about the runaway, because that is the one a human can
+        act on. `cost_limit` normally stops a run before it can overdraw, so the
+        overdraft is forced here rather than waited for."""
+
+        class Overdrawing(JobBudget):
+            def record(self, usage: Any) -> None:
+                super().record(usage)
+                raise BudgetExceeded(self.job_id, Decimal("9.99"), self.ceiling_usd)
+
+        deps = MycelDeps(
+            job_id="job-1",
+            budget=Overdrawing("job-1", Decimal("1.00")),
+            settings=AgentSettings(model_spec="local:x", request_limit=2),
+        )
+        agent = Agent(deps_type=MycelDeps, output_type=str)
+
+        @agent.tool_plain
+        def noop() -> str:
+            return "x"
+
+        def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return ModelResponse(
+                parts=[ToolCallPart("noop", {})],
+                usage=RequestUsage(input_tokens=5, output_tokens=5),
+            )
+
+        with pytest.raises(RunawayStopped):
+            with agent.override(model=FunctionModel(respond)):
+                await runner.run(agent, "go", deps)
+
+        assert deps.budget.requests == 2, "the spend still has to be recorded"

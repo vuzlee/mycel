@@ -8,16 +8,15 @@ manager.
 overrides its model last wins, across everything else running in the same process. A
 factory costs one call and removes the whole class of problem.
 
-Only `analyst` exists so far. `writer` and `reviewer` are docstring-only modules; they
-appear here when they have code, not before — a registry that lists agents which cannot
-run is a lie told to the orchestrator.
+Only `analyst` exists so far. `researcher` and `librarian` appear here when they have code,
+not before — a registry that lists agents which cannot run is a lie told to the orchestrator.
 """
 
 from collections.abc import Callable
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from mycel.agents.analyst import build_analyst
+from mycel.agents.agent.analyst import build_analyst
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.core.exceptions import ConfigError

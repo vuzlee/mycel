@@ -109,3 +109,27 @@ def test_results_are_finite() -> None:
     """No NaN or inf may reach a report."""
     assert math.isfinite(compute.percent_change(1e-9, 1e9))
     assert math.isfinite(compute.cagr(1, 1e6, 10))
+
+
+class TestToolset:
+    """The point of `build_toolset()`: these tools belong to no one agent."""
+
+    def test_it_exposes_every_compute_function(self) -> None:
+        toolset = compute.build_toolset()
+        assert set(toolset.tools) == {
+            "percent_change",
+            "absolute_change",
+            "percentage",
+            "cagr",
+            "share_of_total",
+            "summary_stats",
+        }
+
+    def test_a_second_agent_needs_no_wrappers(self) -> None:
+        """Adding these tools to another agent is one line, not a copy of six wrappers."""
+        from pydantic_ai import Agent
+
+        from mycel.agents.core.deps import MycelDeps
+
+        agent = Agent(deps_type=MycelDeps, toolsets=[compute.build_toolset()])
+        assert agent is not None

@@ -108,8 +108,13 @@ A 3B model is not good enough to write a report, so it carries the volume, not t
 Specific hardware constraints: `deploy/inference/README.md`.
 
 ### `agents/`
-Split into two layers, because they change at different rates: how tokens are streamed or
-traces attached barely changes, while prompts change constantly.
+Split into two layers, because they change at different rates: how a run is wired barely
+changes, while prompts change constantly.
+
+**Built on pydantic-ai.** The run loop, message types, streaming and usage accounting are the
+framework's. What is left below is only the part specific to Mycel — which is why there is no
+`agent.py`, no `schemas.py` and no `streaming/`: `Agent`, `ModelMessage` and
+`run_stream_events()` replace them outright.
 
 **The framework — `agents/core/`**, the shared foundation for `agents/` only, with no business
 logic. Same shape as `mycel/core/` but one level narrower: a `core/` nested inside a package
@@ -117,41 +122,42 @@ always means "the shared foundation of that package".
 
 | | Does |
 |---|---|
-| `agent.py` | The run loop: build messages, call the model, call tools, repeat until there is output. `run()` and `run_stream()` share this loop |
+| `runner.py` | The one place a top-level run starts, and so the one place the budget is charged. `delegate` runs on the caller's usage and deliberately charges nothing |
 | `config.py` · `model_builder.py` | Models declared as `'<tier>:<model_name>'`; the builder turns a spec into a client with timeouts and retries attached |
-| `run_context.py` | What one run carries: `job_id`, budget, DB session, trace context |
-| `schemas.py` | The internal contract between agent, tools and streaming (unlike `managers/*/schemas.py`, which is the HTTP contract) |
-| `hooks.py` | The only place that sees every run — attach traces, log usage, add to the budget |
-| `guards.py` | Stops infinite loops, a model repeating itself, retries on schema-invalid output |
-| `streaming/` | Raw model events → named domain events: `reader` · `mapper` · `envelope` · `sink` · `output/` |
-| `integrations/` | `mcp.py` attaches tools from an external MCP server; `agent_protocol.py` is reserved for a second system |
+| `deps.py` | What one run carries: `job_id`, budget, settings. Named `deps`, not `run_context` — pydantic-ai owns that name and means something else by it |
+| `guards.py` | Degenerate-loop detection only. Runaway limits and schema retries are `UsageLimits` and `ModelRetry`, i.e. configuration rather than code |
+| `exceptions.py` | Where pydantic-ai's failures become Mycel's, named with the tier that produced them |
 
 **The business layer** on top:
 
+- **`agent/`** — `analyst.py` · `researcher.py` · `librarian.py`, one job each: figures from
+  gold, facts from the web, passages from the knowledge base. All three share a shape — take a
+  question, return statements with their sources — so the orchestrator composes them without
+  knowing how they differ. A single job means a short prompt, evals that can score each one, and
+  a clear culprit when something breaks. Each file is a prompt and an output schema; the tools it
+  uses come from `tools/`.
+- **`tools/`** — each module owns a capability end to end and exports a `build_toolset()`. An
+  agent lists the toolsets it wants and writes no wrappers, so the second agent to need a tool
+  adds a line rather than copying code.
 - **`orchestrator.py`** — takes a report request, splits it into tasks, hands them out, merges
-  the results. It does no analysis and writes no prose itself. Not named `manager.py`, to avoid
-  confusion with `managers/` — that is the per-domain HTTP entry point.
-- **`analyst.py` · `writer.py` · `reviewer.py`** — one job each: read numbers from gold, write
-  prose from those numbers, check the draft against the sources. A single job means a short
-  prompt, evals that can score each one, and a clear culprit when something breaks. They sit
-  flat next to `orchestrator.py` with no extra directory layer — when one agent outgrows a file,
-  it becomes a directory.
+  the results. It does no analysis and writes no prose itself. Outside `agent/` because it
+  coordinates specialists rather than being one. Not named `manager.py`, to avoid confusion with
+  `managers/` — that is the per-domain HTTP entry point.
 - **`registry.py`** — declares the agents and tools the orchestrator may use. Adding an agent =
   adding a line.
-- **`tools/`** — `query_gold` (via `storage/postgres/`, reads gold only, with a row ceiling),
-  `search_docs` (via `storage/vectors/`), `chart`, `compute`. Two lookup routes for two kinds of
-  question: `query_gold` answers questions with exact numbers, `search_docs` answers vague ones.
-  Get it the wrong way round and the agent goes hunting for a number via semantic search and
-  invents something approximately right.
-- **`prompts/`** — prompts kept out of the code, editable without a redeploy, diffable when an
-  eval score drops.
 
+**Not built yet: streaming beyond a single agent.** `run_stream_events()` covers one run, but
+routing several agents' events into one stream a client can untangle needs an envelope carrying
+which agent an event came from and which tool call it sits under — and jobs run in a separate
+worker process, so an in-process queue does not reach the HTTP layer. See `api/__init__.py`.
 Agents return structured, validated output; if the model returns the wrong format it retries
 rather than letting broken data travel further.
 
-**Budget is accumulated in the hook, not at the call site.** A sub-agent's usage does not roll
-up into the parent automatically, so counting at the call site loses the child agents.
-`hooks.py` is the only place that sees every run, nested ones included.
+**Two error conventions in `tools/`, and picking the wrong one is expensive.** `compute.py`
+raises `ModelRetry` because its failures are argument failures — the model fixes them by calling
+again with different numbers. A tool that does I/O cannot: when a quota runs out or Qdrant is
+down, re-prompting sends the model round the same loop until `max_retries` turns it into a run
+error. Those raise `ToolFailed`.
 
 **Guards are not budgets.** The budget counts money across the whole job; a guard counts the
 behaviour of a single run. A broken loop hits a guard within seconds; by the time it hits the
@@ -396,28 +402,29 @@ both go through `managers`. `observability` is a deliberate exception: every lay
 
 ## Operations
 
-`docker compose up` brings up both the app and the observability layer:
+`docker compose up` brings up six containers — the minimum a job needs to run end to end.
+Everything else sits behind a profile, so a single dev box is not asked to hold a stack it has
+no data for.
 
-| Service | Role |
-|---|---|
-| `api` | The front door — accepts report requests, health checks |
-| `scheduler` | Background runner — syncs, transforms, periodic reports |
-| `postgres` | One database, three schemas. Separate volume so upgrading the image does not lose data |
-| `otel-collector` | The single collection point; routes traces to Tempo, metrics to Prometheus |
-| `tempo` | Trace storage — one report request is one trace, from HTTP down to each LLM call |
-| `prometheus` | Metrics storage — sync latency, record counts per layer, tokens spent, job failure rate |
-| `worker` | Pulls jobs and runs them. `--scale worker=N`, but pods beyond the partition count sit idle |
-| `kafka` | The job queue. KRaft mode, no Zookeeper |
-| `qdrant` | Vector store — knowledge base search |
-| `minio` | Object store, S3 API — large files and rendered reports |
-| `loki` | Log storage |
-| `promtail` | Collects container stdout and ships it to Loki. The app does not know Loki exists |
-| `vllm` | Optional local model — enabled with `--profile local-llm` |
-| `grafana` | Dashboards + datasources, provisioned from `deploy/grafana/` so they are versioned with the code |
+| Service | Role | In the default `up` |
+|---|---|---|
+| `postgres` | One database, three schemas. Separate volume so upgrading the image does not lose data | yes |
+| `rabbitmq` | The job queue: one consumer per message, redelivery on crash, a dead-letter exchange for retries | yes |
+| `redis` | Agent events on their way to the browser, one Stream key per run, expired by TTL | yes |
+| `qdrant` | Vector store — knowledge base search | yes |
+| `worker` | Pulls jobs and runs them. `--scale worker=N` with no partition ceiling | yes |
+| `scheduler` | Background runner — syncs, transforms, periodic reports | yes |
+| `api` | The front door — accepts report requests, health checks | `--profile api`; in dev it runs on the host under `uvicorn --reload` |
+| `vllm` | Optional local model | `--profile local-llm` |
+| `otel-collector` · `tempo` · `prometheus` · `loki` · `promtail` · `grafana` | Metrics over time and logs across machines | `--profile monitoring` |
 
-The app only sends OTLP to one address (`otel-collector:4317`); changing observability backend
-later is an edit to `deploy/otel/collector.yaml`, not to the code. Likewise the app only prints
-logs to stdout — changing log backend is an edit to `deploy/otel/promtail.yaml`.
+**Traces do not go through that stack.** The app exports OTLP straight to Langfuse Cloud, which
+is the view that actually gets read: an agent run as a tree of calls with their prompts, tokens
+and cost. Tempo stores the same spans but renders them as a generic trace; Prometheus, Loki and
+Grafana answer questions — how has latency moved this week, what did the other three machines log
+— that a single dev box has no data for. They stay declared so turning them on is one flag.
+
+Object storage is not here at all: a report is markdown, which is a `TEXT` column.
 
 ## From dev machine to cluster
 
@@ -526,6 +533,53 @@ Tag = commit SHA, never `latest`: `latest` lets two pods with the same manifest 
 code, and leaves rollback with no version to go back to. Details: `deploy/registry/README.md`.
 
 Environment variable and secret details: `deploy/envs/README.md`.
+
+## Deferred designs
+
+Specs for files removed before they were written. Each was a docstring in the tree; keeping
+the design here and the tree small is cheaper than carrying an empty module that reads as
+half-built work.
+
+### Agents
+
+**`agent/writer.py`** — writes the prose of a report from the analyst's results. May only use
+numbers already present in its input; if it needs more it returns a request rather than
+deriving them itself. Waits on the analyst's output schema settling.
+
+**`agent/reviewer.py`** — checks a draft against the source data: do the numbers match, which
+sentences cannot be traced back to a source. Runs after the writer, before `reports/` builds
+the final artifact. Only meaningful once a writer exists.
+
+### Tools
+
+**`tools/query_gold.py`** — queries the gold layer through `storage/` rather than writing SQL
+itself, and reads gold only; agents never touch raw or silver. A cap on rows returned, because
+one table-scanning question would blow up the context and burn money for nothing. Waits on
+`storage/`.
+
+**`tools/search_docs.py`** — semantic search over the knowledge base via `storage/vectors/`.
+Returns passages together with their **source** (which gold record, original link), not content
+alone: without a source a reviewer has no way to verify anything and the report becomes a set
+of assertions that cannot be cited. View permissions are pushed down into Qdrant's filter, not
+applied after results come back. Folded into `rag_search.py`, which carries the same two rules.
+
+**`tools/chart.py`** — builds a chart from a dataset and returns a chart *spec* for `reports/`
+to render, not an image. Waits on a report renderer.
+
+Two lookup routes for two kinds of question: `query_gold` answers anything needing exact
+figures ("Q3 revenue"), semantic search answers vague ones ("who discussed this"). Get it the
+wrong way round and the agent hunts for a number via semantic search and invents something
+approximately right.
+
+### Integrations
+
+**`core/integrations/mcp.py`** — moved out of the agent layer to `mcp/clients.py`: MCP is a
+boundary of the system, not an internal detail of how an agent runs. External tools are someone
+else's code, so they need a timeout and a cap on result size, and their descriptions travel
+straight into the prompt — which is why servers are declared in config and never discovered.
+
+**`core/integrations/agent_protocol.py`** — talking to another system's agent over an
+agent-to-agent protocol. Deferred until there is a second system to call.
 
 ## Growing later
 

@@ -27,12 +27,12 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_unknown_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`.env.example` carries DATABASE_URL, Kafka and MinIO keys this slice never reads.
+    """`.env.example` carries DATABASE_URL, RabbitMQ and Qdrant keys this slice never reads.
 
     A strict model would refuse to start over them.
     """
     monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
-    monkeypatch.setenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    monkeypatch.setenv("RABBITMQ_URL", "amqp://localhost:5672/")
     assert Settings().mycel_env == "dev"
 
 

@@ -11,6 +11,9 @@ deliberately *not* translated, because they are control flow rather than failure
   ValidationError  raised inside an output validator — same
 
 Wrapping either breaks the retry machinery and turns a recoverable run into a dead one.
+
+Provider failures arrive as `ModelAPIError`: pydantic-ai catches the SDK's own exception
+and re-raises, so a timeout is only recognisable from the `__cause__` chain underneath.
 """
 
 from collections.abc import Iterator
@@ -55,11 +58,33 @@ class OutputValidationFailed(AgentError):
     """The model could not produce output matching the schema within its retries."""
 
 
+class ModelCallFailed(AgentError):
+    """The provider rejected the request or was unreachable."""
+
+
+def _caused_by_timeout(exc: BaseException) -> bool:
+    """Whether a timeout is anywhere under `exc`.
+
+    Provider SDKs do not share a base class and none of them inherit from the HTTP
+    library's timeout, so this matches on the chain by name as well as by type.
+    """
+    import httpx2
+
+    seen: BaseException | None = exc
+    while seen is not None:
+        if isinstance(seen, (httpx2.TimeoutException, TimeoutError)):
+            return True
+        if type(seen).__name__ == "APITimeoutError":
+            return True
+        seen = seen.__cause__ or seen.__context__
+    return False
+
+
 @contextmanager
 def translate_agent_errors(model_spec: str) -> Iterator[None]:
     """Turn pydantic-ai's exceptions into Mycel's, naming which backend was at fault."""
-    import httpx2
     from pydantic_ai.exceptions import (
+        ModelAPIError,
         UnexpectedModelBehavior,
         UsageLimitExceeded,
     )
@@ -70,7 +95,9 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
         raise RunawayStopped(f"{model_spec}: {exc}") from exc
     except UnexpectedModelBehavior as exc:
         raise OutputValidationFailed(f"{model_spec}: {exc}") from exc
-    except httpx2.TimeoutException as exc:
-        # Say plainly which side is at fault: a local timeout means the vLLM container is
-        # down, and a message that does not say so sends people hunting in the wrong place.
-        raise ModelTimeout(f"{model_spec} did not respond in time: {exc}") from exc
+    except ModelAPIError as exc:
+        # Which side failed decides where to look: a local timeout means the vLLM
+        # container is down, a cloud one is usually transient.
+        if _caused_by_timeout(exc):
+            raise ModelTimeout(f"{model_spec} did not respond in time: {exc}") from exc
+        raise ModelCallFailed(f"{model_spec}: {exc}") from exc

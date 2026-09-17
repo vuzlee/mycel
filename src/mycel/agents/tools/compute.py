@@ -1,20 +1,31 @@
-"""Computation tool: percentages, growth, basic statistics.
+"""The analyst's tools: percentages, growth, basic statistics.
 
 With a tool the model does not have to do arithmetic in its head — and arithmetic slips are
 the hardest error to spot in a report, because a wrong number reads exactly like a right one.
 
-Pure functions: no `RunContext`, no pydantic-ai import, no I/O. They are unit-testable on
-their own, and `analyst.py` is what wraps them as tools.
+Two halves, in one file because they are one capability:
 
-Every `ValueError` message here is written **for the model to read**. When a tool fails,
-`analyst.py` turns the message into a `ModelRetry`, so it has to say what to do instead —
-not just that something was invalid.
+  the functions      pure — no `RunContext`, no I/O, unit-testable without an agent
+  `build_toolset()`  the same functions as a `FunctionToolset` an agent can be given
+
+The toolset lives here rather than in the agent so a second agent needing these numbers
+gets them by adding one line, not by copying wrappers.
+
+Every `ValueError` message is written **for the model to read**: `_guarded` turns it into a
+`ModelRetry`, so it has to say what to do instead, not just that something was invalid.
 """
 
 import statistics
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
+from pydantic_ai import FunctionToolset, ModelRetry, RunContext
+
+from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.guards import guard_repeat
+
+T = TypeVar("T")
 
 
 class SummaryStats(BaseModel):
@@ -105,3 +116,67 @@ def summary_stats(values: Sequence[float]) -> SummaryStats:
         minimum=float(min(values)),
         maximum=float(max(values)),
     )
+
+
+def build_toolset() -> FunctionToolset[MycelDeps]:
+    """The compute functions as tools, guarded and with model-readable errors."""
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+
+    @toolset.tool(name="percent_change")
+    def _percent_change(
+        ctx: RunContext[MycelDeps], previous: float, current: float
+    ) -> float:
+        """Percentage change from a previous value to a current one."""
+        return _guarded(
+            ctx, "percent_change", percent_change, previous=previous, current=current
+        )
+
+    @toolset.tool(name="absolute_change")
+    def _absolute_change(
+        ctx: RunContext[MycelDeps], previous: float, current: float
+    ) -> float:
+        """Plain difference between two values. Use when percent change is undefined."""
+        return _guarded(
+            ctx, "absolute_change", absolute_change, previous=previous, current=current
+        )
+
+    @toolset.tool(name="percentage")
+    def _percentage(
+        ctx: RunContext[MycelDeps], part: float, whole: float
+    ) -> float:
+        """What percentage one value is of another."""
+        return _guarded(ctx, "percentage", percentage, part=part, whole=whole)
+
+    @toolset.tool(name="cagr")
+    def _cagr(
+        ctx: RunContext[MycelDeps], begin: float, end: float, periods: float
+    ) -> float:
+        """Compound annual growth rate, in percent, over a number of periods."""
+        return _guarded(ctx, "cagr", cagr, begin=begin, end=end, periods=periods)
+
+    @toolset.tool(name="share_of_total")
+    def _share_of_total(
+        ctx: RunContext[MycelDeps], values: dict[str, float]
+    ) -> dict[str, float]:
+        """Each named value as a percentage of their total."""
+        return _guarded(ctx, "share_of_total", share_of_total, values=values)
+
+    @toolset.tool(name="summary_stats")
+    def _summary_stats(
+        ctx: RunContext[MycelDeps], values: list[float]
+    ) -> SummaryStats:
+        """Count, total, mean, median, spread and range of a series, in one call."""
+        return _guarded(ctx, "summary_stats", summary_stats, values=values)
+
+    return toolset
+
+
+def _guarded(
+    ctx: RunContext[MycelDeps], name: str, fn: Callable[..., T], **kwargs: Any
+) -> T:
+    """Guard against repetition, call the function, turn refusals into re-prompts."""
+    guard_repeat(ctx, name, threshold=ctx.deps.settings.repeat_threshold, **kwargs)
+    try:
+        return fn(**kwargs)
+    except ValueError as exc:
+        raise ModelRetry(str(exc)) from exc

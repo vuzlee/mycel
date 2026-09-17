@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from pydantic_ai import Agent
 
-from mycel.agents.analyst import Analysis
+from mycel.agents.agent.analyst import Analysis
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import AGENTS, build, build_deps
 from mycel.core.exceptions import ConfigError

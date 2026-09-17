@@ -4,7 +4,7 @@ logic in it.
 Same shape as `mycel/core/` but one level narrower — that one is the foundation for the
 whole system.
 
-Kept apart from the agents one level up (`orchestrator.py`, `analyst.py`...) because the
+Kept apart from the agents one level up (`agent/`, `orchestrator.py`) because the
 two change at different rates: how runs are wired barely changes, while prompts change
 constantly. Mixed together, every prompt edit means re-reading runtime code.
 
@@ -12,9 +12,8 @@ constantly. Mixed together, every prompt edit means re-reading runtime code.
   model_builder.py spec '<tier>:<model_name>' -> a client ready to call
   deps.py          what a single run carries: job_id, budget, settings
   guards.py        stop a model repeating itself
-  runner.py        the one place a top-level run starts: budget, limits, error translation
+  runner.py        `run` starts a job's first agent; `delegate` lets one agent call another
   exceptions.py    the framework's errors
-  integrations/    wiring to external tools and agents
 
 **Built on pydantic-ai.** The agent loop, message types, streaming and usage accounting are
 the framework's; this package is only the part that is specific to Mycel. That is why there

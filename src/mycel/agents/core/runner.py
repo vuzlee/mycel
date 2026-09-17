@@ -1,20 +1,20 @@
 """The one place a run is started, so the one place money is counted.
 
-Replaces the `hooks.py` this file was planned as. pydantic-ai has no per-run hook, and
-wanting one turned out to be a symptom rather than a need: what the hooks were for was
-charging the budget, and that belongs at a single call site, not spread across callbacks.
-
 **Two entry points, and the difference between them is the whole design.**
 
-`run_agent` starts a top-level run. It builds the model, converts Mycel's limits into
+`run` starts a job's first agent. It builds the model, converts Mycel's limits into
 `UsageLimits`, records what the run cost, and translates the framework's exceptions into
-Mycel's.
+Mycel's. `run_sync` is the same thing for callers that have no event loop.
 
-`run_child` is how an agent delegates to another agent. It forwards `usage=ctx.usage`, and
-that single argument is why it must not touch the budget: pydantic-ai merges the child's
-tokens into the parent's `RunUsage` as they are spent, so the parent's single `record()`
-at the end already includes every delegated token. A child that also recorded would count
-the same tokens twice — and the deeper the delegation, the worse the overcharge.
+`delegate` is how an agent calls another agent, from inside one of its tools. It forwards
+`usage=ctx.usage`, and that single argument is why it must not touch the budget:
+pydantic-ai merges the delegate's tokens into the caller's `RunUsage` as they are spent, so
+the caller's single `record()` at the end already includes every delegated token. A
+delegate that also recorded would count the same tokens twice — and the deeper the
+delegation, the worse the overcharge.
+
+This is delegation, not handoff: the caller keeps control and receives the output as a tool
+result, rather than stepping aside for the agent it called.
 
 **Why `agent.iter()` rather than `await agent.run()`.** A run killed part-way by
 `UsageLimitExceeded` has already spent real money. `await agent.run()` raises and hands
@@ -23,14 +23,17 @@ exposes the usage on the run object, which a `finally` can read whether the run 
 failed, or was stopped.
 """
 
+import asyncio
 from typing import TYPE_CHECKING, TypeVar
 
 from mycel.agents.core.exceptions import translate_agent_errors
 from mycel.agents.core.model_builder import build_model
 from mycel.core.logging import get_logger
+from mycel.llm.budget import BudgetExceeded
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent, RunContext
+    from pydantic_ai.usage import RunUsage
 
     from mycel.agents.core.config import AgentSettings
     from mycel.agents.core.deps import MycelDeps
@@ -40,7 +43,7 @@ OutputT = TypeVar("OutputT")
 log = get_logger(__name__)
 
 
-async def run_agent(
+async def run(
     agent: "Agent[MycelDeps, OutputT]",
     prompt: str,
     deps: "MycelDeps",
@@ -58,43 +61,79 @@ async def run_agent(
     model = build_model(cfg.model_spec, cfg)
     limits = deps.budget.limits(cfg)
 
+    overdrawn: BudgetExceeded | None = None
+
     with translate_agent_errors(cfg.model_spec):
         async with agent.iter(
             prompt, deps=deps, model=model, usage_limits=limits
-        ) as run:
+        ) as agent_run:
             try:
-                async for _node in run:
+                async for _node in agent_run:
                     pass
             finally:
                 # Charge whatever was spent, including on the path where the run was
                 # stopped mid-way. This is the reason for iter() over run().
-                deps.budget.record(run.usage)
-                log.debug(
-                    "run finished",
-                    extra={
-                        "job_id": deps.job_id,
-                        "model_spec": cfg.model_spec,
-                        "spent_usd": str(deps.budget.spent_usd),
-                    },
-                )
+                overdrawn = _charge(deps, cfg, agent_run.usage)
 
-        result = run.result
+        result = agent_run.result
         if result is None:  # pragma: no cover - iter() always sets it on success
             raise RuntimeError("agent run produced no result")
-        return result.output
+
+    # Raised out here, never from the `finally` above: an exception there would replace
+    # whatever stopped the run, hiding the real cause behind a bookkeeping error.
+    if overdrawn is not None:
+        raise overdrawn
+    return result.output
 
 
-async def run_child(
+def run_sync(
+    agent: "Agent[MycelDeps, OutputT]",
+    prompt: str,
+    deps: "MycelDeps",
+    settings: "AgentSettings | None" = None,
+) -> OutputT:
+    """`run` for callers with no event loop: scripts, sync tests, a CLI.
+
+    Raises if a loop is already running — `asyncio.run` cannot nest, and the caller in that
+    position wants `await run(...)` anyway.
+    """
+    return asyncio.run(run(agent, prompt, deps, settings))
+
+
+def _charge(
+    deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage"
+) -> BudgetExceeded | None:
+    """Record one run's spend, returning the overdraft rather than raising it."""
+    try:
+        deps.budget.record(usage)
+        overdrawn = None
+    except BudgetExceeded as exc:
+        overdrawn = exc
+
+    log.debug(
+        "run finished",
+        extra={
+            "job_id": deps.job_id,
+            "model_spec": cfg.model_spec,
+            "spent_usd": str(deps.budget.spent_usd),
+        },
+    )
+    return overdrawn
+
+
+async def delegate(
     agent: "Agent[MycelDeps, OutputT]",
     prompt: str,
     ctx: "RunContext[MycelDeps]",
     settings: "AgentSettings | None" = None,
 ) -> OutputT:
-    """Delegate from inside a tool to another agent, on the parent's budget.
+    """Call another agent from inside a tool, on the caller's budget.
 
     Deliberately does **not** call `budget.record()`. Passing `usage=ctx.usage` merges this
-    run's tokens into the parent's usage, which the parent records when it finishes;
+    run's tokens into the caller's usage, which the caller records when it finishes;
     recording here as well would bill every delegated token twice.
+
+    Async only: it exists to be awaited inside a tool, which is already in a running loop.
     """
     deps = ctx.deps
     cfg = settings or deps.settings
@@ -108,4 +147,3 @@ async def run_child(
             usage=ctx.usage,
         )
     return result.output
-

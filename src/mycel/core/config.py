@@ -4,7 +4,7 @@ Every knob the system needs arrives as an environment variable, so the same imag
 dev, staging and prod with no `if env == "prod"` anywhere in the code. `.env` is read in
 development; in a container the variables are already set.
 
-`extra="ignore"` is load-bearing: `.env.example` carries Postgres, Kafka, Qdrant, MinIO and
+`extra="ignore"` is load-bearing: `.env.example` carries Postgres, RabbitMQ, Redis, Qdrant and
 Slack keys that most entrypoints do not need, and a strict model would refuse to start over
 a variable it has no field for.
 

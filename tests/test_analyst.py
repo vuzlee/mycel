@@ -19,7 +19,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.analyst import Analysis, build_analyst
+from mycel.agents.agent.analyst import Analysis, build_analyst
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import DegenerateLoop

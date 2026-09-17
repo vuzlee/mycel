@@ -8,9 +8,25 @@
 Business endpoints do not live here. They live in managers/<domain>/controller.py;
 app.py only gathers them.
 
-**When streaming lands, events need a sequence number.** pydantic-ai's
-`run_stream_events()` yields typed events but no `seq`, and over SSE a client cannot
-otherwise tell a quiet stream from a dropped one. The envelope is this module's job, not
-the agent layer's: `{type, seq, data}`, with `seq` incrementing per connection. That
-shape is a contract with clients — adding a field is fine, changing one is breaking.
+**When streaming lands, the envelope is this module's job, not the agent layer's.**
+`run_stream_events()` yields typed events, and nothing else: no ordering, and no way to
+tell one agent's events from another's. A client needs four things the framework does not
+provide:
+
+  seq                  per connection, so a quiet stream is distinguishable from a dropped
+                       one — and ordered only WITHIN one agent, never across two that ran
+                       in parallel
+  agent                which agent produced this, so the client can separate sources on one
+                       connection rather than opening one per agent
+  parent_tool_call_id  which tool call it sits under, so delegated work nests instead of
+                       interleaving into noise
+  backpressure         a bounded queue. Without it an agent faster than the client is an
+                       unbounded buffer
+
+That shape is a contract with clients — adding a field is fine, changing one is breaking.
+
+**The hard part is not the envelope.** Jobs run in a separate worker process (see
+`queue/__init__.py`), so the events are produced somewhere the HTTP handler cannot reach:
+an in-process queue does not cross that boundary, and a pub/sub hop between them changes
+what the envelope has to carry. Settle the transport before designing the wire format.
 """
