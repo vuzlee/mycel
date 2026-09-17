@@ -41,7 +41,7 @@ To enable the local model (needs a GPU): add `--profile local-llm`.
 
 ```
 src/mycel/     Source — see docs/ for what each layer does
-config/        Per-environment and per-source config (secrets live in .env)
+config/        Per-environment, per-agent and per-source YAML (secrets live in .env)
 deploy/        Infrastructure config: OTel, Grafana, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 migrations/    Alembic migrations

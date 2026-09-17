@@ -1,6 +1,6 @@
 """Per-job cost accumulation: the ceiling that stops a stuck agent burning the month.
 
-Arithmetic only — `run_agent` wiring is covered in test_runner.py.
+Arithmetic only — `runner.run` wiring is covered in test_runner.py.
 """
 
 from decimal import Decimal

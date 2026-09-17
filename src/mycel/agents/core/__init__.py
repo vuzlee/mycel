@@ -8,6 +8,7 @@ Kept apart from the agents one level up (`agent/`, `orchestrator.py`) because th
 two change at different rates: how runs are wired barely changes, while prompts change
 constantly. Mixed together, every prompt edit means re-reading runtime code.
 
+  base.py          what every agent declares, and the one place they are wired
   config.py        model choice, generation parameters, loop limits
   model_builder.py spec '<tier>:<model_name>' -> a client ready to call
   deps.py          what a single run carries: job_id, budget, settings

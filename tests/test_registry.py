@@ -6,6 +6,7 @@ import pytest
 from pydantic_ai import Agent
 
 from mycel.agents.agent.analyst import Analysis
+from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import AGENTS, build, build_deps
 from mycel.core.exceptions import ConfigError
@@ -59,3 +60,21 @@ def test_analyst_output_type_is_analysis() -> None:
     """The registry's job is to hand back something the orchestrator can use, and the
     analyst's contract is a structured Analysis, not free text."""
     assert build("analyst").output_type is Analysis
+
+
+class TestTheAgentContract:
+    """`BaseAgent` refuses a subclass that does not declare what `build()` needs."""
+
+    def test_a_half_declared_agent_fails_at_class_creation(self) -> None:
+        with pytest.raises(TypeError, match="output_type"):
+
+            class Broken(BaseAgent[str]):
+                name = "broken"
+                instructions = "..."
+
+    def test_the_registry_key_is_the_agents_own_name(self) -> None:
+        assert all(name == cls.name for name, cls in AGENTS.items())
+
+    def test_an_agent_class_cannot_be_instantiated(self) -> None:
+        with pytest.raises(TypeError, match="declaration"):
+            AGENTS["analyst"]()

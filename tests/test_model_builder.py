@@ -7,6 +7,7 @@ sets `ALLOW_MODEL_REQUESTS = False`, and building a model must not need the netw
 import pytest
 from pydantic import SecretStr
 from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from mycel.agents.core.config import AgentSettings
@@ -37,6 +38,37 @@ class TestCloudTier:
     def test_error_names_the_spec(self) -> None:
         with pytest.raises(ConfigError, match="cloud:claude-sonnet-5"):
             build_model("cloud:claude-sonnet-5", settings=_settings())
+
+    def test_gemini_gets_googles_own_client(self) -> None:
+        """Not the OpenAI-compatible endpoint: that one drops Gemini 3's thought
+        signatures, and the API then rejects every run that calls a tool."""
+        model = build_model(
+            "cloud:gemini-3-flash-preview",
+            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+        )
+        assert isinstance(model, GoogleModel)
+        assert model.model_name == "gemini-3-flash-preview"
+
+    def test_gemini_needs_its_own_key(self) -> None:
+        with pytest.raises(ConfigError, match="GEMINI_API_KEY"):
+            build_model(
+                "cloud:gemini-3-flash-preview",
+                settings=_settings(anthropic_api_key=SecretStr("sk-test")),
+            )
+
+    def test_an_unknown_cloud_model_lists_the_known_ones(self) -> None:
+        """The spec usually comes from a YAML file, where a typo is otherwise invisible
+        until the first call."""
+        with pytest.raises(ConfigError, match="claude-sonnet-5"):
+            build_model("cloud:gemini-9-ultra", settings=_settings())
+
+    def test_a_dated_version_stays_out_of_the_spec(self) -> None:
+        """Specs are human-sized; pinning a dated release is an edit in one table."""
+        model = build_model(
+            "cloud:claude-haiku-4-5",
+            settings=_settings(anthropic_api_key=SecretStr("sk-test")),
+        )
+        assert model.model_name == "claude-haiku-4-5-20251001"
 
 
 class TestLocalTier:
@@ -86,6 +118,18 @@ class TestModelSettings:
         model = build_model("local:qwen3-4b", settings=_settings())
         assert model.settings is not None
         assert model.settings["temperature"] == 0.0
+
+    def test_gemini_3_gets_no_sampling_parameters(self) -> None:
+        """Gemini 3 rejects temperature rather than ignoring it, so a value configured for
+        a model that has no such knob must be dropped, not forwarded."""
+        model = build_model(
+            "cloud:gemini-3-flash-preview",
+            agent_settings=AgentSettings(temperature=0.7),
+            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+        )
+        assert model.settings is not None
+        assert "temperature" not in model.settings
+        assert model.settings["timeout"] == 60.0
 
 
 def test_bad_spec_raises_before_touching_a_provider() -> None:

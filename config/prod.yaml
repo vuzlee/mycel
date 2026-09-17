@@ -1,0 +1,8 @@
+# Production. Only what differs from base.yaml.
+
+pipeline:
+  batch_size: 1000
+
+agents:
+  defaults:
+    timeout_s: 120.0

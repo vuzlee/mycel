@@ -68,11 +68,14 @@ async def run(
             prompt, deps=deps, model=model, usage_limits=limits
         ) as agent_run:
             try:
+                # One node per step of the agent loop: prompt, model request, tool calls,
+                # back to the model. Nothing reads them yet; the loop is here to turn.
                 async for _node in agent_run:
                     pass
             finally:
-                # Charge whatever was spent, including on the path where the run was
-                # stopped mid-way. This is the reason for iter() over run().
+                # `agent_run` exists before the loop runs and outlives it failing, so its
+                # usage is readable even when the run was stopped part-way. That is the
+                # whole reason for iter() over run(), whose usage dies with the result.
                 overdrawn = _charge(deps, cfg, agent_run.usage)
 
         result = agent_run.result

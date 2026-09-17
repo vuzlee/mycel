@@ -2,7 +2,7 @@
 
 Returns numbers with their sources, not prose — framing them is someone else's job.
 
-"With their sources" is enforced, not requested: `_every_figure_is_sourced` rejects any
+"With their sources" is enforced, not requested: `Analyst.validate_output` rejects any
 figure whose `source` is empty and re-prompts naming the offending labels. Without it
 nothing downstream can check a draft against the figures, and the report becomes a set of
 assertions that cannot be cited.
@@ -17,26 +17,13 @@ toolset when `storage/` lands — the agent shape does not change when it does.
 """
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai import ModelRetry, RunContext
+from pydantic_ai.toolsets import AbstractToolset
 
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.prompts import load
 from mycel.agents.tools import compute
-
-ANALYST_SETTINGS = AgentSettings(model_spec="cloud:claude-sonnet-5")
-
-INSTRUCTIONS = """\
-You analyse figures and report what they show. You do not write prose for publication.
-
-Rules:
-- Use the compute tools for every calculation. Do not do arithmetic yourself, even when
-  it looks trivial.
-- Every figure you report must carry a source saying where it came from: the tool call
-  that produced it, or the part of the input it was given in.
-- If a calculation is undefined, say so and report what can be said instead. Never
-  substitute a plausible-looking number.
-- State what the figures show. Leave interpretation and framing to the caller.
-"""
 
 
 class Figure(BaseModel):
@@ -55,6 +42,7 @@ class Figure(BaseModel):
     )
 
 
+
 class Analysis(BaseModel):
     """What the analyst hands back."""
 
@@ -66,35 +54,20 @@ class Analysis(BaseModel):
     )
 
 
-def build_analyst(
-    settings: AgentSettings | None = None,
-) -> Agent[MycelDeps, Analysis]:
-    """Build the analyst.
 
-    A factory rather than a module-level singleton, so tests can build one per model
-    without a global to reset, and `registry.py` decides the model spec at startup.
+class Analyst(BaseAgent[Analysis]):
+    """Reads figures, reports what they show, cites every number."""
 
-    **No model is built here.** `run_agent` resolves the spec and passes the model per
-    run, so constructing an agent needs no credentials — the registry can be imported,
-    listed and unit-tested on a machine with no API key, and a missing key fails when a
-    run is actually attempted rather than at import time.
-    """
-    cfg = settings or ANALYST_SETTINGS
-    agent: Agent[MycelDeps, Analysis] = Agent(
-        deps_type=MycelDeps,
-        output_type=Analysis,
-        instructions=INSTRUCTIONS,
-        retries=cfg.tool_retries,
-        name="analyst",
-        toolsets=[compute.build_toolset()],
-    )
-    _register_output_validator(agent)
-    return agent
+    name = "analyst"
+    instructions = load("analyst")
+    output_type = Analysis
 
+    @classmethod
+    def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
+        return [compute.build_toolset()]
 
-def _register_output_validator(agent: Agent[MycelDeps, Analysis]) -> None:
-    @agent.output_validator
-    def _every_figure_is_sourced(ctx: RunContext[MycelDeps], output: Analysis) -> Analysis:
+    @classmethod
+    def validate_output(cls, ctx: RunContext[MycelDeps], output: Analysis) -> Analysis:
         """Reject uncited figures. This is the enforcement of the module docstring."""
         uncited = [f.label for f in output.figures if not f.source.strip()]
         if uncited:

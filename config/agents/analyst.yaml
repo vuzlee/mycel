@@ -1,0 +1,7 @@
+# Anything left out here falls back to `agents.defaults` in base.yaml.
+
+# 3.8 has been returning 503 under load; the preview is the same family and free.
+model_spec: cloud:gemini-3-flash-preview
+
+# Every figure costs a tool call or two.
+tool_calls_limit: 30

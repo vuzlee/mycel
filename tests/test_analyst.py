@@ -19,7 +19,7 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.agent.analyst import Analysis, build_analyst
+from mycel.agents.agent.analyst import Analysis, Analyst
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import DegenerateLoop
@@ -98,7 +98,7 @@ class TestWiring:
                 ["up 30%"],
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with capture_run_messages() as messages:
             with agent.override(model=FunctionModel(respond)):
                 result = await agent.run("Revenue 100 -> 130.", deps=unguarded_deps)
@@ -130,7 +130,7 @@ class TestOutputValidator:
                 ["up 30%"],
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with capture_run_messages() as messages:
             with agent.override(model=FunctionModel(respond)):
                 result = await agent.run("Revenue 100 -> 130.", deps=deps)
@@ -165,7 +165,7 @@ class TestOutputValidator:
                 ["12.5%"],
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             await agent.run("Share?", deps=deps)
 
@@ -180,7 +180,7 @@ class TestOutputValidator:
                 [{"label": "growth", "value": 30.0, "source": "percent_change"}], ["up"]
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run("Revenue 100 -> 130.", deps=deps)
         assert len(calls) == 1
@@ -208,7 +208,7 @@ class TestToolErrorsBecomeRetries:
                 ["up 50 in absolute terms"],
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run("From 0 to 50?", deps=deps)
 
@@ -227,7 +227,7 @@ class TestDegenerateLoop:
                 parts=[ToolCallPart("percent_change", {"previous": 100, "current": 130})]
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with pytest.raises(DegenerateLoop) as exc:
             with agent.override(model=FunctionModel(respond)):
                 await agent.run("Revenue 100 -> 130.", deps=deps)
@@ -251,7 +251,7 @@ class TestDegenerateLoop:
                 [{"label": "growth", "value": 3.0, "source": "percent_change"}], ["up"]
             )
 
-        agent = build_analyst(LOCAL)
+        agent = Analyst.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run("Revenue?", deps=deps)
         assert result.output.findings == ["up"]

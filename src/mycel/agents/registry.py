@@ -3,20 +3,24 @@
 One place to declare them, so adding an agent is one line here and no change to any
 manager.
 
-**Builders, not instances.** `AGENTS` maps a name to a factory rather than to a live
-`Agent`, because a module-level agent is a shared mutable object: whichever test or task
-overrides its model last wins, across everything else running in the same process. A
-factory costs one call and removes the whole class of problem.
+**Classes, not instances.** `AGENTS` maps a name to a `BaseAgent` subclass rather than to
+a live `Agent`, because a module-level agent is a shared mutable object: whichever test or
+task overrides its model last wins, across everything else running in the same process.
+`build()` costs one call and removes the whole class of problem.
+
+The dict is keyed off each class's own `name`, so the registry cannot disagree with the
+class about what an agent is called — and therefore cannot send it to read another agent's
+`config/agents/<name>.yaml`.
 
 Only `analyst` exists so far. `researcher` and `librarian` appear here when they have code,
 not before — a registry that lists agents which cannot run is a lie told to the orchestrator.
 """
 
-from collections.abc import Callable
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from mycel.agents.agent.analyst import build_analyst
+from mycel.agents.agent.analyst import Analyst
+from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.core.exceptions import ConfigError
@@ -25,11 +29,11 @@ from mycel.llm.budget import JobBudget
 if TYPE_CHECKING:
     from pydantic_ai import Agent
 
-AgentBuilder = Callable[[AgentSettings | None], "Agent[MycelDeps, Any]"]
 
-AGENTS: dict[str, AgentBuilder] = {
-    "analyst": build_analyst,
-}
+_DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst,)
+
+AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}
+
 
 
 def build(name: str, settings: AgentSettings | None = None) -> "Agent[MycelDeps, Any]":
@@ -40,11 +44,12 @@ def build(name: str, settings: AgentSettings | None = None) -> "Agent[MycelDeps,
     between a one-second fix and a hunt.
     """
     try:
-        builder = AGENTS[name]
+        agent_cls = AGENTS[name]
     except KeyError:
         known = ", ".join(sorted(AGENTS)) or "(none)"
         raise ConfigError(f"unknown agent {name!r}; known agents: {known}") from None
-    return builder(settings)
+    return agent_cls.build(settings)
+
 
 
 def build_deps(

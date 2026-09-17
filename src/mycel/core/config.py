@@ -30,14 +30,20 @@ class Settings(BaseSettings):
 
     mycel_env: Literal["dev", "staging", "prod"] = "dev"
 
-    # LLM. The cloud key is optional so a local-only run needs no credential at all.
+    # LLM. Every key is optional: a run needs the one its model spec asks for and no
+    # other, so a Gemini-only machine is a valid deployment.
     anthropic_api_key: SecretStr | None = None
+    gemini_api_key: SecretStr | None = None
     local_llm_base_url: str = "http://localhost:8001/v1"
 
-    # Observability. Disabled by default in development, where no collector is running.
+    # Observability. Agent runs go to Langfuse over OTLP HTTP; the endpoint is derived from
+    # the base url, so a deployment sets the two keys and nothing else.
     otel_enabled: bool = False
     otel_exporter_otlp_endpoint: str | None = None
     otel_service_name: str = "mycel"
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
+    langfuse_base_url: str = "https://jp.cloud.langfuse.com"
 
     log_level: str = "INFO"
 

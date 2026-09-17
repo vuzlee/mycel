@@ -100,7 +100,7 @@ class JobBudget:
     def record(self, usage: "RunUsage") -> None:
         """Charge one completed top-level run.
 
-        Called from `run_agent` and nowhere else. Sub-agent tokens are already merged into
+        Called from `runner.run` and nowhere else. Sub-agent tokens are already merged into
         the parent's `RunUsage` by `usage=ctx.usage` at the delegation site, so charging
         per-run would count every delegated token twice.
 

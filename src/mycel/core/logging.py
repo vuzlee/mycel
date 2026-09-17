@@ -47,7 +47,6 @@ class JsonFormatter(logging.Formatter):
         except Exception:  # noqa: BLE001 - logging must not raise
             pass
 
-        # Whatever the caller passed as extra={...}: job_id, request_id, model, tokens.
         payload.update(
             {k: v for k, v in record.__dict__.items() if k not in _STANDARD}
         )

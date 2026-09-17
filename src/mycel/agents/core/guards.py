@@ -5,7 +5,7 @@
   retry_prompt off-schema output gets a re-prompt naming the exact error, not a blind retry
 
 **Two of those three are now configuration, not code.** pydantic-ai enforces runaway via
-`UsageLimits(request_limit=, tool_calls_limit=)`, which `run_agent` builds from
+`UsageLimits(request_limit=, tool_calls_limit=)`, which `runner.run` builds from
 `AgentSettings`, and retry_prompt via `output_type` + `ModelRetry` + `retries=`. Do not go
 looking in this file for a loop counter; there isn't one, and that is deliberate.
 

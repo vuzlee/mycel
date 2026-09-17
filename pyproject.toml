@@ -5,15 +5,16 @@ description = "Multi-agent system that builds reports and dashboards from multip
 requires-python = ">=3.11"
 dependencies = [
   # pydantic-ai-slim, not the full package: full pulls in every provider plus Logfire.
-  "pydantic-ai-slim[anthropic,openai]>=2.44,<3",
+  "pydantic-ai-slim[anthropic,google,openai]>=2.44,<3",
   "pydantic-settings>=2.4",
+  "pyyaml>=6.0",
   "opentelemetry-sdk>=1.27",
   "opentelemetry-exporter-otlp-proto-grpc>=1.27",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
 [dependency-groups]
-dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8.0", "anyio>=4.4"]
+dev = ["ruff>=0.6", "mypy>=1.11", "pytest>=8.0", "anyio>=4.4", "types-pyyaml>=6.0"]
 
 [build-system]
 requires = ["hatchling"]
