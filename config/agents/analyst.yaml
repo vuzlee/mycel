@@ -1,7 +1,9 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
-# 3.8 has been returning 503 under load; the preview is the same family and free.
-model_spec: cloud:gemini-3-flash-preview
+# A GA release, not a preview: the free tier allows 20 requests a day against
+# `gemini-3-flash-preview` and 15 a minute against this one. 3.8 has been returning 503
+# under load, so the lite release of the same family is what actually runs.
+model_spec: cloud:gemini-3.5-flash-lite
 
 # Every figure costs a tool call or two.
 tool_calls_limit: 30

@@ -52,6 +52,12 @@ class _Backend:
 # across every agent's config.
 _CLOUD_MODELS: dict[str, _Backend] = {
     "gemini-3.8-flash": _Backend("gemini-3.8-flash", "google", "gemini_api_key", "GEMINI_API_KEY"),
+    "gemini-3.6-flash": _Backend("gemini-3.6-flash", "google", "gemini_api_key", "GEMINI_API_KEY"),
+    "gemini-3.5-flash-lite": _Backend(
+        "gemini-3.5-flash-lite", "google", "gemini_api_key", "GEMINI_API_KEY"
+    ),
+    # Preview, and priced as one: the free tier allows 20 requests a day for this model
+    # against far more for the GA releases above. Kept for comparison, not for running.
     "gemini-3-flash-preview": _Backend(
         "gemini-3-flash-preview", "google", "gemini_api_key", "GEMINI_API_KEY"
     ),

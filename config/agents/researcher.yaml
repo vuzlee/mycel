@@ -1,7 +1,11 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
-# Same family as the analyst, for the same reason: 3.8 has been returning 503 under load.
-model_spec: cloud:gemini-3-flash-preview
+# A GA release, not a preview: the free tier allows 20 requests a day against
+# `gemini-3-flash-preview` and 15 a minute against this one, which is the difference
+# between a slice that can be run and one that cannot. Lite rather than full flash because
+# this agent reads search results and copies urls out of them rather than reasoning hard,
+# and 3.8 has been returning 503 under load.
+model_spec: cloud:gemini-3.5-flash-lite
 
 # Searching is one call per angle on the question, and cross-checking a contested claim
 # costs another. Lower than the analyst's, where every figure is its own call.
