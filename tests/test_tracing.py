@@ -1,8 +1,13 @@
-"""Tracing setup. No collector is involved: these check the switch and the wiring."""
+"""Tracing setup. Nothing is exported: these check the switch and the wiring."""
+
+import base64
+from typing import Any
 
 import pytest
+from pydantic import SecretStr
 
 from mycel.core.config import Settings
+from mycel.core.exceptions import ConfigError
 from mycel.observability import tracing
 
 
@@ -13,8 +18,11 @@ def _reset() -> "object":
     tracing.reset_for_tests()
 
 
-def _settings(**kw: object) -> Settings:
-    return Settings(otel_exporter_otlp_endpoint="http://localhost:4317", **kw)  # type: ignore[arg-type]
+def _settings(**kw: Any) -> Settings:
+    return Settings(
+        otel_exporter_otlp_endpoint="http://localhost:4318/v1/traces",
+        **kw,
+    )
 
 
 class TestDisabled:
@@ -52,3 +60,38 @@ def test_instrumenting_agents_is_safe_to_repeat() -> None:
     """Called on every setup, and agents are built on demand afterwards."""
     tracing.instrument_agents()
     tracing.instrument_agents()
+
+
+class TestWhereSpansGo:
+    """The endpoint and its credentials, which are silent when wrong: the exporter keeps
+    batching and the UI simply stays empty."""
+
+    def test_an_explicit_endpoint_wins_and_carries_no_credentials(self) -> None:
+        endpoint, headers = tracing._otlp_target(
+            _settings(
+                otel_enabled=True,
+                langfuse_public_key=SecretStr("pk-lf-1"),
+                langfuse_secret_key=SecretStr("sk-lf-1"),
+            )
+        )
+        assert endpoint == "http://localhost:4318/v1/traces"
+        assert headers == {}
+
+    def test_langfuse_is_the_fallback(self) -> None:
+        endpoint, headers = tracing._otlp_target(
+            Settings(
+                otel_enabled=True,
+                langfuse_public_key=SecretStr("pk-lf-1"),
+                langfuse_secret_key=SecretStr("sk-lf-1"),
+                langfuse_base_url="https://jp.cloud.langfuse.com/",
+            )
+        )
+        assert endpoint == "https://jp.cloud.langfuse.com/api/public/otel/v1/traces"
+        assert headers["Authorization"] == "Basic " + base64.b64encode(b"pk-lf-1:sk-lf-1").decode()
+
+    def test_one_key_alone_is_refused(self) -> None:
+        """A deployment that believes it is traced and is not."""
+        with pytest.raises(ConfigError, match="LANGFUSE_PUBLIC_KEY"):
+            tracing._otlp_target(
+                Settings(otel_enabled=True, langfuse_public_key=SecretStr("pk-lf-1"))
+            )

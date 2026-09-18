@@ -56,7 +56,9 @@ minio:    {enabled: true, storage: 100Gi}
 
 observability:
   enabled: true
-  otlpEndpoint: otel-collector:4317
+  # Empty means Langfuse, whose endpoint the app derives from LANGFUSE_BASE_URL. Set this
+  # only to divert spans to a collector on the cluster network — a full path, not a host.
+  otlpEndpoint: ""
 
 ingress:
   enabled: true

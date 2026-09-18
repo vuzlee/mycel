@@ -10,26 +10,9 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
 
-  - name: Tempo
-    type: tempo
-    uid: tempo
-    url: http://tempo:3200
-    jsonData:
-      # From a span, jump to exactly that trace's log lines.
-      tracesToLogsV2:
-        datasourceUid: loki
-        filterByTraceID: true
-
   - name: Loki
     type: loki
     uid: loki
     url: http://loki:3100
-    jsonData:
-      # The reverse direction: from an error log line, click straight through to the trace.
-      # trace_id lives in the JSON log body, not a label — as a label its unbounded
-      # cardinality would kill Loki's index.
-      derivedFields:
-        - name: TraceID
-          matcherRegex: '"trace_id"\s*:\s*"([a-f0-9]+)"'
-          url: "$${__value.raw}"
-          datasourceUid: tempo
+    # No derived trace link: the traces live in Langfuse, which Grafana cannot link
+    # into. `trace_id` is still in the JSON log body, so it is copy-pasteable by hand.

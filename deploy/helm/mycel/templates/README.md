@@ -9,7 +9,7 @@ worker/      deployment.yaml  hpa.yaml          # HPA on Kafka lag (KEDA)
 scheduler/   deployment.yaml                    # replicas: 1, Recreate
 vllm/        deployment.yaml  service.yaml      # if .Values.vllm.enabled
 stateful/    postgres.yaml  kafka.yaml  qdrant.yaml  minio.yaml
-observability/ collector.yaml  tempo.yaml  prometheus.yaml  loki.yaml  grafana.yaml
+observability/ prometheus.yaml  loki.yaml  grafana.yaml
 _helpers.tpl                                    # shared names and labels
 hooks/migrate.yaml                              # pre-upgrade: alembic upgrade head
 ```

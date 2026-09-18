@@ -14,6 +14,7 @@ from mycel.agents.agent.analyst import Analyst
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
+from mycel.observability.tracing import setup_tracing
 
 PROMPT = """\
 Revenue was 1,200,000 USD in Q1 and 1,410,000 USD in Q2. Support tickets went from 840 to
@@ -22,6 +23,10 @@ Revenue was 1,200,000 USD in Q1 and 1,410,000 USD in Q2. Support tickets went fr
 
 
 def main() -> int:
+    # Spans are batched, so the provider is flushed before the process exits — otherwise
+    # a script that finishes in two seconds exports nothing.
+    provider = setup_tracing()
+
     cfg = AgentSettings.from_config("analyst")
     if len(sys.argv) > 1:
         cfg = replace(cfg, model_spec=sys.argv[1])
@@ -37,6 +42,9 @@ def main() -> int:
     for caveat in analysis.caveats:
         print(f"  ! {caveat}")
     print(f"\nspent: ${deps.budget.spent_usd}")
+
+    if provider is not None:
+        provider.shutdown()
     return 0
 
 

@@ -416,12 +416,12 @@ no data for.
 | `scheduler` | Background runner — syncs, transforms, periodic reports | yes |
 | `api` | The front door — accepts report requests, health checks | `--profile api`; in dev it runs on the host under `uvicorn --reload` |
 | `vllm` | Optional local model | `--profile local-llm` |
-| `otel-collector` · `tempo` · `prometheus` · `loki` · `promtail` · `grafana` | Metrics over time and logs across machines | `--profile monitoring` |
+| `prometheus` · `loki` · `promtail` · `grafana` | Metrics over time and logs across machines | `--profile monitoring` |
 
-**Traces do not go through that stack.** The app exports OTLP straight to Langfuse Cloud, which
+**Traces are not in that stack at all.** The app exports OTLP straight to Langfuse Cloud, which
 is the view that actually gets read: an agent run as a tree of calls with their prompts, tokens
-and cost. Tempo stores the same spans but renders them as a generic trace; Prometheus, Loki and
-Grafana answer questions — how has latency moved this week, what did the other three machines log
+and cost. Tempo held the same spans but rendered them as a generic trace, and the collector in
+front of it only forwarded them, so both are gone. Prometheus, Loki and Grafana answer questions — how has latency moved this week, what did the other three machines log
 — that a single dev box has no data for. They stay declared so turning them on is one flag.
 
 Object storage is not here at all: a report is markdown, which is a `TEXT` column.

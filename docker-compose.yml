@@ -116,24 +116,14 @@ services:
           devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
 
   # --- Observability (optional) ---
-  # Traces go straight to Langfuse Cloud, which is what actually gets read: it renders an
-  # agent run as a tree of calls with their prompts, tokens and cost. The Grafana stack
-  # below answers different questions — metrics over time, logs across several machines —
-  # and nothing produces that data on a single dev box yet, so it sits behind a profile:
-  # docker compose --profile monitoring up -d
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    profiles: [monitoring]
-    command: ["--config=/etc/otel/collector.yaml"]
-    volumes: ["./deploy/otel:/etc/otel"]
-    ports: ["4317:4317"]   # OTLP gRPC
-
-  tempo:
-    image: grafana/tempo:latest
-    profiles: [monitoring]
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
-    volumes: ["./deploy/otel:/etc/tempo", "tempodata:/var/tempo"]
-
+  # Traces are not here. The app exports OTLP straight to Langfuse Cloud, which is the
+  # backend that actually gets read: it renders an agent run as a tree of calls with their
+  # prompts, tokens and cost. A collector would only forward spans, and there is one
+  # backend to forward them to.
+  #
+  # What remains answers different questions — metrics over time, logs across several
+  # machines — and nothing produces that data on a single dev box yet, so it sits behind
+  # a profile: docker compose --profile monitoring up -d
   prometheus:
     image: prom/prometheus:latest
     profiles: [monitoring]
@@ -141,8 +131,8 @@ services:
     volumes: ["./deploy/otel:/etc/prometheus", "promdata:/prometheus"]
     ports: ["9090:9090"]
 
-  # Prometheus answers "is something broken", Tempo "where", and Loki "why" —
-  # reading exactly that trace's log lines.
+  # Prometheus answers "is something broken" and Loki "why". "Where" is Langfuse's
+  # question now, and it is not part of this stack.
   loki:
     image: grafana/loki:latest
     profiles: [monitoring]
@@ -171,13 +161,12 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes: ["./deploy/grafana:/etc/grafana/provisioning"]
     ports: ["3000:3000"]
-    depends_on: [prometheus, tempo, loki]
+    depends_on: [prometheus, loki]
 
 volumes:
   pgdata:
   rabbitdata:
   qdrantdata:
   lokidata:
-  tempodata:
   promdata:
   hfcache:
