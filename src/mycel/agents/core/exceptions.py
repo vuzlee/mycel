@@ -58,6 +58,25 @@ class OutputValidationFailed(AgentError):
     """The model could not produce output matching the schema within its retries."""
 
 
+class ToolFailed(AgentError):
+    """A tool could not do its work, and no amount of re-prompting would change that.
+
+    The counterpart to `ModelRetry`, and the distinction is the whole point: a tool whose
+    *arguments* were wrong raises `ModelRetry` so the model can fix them, while a tool whose
+    *world* is wrong — quota spent, search API down, Qdrant unreachable — raises this. Ask
+    the model to retry that and it walks the same loop until `max_retries` turns a plain
+    outage into an unreadable run error.
+
+    Names the tool, because by the time this surfaces the caller sees a failed job and not
+    which capability was missing.
+    """
+
+    def __init__(self, tool: str, reason: str) -> None:
+        super().__init__(f"tool {tool!r} failed: {reason}")
+        self.tool = tool
+        self.reason = reason
+
+
 class ModelCallFailed(AgentError):
     """The provider rejected the request or was unreachable."""
 

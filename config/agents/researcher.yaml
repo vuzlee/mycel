@@ -1,0 +1,8 @@
+# Anything left out here falls back to `agents.defaults` in base.yaml.
+
+# Same family as the analyst, for the same reason: 3.8 has been returning 503 under load.
+model_spec: cloud:gemini-3-flash-preview
+
+# Searching is one call per angle on the question, and cross-checking a contested claim
+# costs another. Lower than the analyst's, where every figure is its own call.
+tool_calls_limit: 12

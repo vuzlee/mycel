@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr | None = None
     local_llm_base_url: str = "http://localhost:8001/v1"
 
+    # Tools that reach outside the process. Optional on the same terms as the model keys:
+    # an agent that never searches the web is a valid deployment, and `web_search` says so
+    # itself rather than failing at import.
+    tavily_api_key: SecretStr | None = None
+
     # Observability. Agent runs go to Langfuse over OTLP HTTP; the endpoint is derived from
     # the base url, so a deployment sets the two keys and nothing else.
     otel_enabled: bool = False
