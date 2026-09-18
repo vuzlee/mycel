@@ -1,10 +1,12 @@
-"""Push a job onto a topic. The entry point from business code is `services/enqueue.py`.
+"""Publish a job to an exchange. The entry point from business code is `services/enqueue.py`.
 
-Picks the partition via the message key (usually a source name or domain id), so jobs for
-the same object keep their order and do not overlap.
+The routing key picks the queue, and therefore which pool of workers takes the job — keeping
+long bulk syncs off the queue that interactive report jobs wait on.
 
-`acks=all` rather than the default: losing a report job leaves the user waiting for
-something that never arrives, which costs far more than a few tens of milliseconds on send.
+Publish with `delivery_mode=PERSISTENT` to a durable queue, and with publisher confirms on:
+losing a report job leaves the user waiting for something that never arrives, which costs far
+more than a few tens of milliseconds on publish. Both are off by default; a message published
+without them is dropped silently when the broker restarts.
 
-Call `context.inject()` before sending, otherwise the trace breaks right here.
+Call `context.inject()` before publishing, otherwise the trace breaks right here.
 """

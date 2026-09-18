@@ -1,35 +1,39 @@
-"""Background job layer on Kafka: job definitions, retry, dead-letter, idempotency keys.
+"""Background job layer on RabbitMQ: job definitions, retry, dead-letter, idempotency keys.
 
-**Not a broker.** Kafka runs outside, declared in `docker-compose`. This directory is the
-layer *on top of* Kafka — swapping brokers means changing things here, and the rest of the
+**Not a broker.** RabbitMQ runs outside, declared in `docker-compose`. This directory is the
+layer *on top of* it — swapping brokers means changing things here, and the rest of the
 system never notices.
 
 Answers *what runs and what happens on failure*; `scheduler/` answers *when*.
 
   job.py       a job's shape: payload, idempotency key, retry count, trace context
-  producer.py  push a job onto a topic — the entry point is `services/enqueue.py`
-  consumer.py  the worker's poll/commit loop
-  retry.py     tiered retry topics + dead-letter
+  producer.py  publish a job to an exchange — the entry point is `services/enqueue.py`
+  consumer.py  the worker's consume/ack loop
+  retry.py     dead-letter exchange with a TTL, and a final dead-letter queue
   context.py   carry trace context across the process boundary
 
-**Kafka is an ordered log, not a work queue**, so the four things below have to be built by
-hand — none is a default, and all four fail silently when done wrong:
+**Why RabbitMQ and not Kafka.** A few reports an hour do not need a partitioned log, a JVM
+or replay. What they need is one consumer per message, redelivery when a worker dies, and a
+dead-letter queue — which is what a broker gives directly. Kafka would mean building all
+three by hand: retry topics instead of a DLX, a retry counter in the headers because offsets
+do not count attempts, and a raised `max.poll.interval.ms` because a long job looks dead to
+a consumer group. See the comment in `docker-compose.yml`.
 
-1. **Retries cannot be per-message.** Consumers commit by offset, so `seek`-ing back on a
-   failed job blocks the whole partition. Instead: push to a retry topic and commit onward —
-   see `retry.py`.
-2. **Partition count caps parallelism, not worker count.** With 3 partitions a 4th worker
-   sits idle. Set partitions to the maximum scale you *expect* from the start: they can be
-   increased but not decreased, and increasing them breaks per-key ordering.
-3. **Long jobs look dead.** `max.poll.interval.ms` defaults to 5 minutes; generating a
-   report takes "a few minutes", squarely in the danger zone — exceeding it triggers a
-   rebalance and the job restarts from scratch. Raise this value substantially, or move the
-   work off the poll loop.
-4. **Commit after finishing, not after receiving.** Commit early and a worker dying mid-job
-   loses it. Commit late and a job may run twice — which is why the idempotency key in
-   `job.py` is mandatory, not optional.
+Four things still have to be got right, and each fails quietly when it is not:
 
-In exchange, Kafka gives what an ordinary queue does not: the log is retained so it can be
-replayed, and another consumer group can read the same stream without affecting existing
-workers.
+1. **Ack after finishing, not on delivery.** `auto_ack` loses a job the moment a worker dies
+   mid-report. Manual ack after the work completes gives at-least-once — which is why the
+   idempotency key in `job.py` is mandatory, not optional.
+2. **Bound the prefetch.** Without `basic_qos(prefetch_count=...)` one worker takes every
+   queued message and the rest idle. One or two in flight per worker is right for jobs that
+   run for minutes.
+3. **A failed job must not be requeued in a loop.** `nack(requeue=True)` puts it straight
+   back at the head and it fails again immediately. Reject it to the dead-letter exchange
+   instead — see `retry.py`.
+4. **Long jobs must outlive the timeouts.** RabbitMQ has no consumer-side poll deadline, but
+   an unacked delivery does age against `consumer_timeout` (30 minutes by default). A report
+   that can run longer than that needs the value raised on the broker.
+
+Parallelism is the number of consumers, not a partition count fixed up front: workers can be
+added and removed freely, which is the practical difference from the Kafka design.
 """
