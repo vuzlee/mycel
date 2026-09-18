@@ -1,0 +1,9 @@
+# Anything left out here falls back to `agents.defaults` in base.yaml.
+
+# Same family as the specialists it calls, for the same reason: 3.8 has been returning 503
+# under load.
+model_spec: cloud:gemini-3-flash-preview
+
+# One call per specialist per angle, and a report usually has a few angles. Low on purpose:
+# every call here is itself a whole agent run, so this limit multiplies rather than adds.
+tool_calls_limit: 8

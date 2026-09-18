@@ -12,7 +12,7 @@ The dict is keyed off each class's own `name`, so the registry cannot disagree w
 class about what an agent is called — and therefore cannot send it to read another agent's
 `config/agents/<name>.yaml`.
 
-`analyst` and `researcher` are here because they run. `librarian` is not:
+`analyst`, `orchestrator` and `researcher` are here because they run. `librarian` is not:
 it reads the knowledge base, which needs `storage/` and a gold layer that do not exist
 yet — see `notes/deferred.md`. An agent appears here when it has code and not before,
 because a registry listing agents that cannot run is a lie told to the orchestrator.
@@ -26,6 +26,7 @@ from mycel.agents.agent.researcher import Researcher
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.orchestrator import Orchestrator
 from mycel.core.exceptions import ConfigError
 from mycel.llm.budget import JobBudget
 
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from pydantic_ai import Agent
 
 
-_DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst, Researcher)
+_DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst, Orchestrator, Researcher)
 
 AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}
 
