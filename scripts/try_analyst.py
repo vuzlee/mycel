@@ -17,8 +17,10 @@ from mycel.agents.registry import build_deps
 from mycel.observability.tracing import setup_tracing
 
 PROMPT = """\
-Revenue was 1,200,000 USD in Q1 and 1,410,000 USD in Q2. Support tickets went from 840 to
-902 over the same period. Report the growth in each, and whether they moved together.
+Revenue: Q1 1,200,000 USD -> Q2 1,410,000 USD.
+Tickets: Q1 840 -> Q2 902.
+
+Report the growth in each, and whether they moved together.
 """
 
 
