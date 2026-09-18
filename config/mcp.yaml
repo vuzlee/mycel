@@ -1,0 +1,26 @@
+# MCP servers this system is allowed to call.
+#
+# A server is used because it is listed here and for no other reason: an MCP tool's name
+# and description are written by whoever runs it and go straight into the model's prompt,
+# so the list of them is prompt input that a reviewer should see in a diff.
+#
+# Secrets are named, never written: `token_env` holds the *variable* that holds the token,
+# the same split as the rest of `config/`.
+#
+#   servers:
+#     acme:
+#       transport: http          # http (default) | stdio
+#       url: https://mcp.acme.example/mcp
+#       token_env: ACME_MCP_TOKEN
+#       enabled: true            # default; false keeps the entry without loading it
+#
+#     local-notes:
+#       transport: stdio
+#       command: uvx
+#       args: [mcp-server-notes]
+#       token_env: NOTES_TOKEN   # read from this variable...
+#       token_arg: NOTES_API_KEY # ...and passed to the child under this name
+#
+# Nothing is declared yet: no agent in this slice calls an outside server, and a server
+# listed before something needs it is a connection nobody asked for.
+servers: {}

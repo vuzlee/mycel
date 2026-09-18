@@ -5,7 +5,7 @@ description = "Multi-agent system that builds reports and dashboards from multip
 requires-python = ">=3.11"
 dependencies = [
   # pydantic-ai-slim, not the full package: full pulls in every provider plus Logfire.
-  "pydantic-ai-slim[anthropic,google,openai]>=2.44,<3",
+  "pydantic-ai-slim[anthropic,google,mcp,openai]>=2.44,<3",
   "pydantic-settings>=2.4",
   # Arrives with pydantic-ai anyway, declared because `tools/web_search.py` imports it
   # directly: a transitive dependency is a fact about today's lockfile, not a promise.
