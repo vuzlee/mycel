@@ -37,27 +37,21 @@ UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_00
 
 @pytest.fixture
 def deps() -> MycelDeps:
-    return MycelDeps(
-        job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=LOCAL
-    )
+    return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=LOCAL)
 
 
 @pytest.fixture
 def unguarded_deps() -> MycelDeps:
     """The guard reads its threshold from deps, not from the agent, because the limit
     belongs to the run rather than to the agent definition."""
-    return MycelDeps(
-        job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED
-    )
+    return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED)
 
 
 def _analysis_call(figures: list[dict[str, Any]], findings: list[str]) -> ModelResponse:
     """A model response that produces the final Analysis output."""
     return ModelResponse(
         parts=[
-            ToolCallPart(
-                "final_result", {"figures": figures, "findings": findings, "caveats": []}
-            )
+            ToolCallPart("final_result", {"figures": figures, "findings": findings, "caveats": []})
         ]
     )
 
@@ -76,9 +70,7 @@ VALID_CALLS: list[tuple[str, dict[str, Any]]] = [
 
 
 class TestWiring:
-    async def test_every_tool_is_registered_and_callable(
-        self, unguarded_deps: MycelDeps
-    ) -> None:
+    async def test_every_tool_is_registered_and_callable(self, unguarded_deps: MycelDeps) -> None:
         """Walk every tool once, then produce an output.
 
         This is the smoke test that no tool signature is unserialisable and no compute
@@ -242,9 +234,7 @@ class TestDegenerateLoop:
             if step[0] <= 3:
                 return ModelResponse(
                     parts=[
-                        ToolCallPart(
-                            "percent_change", {"previous": 100, "current": 100 + step[0]}
-                        )
+                        ToolCallPart("percent_change", {"previous": 100, "current": 100 + step[0]})
                     ]
                 )
             return _analysis_call(

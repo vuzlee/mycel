@@ -64,9 +64,7 @@ async def run(
     overdrawn: BudgetExceeded | None = None
 
     with translate_agent_errors(cfg.model_spec):
-        async with agent.iter(
-            prompt, deps=deps, model=model, usage_limits=limits
-        ) as agent_run:
+        async with agent.iter(prompt, deps=deps, model=model, usage_limits=limits) as agent_run:
             try:
                 # One node per step of the agent loop: prompt, model request, tool calls,
                 # back to the model. Nothing reads them yet; the loop is here to turn.
@@ -103,9 +101,7 @@ def run_sync(
     return asyncio.run(run(agent, prompt, deps, settings))
 
 
-def _charge(
-    deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage"
-) -> BudgetExceeded | None:
+def _charge(deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage") -> BudgetExceeded | None:
     """Record one run's spend, returning the overdraft rather than raising it."""
     try:
         deps.budget.record(usage)

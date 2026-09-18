@@ -37,6 +37,7 @@ if TYPE_CHECKING:  # Type-visible without importing an SDK at runtime.
     from pydantic_ai.models import Model
     from pydantic_ai.settings import ModelSettings
 
+
 @dataclass(frozen=True, slots=True)
 class _Backend:
     """What a spec name resolves to: the provider's own model id, and how to reach it."""
@@ -50,9 +51,7 @@ class _Backend:
 # Specs stay short and human-sized, so pinning a dated version is an edit here rather than
 # across every agent's config.
 _CLOUD_MODELS: dict[str, _Backend] = {
-    "gemini-3.8-flash": _Backend(
-        "gemini-3.8-flash", "google", "gemini_api_key", "GEMINI_API_KEY"
-    ),
+    "gemini-3.8-flash": _Backend("gemini-3.8-flash", "google", "gemini_api_key", "GEMINI_API_KEY"),
     "gemini-3-flash-preview": _Backend(
         "gemini-3-flash-preview", "google", "gemini_api_key", "GEMINI_API_KEY"
     ),

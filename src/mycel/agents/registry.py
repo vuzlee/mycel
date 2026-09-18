@@ -35,7 +35,6 @@ _DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst,)
 AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}
 
 
-
 def build(name: str, settings: AgentSettings | None = None) -> "Agent[MycelDeps, Any]":
     """Build one agent by name, or raise `ConfigError` naming what is available.
 
@@ -49,7 +48,6 @@ def build(name: str, settings: AgentSettings | None = None) -> "Agent[MycelDeps,
         known = ", ".join(sorted(AGENTS)) or "(none)"
         raise ConfigError(f"unknown agent {name!r}; known agents: {known}") from None
     return agent_cls.build(settings)
-
 
 
 def build_deps(

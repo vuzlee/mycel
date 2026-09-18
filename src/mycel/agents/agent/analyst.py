@@ -42,7 +42,6 @@ class Figure(BaseModel):
     )
 
 
-
 class Analysis(BaseModel):
     """What the analyst hands back."""
 
@@ -52,7 +51,6 @@ class Analysis(BaseModel):
         default_factory=list,
         description="Anything that limits the reading: missing data, undefined results.",
     )
-
 
 
 class Analyst(BaseAgent[Analysis]):

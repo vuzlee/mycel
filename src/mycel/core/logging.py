@@ -47,9 +47,7 @@ class JsonFormatter(logging.Formatter):
         except Exception:  # noqa: BLE001 - logging must not raise
             pass
 
-        payload.update(
-            {k: v for k, v in record.__dict__.items() if k not in _STANDARD}
-        )
+        payload.update({k: v for k, v in record.__dict__.items() if k not in _STANDARD})
 
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)

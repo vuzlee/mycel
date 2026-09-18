@@ -26,9 +26,7 @@ LOCAL = AgentSettings(model_spec="local:qwen3-4b")
 
 
 def _deps(ceiling: str = "1.00", settings: AgentSettings = LOCAL) -> MycelDeps:
-    return MycelDeps(
-        job_id="job-1", budget=JobBudget("job-1", Decimal(ceiling)), settings=settings
-    )
+    return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal(ceiling)), settings=settings)
 
 
 def _says(text: str, *, tokens: int = 10) -> Any:
@@ -174,9 +172,7 @@ def _priced(text: str, *, cost: str, tokens: int = 10) -> Any:
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         return ModelResponse(
             parts=[TextPart(text)],
-            usage=RequestUsage(
-                input_tokens=tokens, output_tokens=tokens, cost=Decimal(cost)
-            ),
+            usage=RequestUsage(input_tokens=tokens, output_tokens=tokens, cost=Decimal(cost)),
         )
 
     return FunctionModel(respond)

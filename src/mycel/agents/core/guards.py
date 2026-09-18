@@ -57,9 +57,7 @@ def fingerprint(tool: str, args: dict[str, Any]) -> str:
     value degrades to its repr instead of raising — a guard that crashes is worse than a
     guard that is occasionally coarse.
     """
-    payload = json.dumps(
-        {"tool": tool, "args": _canonical(args)}, sort_keys=True, default=str
-    )
+    payload = json.dumps({"tool": tool, "args": _canonical(args)}, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -80,9 +78,7 @@ def count_identical_calls(messages: "list[Any]", target: str) -> int:
     return seen
 
 
-def guard_repeat(
-    ctx: "RunContext[Any]", tool: str, threshold: int = 2, **args: Any
-) -> None:
+def guard_repeat(ctx: "RunContext[Any]", tool: str, threshold: int = 2, **args: Any) -> None:
     """Call at the top of every tool body, before doing any work.
 
     The ladder matters. On the first repeat the model is told, in words, what it already

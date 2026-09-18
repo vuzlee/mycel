@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 OutputT = TypeVar("OutputT")
 
 
-
 class BaseAgent(ABC, Generic[OutputT]):
     """One specialist. Subclasses declare what they are; this class builds them.
 
@@ -81,9 +80,7 @@ class BaseAgent(ABC, Generic[OutputT]):
         return []
 
     @classmethod
-    def validate_output(
-        cls, ctx: "RunContext[MycelDeps]", output: OutputT
-    ) -> OutputT:
+    def validate_output(cls, ctx: "RunContext[MycelDeps]", output: OutputT) -> OutputT:
         """Last check before the output leaves the agent.
 
         Raise `ModelRetry` to send the model back with a reason; the default accepts
