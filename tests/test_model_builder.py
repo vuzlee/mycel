@@ -132,6 +132,50 @@ class TestModelSettings:
         assert model.settings["timeout"] == 60.0
 
 
+class TestTransientRetries:
+    """Each SDK retries the one failed HTTP request itself, so a 503 from an overloaded
+    model does not end the run. Asserted on the client, because that is where the setting
+    has to land for the SDK to act on it."""
+
+    def test_google_gets_attempts_including_the_first(self) -> None:
+        """google-genai counts the original request in `attempts`; the other two SDKs
+        count retries after it. Off by one here means one fewer retry than configured."""
+        model = build_model(
+            "cloud:gemini-3-flash-preview",
+            agent_settings=AgentSettings(transient_retries=2, retry_max_delay_s=20.0),
+            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+        )
+        options = model.client._api_client._http_options.retry_options
+        assert options is not None
+        assert options.attempts == 3
+        assert options.max_delay == 20.0
+
+    def test_google_zero_disables_retrying(self) -> None:
+        model = build_model(
+            "cloud:gemini-3-flash-preview",
+            agent_settings=AgentSettings(transient_retries=0),
+            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+        )
+        assert model.client._api_client._http_options.retry_options is None
+
+    def test_anthropic_client_carries_the_retries(self) -> None:
+        model = build_model(
+            "cloud:claude-sonnet-5",
+            agent_settings=AgentSettings(transient_retries=4),
+            settings=_settings(anthropic_api_key=SecretStr("sk-test")),
+        )
+        assert model.client.max_retries == 4
+
+    def test_local_client_carries_the_retries(self) -> None:
+        """The vLLM container restarting is exactly the case this covers."""
+        model = build_model(
+            "local:qwen3-4b",
+            agent_settings=AgentSettings(transient_retries=4),
+            settings=_settings(),
+        )
+        assert model.client.max_retries == 4
+
+
 def test_bad_spec_raises_before_touching_a_provider() -> None:
     with pytest.raises(ConfigError):
         build_model("gpu:qwen3-4b", settings=_settings())

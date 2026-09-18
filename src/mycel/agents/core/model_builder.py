@@ -22,6 +22,12 @@ and the same compatibility layer at the end of it.
 no such knob is dropped here. Configuration stays declarative; the backend's rules stay in
 this file.
 
+**Transient HTTP failures are retried by the provider's own client.** A 503 from an
+overloaded model, a 429, a dropped connection — each SDK already knows how to wait and
+resend the single failed request, so `transient_retries` is handed to that machinery rather
+than wrapped around the agent loop, which would replay the whole conversation and pay for
+every token again. Only failures the SDK gives up on reach `exceptions.py`.
+
 Building a model makes no network call, so agents can be constructed at import time.
 """
 
@@ -34,6 +40,7 @@ from mycel.core.exceptions import ConfigError
 from mycel.llm.router import ModelSpec, Tier, resolve
 
 if TYPE_CHECKING:  # Type-visible without importing an SDK at runtime.
+    from google.genai.types import HttpRetryOptions
     from pydantic_ai.models import Model
     from pydantic_ai.settings import ModelSettings
 
@@ -118,16 +125,19 @@ def _cloud_model(spec: ModelSpec, env: Settings, agent_cfg: AgentSettings) -> "M
 
         return GoogleModel(
             backend.model_name,
-            provider=GoogleProvider(api_key=api_key),
+            provider=GoogleProvider(api_key=api_key, retry_options=_google_retries(agent_cfg)),
             settings=model_settings,
         )
 
+    from anthropic import AsyncAnthropic
     from pydantic_ai.models.anthropic import AnthropicModel
     from pydantic_ai.providers.anthropic import AnthropicProvider
 
+    # `max_retries` lives on the client, not the provider, so the client is built here.
+    client = AsyncAnthropic(api_key=api_key, max_retries=agent_cfg.transient_retries)
     return AnthropicModel(
         backend.model_name,
-        provider=AnthropicProvider(api_key=api_key),
+        provider=AnthropicProvider(anthropic_client=client),
         settings=model_settings,
     )
 
@@ -141,19 +151,26 @@ def _local_model(spec: ModelSpec, env: Settings, agent_cfg: AgentSettings) -> "M
         env.local_llm_base_url,
         "not-needed",
         _model_settings(agent_cfg, model_name),
+        agent_cfg.transient_retries,
     )
 
 
 def _openai_chat_model(
-    model_name: str, base_url: str, api_key: str, model_settings: "ModelSettings"
+    model_name: str,
+    base_url: str,
+    api_key: str,
+    model_settings: "ModelSettings",
+    transient_retries: int,
 ) -> "Model":
     """The local server: vLLM speaks /v1/chat/completions and nothing else."""
+    from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
+    client = AsyncOpenAI(base_url=base_url, api_key=api_key, max_retries=transient_retries)
     return OpenAIChatModel(
         model_name,
-        provider=OpenAIProvider(base_url=base_url, api_key=api_key),
+        provider=OpenAIProvider(openai_client=client),
         settings=model_settings,
     )
 
@@ -168,3 +185,19 @@ def _model_settings(agent_cfg: AgentSettings, model_name: str) -> "ModelSettings
     if agent_cfg.max_tokens is not None:
         model_settings["max_tokens"] = agent_cfg.max_tokens
     return model_settings
+
+
+def _google_retries(agent_cfg: AgentSettings) -> "HttpRetryOptions | None":
+    """google-genai counts `attempts` including the first, unlike the other two SDKs.
+
+    Returns `None` for zero retries: the SDK reads that as "never retry", where
+    `attempts=1` would mean the same thing by a longer route.
+    """
+    from google.genai.types import HttpRetryOptions
+
+    if agent_cfg.transient_retries <= 0:
+        return None
+    return HttpRetryOptions(
+        attempts=agent_cfg.transient_retries + 1,
+        max_delay=agent_cfg.retry_max_delay_s,
+    )
