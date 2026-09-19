@@ -28,6 +28,7 @@ from pydantic_ai import Agent
 
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.mcp.clients import build_toolsets
 
 if TYPE_CHECKING:
     from pydantic_ai import RunContext
@@ -76,7 +77,12 @@ class BaseAgent(ABC, Generic[OutputT]):
 
     @classmethod
     def toolsets(cls) -> "list[AbstractToolset[MycelDeps]]":
-        """What this agent may call. Empty for an agent that only reasons over its prompt."""
+        """The toolsets written in this agent's own code.
+
+        Empty for an agent that only reasons over its prompt. MCP servers are *not*
+        declared here — they come from `settings.mcp_servers`, so that which outside
+        server an agent may call is a line in `config/` rather than a line in a module.
+        """
         return []
 
     @classmethod
@@ -104,7 +110,7 @@ class BaseAgent(ABC, Generic[OutputT]):
             instructions=cls.instructions,
             retries=cfg.tool_retries,
             name=cls.name,
-            toolsets=cls.toolsets(),
+            toolsets=[*cls.toolsets(), *build_toolsets(list(cfg.mcp_servers))],
         )
         agent.output_validator(cls.validate_output)
         return agent

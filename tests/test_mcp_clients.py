@@ -1,4 +1,4 @@
-"""Building MCP toolsets from `config/mcp.yaml`.
+"""Building MCP toolsets from `config/mcp/servers.yaml`.
 
 Nothing here connects to anything: `MCPToolset` opens its transport when an agent runs, so
 construction is exactly the part that can be tested offline — and it is the part that
@@ -123,6 +123,6 @@ class TestBadConfig:
 
 class TestTheCommittedFile:
     def test_the_repo_s_own_config_builds(self) -> None:
-        """`config/mcp.yaml` declares nothing yet, and that must stay loadable rather than
+        """`config/mcp/servers.yaml` declares nothing yet, and that must stay loadable rather than
         becoming a file nobody parses until the first server is added."""
         assert clients.build_toolsets() == []

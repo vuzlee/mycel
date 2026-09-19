@@ -1,0 +1,1 @@
+Mycel keeps agent tools and agent prompts in separate files.

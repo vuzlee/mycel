@@ -19,11 +19,18 @@ The limits here are the runaway guard. pydantic-ai enforces them itself once `ru
 turns them into `UsageLimits`; nothing in Mycel counts loops by hand.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
-from mycel.core.config_files import CONFIG_DIR, get_config, load_config, read_yaml
+from mycel.core.config_files import (
+    AGENTS_SUBDIR,
+    CONFIG_DIR,
+    get_config,
+    load_config,
+    read_yaml,
+)
 from mycel.core.exceptions import ConfigError
 
 
@@ -64,6 +71,27 @@ class AgentSettings:
     # How many identical (tool, arguments) calls to tolerate before `guards.py` steps in.
     repeat_threshold: int = 2
 
+    # Names of servers in `config/mcp/servers.yaml` this agent may call, empty for none. An MCP
+    # tool's name and description are written by whoever runs that server and go straight
+    # into the prompt, so which agent sees which server is a decision that belongs in a
+    # reviewable file rather than in an agent's code. Naming a server that is not declared
+    # raises at build time — see `mcp/clients.py`.
+    mcp_servers: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Freeze `mcp_servers` into a tuple however it arrived.
+
+        YAML has no tuples, so this field reaches `from_config` as a list — mutable, and
+        therefore able to change under an agent that has already been built. The dataclass
+        is frozen for exactly that reason, so the field has to be too.
+        """
+        if not isinstance(self.mcp_servers, tuple):
+            if isinstance(self.mcp_servers, str) or not isinstance(self.mcp_servers, Iterable):
+                raise ConfigError(
+                    f"mcp_servers must be a list of server names, got {self.mcp_servers!r}"
+                )
+            object.__setattr__(self, "mcp_servers", tuple(self.mcp_servers))
+
     @classmethod
     def from_config(
         cls, name: str, env: str | None = None, config_dir: Path | None = None
@@ -82,7 +110,7 @@ class AgentSettings:
         merged: dict[str, Any] = {}
         merged.update(_mapping(cfg.get("agents", {}).get("defaults", {}), "agents.defaults"))
 
-        own = directory / "agents" / f"{name}.yaml"
+        own = directory / AGENTS_SUBDIR / f"{name}.yaml"
         if own.exists():
             merged.update(_mapping(read_yaml(own), str(own)))
 

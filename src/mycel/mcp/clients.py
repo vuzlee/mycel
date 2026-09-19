@@ -1,4 +1,4 @@
-"""Build toolsets for the MCP servers named in `config/mcp.yaml`.
+"""Build toolsets for the MCP servers named in `config/mcp/servers.yaml`.
 
 **Declared servers only, never discovery.** An MCP tool arrives carrying a name and a
 description written by whoever runs that server, and both go straight into the model's
@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic_ai.mcp import MCPToolset
 
-from mycel.core.config_files import CONFIG_DIR, read_yaml
+from mycel.core.config_files import CONFIG_DIR, MCP_SUBDIR, read_yaml
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
 
@@ -46,7 +46,7 @@ def build_toolsets(
     the file raises rather than returning fewer toolsets than asked for — a silently
     missing capability is the failure mode this whole module is arranged against.
     """
-    servers = _load(config_path or CONFIG_DIR / "mcp.yaml")
+    servers = _load(config_path or CONFIG_DIR / MCP_SUBDIR / "servers.yaml")
 
     if names is not None:
         unknown = sorted(set(names) - set(servers))
