@@ -3,6 +3,7 @@
   postgres/    transactional state: the raw/silver/gold layers, jobs, permissions
   vectors/     embeddings for knowledge base search (Qdrant)
   objects/     large files: source PDFs, rendered reports (MinIO, S3 API)
+  redis/       not a record: short-lived things crossing a process boundary, all with a TTL
 
 Why three stores rather than putting everything in Postgres:
 
