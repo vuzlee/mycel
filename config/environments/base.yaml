@@ -1,7 +1,7 @@
 # Non-secret configuration, versioned with the code. A private value is named here and read
 # from the environment — never written down.
 #
-# `dev.yaml` and `prod.yaml` hold only what differs from this file.
+# `dev.yaml` and `prod.yaml`, beside this file, hold only what differs from it.
 
 database:
   schema_raw: raw

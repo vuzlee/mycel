@@ -6,15 +6,23 @@ from pathlib import Path
 import pytest
 
 from mycel.agents.core.config import AgentSettings
-from mycel.core.config_files import CONFIG_DIR, get_config, load_config, read_yaml
+from mycel.core.config_files import (
+    AGENTS_SUBDIR,
+    CONFIG_DIR,
+    ENV_SUBDIR,
+    get_config,
+    load_config,
+    read_yaml,
+)
 from mycel.core.exceptions import ConfigError
 
 
 @pytest.fixture
 def config_dir(tmp_path: Path) -> Path:
-    """A miniature `config/` tree: base, one overlay, one agent."""
-    (tmp_path / "agents").mkdir()
-    (tmp_path / "base.yaml").write_text(
+    """A miniature `config/` tree: the environment layers, one agent."""
+    (tmp_path / AGENTS_SUBDIR).mkdir()
+    (tmp_path / ENV_SUBDIR).mkdir()
+    (tmp_path / ENV_SUBDIR / "base.yaml").write_text(
         "pipeline:\n"
         "  batch_size: 500\n"
         "  workers: 4\n"
@@ -25,11 +33,11 @@ def config_dir(tmp_path: Path) -> Path:
         "    tool_calls_limit: 20\n",
         encoding="utf-8",
     )
-    (tmp_path / "dev.yaml").write_text(
+    (tmp_path / ENV_SUBDIR / "dev.yaml").write_text(
         "pipeline:\n  batch_size: 50\nagents:\n  defaults:\n    request_limit: 8\n",
         encoding="utf-8",
     )
-    (tmp_path / "agents" / "analyst.yaml").write_text(
+    (tmp_path / AGENTS_SUBDIR / "analyst.yaml").write_text(
         "model_spec: cloud:claude-sonnet-5\ntool_calls_limit: 30\n", encoding="utf-8"
     )
     return tmp_path
@@ -63,18 +71,20 @@ class TestBadFiles:
             load_config("dev", tmp_path)
 
     def test_malformed_yaml_names_the_file(self, config_dir: Path) -> None:
-        (config_dir / "dev.yaml").write_text("pipeline:\n  - [unclosed\n", encoding="utf-8")
+        (config_dir / ENV_SUBDIR / "dev.yaml").write_text(
+            "pipeline:\n  - [unclosed\n", encoding="utf-8"
+        )
         with pytest.raises(ConfigError, match="dev.yaml"):
             load_config("dev", config_dir)
 
     def test_a_non_mapping_is_rejected(self, config_dir: Path) -> None:
-        (config_dir / "dev.yaml").write_text("- one\n- two\n", encoding="utf-8")
+        (config_dir / ENV_SUBDIR / "dev.yaml").write_text("- one\n- two\n", encoding="utf-8")
         with pytest.raises(ConfigError, match="must contain a mapping"):
             load_config("dev", config_dir)
 
     def test_an_empty_overlay_is_not(self, config_dir: Path) -> None:
         """A file holding only comments parses to None, which means "override nothing"."""
-        (config_dir / "dev.yaml").write_text("# nothing yet\n", encoding="utf-8")
+        (config_dir / ENV_SUBDIR / "dev.yaml").write_text("# nothing yet\n", encoding="utf-8")
         assert load_config("dev", config_dir)["pipeline"]["batch_size"] == 500
 
 
@@ -94,7 +104,7 @@ class TestAgentSettings:
     def test_an_unknown_key_fails_with_the_real_names(self, config_dir: Path) -> None:
         """A misspelt setting must not be silently ignored — that leaves an agent running on
         a limit its YAML says it is not."""
-        (config_dir / "agents" / "analyst.yaml").write_text(
+        (config_dir / AGENTS_SUBDIR / "analyst.yaml").write_text(
             "tool_call_limit: 30\n", encoding="utf-8"
         )
         with pytest.raises(ConfigError, match="tool_call_limit"):
@@ -114,7 +124,7 @@ class TestTheRealConfigDir:
         assert cfg.model_spec.startswith("cloud:")  # the shared default, not an override
 
     def test_every_agent_file_parses(self) -> None:
-        for path in sorted((CONFIG_DIR / "agents").glob("*.yaml")):
+        for path in sorted((CONFIG_DIR / AGENTS_SUBDIR).glob("*.yaml")):
             assert read_yaml(path), f"{path} is empty"
             AgentSettings.from_config(path.stem, env="prod")
 

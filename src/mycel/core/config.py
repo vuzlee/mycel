@@ -11,6 +11,7 @@ a variable it has no field for.
 `get_settings()` is cached — config is read once per process, and tests clear the cache.
 """
 
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -49,6 +50,17 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str = "https://jp.cloud.langfuse.com"
+
+    # Infrastructure. The broker and the result store both have working defaults pointing
+    # at what `docker-compose.yml` brings up, so a dev machine needs neither variable set.
+    rabbitmq_url: str = "amqp://mycel:mycel@localhost:5672/"
+    redis_url: str = "redis://localhost:6379/0"
+    #: How long a finished report stays readable. Long enough for a caller to come back for
+    #: it, short enough that Redis is never asked to be a database.
+    result_ttl_seconds: int = 3600
+    #: Most one queued job may spend. The HTTP layer has its own ceiling in
+    #: `api/dependencies.py`; a worker has no request to read one from, so it reads this.
+    job_ceiling_usd: Decimal = Decimal("0.50")
 
     log_level: str = "INFO"
 
