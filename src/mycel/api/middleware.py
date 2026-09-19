@@ -36,3 +36,69 @@ Boundaries it does not cross:
 That last line is the one we actually hit: jobs run in a separate worker process, so the
 id does not travel with them.
 """
+
+import uuid
+
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from mycel.core.logging import bind_request_id, current_request_id
+
+#: The header a request id arrives in and leaves in. `X-Request-ID` is the de facto name;
+#: matching it means an id set by a proxy upstream is picked up rather than replaced.
+HEADER = "x-request-id"
+
+
+class RequestIdMiddleware:
+    """Give every request an id, put it where the logger finds it, send it back.
+
+    Pure ASGI rather than `BaseHTTPMiddleware`, for the reason in this module's docstring:
+    that one buffers the response body, which would stall the SSE stream that batch 005
+    adds. Getting this wrong fails silently — tokens simply arrive in one lump at the end —
+    so it is written the safe way now, while there is nothing to break.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            # Lifespan and websocket messages have no headers to read or write.
+            await self.app(scope, receive, send)
+            return
+
+        request_id = _incoming(scope) or uuid.uuid4().hex
+        token = bind_request_id(request_id)
+
+        async def send_with_id(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                # Replace rather than append. Appending gives two values for one header
+                # when anything further in has already set it — which readers join with a
+                # comma, so the id silently becomes `abc, abc` and no longer matches the
+                # one in the logs.
+                kept = [
+                    (key, value)
+                    for key, value in message.get("headers", [])
+                    if key.decode().lower() != HEADER
+                ]
+                kept.append((HEADER.encode(), request_id.encode()))
+                message["headers"] = kept
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_id)
+        finally:
+            # Reset even on failure: the contextvar outlives the request otherwise, and
+            # the next one handled by this task would log somebody else's id.
+            current_request_id.reset(token)
+
+
+def _incoming(scope: Scope) -> str | None:
+    """The id an upstream proxy already assigned, if there is one.
+
+    Reusing it keeps one chain of ids across services; generating a fresh one here would
+    break the link at exactly the boundary where a reader needs it.
+    """
+    for key, value in scope.get("headers", []):
+        if key.decode().lower() == HEADER:
+            return value.decode()[:200] or None
+    return None

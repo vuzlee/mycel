@@ -7,6 +7,11 @@ log backend is an edit to `deploy/otel/promtail.yaml`, not to this file.
 so the formatter reads the current OTel span on every record — that is what lets you jump
 from a log line straight to its trace instead of hunting by timestamp.
 
+`request_id` works the same way but comes from a contextvar rather than a span, because it
+is ours and outlives any one span. `api/middleware.py` sets it; every line logged while
+handling that request carries it without a single call site mentioning it. It only follows
+the async task, so it does not reach a thread pool or another process — see that module.
+
 If the id is missing, or OTel was never set up, it still logs and never raises. Logging
 that kills a request turns a small problem into a large one.
 """
@@ -14,9 +19,13 @@ that kills a request turns a small problem into a large one.
 import json
 import logging
 import sys
+from contextvars import ContextVar, Token
 from typing import Any
 
 from opentelemetry import trace
+
+#: The id of the request being handled, or empty outside one. Read by the formatter.
+current_request_id: ContextVar[str] = ContextVar("current_request_id", default="")
 
 # Attributes LogRecord always carries; anything else was passed via `extra=` and belongs in
 # the JSON body.
@@ -47,6 +56,10 @@ class JsonFormatter(logging.Formatter):
         except Exception:  # noqa: BLE001 - logging must not raise
             pass
 
+        request_id = current_request_id.get()
+        if request_id:
+            payload["request_id"] = request_id
+
         payload.update({k: v for k, v in record.__dict__.items() if k not in _STANDARD})
 
         if record.exc_info:
@@ -64,6 +77,16 @@ def setup_logging(level: str = "INFO") -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level.upper())
+
+
+def bind_request_id(request_id: str) -> Token[str]:
+    """Attach an id to everything logged from here on in this task.
+
+    Returns the token the caller must `current_request_id.reset()` with when the request
+    ends — without that the value outlives the request and the next one handled by the
+    same task inherits it.
+    """
+    return current_request_id.set(request_id)
 
 
 def get_logger(name: str) -> logging.Logger:
