@@ -34,7 +34,9 @@ docker compose up -d      # app + postgres + observability
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
 
-Without Docker: `uv sync`, then `uvicorn mycel.api.app:app --reload`.
+Without Docker: `uv sync`, then `uv run uvicorn --factory mycel.api.app:create_app --reload`.
+(`--factory`: the app is built by `create_app()`, so tests can construct one with their own
+settings instead of inheriting whatever the environment holds at import time.)
 To enable the local model (needs a GPU): add `--profile local-llm`.
 
 ## Directory tree
