@@ -5,6 +5,7 @@
  * indicator the stream offers: there is no event for a tool that has started.
  */
 
+import { useEffect, useRef, useState } from "react";
 import type { Item, ToolItem } from "../thread";
 import { Chevron, Spinner } from "./icons";
 
@@ -16,10 +17,28 @@ interface Props {
 export function ToolCall({ item, renderChildren }: Props) {
   const pending = item.result === null;
 
+  // A call is open while it is out and folds itself when it answers. It used to stay open
+  // for good once it had delegated, on the grounds that a sub-agent's work is what someone
+  // watching a run is watching for — true while it runs, and wrong the moment it is over:
+  // a finished thread was a wall of arguments and JSON with the answer somewhere below.
+  //
+  // Until the reader touches it. Then it is theirs, and the run stops moving it.
+  const [open, setOpen] = useState(pending);
+  const touched = useRef(false);
+
+  useEffect(() => {
+    if (!touched.current) setOpen(pending);
+  }, [pending]);
+
   return (
-    // Open while the call is out, and open when it delegated: those are the two cases
-    // someone watching a run is watching *for*. A finished leaf call folds away.
-    <details className="tool" open={pending || item.children.length > 0}>
+    <details
+      className="tool"
+      open={open}
+      onToggle={(event) => {
+        touched.current = true;
+        setOpen(event.currentTarget.open);
+      }}
+    >
       <summary>
         <Chevron className="chevron" />
         <span className="name">{item.tool}</span>
