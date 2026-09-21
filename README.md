@@ -1,22 +1,26 @@
 # Mycel
 
-A multi-agent system that turns the work already in your issue tracker into **progress
-reports and dashboards**. Today it reads Jira; the source layer is pluggable.
+A multi-agent system that answers questions about the work already in your issue tracker.
+Today it reads Jira; the source layer is pluggable.
 
 Named after *mycelium*, the underground fungal network that connects a whole forest. Mycel
 works the same way: running in the background, quietly gathering data, processing it through
 several layers, and only then surfacing as a report.
 
-> **Status:** the chain runs end to end — Jira to gold to a summary, a dashboard, a
-> Telegram message and a calendar entry. `TELEGRAM_NOTIFY_CHAT_ID` is the one thing not
-> yet exercised against a real chat.
+> **Status:** the chain runs end to end — Jira to gold to an answer, a Telegram message
+> and a calendar entry. There is one screen, Ask; batch 027 deleted the report and
+> dashboard pages once an agent could answer both. `TELEGRAM_NOTIFY_CHAT_ID` is the one
+> thing not yet exercised against a real chat.
 
 ## What it does
 
 ```
-Jira ──► bronze ──► gold ──┬─► Summariser ──► Progress report ──► Telegram
-         raw        ready  ├────────────────► Dashboard
-                           └────────────────► due dates ──────► Google Calendar
+Jira ──► bronze ──► gold ──┐
+         raw        ready  │       ┌─► summariser ─► a project's window
+                           ├─► Ask ─┼─► analyst ────► SQL over gold, read-only
+         your question ────┘       └─► researcher ─► the web, and your mailbox
+
+POST /reports/summary ──► Telegram · Google Calendar   (no page; cron calls it)
 ```
 
 Three surfaces, three jobs:
@@ -28,18 +32,19 @@ Three surfaces, three jobs:
 | **Google Calendar** | deadlines on a phone | write |
 
 Keep issues in Jira the way you already do. A scheduled sync pulls what moved, normalises
-it into `gold.work_item` and `gold.worklog`, and two things read the result:
+it into `gold.work_item` and `gold.worklog`, and one box reads the result:
 
-- **Progress report** — `POST /reports/summary` runs an agent over one project's window. It
-  opens with a verdict (on track · at risk · off track) and a one-sentence headline, then the
-  tables behind them: at risk, in flight, shipped, and estimated against spent per person.
-  The agent fills columns — issue, title, epic, who, estimate, spent, due — rather than a sentence per line,
-  so every surface renders the same rows without parsing prose. It lands in Postgres, so it is
-  still there tomorrow, and the headline goes out to Telegram with a link back to it.
-- **Dashboard** — `GET /dashboard/{project}` — numbers, no model call. One whole-project
-  progress figure at the top, then the window: totals by status category, what is past due,
-  the estimate-versus-spent gap per person, a progress bar per epic, and effort logged per day.
-  The percentage is never drawn from the window — a quiet week is not a finished project.
+- **Ask** — `POST /reports` takes a question in plain language and an orchestrator decides
+  who answers it. `summariser` writes up a project's window: a verdict (on track · at risk ·
+  off track), a headline, then the tables behind them — at risk, in flight, shipped, and
+  estimated against spent per person, as columns rather than a sentence per line. `analyst`
+  writes its own SQL against gold for anything countable and returns each figure with the
+  query that produced it. `researcher` reads the mailbox over IMAP (headers only) and
+  searches the web. Every run lands in Postgres, so it is still there tomorrow.
+- **Read-only, and enforced as such.** `run_sql` runs inside `SET TRANSACTION READ ONLY`,
+  so a question that would change the work data is refused by Postgres, not by a prompt.
+- **`POST /reports/summary`** is still there, without a page in front of it: it is the
+  entry point a scheduler or a cron would call, and it is what sends Telegram and Calendar.
 
 Both outputs are one-way and optional; a deployment with neither still works. Mycel never
 writes to your board, and never reads work back out of Calendar — an event has a start and
@@ -69,7 +74,7 @@ waits until each service answers a real query rather than merely accepting TCP.
 |---|---|
 | `scripts/stack.sh up` | Bring the stack up (the default — bare `stack.sh` does this) |
 | `scripts/stack.sh down` | Stop everything; named volumes keep the data |
-| `scripts/stack.sh status` | What is running, on which port, with the dashboard URL |
+| `scripts/stack.sh status` | What is running, on which port, with the app URL |
 | `scripts/stack.sh logs api` | Follow `api`, `worker` or `scheduler` |
 | `scripts/stack.sh restart` | `down` then `up` — the usual way to pick up a code change |
 | `scripts/stack.sh sync` | Run one Jira sync now, without waiting for the tick |
@@ -93,7 +98,6 @@ carries the label `backfill`.
 |---|---|
 | API | http://localhost:8000 |
 | UI | http://localhost:8000/app — sign in at `/app/login` |
-| Dashboard | http://localhost:8000/app/dashboard |
 | RabbitMQ | http://localhost:15672 |
 
 Postgres is on **5433**, not 5432, so it cannot collide with a system install.

@@ -256,11 +256,11 @@ report goes out to Telegram, and due dates go out to a calendar.</p>
       <p>Raw kept as it arrived · unwrapped · one row per work item, one per logged hour.</p>
       <p class="f">etl/</p>
     </div>
-    <div class="lk"><span>two readers, same window</span></div>
+    <div class="lk"><span>one box, four specialists</span></div>
     <div class="node">
-      <h4>Dashboard · Progress report</h4>
-      <p>Counts, in a request. And a written summary, from an agent.</p>
-      <p class="f">/app/dashboard · /app/reports</p>
+      <h4>Ask</h4>
+      <p>A question in plain language. An orchestrator picks who answers it.</p>
+      <p class="f">/app</p>
     </div>
   </div>
   <figcaption>Work → sync → read. Steps 03 to 06 below are one pass through this.</figcaption>
@@ -412,17 +412,20 @@ the order worth checking:</p>
 
 <h2 data-n="06">Read the numbers</h2>
 
-<p><a href="http://localhost:8000/app/dashboard">/app/dashboard</a> — pick the project and a
-window. It answers in the request because it is a handful of SQL queries and no model call,
-and it refreshes itself every 30 seconds.</p>
+<p>Ask for them. <a href="http://localhost:8000/app">/app</a> takes &ldquo;what is late
+right now&rdquo; or &ldquo;compare hours logged this month with last&rdquo; and the
+<b>analyst</b> writes its own SQL against the work data, returning each figure with the
+query that produced it. There was a dashboard page until batch 027; it answered in
+milliseconds and could only answer the six questions it was built for.</p>
 
-<p>The page opens on <b>one number: the whole project, finished over existing</b>, drawn as a
-bar split by category. It sits apart from everything under it, because everything under it is
-the window. That separation is the point — a percentage drawn from a 7-day count would read a
-quiet week, two tickets moved and one of them done, as a project half finished.</p>
+<p>The six are worth knowing anyway, because they are the ones that are easy to read under
+the wrong scope. <b>Whole-project</b> and <b>window</b> are different questions, and a
+count is wrong rather than merely imprecise when the two are mixed &mdash; a percentage
+drawn from a 7-day count reads a quiet week, two tickets moved and one done, as a project
+half finished. Say which you mean in the question.</p>
 
 <table>
-  <tr><th>Block</th><th>What it counts, and over what range</th></tr>
+  <tr><th>Ask about</th><th>What it counts, and over what range</th></tr>
   <tr><td class="m">progress</td><td>The <b>whole project</b>: items done over items that
   exist, 0-100. The one figure on the page that is not the window, which is why it is drawn
   above the divider and says so.</td></tr>
@@ -460,14 +463,16 @@ than no count.</p>
   the second. Neither is wrong; they answer different questions.</p>
 </div>
 
-<p>A project with no data is an empty dashboard, not an error: a project that has been set
-up and has not synced yet is a normal state and the page says so.</p>
+<p>A project with no data is an empty answer, not an error: a project that has been set
+up and has not synced yet is a normal state and the agent says so rather than inventing a
+number.</p>
 
 <h2 data-n="07">Run a progress report</h2>
 
-<p><a href="http://localhost:8000/app/reports">/app/reports</a> — pick the same project and
-a window, press <b>Run report</b>. There is no text box, because everything the run needs is
-a project key and a number of days.</p>
+<p>Ask for one: &ldquo;how is MYC going this week&rdquo;. The orchestrator hands it to the
+<b>summariser</b>, which takes the project key and the window out of your sentence. There
+was a form for this until batch 027, with a project picker and a day count; a sentence
+carries both and does not have to be found first.</p>
 
 <div class="step">
   <h3 data-n="01">It comes back immediately with a job id</h3>
@@ -560,19 +565,19 @@ GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/key.json</pre>
   database already holds.</p>
 </div>
 
-<h2 data-n="09">Ask something else</h2>
+<h2 data-n="09">One box, four specialists</h2>
 
-<p><a href="http://localhost:8000/app">/app</a> is the open-ended one: ask a question in
-plain language and an agent goes and finds out, delegating to specialists as it needs
-them. It is the same streaming view and the same saved history.</p>
-
-<p>It now reaches the same data the two pages above do, so a question no fixed page was
-built for has an answer:</p>
+<p><a href="http://localhost:8000/app">/app</a> is the whole app. Ask a question in plain
+language; an orchestrator reads it and delegates. There is nowhere else to go, which is
+the point of batch 027 &mdash; you no longer have to know which page a question belongs to
+before you can ask it.</p>
 
 <table>
   <tr><th>Ask this</th><th>What answers it</th></tr>
-  <tr><td>&ldquo;how is MYC going this week&rdquo;</td><td>The same summariser
-  <code>/app/reports</code> runs, on a window you name in the question.</td></tr>
+  <tr><td>&ldquo;how is MYC going this week&rdquo;</td><td>The summariser, on the window
+  you named in the question.</td></tr>
+  <tr><td>&ldquo;what is late right now, and who is it with&rdquo;</td><td>The analyst,
+  the question the dashboard page used to answer.</td></tr>
   <tr><td>&ldquo;who logged the most hours this month&rdquo;</td><td>The analyst, which
   writes its own SQL against the work data and returns each figure with the query that
   produced it.</td></tr>
@@ -584,10 +589,17 @@ built for has an answer:</p>
   read, so it says when a subject line is not enough to be sure.</td></tr>
 </table>
 
-<p>That data is read-only and enforced as such by Postgres, not only asked for in a prompt:
-a question that would change anything is refused and the agent says so.
-<code>/app/dashboard</code> and <code>/app/reports</code> are both still here and still
-work &mdash; asking is an addition, not a replacement.</p>
+<p>That data is read-only and enforced as such by Postgres, not only asked for in a
+prompt: <code>run_sql</code> runs inside a read-only transaction, so a question that would
+change anything is refused by the database and the agent says so.</p>
+
+<div class="note">
+  <p><b>What the deletion cost.</b> The dashboard answered in milliseconds and for free;
+  the same question now costs a model call and a few seconds, against a free tier of 20
+  requests a day. That was traded deliberately for not having to know which page holds
+  which answer. If the cost bites, the fix is a higher tier or a cached window &mdash; not
+  a second screen.</p>
+</div>
 
 <h2 data-n="10">When something looks wrong</h2>
 
@@ -607,9 +619,9 @@ work &mdash; asking is an addition, not a replacement.</p>
   or the bot is not in that chat. The report itself is unaffected.</td></tr>
   <tr><td>Calendar events never appear</td><td>The calendar is not shared with the service
   account's email address.</td></tr>
-  <tr><td>Report queued and never moves</td><td>The worker is not running.
+  <tr><td>A run is queued and never moves</td><td>The worker is not running.
   <code>scripts/stack.sh status</code>, then <code>logs worker</code>.</td></tr>
-  <tr><td>Report fails part-way</td><td>Usually the model provider — a free-tier quota or
+  <tr><td>A run fails part-way</td><td>Usually the model provider — a free-tier quota or
   a missing key in <code>.env</code>. The failure reason is shown on the run.</td></tr>
   <tr><td><code>api</code> reads <code>foreign</code></td><td>A stale process on port
   8000. <code>status</code> prints the pid and the command.</td></tr>
@@ -621,8 +633,8 @@ work &mdash; asking is an addition, not a replacement.</p>
 <span class="c"># open /app/login, create an account</span>
 <span class="c"># in Jira: move a ticket, log an hour, set a due date</span>
 scripts/stack.sh sync
-<span class="c"># /app/dashboard  → the numbers</span>
-<span class="c"># /app/reports    → the written summary</span></pre>
+<span class="c"># /app → &quot;how is MYC going this week&quot;</span>
+<span class="c">#      → &quot;what is late right now, and who is it with&quot;</span></pre>
 
 <p class="seq">
   <a href="architecture.html">architecture</a> ·

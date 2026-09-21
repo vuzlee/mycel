@@ -545,7 +545,7 @@ footer {
     <p class="eyebrow">Architecture design · v0.1</p>
     <h1>Mycel</h1>
     <p class="hero-lede">
-      A multi-agent system that assembles reports and dashboards from scattered data sources.
+      A multi-agent system that answers questions about scattered data from one box.
       Named after <em>mycelium</em> — the underground fungal network connecting a whole forest: running
       in the background, quietly gathering data, and only then surfacing as a report.
     </p>
@@ -736,7 +736,7 @@ footer {
           <text x="758" y="280" font-family="JetBrains Mono, monospace" font-size="12"
                 fill="var(--ink)">reports/</text>
           <text x="758" y="299" font-family="Inter Tight, sans-serif" font-size="11"
-                fill="var(--ink-soft)">reports · dashboards</text>
+                fill="var(--ink-soft)">answers · summaries</text>
 
           <!-- ===== Control layer ===== -->
           <text x="24" y="462" font-family="JetBrains Mono, monospace" font-size="10"
@@ -1055,8 +1055,10 @@ footer {
       <figcaption>
 A domain is a pair: one route module, one domain module. HTTP types stop at the route, so the
         same domain module is what <code>scheduler/</code> and any script call — the dashed arrow.
-        Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard</code>
-        and <code>threads</code>. <code>auth</code> is the exception — it is a route plus a
+Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard</code>
+        and <code>threads</code>. <code>dashboard</code> lost its route in batch 027 and is
+        reached only through <code>/projects</code> now &mdash; kept because its queries are
+        a verified read of gold. <code>auth</code> is the exception — it is a route plus a
         service, with no domain module, because signing in chains nothing.
       </figcaption>
     </figure>
@@ -1511,7 +1513,7 @@ A domain is a pair: one route module, one domain module. HTTP types stop at the 
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>domains/dashboard.py</span>
-        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. A query, so it answers inside the request rather than queueing.</span>
+        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. Batch 027 deleted the page and the route above it; <code>known_projects</code> is the part still called. A query, so it answers inside the request rather than queueing.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>domains/threads.py</span>
@@ -1519,7 +1521,7 @@ A domain is a pair: one route module, one domain module. HTTP types stop at the 
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>
-        <span class="tree-note">Builds the final artifacts from agent output: prose, data tables, dashboards.</span>
+        <span class="tree-note">Builds the final artifacts from agent output: prose and data tables.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>notify/</span>
@@ -2147,8 +2149,9 @@ A domain is a pair: one route module, one domain module. HTTP types stop at the 
             <code>services/render.py</code> and kept in <code>app.report</code></td>
         </tr>
         <tr>
-          <td class="who">app/ — sign-in, dashboard, reports</td>
-          <td>Built — Argon2id, an opaque session cookie, four pages</td>
+          <td class="who">app/ — sign-in and Ask</td>
+          <td>Built — Argon2id, an opaque session cookie. One screen since batch 027:
+            the report and dashboard pages went once an agent could answer both</td>
         </tr>
         <tr class="tone-bronze">
           <td class="who">sources/ — anything but Jira</td>
