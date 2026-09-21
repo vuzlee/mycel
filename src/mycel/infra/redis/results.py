@@ -1,9 +1,9 @@
 """Where a finished job's report waits until somebody asks for it.
 
-**This is a holding area, not storage.** Batch 004 moved the work into a second process,
+**This is a holding area, not a record.** Batch 004 moved the work into a second process,
 which immediately raises a question that process boundary does not answer: the worker has
 the `Report` and the caller has only a job id. Redis with a TTL closes that gap without
-deciding anything about the data layer, which is a later branch — `storage/` is still
+deciding anything about the data layer, which is a later branch — `infra/` is still
 stubs, and designing the reports table here would mean designing it twice.
 
 What that buys, and what it costs:
@@ -22,15 +22,13 @@ instead of having to distinguish "no key yet" from "key expired".
 import json
 from typing import Any, Literal
 
-import redis.asyncio as redis
 from pydantic import BaseModel
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.infra.redis.client import get_client
 
 log = get_logger(__name__)
-
-_client: redis.Redis | None = None
 
 
 class JobResult(BaseModel):
@@ -50,26 +48,6 @@ class JobResult(BaseModel):
 
 def _key(job_id: str) -> str:
     return f"mycel:result:{job_id}"
-
-
-async def get_client() -> redis.Redis:
-    """The process-wide client, opened on first use.
-
-    Not at import: importing this module must not require Redis to be up, or every test
-    and every `--help` needs docker running.
-    """
-    global _client
-    if _client is None:
-        _client = redis.from_url(get_settings().redis_url, decode_responses=True)
-    return _client
-
-
-async def close_client() -> None:
-    """Close it on the way out. Safe when nothing was ever opened."""
-    global _client
-    if _client is not None:
-        await _client.aclose()
-    _client = None
 
 
 async def mark_running(job_id: str) -> None:
