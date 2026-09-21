@@ -10,7 +10,14 @@ the model's own memory — fluent, undated, and indistinguishable from a search 
 someone checks. The tool cannot prevent this on its own: it can only guarantee that what it
 *returns* carries urls, not that the model used them.
 
-Searching is `tools/web_search.py`; this file only says which toolsets the researcher gets.
+**The mailbox is outside this system too.** `tools/mail.py` joined the toolset for the
+same reason `web_search` is here: both fetch what the prompt does not contain, and both
+fail the same way when the model answers from memory instead. The enforcement above needs
+no change to cover them — every Gmail message has a permalink, so a claim about mail has a
+source in exactly the sense `validate_output` already means.
+
+Searching is `tools/web_search.py`, reading mail is `tools/mail.py`; this file only says
+which toolsets the researcher gets.
 """
 
 from pydantic import BaseModel, Field
@@ -20,7 +27,7 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import web_search
+from mycel.agents.tools import mail, web_search
 
 
 class Claim(BaseModel):
@@ -63,7 +70,7 @@ class Researcher(BaseAgent[Research]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        return [web_search.build_toolset()]
+        return [web_search.build_toolset(), mail.build_toolset()]
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Research) -> Research:
