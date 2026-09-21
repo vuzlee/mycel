@@ -1,0 +1,11 @@
+# Anything left out here falls back to `agents.defaults` in base.yaml.
+
+# The same GA release the analyst runs on. This agent makes exactly one request per
+# report — no tools, no loop — so it is the cheapest thing in the system and there is no
+# reason to spend a preview quota on it.
+model_spec: cloud:gemini-3.5-flash-lite
+
+# It has no tools. One call, one answer. Zero does not stop the structured output —
+# that is delivered as `final_result`, which pydantic-ai does not count here — nor a
+# re-prompt when the model returns the wrong shape. `test_summariser.py` pins both.
+tool_calls_limit: 0
