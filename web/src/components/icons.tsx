@@ -41,6 +41,20 @@ export function ArrowUp({ size = 15 }: IconProps) {
   );
 }
 
+export function ArrowDown({ size = 14 }: IconProps) {
+  return (
+    <svg viewBox="0 0 16 16" width={size} height={size} fill="none" aria-hidden="true">
+      <path
+        d="M8 3v10M4 9l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function ArrowRight({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>

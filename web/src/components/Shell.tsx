@@ -4,21 +4,24 @@
  */
 
 import { useState } from "react";
-import { Menu } from "./icons";
+import { ArrowDown, Menu } from "./icons";
 import { Sidebar } from "./Sidebar";
 
 interface Props {
   /** Job id of the run on screen, so the rail can mark its row. */
   current?: string | null;
   header?: React.ReactNode;
-  /** Passed to the scrolling body — the run pages stick it to the bottom. */
+  /** Passed to the scrolling body. Nothing scrolls it on its own — see `useFollow`. */
   scrollRef?: (node: HTMLDivElement | null) => void;
+  /** Offered only while the bottom is off screen: with no auto-scroll, work happening
+   *  below the fold is otherwise invisible. */
+  jump?: () => void;
   children: React.ReactNode;
   /** Below the scroll area, outside it: the composer, where a page has one. */
   footer?: React.ReactNode;
 }
 
-export function Shell({ current = null, header, scrollRef, children, footer }: Props) {
+export function Shell({ current = null, header, scrollRef, jump, children, footer }: Props) {
   const [menu, setMenu] = useState(false);
 
   return (
@@ -38,6 +41,11 @@ export function Shell({ current = null, header, scrollRef, children, footer }: P
         <div className="scroll" ref={scrollRef}>
           {children}
         </div>
+        {jump && (
+          <button className="jump" onClick={jump} aria-label="Scroll to the newest">
+            <ArrowDown />
+          </button>
+        )}
         {footer}
       </main>
     </div>

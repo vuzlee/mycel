@@ -15,7 +15,8 @@ import { useAuth } from "./auth";
 import { buildThread } from "./thread";
 import type { Item } from "./thread";
 import type { StreamState } from "./types";
-import { useJobStream, useStickToBottom } from "./useJobStream";
+import type { Follow } from "./useJobStream";
+import { useFollow, useJobStream } from "./useJobStream";
 
 const POLL_MS = 3000;
 
@@ -29,7 +30,8 @@ export interface Run {
   busy: boolean;
   /** True until an answer or a failure is on screen, not merely until the stream shuts. */
   pending: boolean;
-  scrollRef: (node: HTMLDivElement | null) => void;
+  /** Where the view is, and how to send it to the bottom. The loop never does. */
+  follow: Follow;
 }
 
 export function useRun(jobId: string | null): Run {
@@ -39,7 +41,7 @@ export function useRun(jobId: string | null): Run {
 
   const stream = useJobStream(jobId);
   const items = useMemo(() => buildThread(stream.events), [stream.events]);
-  const scrollRef = useStickToBottom(stream.events.length);
+
 
   useEffect(() => {
     setFailure(null);
@@ -79,6 +81,8 @@ export function useRun(jobId: string | null): Run {
   }, [jobId, forget]);
 
   const busy = stream.state === "running";
+  // The answer is the one thing worth taking the view to. Everything above it is work.
+  const follow = useFollow(result?.status === "done" || failure !== null);
 
   return {
     items,
@@ -89,6 +93,6 @@ export function useRun(jobId: string | null): Run {
     result,
     busy,
     pending: jobId !== null && failure === null && result?.status !== "done",
-    scrollRef,
+    follow,
   };
 }

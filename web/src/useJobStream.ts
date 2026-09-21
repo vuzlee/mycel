@@ -84,25 +84,46 @@ export function useJobStream(jobId: string | null): Stream {
   return stream;
 }
 
-/** Scroll a container to the bottom whenever `deps` grows, unless the user scrolled up. */
-export function useStickToBottom(dep: number): (node: HTMLDivElement | null) => void {
+export interface Follow {
+  ref: (node: HTMLDivElement | null) => void;
+  /** True while the bottom is off screen — what the jump button is shown for. */
+  adrift: boolean;
+  toBottom: () => void;
+}
+
+/**
+ * Follow the answer, not the work.
+ *
+ * A run emits dozens of events — reasoning, tool calls, a sub-agent's own loop — and
+ * scrolling on each one takes the page away from whatever is being read. So the loop
+ * never moves the view. `answered` does: the answer is the thing that was asked for, and
+ * it lands once.
+ *
+ * `adrift` says the bottom is off screen, which is the only honest reason to offer a
+ * jump button: with no auto-scroll, new work below the fold is otherwise invisible.
+ */
+export function useFollow(answered: boolean): Follow {
   const node = useRef<HTMLDivElement | null>(null);
-  const pinned = useRef(true);
+  const [adrift, setAdrift] = useState(false);
 
   const ref = useCallback((element: HTMLDivElement | null) => {
     node.current = element;
     if (!element) return;
-    element.addEventListener("scroll", () => {
+    const read = (): void => {
       const slack = element.scrollHeight - element.scrollTop - element.clientHeight;
-      pinned.current = slack < 80;
-    });
+      setAdrift(slack > 120);
+    };
+    element.addEventListener("scroll", read);
+    read();
+  }, []);
+
+  const toBottom = useCallback(() => {
+    node.current?.scrollTo({ top: node.current.scrollHeight, behavior: "smooth" });
   }, []);
 
   useEffect(() => {
-    if (node.current && pinned.current) {
-      node.current.scrollTop = node.current.scrollHeight;
-    }
-  }, [dep]);
+    if (answered) toBottom();
+  }, [answered, toBottom]);
 
-  return ref;
+  return { ref, adrift, toBottom };
 }
