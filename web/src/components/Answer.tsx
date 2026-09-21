@@ -8,9 +8,12 @@
  */
 
 import type { ReportResult } from "../api";
+import { ArrowRight } from "./icons";
 
 interface Props {
   result: ReportResult;
+  /** Put a suggestion in the composer. Absent on a page with no composer. */
+  onFollow?: (question: string) => void;
 }
 
 interface Finding {
@@ -18,12 +21,13 @@ interface Finding {
   sources?: string[];
 }
 
-export function Answer({ result }: Props) {
+export function Answer({ result, onFollow }: Props) {
   const report = result.report;
   if (!report) return null;
 
   const findings = (report.findings as Finding[] | undefined) ?? [];
   const gaps = (report.gaps as string[] | undefined) ?? [];
+  const followUps = (report.follow_ups as string[] | undefined) ?? [];
 
   return (
     <section className="answer">
@@ -51,6 +55,21 @@ export function Answer({ result }: Props) {
       )}
 
       {result.spent_usd && <p className="spend">${result.spent_usd}</p>}
+
+      {/* Written by the run that just answered, not chosen from a list here: it is the
+          only thing that knows what this answer opened up. Empty is a real answer — a
+          question that closes its subject gets no row of suggestions under it. */}
+      {onFollow && followUps.length > 0 && (
+        <div className="follow-ups">
+          <span className="label">Ask next</span>
+          {followUps.map((question) => (
+            <button key={question} onClick={() => onFollow(question)}>
+              {question}
+              <ArrowRight />
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

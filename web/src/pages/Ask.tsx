@@ -102,7 +102,8 @@ export function Ask() {
   return (
     <Shell
       current={jobId}
-      scrollRef={run.scrollRef}
+      scrollRef={run.follow.ref}
+      jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       header={
         <>
           <StatePill state={refused ? "error" : run.state} />
@@ -128,7 +129,9 @@ export function Ask() {
           failure={failure}
           pending={run.pending}
         >
-          {run.result?.status === "done" && <Answer result={run.result} />}
+          {run.result?.status === "done" && (
+            <Answer result={run.result} onFollow={setSeed} />
+          )}
         </Thread>
       ) : (
         <div className="blank">

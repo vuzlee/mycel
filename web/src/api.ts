@@ -9,6 +9,9 @@ export interface Accepted {
 export interface Report {
   findings: { statement: string; sources: string[] }[];
   gaps: string[];
+  /** Questions this answer made worth asking, written by the run that answered. Empty
+   *  when it closed the subject — the page shows nothing rather than a generic menu. */
+  follow_ups?: string[];
 }
 
 /** The window's verdict, as the model judged it. */

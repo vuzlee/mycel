@@ -376,6 +376,7 @@ a.brand:hover .mark {
 /* ---------------------------------------------------------------- main */
 
 .main {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -755,6 +756,75 @@ details[open] > summary .chevron {
   font-size: 11px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
+}
+
+/* Suggestions written by the run that just answered. They sit inside the answer rather
+   than above the composer: they belong to this answer, and a strip pinned to the box
+   would still be there after the next question makes them stale. */
+.follow-ups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.follow-ups button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: start;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  text-align: left;
+  color: var(--ink-2);
+  transition: border-color 0.16s ease, color 0.16s ease;
+}
+
+.follow-ups button:hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+
+.follow-ups button svg {
+  flex: none;
+  color: var(--faint);
+  transition: color 0.16s ease, translate 0.16s ease;
+}
+
+.follow-ups button:hover svg {
+  color: var(--accent);
+  translate: 2px 0;
+}
+
+/* Offered only while the bottom is off screen. Nothing scrolls the thread on its own
+   any more, so new work below the fold would otherwise be invisible. */
+.jump {
+  position: absolute;
+  bottom: 104px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-md);
+  transition: color 0.16s ease, border-color 0.16s ease;
+}
+
+.jump:hover {
+  color: var(--ink);
+  border-color: var(--accent-line);
 }
 
 /* ---------------------------------------------------------------- gap + error */
