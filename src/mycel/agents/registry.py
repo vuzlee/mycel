@@ -12,29 +12,36 @@ The dict is keyed off each class's own `name`, so the registry cannot disagree w
 class about what an agent is called — and therefore cannot send it to read another agent's
 `config/agents/<name>.yaml`.
 
-`analyst`, `orchestrator` and `researcher` are here because they run. `librarian` is not:
-it reads the knowledge base, which needs `storage/` and a gold layer that do not exist
-yet — see `notes/deferred.md`. An agent appears here when it has code and not before,
-because a registry listing agents that cannot run is a lie told to the orchestrator.
+**This is where the orchestrator is kept out of reach, not the directory tree.** It lives
+in `agent/` with the specialists because it is one, so the only thing preventing a
+specialist from delegating back to its own caller is that `build_toolset` in
+`tools/delegate.py` names `Analyst` and `Researcher` and nothing else.
+
+`analyst`, `orchestrator`, `researcher` and `summariser` are here because they run.
+`librarian` is not: it reads the knowledge base, which needs a vector store that does not
+exist yet — see `notes/deferred.md`. An agent appears here when it has code and not
+before, because a registry listing agents that cannot run is a lie told to the orchestrator.
 """
 
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from mycel.agents.agent.analyst import Analyst
+from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.agent.researcher import Researcher
+from mycel.agents.agent.summariser import Summariser
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.orchestrator import Orchestrator
 from mycel.core.exceptions import ConfigError
+from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
 
 
-_DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst, Orchestrator, Researcher)
+_DECLARED: tuple[type[BaseAgent[Any]], ...] = (Analyst, Orchestrator, Researcher, Summariser)
 
 AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}
 
@@ -58,6 +65,8 @@ def build_deps(
     job_id: str,
     ceiling_usd: Decimal | str,
     settings: AgentSettings | None = None,
+    budget: JobBudget | None = None,
+    events: EventChannel | None = None,
 ) -> MycelDeps:
     """Make the deps one job's runs share.
 
@@ -67,9 +76,15 @@ def build_deps(
 
     `ceiling_usd` accepts a string so callers can pass config values straight through
     without a float ever touching money.
+
+    `budget` is for the caller that already knows what this job has spent — the worker,
+    which reads the running total out of Redis so a redelivered job does not start again
+    from zero. Left out, the job starts at its full ceiling, which is right for a script
+    or a test and wrong for anything that can be retried.
     """
     return MycelDeps(
         job_id=job_id,
-        budget=JobBudget(job_id, Decimal(ceiling_usd)),
+        budget=budget or JobBudget(job_id, Decimal(ceiling_usd)),
         settings=settings or AgentSettings(),
+        events=events or NullChannel(),
     )

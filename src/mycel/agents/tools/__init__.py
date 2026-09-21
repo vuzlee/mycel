@@ -2,7 +2,7 @@
 
   compute.py        percentages, growth, basic statistics
   web_search.py     search the open web
-  rag_search.py     search the knowledge base via storage/vectors/
+  rag_search.py     search the knowledge base via infra/vectors/
 
 Each module owns its tools end to end and exports a `build_toolset()`; an agent lists the
 toolsets it wants and writes no wrappers of its own. That is what makes a tool reusable:

@@ -12,8 +12,11 @@ arithmetic slip is the hardest error to spot in a finished report: a wrong numbe
 exactly like a right one. That module owns the tools themselves; this file only says which
 toolsets the analyst gets.
 
-This slice computes over figures given in the prompt. A gold-layer query tool joins the
-toolset when `storage/` lands — the agent shape does not change when it does.
+`tools/query.py` is the gold-layer read this file promised when it only had `compute`, and
+it is what makes the dashboard an agent rather than a second screen: the questions a fixed
+set of SQL queries could not answer are now written per question. It needs no new rule to
+stay honest — `validate_output` already refuses a figure without a source, and the query
+that produced a number *is* its source.
 """
 
 from pydantic import BaseModel, Field
@@ -23,7 +26,7 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import compute
+from mycel.agents.tools import compute, query
 
 
 class Figure(BaseModel):
@@ -62,7 +65,7 @@ class Analyst(BaseAgent[Analysis]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        return [compute.build_toolset()]
+        return [compute.build_toolset(), query.build_toolset()]
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Analysis) -> Analysis:
