@@ -26,6 +26,15 @@ dependencies = [
   # has to be readable from a second process, and the data layer that will own it properly
   # is a later branch.
   "redis>=5.0",
+  # The data layer. `asyncpg` rather than psycopg: every caller downstream of a query is
+  # already async, and a blocking driver would stall the event loop it runs on.
+  "sqlalchemy[asyncio]>=2.0",
+  "asyncpg>=0.29",
+  "alembic>=1.13",
+  # Password hashing. Argon2id is what the OWASP cheat sheet names first, and bcrypt's
+  # silent truncation at 72 bytes is a footgun nobody notices until a long passphrase
+  # turns out to have been only its first 72 bytes all along.
+  "argon2-cffi>=23.1",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
@@ -34,6 +43,8 @@ dev = [
   "ruff>=0.6", "mypy>=1.11", "pytest>=8.0", "anyio>=4.4", "types-pyyaml>=6.0",
   # Drives the app in tests without a running server.
   "httpx>=0.27",
+  # Type stubs for the async driver, which ships none.
+  "asyncpg-stubs>=0.29",
 ]
 
 [build-system]

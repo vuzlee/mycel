@@ -1,6 +1,6 @@
 # Development. Only what differs from base.yaml: a mistake should cost seconds and cents.
 
-pipeline:
+etl:
   batch_size: 50
 
 agents:

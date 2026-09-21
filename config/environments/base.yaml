@@ -4,11 +4,11 @@
 # `dev.yaml` and `prod.yaml`, beside this file, hold only what differs from it.
 
 database:
-  schema_raw: raw
+  schema_bronze: bronze
   schema_silver: silver
   schema_gold: gold
 
-pipeline:
+etl:
   batch_size: 500
 
 agents:

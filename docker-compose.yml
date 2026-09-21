@@ -5,15 +5,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: mycel
-      POSTGRES_PASSWORD: mycel
-      POSTGRES_DB: mycel
+      POSTGRES_USER: ${POSTGRES_USER:-mycel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-mycel}
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mycel"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mycel}"]
       interval: 5s
       retries: 10
 
@@ -22,7 +22,9 @@ services:
   api:
     build: .
     profiles: [api]
-    command: uvicorn mycel.api.app:app --host 0.0.0.0 --port 8000
+    # `--factory`: there is no module-level `app`. `create_app()` is a factory on purpose,
+    # so configuration is chosen at call time rather than frozen at import.
+    command: uvicorn --factory mycel.api.app:create_app --host 0.0.0.0 --port 8000
     env_file: .env
     ports: ["8000:8000"]
     depends_on:
@@ -31,6 +33,10 @@ services:
       redis: {condition: service_healthy}
       qdrant: {condition: service_healthy}
 
+  # Ticks `domains/sync.py` every SYNC_INTERVAL_SECONDS: Telegram -> bronze -> silver ->
+  # gold. Its own process because its failure mode is its own — Telegram drops updates
+  # after 24 hours, so a scheduler that stays down loses data nothing can replay.
+  # Two replicas are safe: the tick takes a Postgres advisory lock and the loser skips.
   scheduler:
     build: .
     command: python -m mycel.scheduler
@@ -59,8 +65,8 @@ services:
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     environment:
-      RABBITMQ_DEFAULT_USER: mycel
-      RABBITMQ_DEFAULT_PASS: mycel
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-mycel}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set it in .env}
     ports: ["5672:5672", "15672:15672"]   # AMQP, management UI
     volumes: ["rabbitdata:/var/lib/rabbitmq"]
     healthcheck:
@@ -73,16 +79,21 @@ services:
   # every open tab wants every event, keyed per run, and nothing needs to be kept once the
   # run is old. Redis Streams gives per-run keys, replay from an id after an F5, and a TTL
   # that cleans up on its own. Not durable state — losing it costs a reload, nothing more.
+  #
+  # `noeviction`, not `allkeys-lru`: the same instance holds job budgets, and an evicted
+  # budget reads back as an untouched ceiling — a silent refund that lets a job spend
+  # twice. Every key here carries a TTL, so memory is bounded by expiry rather than by
+  # eviction, and a write that would not fit fails loudly instead.
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       retries: 10
 
-  # --- Storage ---
+  # --- Durable stores ---
 
   # Vector store for knowledge base search. Postgres holds transactional state,
   # Qdrant holds embeddings — two different jobs, do not merge them.

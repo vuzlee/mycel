@@ -1,6 +1,6 @@
 # Production. Only what differs from base.yaml.
 
-pipeline:
+etl:
   batch_size: 1000
 
 agents:

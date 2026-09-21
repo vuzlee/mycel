@@ -23,3 +23,14 @@ config/*-local.ini
 
 # Scratch notes, never pushed.
 notes/
+
+# Frontend: installed, and built into the image.
+web/node_modules/
+web/dist/
+.env.bak.*
+
+# Host-process pids and logs from scripts/stack.sh
+.run/
+
+# One-off Jira maintenance scripts. Not part of the app.
+.jira/
