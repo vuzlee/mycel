@@ -30,7 +30,7 @@ export interface Run {
   busy: boolean;
   /** True until an answer or a failure is on screen, not merely until the stream shuts. */
   pending: boolean;
-  /** Where the view is, and how to send it to the bottom. The loop never does. */
+  /** Where the view is, and how to send it to the bottom. Only the reader ever does. */
   follow: Follow;
 }
 
@@ -81,8 +81,9 @@ export function useRun(jobId: string | null): Run {
   }, [jobId, forget]);
 
   const busy = stream.state === "running";
-  // The answer is the one thing worth taking the view to. Everything above it is work.
-  const follow = useFollow(result?.status === "done" || failure !== null);
+  // Nothing here moves the view, not even the answer: it arrives while the reader is
+  // looking at the step that produced it. The jump button is the whole mechanism.
+  const follow = useFollow();
 
   return {
     items,

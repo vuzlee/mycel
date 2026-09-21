@@ -92,17 +92,21 @@ export interface Follow {
 }
 
 /**
- * Follow the answer, not the work.
+ * Nothing moves the view but the reader.
  *
  * A run emits dozens of events — reasoning, tool calls, a sub-agent's own loop — and
- * scrolling on each one takes the page away from whatever is being read. So the loop
- * never moves the view. `answered` does: the answer is the thing that was asked for, and
- * it lands once.
+ * scrolling on any of them takes the page away from whatever is being read. The answer
+ * is no different: it lands while the reader is halfway up the thread looking at the
+ * step that produced it, and yanking them down is the same interruption.
  *
- * `adrift` says the bottom is off screen, which is the only honest reason to offer a
- * jump button: with no auto-scroll, new work below the fold is otherwise invisible.
+ * So there is no automatic scroll at all. `adrift` says the bottom is off screen, and
+ * the button it lights is the whole mechanism: work below the fold announces itself,
+ * and going there is a decision.
+ *
+ * Watched with a `ResizeObserver` rather than on scroll alone, because with nothing
+ * following the run the content is what moves, not the viewport.
  */
-export function useFollow(answered: boolean): Follow {
+export function useFollow(): Follow {
   const node = useRef<HTMLDivElement | null>(null);
   const [adrift, setAdrift] = useState(false);
 
@@ -113,17 +117,16 @@ export function useFollow(answered: boolean): Follow {
       const slack = element.scrollHeight - element.scrollTop - element.clientHeight;
       setAdrift(slack > 120);
     };
-    element.addEventListener("scroll", read);
+    element.addEventListener("scroll", read, { passive: true });
+    const grows = new ResizeObserver(read);
+    for (const child of Array.from(element.children)) grows.observe(child);
+    grows.observe(element);
     read();
   }, []);
 
   const toBottom = useCallback(() => {
     node.current?.scrollTo({ top: node.current.scrollHeight, behavior: "smooth" });
   }, []);
-
-  useEffect(() => {
-    if (answered) toBottom();
-  }, [answered, toBottom]);
 
   return { ref, adrift, toBottom };
 }
