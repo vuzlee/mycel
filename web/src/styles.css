@@ -1,0 +1,3129 @@
+/**
+ * One violet hue (272°) carries the whole interface. Everything else — ground, surface,
+ * rule, text — is that same hue at very low saturation, so the greys read as belonging to
+ * the accent rather than sitting next to it. That is where the "expensive" look comes
+ * from: restraint, not more colour.
+ */
+
+:root {
+  --ground: #faf9fc;
+  --surface: #ffffff;
+  --sunk: #f3f1f8;
+  --raised: #ffffff;
+
+  --ink: #17141f;
+  --ink-2: #453e56;
+  --muted: #6f6782;
+  --faint: #9d96ae;
+
+  --rule: #e7e3f0;
+  --rule-2: #d9d3e6;
+
+  --accent: #6d3fd1;
+  --accent-hover: #5c33b8;
+  --accent-ink: #ffffff;
+  --accent-soft: #efe9fc;
+  --accent-line: #d6c8f7;
+
+  --flag: #a63d6b;
+  --flag-soft: #fdeef4;
+
+  /* Jira's status categories, as colours, plus the one state it has no category for.
+     Tokens rather than literals because the dashboard they came from hardcoded a green
+     and a red that were invisible in dark mode. */
+  --todo: #6b6380;
+  --doing: #a8762a;
+  --done: #3f7d58;
+  --late: #b2453c;
+
+  --shadow-sm: 0 1px 2px rgb(23 20 31 / 0.05);
+  --shadow-md: 0 4px 16px -4px rgb(23 20 31 / 0.1), 0 1px 3px rgb(23 20 31 / 0.05);
+  --shadow-lg: 0 16px 40px -12px rgb(45 27 85 / 0.18);
+
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --display: "Instrument Serif", Georgia, serif;
+
+  --rail: 272px;
+  /* Two content widths, because there are two kinds of content. `--thread` is prose and
+     stops where a line stops being comfortable to read. `--board` is tables and figures,
+     which are compared side by side and lose nothing by being wide — holding them at
+     reading width is what left a wide screen mostly empty. */
+  --thread: 45rem;
+  --board: 78rem;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #0b0910;
+    --surface: #131019;
+    --sunk: #0f0d15;
+    --raised: #1a1622;
+
+    --ink: #f0edf7;
+    --ink-2: #c5bed6;
+    --muted: #8f87a3;
+    --faint: #6b6380;
+
+    --rule: #241f30;
+    --rule-2: #332c42;
+
+    --accent: #b79cff;
+    --accent-hover: #c9b5ff;
+    --accent-ink: #14101d;
+    --accent-soft: #1d1730;
+    --accent-line: #3a2f5c;
+
+    --flag: #f090b4;
+    --flag-soft: #2a1520;
+
+    --todo: #8f87a3;
+    --doing: #e0b05c;
+    --done: #6fc894;
+    --late: #f4867c;
+
+    --shadow-sm: none;
+    --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #0b0910;
+  --surface: #131019;
+  --sunk: #0f0d15;
+  --raised: #1a1622;
+
+  --ink: #f0edf7;
+  --ink-2: #c5bed6;
+  --muted: #8f87a3;
+  --faint: #6b6380;
+
+  --rule: #241f30;
+  --rule-2: #332c42;
+
+  --accent: #b79cff;
+  --accent-hover: #c9b5ff;
+  --accent-ink: #14101d;
+  --accent-soft: #1d1730;
+  --accent-line: #3a2f5c;
+
+  --flag: #f090b4;
+  --flag-soft: #2a1520;
+
+  --todo: #8f87a3;
+  --doing: #e0b05c;
+  --done: #6fc894;
+  --late: #f4867c;
+
+  --shadow-sm: none;
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* The in-page links on the home page jump; smooth makes it read as moving down one
+   page rather than as a new page arriving. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.006em;
+  font-feature-settings: "ss01", "cv05";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Underlines off once, here, rather than in every rule that styles a link. A link in
+   this app is told apart by colour and by where it sits, and an underline under a
+   wordmark or a nav row reads as a mistake. */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* A label in small caps monospace. Used for every structural heading. */
+.label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- shell */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- sidebar */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sunk);
+  border-right: 1px solid var(--rule);
+}
+
+.rail > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 18px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* It is a link now, so it has to say so on hover — the mark brightening is enough,
+   an underline under a wordmark reads as a mistake. */
+a.brand {
+  color: inherit;
+}
+
+a.brand:hover .mark {
+  filter: brightness(1.12);
+}
+
+.brand .mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #ff9ecd));
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.icon-button:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.new-run {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 20px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule-2);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: border-color 0.14s ease, color 0.14s ease, transform 0.14s ease;
+}
+
+.new-run:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.new-run:active {
+  transform: translateY(1px);
+}
+
+.new-run kbd {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.rail h2 {
+  margin: 0 18px 8px;
+}
+
+.rail ol {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 8px 20px;
+  list-style: none;
+}
+
+.rail li {
+  position: relative;
+}
+
+.rail li > button {
+  display: block;
+  width: 100%;
+  padding: 8px 30px 8px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.rail li > button:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.rail li > button[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rail li .drop {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 0.14s ease, color 0.14s ease;
+}
+
+.rail li:hover .drop,
+.rail li .drop:focus-visible {
+  opacity: 1;
+}
+
+.rail li .drop:hover {
+  color: var(--flag);
+}
+
+.rail .empty {
+  margin: 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- main */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--ground);
+}
+
+.main > header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  height: 53px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 25px;
+  padding: 0 11px 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-2);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.pill[data-state="running"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.pill[data-state="running"] .dot {
+  background: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.pill[data-state="done"] .dot {
+  background: var(--accent);
+}
+
+.pill[data-state="error"] {
+  border-color: var(--flag);
+  background: var(--flag-soft);
+  color: var(--flag);
+}
+
+.pill[data-state="error"] .dot {
+  background: var(--flag);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.job-id {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  transition: color 0.14s ease;
+}
+
+.job-id:hover {
+  color: var(--ink-2);
+}
+
+.elapsed {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-2) transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--rule-2);
+  border: 3px solid var(--ground);
+  border-radius: 999px;
+}
+
+.thread {
+  max-width: var(--thread);
+  margin: 0 auto;
+  padding: 36px 24px 48px;
+}
+
+/* ---------------------------------------------------------------- messages */
+
+.turn.user {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 28px;
+}
+
+.turn.user .bubble {
+  max-width: 82%;
+  padding: 11px 16px;
+  border-radius: 16px 16px 5px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.items > * {
+  margin-bottom: 12px;
+  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.prose {
+  white-space: pre-wrap;
+  max-width: 66ch;
+  color: var(--ink);
+}
+
+.agent-tag {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- thinking */
+
+.thinking {
+  border-left: 2px solid var(--accent-line);
+  padding-left: 16px;
+}
+
+.thinking > summary,
+.tool > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.thinking > summary::-webkit-details-marker,
+.tool > summary::-webkit-details-marker {
+  display: none;
+}
+
+.thinking > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  transition: color 0.14s ease;
+}
+
+.thinking > summary:hover {
+  color: var(--accent);
+}
+
+.chevron {
+  flex: none;
+  transition: rotate 0.16s ease;
+  color: var(--faint);
+}
+
+details[open] > summary .chevron {
+  rotate: 90deg;
+}
+
+.thinking .body {
+  margin-top: 10px;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--muted);
+  white-space: pre-wrap;
+  max-width: 72ch;
+}
+
+/* ---------------------------------------------------------------- tool calls */
+
+.tool {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color 0.16s ease;
+}
+
+.tool:hover {
+  border-color: var(--rule-2);
+}
+
+.tool > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.tool .name {
+  color: var(--accent);
+  font-weight: 500;
+  flex: none;
+}
+
+.tool .peek {
+  flex: 1;
+  min-width: 0;
+  color: var(--faint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tool .working {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.tool .detail {
+  border-top: 1px solid var(--rule);
+  padding: 12px 13px;
+}
+
+.tool .detail .label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.tool pre {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: var(--sunk);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.tool pre:last-child {
+  margin-bottom: 0;
+}
+
+.nested {
+  margin-top: 14px;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent-line);
+}
+
+.nested > * {
+  margin-bottom: 12px;
+}
+
+.nested > *:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- answer */
+
+.answer {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  animation: rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.answer .label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.answer .findings {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  max-width: 66ch;
+}
+
+.answer .findings li {
+  position: relative;
+  margin-bottom: 9px;
+  padding-left: 18px;
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+
+.answer .findings li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.answer .gaps li::before {
+  background: var(--flag);
+}
+
+.answer .gaps li {
+  color: var(--flag);
+}
+
+.answer .sources {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.answer .spend {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- gap + error */
+
+.gap,
+.failure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--flag) 30%, transparent);
+  background: var(--flag-soft);
+  color: var(--flag);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.failure {
+  margin-top: 20px;
+}
+
+/* ---------------------------------------------------------------- composer */
+
+.composer {
+  padding: 0 24px 22px;
+  background: linear-gradient(to top, var(--ground) 62%, transparent);
+}
+
+.composer form {
+  max-width: var(--thread);
+  margin: 0 auto;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 9px 9px 9px 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: 18px;
+  background: var(--raised);
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.composer form:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+}
+
+.composer textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  max-height: 180px;
+  padding: 5px 0;
+}
+
+.composer textarea::placeholder {
+  color: var(--faint);
+}
+
+.send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition: background 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.send:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.send .spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.composer .hint {
+  max-width: var(--thread);
+  margin: 9px auto 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.composer .hint kbd {
+  font-family: inherit;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- empty state */
+
+/* Centred rather than top-aligned: with nothing below it, a block pinned to the top
+   leaves a dead half-screen under the seeds. */
+.blank {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  max-width: var(--thread);
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+.blank h1 {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: 2.9rem;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.blank h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.blank > p {
+  margin: 0 0 32px;
+  max-width: 46ch;
+  font-size: 15.5px;
+  color: var(--muted);
+}
+
+.blank .label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.seeds {
+  display: grid;
+  gap: 9px;
+}
+
+.seeds button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 14px;
+  text-align: left;
+  color: var(--ink-2);
+  transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.seeds button:hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.seeds button .arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--faint);
+  transition: color 0.16s ease, translate 0.16s ease;
+}
+
+.seeds button:hover .arrow {
+  color: var(--accent);
+  translate: 2px 0;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+/* The hamburger and the scrim exist only in the drawer layout below. The asking scrim is
+   the exception: a confirmation covers the page at every width, so it opts back in. */
+.reveal,
+.shut,
+.scrim {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- asking */
+
+.scrim.asking {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  padding: 24px;
+  background: rgb(12 9 18 / 0.44);
+  /* Stated, not inherited: the drawer's media query hides and fades `.scrim`, and a
+     confirmation that fades out under it would be a dialog nobody can answer. */
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ask-card {
+  width: 100%;
+  max-width: 21rem;
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.ask-card h2 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.ask-card p {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ask-card .choices {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.ask-card .choices button:not(.primary) {
+  padding: 10px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.ask-card .choices button:not(.primary):hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+
+/* -------------------------------------------------- working (the run's own mark) */
+
+/*
+ * Three hyphae reaching out of a node, drawn in and retracted on a stagger. A spinner
+ * would say "waiting"; a delegating run is searching, so the mark grows outward instead.
+ */
+.working-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 18px 0 4px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.grow {
+  flex: none;
+  color: var(--accent);
+}
+
+.grow .dormant {
+  opacity: 0.26;
+}
+
+.grow .hypha {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: reach 2.4s ease-in-out infinite;
+}
+
+.grow .hypha:nth-of-type(2) {
+  animation-delay: 0.35s;
+}
+
+.grow .hypha:nth-of-type(3) {
+  animation-delay: 0.7s;
+}
+
+.grow circle {
+  transform-origin: 8px 8.6px;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes reach {
+  0% {
+    stroke-dashoffset: 14;
+  }
+  45%,
+  70% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 14;
+  }
+}
+
+/* Three dots typed out one at a time, so a long wait still looks alive. */
+.ellipsis::after {
+  content: "";
+  animation: dots 1.6s steps(4, jump-none) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75%,
+  100% {
+    content: "...";
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Off-canvas, not hidden: the history is the only way back to a past run. */
+  .rail {
+    position: fixed;
+    z-index: 20;
+    inset: 0 auto 0 0;
+    width: min(var(--rail), 84vw);
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 0 40px rgb(0 0 0 / 0.18);
+  }
+
+  .rail[data-open="true"] {
+    transform: none;
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    z-index: 19;
+    inset: 0;
+    background: rgb(12 9 18 / 0.44);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+
+  .scrim[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .reveal,
+  .shut {
+    display: inline-flex;
+  }
+
+  .thread,
+  .composer,
+  .blank {
+    padding-inline: 16px;
+  }
+
+  .blank {
+    padding-top: 64px;
+  }
+
+  .blank h1 {
+    font-size: 2.2rem;
+  }
+
+  .main > header {
+    padding-inline: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------- nav */
+
+.nav {
+  display: grid;
+  gap: 2px;
+  padding: 0 12px 14px;
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13.5px;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.nav a:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.nav a.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The state of a run that is not done, beside its title in the rail. */
+.rail li .state {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- the gate */
+
+/* Nothing on screen while `me()` is in flight. A spinner here flashes on every reload
+   for the length of one local request, which reads as slowness rather than loading. */
+.waiting {
+  height: 100%;
+  background: var(--ground);
+}
+
+.gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 32px 16px;
+  background: var(--ground);
+}
+
+.gate .card {
+  width: 100%;
+  max-width: 24rem;
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.gate .brand {
+  margin-bottom: 2px;
+}
+
+.gate h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.8rem;
+  font-weight: 400;
+}
+
+.gate .lede {
+  margin: -6px 0 4px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.gate .switch {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gate .switch a {
+  color: var(--accent);
+}
+
+.gate .switch a:hover {
+  color: var(--accent-hover);
+}
+
+/* The fields are their own component now, so the card's gap does not reach them. */
+.gate form {
+  display: grid;
+  gap: 14px;
+}
+
+/* An outcome, not a failure: the account exists and the next step is this form. Stated
+   in the accent rather than the flag colour, which everywhere else means something went
+   wrong. */
+.gate .notice {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* The gate's error sits between the fields and the button, where the card's own gap
+   already spaces it — the thread's 20px top margin would open a hole here. */
+.gate .failure {
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------- form parts */
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+label .label {
+  display: block;
+}
+
+label .hint {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+input,
+select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+button.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.14s ease;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- pages */
+
+/* Report and dashboard. Wide, because both are tables. */
+.page {
+  max-width: var(--board);
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}
+
+/* The run's reasoning still reads at prose width, left-aligned under the picker rather
+   than centred — a centred column inside a wide page reads as a second, floating page. */
+.page .thread {
+  margin-left: 0;
+  padding-inline: 0;
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.picker label {
+  flex: 1 1 12rem;
+}
+
+.picker .primary {
+  flex: none;
+}
+
+.windows {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+}
+
+.windows button {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.windows button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.note {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.note code {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sunk);
+}
+
+/* ---------------------------------------------------------------- dashboard */
+
+/* The lede: the one question a dashboard is opened to answer, answered before any
+   scrolling. Whole-project, which is why it sits apart from the window blocks below
+   rather than as a first tile among them. */
+.board .lede {
+  margin: 20px 0 20px;
+  padding: 20px 22px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.board .lede .figure {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.board .lede .figure > b {
+  font-family: var(--display);
+  font-size: 3.2rem;
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .of {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board .lede .of .big {
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .of .big i {
+  font-style: normal;
+  color: var(--faint);
+}
+
+.board .lede .of .sub {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+/* Past due, pulled out of the row of window tiles it used to sit in. It is the only
+   whole-project alarm on the page, so it belongs beside the whole-project figure. */
+.board .lede .flag {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--late);
+  border-radius: 999px;
+  background: var(--flag-soft);
+}
+
+.board .lede .flag b {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--late);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .flag span {
+  font-size: 12px;
+  color: var(--late);
+}
+
+/* One bar, three segments in the order work moves. Segments rather than a single fill:
+   the gap between "done" and "everything else" is the number, and splitting the rest
+   into to-do and in-progress costs nothing and says where the rest actually is. */
+.board .lede .track {
+  display: flex;
+  height: 10px;
+  margin: 18px 0 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .lede .track .fill {
+  transition: width 0.3s ease;
+}
+
+.board .lede .track .fill[data-status="todo"] {
+  background: var(--rule-2);
+}
+
+.board .lede .track .fill[data-status="doing"] {
+  background: var(--doing);
+}
+
+.board .lede .track .fill[data-status="done"] {
+  background: var(--done);
+}
+
+/* What each segment is. A bar with three colours and no key is a bar the reader guesses
+   at, and the guess is usually that the longest one is the important one. */
+.board .lede .legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.board .lede .legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.board .lede .legend [data-status="todo"] i {
+  background: var(--rule-2);
+}
+
+.board .lede .legend [data-status="doing"] i {
+  background: var(--doing);
+}
+
+.board .lede .legend [data-status="done"] i {
+  background: var(--done);
+}
+
+/* Heading, count and scope on one line. Scope is a word rather than the paragraph it
+   used to be: which range a block covers is a label, and a label people read. */
+/* Blocks tile. Two per row where one fits a column, full width where it is a table —
+   five blocks stacked in one column meant scrolling past four to reach the fifth on a
+   screen with room for two abreast. */
+.board .grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.board .block {
+  min-width: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.board .block.wide {
+  grid-column: 1 / -1;
+}
+
+/* A heading inside a block has the block's own padding above it already. */
+.board .block h2.label {
+  margin-top: 0;
+}
+
+.board .block > :last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .board .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.board h2.label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 34px 0 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.board h2 .count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sunk);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board h2 .count[data-status="late"] {
+  background: var(--flag-soft);
+  color: var(--late);
+}
+
+.board h2 .scope {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  text-transform: none;
+}
+
+/* Only where the figures are genuinely misreadable without it, and never longer than
+   what it labels. The full reasoning lives in the API schema's field descriptions. */
+.board .caption {
+  max-width: 64ch;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+.board .caption b {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.board .totals {
+  display: flex;
+  gap: 10px;
+}
+
+.board .total {
+  flex: 1;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.board .total b {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .total span {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Epics as bars, not as a table. A plan is read as "how far along is each piece", and
+   two columns of integers makes the reader divide one by the other on every row. */
+.board .epics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.board .epics li {
+  padding: 13px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.board .epics .row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.board .epics .key {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.board .epics .title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board .epics .tally {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .epics .pct {
+  min-width: 3.5ch;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .epics .track {
+  height: 6px;
+  margin: 10px 0 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .epics .track .fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.board .epics li[data-status="done"] .track .fill {
+  background: var(--done);
+}
+
+.board .epics .moved {
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+[data-status="todo"] b,
+td[data-status="todo"] {
+  color: var(--todo);
+}
+
+[data-status="doing"] b,
+td[data-status="doing"] {
+  color: var(--doing);
+}
+
+[data-status="done"] b,
+td[data-status="done"] {
+  color: var(--done);
+}
+
+[data-status="late"] b,
+td[data-status="late"] {
+  color: var(--late);
+}
+
+.board table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.board th,
+.board td {
+  text-align: left;
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13.5px;
+}
+
+.board tr:last-child td {
+  border-bottom: 0;
+}
+
+.board th {
+  padding-top: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--faint);
+}
+
+.board td.n,
+.board th.n {
+  text-align: right;
+  width: 4.5rem;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board td.who,
+.board th.who {
+  width: 9rem;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.board td.when,
+.board th.when {
+  text-align: right;
+  width: 7rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.board td.key,
+.board th.key {
+  width: 5.5rem;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Effort per day. A bar per row rather than a chart library: one series, one axis, and
+   the width is the whole message. */
+.board .effort {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .effort li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.board .effort .when {
+  width: 3.4rem;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.board .effort .bar {
+  height: 10px;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.board .effort .n {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.board .empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+@media (max-width: 720px) {
+  .board .lede .figure {
+    flex-wrap: wrap;
+  }
+
+  .board .lede .flag {
+    margin-left: 0;
+  }
+
+  .board .totals {
+    flex-wrap: wrap;
+  }
+
+  .board .total {
+    flex: 1 1 8rem;
+  }
+
+  /* The same two columns the report drops, for the same reason: the key opens the
+     ticket and the title says what it is. */
+  .board td.who,
+  .board th.who {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- summary */
+
+/* A report reads as one card, not as a page of loose sections. The border is what tells
+   a reader the run is over and this is its output, since everything above it on the page
+   is the stream that produced it. */
+.summary {
+  margin-top: 26px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Verdict, headline, counts — in that order, and all three above anything that has to
+   be scanned. A report is mostly read by someone deciding whether to read it. */
+.summary .lede {
+  padding: 22px 24px 20px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--sunk);
+}
+
+.summary .lede .verdict {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary .lede .verdict b {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary .lede .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--todo);
+}
+
+.summary .lede[data-tone="done"] .dot {
+  background: var(--done);
+}
+
+.summary .lede[data-tone="done"] .verdict b {
+  color: var(--done);
+}
+
+.summary .lede[data-tone="doing"] .dot {
+  background: var(--doing);
+}
+
+.summary .lede[data-tone="doing"] .verdict b {
+  color: var(--doing);
+}
+
+.summary .lede[data-tone="late"] .dot {
+  background: var(--late);
+}
+
+.summary .lede[data-tone="late"] .verdict b {
+  color: var(--late);
+}
+
+.summary .lede .period {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+/* The sentence the whole run exists to produce. Set in the display face, because it is
+   the one line here meant to be read rather than scanned. */
+.summary .lede .headline {
+  margin: 12px 0 18px;
+  max-width: 48ch;
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Three figures, divided rather than boxed: a tile each would be three cards inside a
+   card, and the numbers are small enough that a rule does the same job quieter. */
+.summary .lede .counts {
+  display: flex;
+  gap: 28px;
+}
+
+.summary .lede .count {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 2px solid var(--rule-2);
+}
+
+.summary .lede .count b {
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.summary .lede .count span {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.summary .lede .count[data-tone="done"] {
+  border-left-color: var(--done);
+}
+
+.summary .lede .count[data-tone="doing"] {
+  border-left-color: var(--doing);
+}
+
+.summary .lede .count[data-tone="late"] {
+  border-left-color: var(--late);
+}
+
+.summary .group {
+  padding: 18px 24px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.summary .group:last-of-type {
+  border-bottom: 0;
+}
+
+.summary .group .head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary .group .head .label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* How many are in this list, without having to count them. A pill rather than plain
+   digits: beside an uppercase label, bare numerals read as part of the label. */
+.summary .group .tally {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* What the block is measured over, as one word beside the heading rather than a caption
+   paragraph under it. The long version lives in the API schema, where whoever needs it
+   is already reading. */
+.summary .group .scope {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.summary .group[data-tone="late"] .tally {
+  background: var(--flag-soft);
+  color: var(--late);
+}
+
+/* An accent bar down the left of the group that matters, so At risk is findable by eye
+   from a scroll position that shows no heading. */
+.summary .group[data-tone="late"] {
+  border-left: 2px solid var(--late);
+  padding-left: 22px;
+}
+
+.summary .caption {
+  max-width: 62ch;
+  margin: -4px 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+/* ---- the tables ---- */
+
+/* Zebra-free, rule-free between rows: alignment is what separates rows in a table this
+   short, and a horizontal line under each one is louder than the data. */
+.summary .lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary .lines th {
+  padding: 0 10px 7px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.summary .lines td {
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13.5px;
+  vertical-align: top;
+}
+
+.summary .lines tr:last-child td {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.summary .lines td.key,
+.summary .lines th.key {
+  width: 5.5rem;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.summary .lines .title {
+  display: block;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+/* The reason a row is in this table, when it has one. Its own line under the title, in
+   the tone of the group, so it reads as a flag rather than as more title. */
+.summary .lines .note {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.summary .lines .note[data-tone="late"] {
+  color: var(--late);
+}
+
+.summary .lines .note[data-tone="doing"] {
+  color: var(--doing);
+}
+
+.summary .lines td.epic,
+.summary .lines th.epic {
+  width: 11rem;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.summary .lines td.who,
+.summary .lines th.who {
+  width: 8rem;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Estimate, spent and due close the row. Right-aligned and tabular because a column of
+   figures is compared downwards, and ragged digits make that comparison by eye
+   impossible. */
+.summary .lines td.n,
+.summary .lines th.n {
+  width: 4.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.summary .lines td.when,
+.summary .lines th.when {
+  width: 6.5rem;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Where a truncated window declares itself. Set apart rather than rendered as a fifth
+   group: a limit that looks like one more section is a limit that gets skimmed past. */
+.summary .limits {
+  margin: 0;
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--rule);
+  background: var(--sunk);
+}
+
+.summary .limits .label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.summary .limits ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.summary .empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+.summary .spend {
+  margin: 0;
+  padding: 10px 24px 12px;
+  border-top: 1px solid var(--rule);
+  text-align: right;
+}
+
+/* Seven columns do not fit a laptop half-screen. They are shed in the order they can be
+   lost: epic first (the title usually implies it), then spent, then who. Key, title,
+   estimate and due survive to the narrowest width. */
+@media (max-width: 1100px) {
+  .summary .lines td.epic,
+  .summary .lines th.epic {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .summary .lines td.who,
+  .summary .lines th.who,
+  .summary .lines td.spent,
+  .summary .lines th.spent {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .summary .lede,
+  .summary .group,
+  .summary .limits,
+  .summary .spend {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .summary .group[data-tone="late"] {
+    padding-left: 14px;
+  }
+}
+
+/* ---------------------------------------------------------------- account menu */
+
+/* One menu, two homes: a pill in the home page's bar and a strip at the foot of the
+   rail. The difference is where it opens from and how wide it sits, not what is in it —
+   an account menu that is somewhere else on another page is one people stop trusting. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu .me {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  transition: border-color 0.14s ease;
+}
+
+.account-menu .me:hover {
+  border-color: var(--accent-line);
+}
+
+.account-menu[data-where="rail"] {
+  margin-top: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Full width in the rail: it is the only thing on that row, and a pill floating in a
+   strip reads as unfinished. */
+.account-menu[data-where="rail"] .me {
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.account-menu .avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #ff9ecd));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-menu .named {
+  display: grid;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.account-menu .as {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Truncated rather than wrapped — a long address must not push the caret off the row. */
+.account-menu .addr {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.account-menu .caret {
+  flex: none;
+  margin-left: auto;
+  color: var(--faint);
+}
+
+.account-menu .menu {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  display: grid;
+  gap: 1px;
+  min-width: 15rem;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Above in the rail, below in the bar — each opens into the room it has. */
+.account-menu[data-where="bar"] .menu {
+  top: calc(100% + 8px);
+}
+
+.account-menu[data-where="rail"] .menu {
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% - 4px);
+}
+
+/* The address again, at the top of the menu: the pill truncates, and this is where
+   someone checks the whole thing before signing out of the wrong account. */
+.account-menu .menu .head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.account-menu .menu .head .addr {
+  max-width: 13rem;
+  font-size: 13px;
+}
+
+.account-menu .menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  text-align: left;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.account-menu .menu button:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.account-menu .menu button svg {
+  flex: none;
+  color: var(--faint);
+}
+
+/* Ruled off, because it is the one item here that cannot be undone by clicking again. */
+.account-menu .menu .out {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.account-menu .menu .out:hover {
+  color: var(--flag);
+}
+
+.account-menu .menu .out:hover svg {
+  color: var(--flag);
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+/* What the account menu opens. Same card as the sign-out question, given a header and
+   room to hold a few blocks instead of one sentence. Capped in height and scrolled
+   inside, so a long panel on a short screen does not push its own close button off. */
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 26rem;
+  max-height: min(84vh, 40rem);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.modal > header > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.modal h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.modal > header p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.modal > header .icon-button {
+  margin-left: auto;
+  flex: none;
+}
+
+.modal .body {
+  display: grid;
+  gap: 22px;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modal .body section {
+  display: grid;
+  gap: 10px;
+}
+
+.modal .body h3.label {
+  margin: 0;
+}
+
+.modal .body .muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.modal .body .muted a {
+  color: var(--accent);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.identity > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.identity b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.identity .muted {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.avatar.big {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+
+/* Three across even in the dialog: they are a number and a word each, and stacking them
+   would make a short fact list look like a long one. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--rule);
+}
+
+.facts > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  background: var(--surface);
+}
+
+.facts dt {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* One of three, and which one is on is stated by the border rather than a dot: the
+   whole row is the target, so the whole row should show the choice. */
+.choice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.choice-list button {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.choice-list button:hover {
+  border-color: var(--accent-line);
+}
+
+.choice-list button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice-list b {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.choice-list .muted {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.steps {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: grid;
+  gap: 5px;
+  padding-left: 34px;
+  position: relative;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.steps b {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.steps .muted {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- home */
+
+/* The one page that renders signed out, so it has no rail to sit beside and sets its own
+   measure. Wider than `--thread`: that width is for reading a run, and this is a page of
+   blocks rather than a column of prose. */
+/* `min-height`, not the `height: 100%` the app shell wants: this is the one page taller
+   than the viewport, and a fixed height would cut its background off at the fold. */
+.home {
+  min-height: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 0 20px 48px;
+  background: var(--ground);
+}
+
+/* Sticky, because the page is long enough that the way back out should not need a
+   scroll to the top. Blurred rather than opaque: the picture below keeps showing
+   through, which is what tells you the bar is over the page and not part of it. */
+.home > header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 44px;
+  padding: 12px 0;
+  background: color-mix(in oklab, var(--ground) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid transparent;
+}
+
+/* The middle nav takes the slack, so the brand sits left and the account sits right. */
+.home nav.sections {
+  margin-left: 26px;
+  margin-right: auto;
+}
+
+.home nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.home nav a:not(.primary) {
+  color: var(--muted);
+  transition: color 0.14s ease;
+}
+
+.home nav a:not(.primary):hover {
+  color: var(--ink);
+}
+
+.home a.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 500;
+  transition: background 0.14s ease;
+}
+
+.home a.primary:hover {
+  background: var(--accent-hover);
+}
+
+.home .lead h1 {
+  margin: 0 0 16px;
+  max-width: 22ch;
+  font-family: var(--display);
+  font-size: 3.4rem;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.home .lead h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.home .lead > p {
+  margin: 0;
+  max-width: 50ch;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.home section {
+  margin-top: 44px;
+  /* Cleared, so an anchor does not land its heading under the sticky bar. */
+  scroll-margin-top: 84px;
+}
+
+/* -------------------------------------------------- the picture */
+
+/* Three columns on a wide screen, stacked below. The arrow rotates when it stacks, which
+   is the only reason it is an svg rather than a border. */
+.flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 40px;
+  padding: 30px 26px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.flow .caption {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.flow .posted {
+  display: grid;
+  gap: 8px;
+}
+
+.flow .bubble {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--ground);
+  font-size: 13px;
+}
+
+.flow .tag {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.flow .said {
+  color: var(--muted);
+}
+
+.flow [data-tag="todo"] {
+  color: var(--todo);
+}
+
+.flow [data-tag="doing"] {
+  color: var(--doing);
+}
+
+.flow [data-tag="done"] {
+  color: var(--done);
+}
+
+.flow [data-tag="late"] {
+  color: var(--late);
+}
+
+.flow .link {
+  width: 64px;
+  height: 120px;
+  stroke: var(--accent-line);
+  stroke-width: 1.4;
+}
+
+.flow .link .fan {
+  stroke-dasharray: 3 4;
+}
+
+.flow .link .node {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.flow .produced {
+  display: grid;
+  gap: 8px;
+}
+
+.flow .sheet {
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+}
+
+/* Prose stood in for by rules: the shape of a written report reads at a glance, and real
+   sentences here would be three more sentences to keep true. */
+.flow .line {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--rule-2);
+}
+
+.flow .line.faint {
+  background: var(--rule);
+}
+
+.flow .bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  height: 46px;
+}
+
+.flow .bars span {
+  flex: 1;
+  border-radius: 3px 3px 1px 1px;
+  background: currentColor;
+}
+
+/* -------------------------------------------------- what you get */
+
+.home .use-list {
+  display: grid;
+  gap: 1px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.home .use-list li {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 4px 20px;
+  padding: 18px 20px;
+  background: var(--surface);
+}
+
+.home .use-list .when {
+  grid-row: span 2;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.home .use-list b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home .use-list .how {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------- the ask, and the name */
+
+.home .note {
+  margin: 14px 0 0;
+  max-width: 56ch;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.home .note code {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* The naming story, set apart: it explains the word on the tab rather than the product,
+   and reads as a footnote because that is what it is. */
+.home .aside {
+  margin: 0;
+  max-width: 58ch;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent-line);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.home .aside em {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+/* -------------------------------------------------- the call, and the footer */
+
+.home .call {
+  padding: 40px 32px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  text-align: center;
+}
+
+.home .call h2 {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 2.1rem;
+  font-weight: 400;
+}
+
+.home .call p {
+  margin: 0 auto 22px;
+  max-width: 46ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.home .call p b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home .call .both {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.home .call a:not(.primary) {
+  color: var(--accent);
+}
+
+.home > footer {
+  display: grid;
+  gap: 26px;
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.home > footer .sig p {
+  margin: 12px 0 0;
+  max-width: 34ch;
+  line-height: 1.6;
+  color: var(--faint);
+}
+
+.home > footer .columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.home > footer .columns > div {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.home > footer .columns .label {
+  margin-bottom: 2px;
+}
+
+.home > footer a {
+  color: var(--muted);
+  transition: color 0.14s ease;
+}
+
+.home > footer a:hover {
+  color: var(--accent);
+}
+
+.home > footer .muted {
+  color: var(--faint);
+  line-height: 1.5;
+}
+
+.home > footer .fine {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.home > footer .fine span:last-child {
+  max-width: 52ch;
+}
+
+@media (max-width: 760px) {
+  .home .lead h1 {
+    font-size: 2.4rem;
+  }
+
+  /* The section links go first: on a phone the account controls are what the bar is
+     for, and three more links would push them off it. */
+  .home nav.sections {
+    display: none;
+  }
+
+  .home .account {
+    margin-left: auto;
+  }
+
+  /* The words go, the initial stays: at this width the avatar alone still answers
+     "is this my account" without taking the button's room. */
+  .account-menu[data-where="bar"] .named,
+  .account-menu[data-where="bar"] .caret {
+    display: none;
+  }
+
+  .account-menu[data-where="bar"] .me {
+    padding: 4px;
+  }
+
+  .home > footer .columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+
+  /* Stacked, so the arrow between the two halves has to point down instead. */
+  .flow {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .flow .link {
+    width: 120px;
+    height: 44px;
+    justify-self: center;
+    rotate: 90deg;
+  }
+
+  .home .use-list li {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .home .use-list .when {
+    grid-row: auto;
+  }
+}
