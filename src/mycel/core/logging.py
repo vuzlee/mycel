@@ -68,6 +68,12 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
+#: Libraries that log a full request URL at INFO. Telegram puts the bot token in the
+#: path, so that line writes a live credential to stdout. Raised to WARNING rather than
+#: filtered, because a failing request is still worth seeing.
+_QUIET = ("httpx", "httpx2", "httpcore")
+
+
 def setup_logging(level: str = "INFO") -> None:
     """Install the JSON formatter on the root logger. Safe to call more than once."""
     handler = logging.StreamHandler(sys.stdout)
@@ -77,6 +83,9 @@ def setup_logging(level: str = "INFO") -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level.upper())
+
+    for name in _QUIET:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def bind_request_id(request_id: str) -> Token[str]:

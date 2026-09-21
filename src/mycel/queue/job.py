@@ -31,6 +31,7 @@ class JobKind(StrEnum):
     """
 
     REPORT = "report"
+    SUMMARY = "summary"
 
 
 class Job(BaseModel):
@@ -43,7 +44,10 @@ class Job(BaseModel):
     kind: JobKind
     payload: dict[str, object] = Field(
         default_factory=dict,
-        description="Arguments for this kind of work. For `report`: `{'question': ...}`.",
+        description=(
+            "Arguments for this kind of work. For `report`: `{'question', "
+            "'conversation_id'}`. For `summary`: `{'project', 'days', 'conversation_id'}`."
+        ),
     )
     job_id: str = Field(
         default_factory=lambda: uuid.uuid4().hex,

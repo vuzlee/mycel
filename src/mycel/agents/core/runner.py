@@ -26,6 +26,7 @@ failed, or was stopped.
 import asyncio
 from typing import TYPE_CHECKING, TypeVar
 
+from mycel.agents.core.emit import RUN_FINISHED, RUN_STARTED, RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
 from mycel.agents.core.model_builder import build_model
 from mycel.core.logging import get_logger
@@ -48,6 +49,7 @@ async def run(
     prompt: str,
     deps: "MycelDeps",
     settings: "AgentSettings | None" = None,
+    parent_tool_call_id: str | None = None,
 ) -> OutputT:
     """Run an agent to completion, charging the job budget exactly once.
 
@@ -60,16 +62,19 @@ async def run(
 
     model = build_model(cfg.model_spec, cfg)
     limits = deps.budget.limits(cfg)
+    emitter = RunEmitter(deps, _name_of(agent), parent_tool_call_id)
 
     overdrawn: BudgetExceeded | None = None
 
     with translate_agent_errors(cfg.model_spec):
         async with agent.iter(prompt, deps=deps, model=model, usage_limits=limits) as agent_run:
             try:
+                await emitter.emit(RUN_STARTED, prompt=prompt)
                 # One node per step of the agent loop: prompt, model request, tool calls,
-                # back to the model. Nothing reads them yet; the loop is here to turn.
-                async for _node in agent_run:
-                    pass
+                # back to the model.
+                async for node in agent_run:
+                    await emitter.node(node)
+                await emitter.emit(RUN_FINISHED)
             finally:
                 # `agent_run` exists before the loop runs and outlives it failing, so its
                 # usage is readable even when the run was stopped part-way. That is the
@@ -99,6 +104,11 @@ def run_sync(
     position wants `await run(...)` anyway.
     """
     return asyncio.run(run(agent, prompt, deps, settings))
+
+
+def _name_of(agent: "Agent[MycelDeps, OutputT]") -> str:
+    """The agent's registry name, which is what a client groups events by."""
+    return agent.name or "agent"
 
 
 def _charge(deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage") -> BudgetExceeded | None:
@@ -137,12 +147,16 @@ async def delegate(
     deps = ctx.deps
     cfg = settings or deps.settings
     model = build_model(cfg.model_spec, cfg)
+    emitter = RunEmitter(deps, _name_of(agent), ctx.tool_call_id)
 
     with translate_agent_errors(cfg.model_spec):
-        result = await agent.run(
-            prompt,
-            deps=deps,
-            model=model,
-            usage=ctx.usage,
-        )
+        async with agent.iter(prompt, deps=deps, model=model, usage=ctx.usage) as agent_run:
+            await emitter.emit(RUN_STARTED, prompt=prompt)
+            async for node in agent_run:
+                await emitter.node(node)
+            await emitter.emit(RUN_FINISHED)
+
+        result = agent_run.result
+        if result is None:  # pragma: no cover - iter() always sets it on success
+            raise RuntimeError("agent run produced no result")
     return result.output

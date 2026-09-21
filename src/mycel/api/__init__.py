@@ -2,11 +2,11 @@
 
   app.py           create the app, mount routers, enable middleware, wire observability
   middleware.py    only `request_id` — the rest is off-the-shelf, see its docstring
-  dependencies.py  what controllers declare via Depends(): auth, DB session, pagination
+  dependencies.py  what routes declare via Depends(): auth, DB session, pagination
   health.py        /health/live and /health/ready — belong to no business domain
 
-Business endpoints do not live here. They live in managers/<domain>/controller.py;
-app.py only gathers them.
+Business endpoints live in routes/<name>.py and call domains/<name>.py; app.py only
+gathers them.
 
 **When streaming lands, the envelope is this module's job, not the agent layer's.**
 `run_stream_events()` yields typed events, and nothing else: no ordering, and no way to

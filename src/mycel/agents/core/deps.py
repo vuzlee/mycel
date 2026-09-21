@@ -17,6 +17,7 @@ cannot drift out of sync with what actually happened.
 from dataclasses import dataclass, field, replace
 
 from mycel.agents.core.config import AgentSettings
+from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
 
 
@@ -30,8 +31,9 @@ class MycelDeps:
     job_id: str
     budget: JobBudget
     settings: AgentSettings = field(default_factory=AgentSettings)
+    events: EventChannel = field(default_factory=NullChannel)
 
-    # session: AsyncSession — added when storage/ lands. Deliberately absent from this
+    # session: AsyncSession — added when infra/ lands. Deliberately absent from this
     # slice, which computes rather than queries.
 
     def child(self) -> "MycelDeps":

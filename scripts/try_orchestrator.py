@@ -17,9 +17,9 @@ needs the network, so it stays out of `tests/` where `ALLOW_MODEL_REQUESTS` is o
 
 import sys
 
+from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
-from mycel.agents.orchestrator import Orchestrator
 from mycel.agents.registry import build_deps
 from mycel.observability.tracing import setup_tracing
 

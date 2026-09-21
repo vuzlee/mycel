@@ -19,10 +19,11 @@ import sys
 
 from mycel.core.config import get_settings
 from mycel.core.logging import setup_logging
+from mycel.infra.redis import results
+from mycel.infra.redis.client import close_clients
 from mycel.observability.tracing import setup_tracing
 from mycel.queue.connection import close_connection
 from mycel.services.enqueue import enqueue_report
-from mycel.storage.redis import results
 
 QUESTION = "Revenue went 1,200,000 USD in Q1 to 1,410,000 USD in Q2. How much growth?"
 
@@ -78,14 +79,16 @@ async def _main() -> int:
     print(f"asking: {question}\n")
 
     try:
-        job_id = await enqueue_report(question)
+        # `conversation_id=0` rather than a thread: this script talks to the broker, not
+        # to the product, and the worker logs the missing thread instead of failing.
+        job_id = await enqueue_report(question, conversation_id=0)
         print(f"job_id: {job_id}\n")
         return await _watch(job_id)
     finally:
         # Both clients hold a socket open. Without this the script prints its answer and
         # then sits there, which reads as a hang rather than as a finished run.
         await close_connection()
-        await results.close_client()
+        await close_clients()
         if provider is not None:
             provider.shutdown()
 

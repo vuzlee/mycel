@@ -12,7 +12,7 @@ means maintaining a re-implementation of something already standardised:
 
 Why `request_id` still has to be hand-written: the value is in putting the id into
 `contextvars` so `observability/logging.py` picks it up on its own, which keeps
-controllers from writing `log.info(..., request_id=rid)` on every line. The logger is
+routes from writing `log.info(..., request_id=rid)` on every line. The logger is
 ours, so no library can wire that up for us; given that, writing it directly beats
 adding a dependency.
 

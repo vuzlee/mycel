@@ -32,19 +32,17 @@ import signal
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 from opentelemetry import context as otel_context
 
-from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.exceptions import AgentError
-from mycel.agents.orchestrator import Orchestrator
-from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
+from mycel.domains import report as report_domain
+from mycel.infra.redis import results
+from mycel.infra.redis.client import close_clients
 from mycel.llm.budget import BudgetExceeded
 from mycel.observability.tracing import setup_tracing
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel, close_connection
-from mycel.queue.job import Job, JobKind
-from mycel.storage.redis import results
+from mycel.queue.job import Job
 
 log = get_logger(__name__)
 
@@ -88,45 +86,29 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
         # Out of money is not transient: another attempt spends money the job does not
         # have. Straight to the dead-letter queue.
         log.warning("job refused for budget", extra={"job_id": job.job_id})
-        await results.store_failure(job.job_id, str(exc))
+        await report_domain.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except (AgentError, OSError) as exc:
         # A provider 503, a rate limit, a broken socket: worth another attempt in a minute.
         # The result is only marked failed on the last one, so a caller polling in between
         # sees `running` rather than a failure that is about to be retried.
         if retry.exhausted(message):
-            await results.store_failure(job.job_id, str(exc))
+            await report_domain.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
     except Exception as exc:  # noqa: BLE001 - see the docstring: the loop must survive
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
-        await results.store_failure(job.job_id, repr(exc))
+        await report_domain.record_failure(job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
 
 
 async def _run(job: Job) -> None:
-    """Do the work a job asks for, and record what came back."""
-    if job.kind is not JobKind.REPORT:
-        raise ValueError(f"no handler for job kind {job.kind!r}")
+    """Hand the job to the domain that knows what its kind means.
 
-    question = str(job.payload.get("question", "")).strip()
-    if not question:
-        raise ValueError("report job has no question")
-
-    settings = AgentSettings.from_config("orchestrator")
-    deps = build_deps(job.job_id, ceiling_usd=get_settings().job_ceiling_usd, settings=settings)
-
-    log.info("job started", extra={"job_id": job.job_id, "model": settings.model_spec})
-    report = await runner.run(Orchestrator.build(settings), question, deps)
-    await results.store(job.job_id, report, str(deps.budget.spent_usd))
-    log.info(
-        "job finished",
-        extra={
-            "job_id": job.job_id,
-            "findings": len(report.findings),
-            "gaps": len(report.gaps),
-            "spent_usd": str(deps.budget.spent_usd),
-        },
-    )
+    One line on purpose. Until batch 013 this function built the orchestrator, seeded its
+    budget and stored its result — the order of steps for one kind of work, written in the
+    transport layer, where a second kind would have meant a second copy of it.
+    """
+    await report_domain.run(job)
 
 
 async def run_worker(stop: asyncio.Event | None = None) -> None:
@@ -171,7 +153,7 @@ def main() -> int:
             await run_worker(stop)
         finally:
             await close_connection()
-            await results.close_client()
+            await close_clients()
 
     try:
         asyncio.run(_main())

@@ -29,11 +29,11 @@ from typing import Any
 
 import yaml
 
+from mycel import REPO_ROOT
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 
-# Repo root: this file is <root>/src/mycel/core/config_files.py.
-CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
+CONFIG_DIR = REPO_ROOT / "config"
 
 #: Subdirectories of `CONFIG_DIR`, named here so the layout is written down once.
 ENV_SUBDIR = "environments"

@@ -10,7 +10,7 @@ from pydantic_ai.usage import RunUsage
 
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.llm.budget import BudgetExceeded, InMemoryBudgetStore, JobBudget
+from mycel.llm.budget import BudgetExceeded, JobBudget
 
 
 def _usage(cost: str | None = "0.10", tokens: int = 100) -> RunUsage:
@@ -79,19 +79,6 @@ class TestLimits:
         """The run is capped mid-flight, not just checked before it starts."""
         b = JobBudget("j", Decimal("1.00"), spent_usd=Decimal("0.60"))
         assert b.limits(AgentSettings()).cost_limit == Decimal("0.40")
-
-
-class TestStore:
-    def test_creates_on_first_get_and_is_stable(self) -> None:
-        store = InMemoryBudgetStore(ceiling_usd=Decimal("2.00"))
-        first = store.get("job-1")
-        assert first.ceiling_usd == Decimal("2.00")
-        assert store.get("job-1") is first
-
-    def test_jobs_are_isolated(self) -> None:
-        store = InMemoryBudgetStore()
-        store.get("a").record(_usage("0.10"))
-        assert store.get("b").spent_usd == Decimal(0)
 
 
 class TestDeps:

@@ -8,19 +8,28 @@ busy worker rather than a spinning one.
 
 `scripts/try_queue.py` is the other half: it runs the same paths against the real broker,
 where these fakes cannot tell the truth about routing.
+
+The agent is faked at `domains/report.runner.run` rather than at the consumer, because
+batch 013 moved what a job *means* into the domain: the consumer now receives, dispatches
+and acks, and that is all it is tested for here.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 import pytest
 
 from mycel.agents.core.exceptions import AgentError
-from mycel.agents.orchestrator import Finding, Report
-from mycel.llm.budget import BudgetExceeded
+from mycel.agents.schemas import Finding, ProgressSummary, Report, WorkLine
+from mycel.domains import report as report_domain
+from mycel.infra.redis import budgets, results
+from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, retry, topology
 from mycel.queue.job import Job, JobKind
-from mycel.storage.redis import results
+from mycel.services.gather import ProgressWindow
 
 pytestmark = pytest.mark.anyio
 
@@ -60,8 +69,31 @@ def _message(question: str = "how many?", **headers: Any) -> FakeMessage:
 
 
 @pytest.fixture
-def store(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Capture what the worker would have written, instead of writing to Redis."""
+def spent(monkeypatch: pytest.MonkeyPatch) -> dict[str, Decimal]:
+    """A budget store that keeps the running total in a dict instead of in Redis.
+
+    It merges the same way the Lua script does — larger wins — so a test can show an
+    attempt inheriting what the one before it spent.
+    """
+    totals: dict[str, Decimal] = {}
+
+    async def load(job_id: str, ceiling_usd: Decimal | str) -> JobBudget:
+        return JobBudget(job_id, Decimal(ceiling_usd), spent_usd=totals.get(job_id, Decimal(0)))
+
+    async def save(budget: JobBudget) -> None:
+        totals[budget.job_id] = max(totals.get(budget.job_id, Decimal(0)), budget.spent_usd)
+
+    monkeypatch.setattr(budgets, "load", load)
+    monkeypatch.setattr(budgets, "save", save)
+    return totals
+
+
+@pytest.fixture
+def store(monkeypatch: pytest.MonkeyPatch, spent: dict[str, Decimal]) -> dict[str, Any]:
+    """Capture what the worker would have written, instead of writing to Redis.
+
+    Depends on `spent` so no test in this file can reach a real Redis by forgetting it.
+    """
     written: dict[str, Any] = {}
 
     async def mark_running(job_id: str) -> None:
@@ -87,10 +119,42 @@ def _runs(monkeypatch: pytest.MonkeyPatch, outcome: Report | Exception) -> None:
             raise outcome
         return outcome
 
-    monkeypatch.setattr(consumer.runner, "run", fake_run)
+    monkeypatch.setattr(report_domain.runner, "run", fake_run)
 
 
 _REPORT = Report(findings=[Finding(statement="42", sources=[])], gaps=[])
+
+PROJECT = "MYC"
+
+
+_SUMMARY = ProgressSummary(
+    period="last week",
+    shipped=[WorkLine(key="MYC-7", title="Schemas", who="Dev One")],
+)
+
+_WINDOW = ProgressWindow(
+    project=PROJECT,
+    since=datetime(2026, 9, 14, tzinfo=UTC),
+    until=datetime(2026, 9, 21, tzinfo=UTC),
+    items=[],
+    by_epic={},
+    epic_titles={},
+    totals={"todo": 0, "doing": 0, "done": 0},
+    by_assignee=[],
+    overdue=[],
+    effort_by_day=[],
+)
+
+
+def _summary_message(days: int = 7) -> FakeMessage:
+    job = Job(kind=JobKind.SUMMARY, payload={"project": PROJECT, "days": days}, job_id="job-1")
+    return FakeMessage(job.model_dump_json().encode())
+
+
+@asynccontextmanager
+async def _no_session() -> AsyncIterator[None]:
+    """Stands in for `session_scope`, so no test here opens a database connection."""
+    yield None
 
 
 class TestIdempotencyKey:
@@ -130,7 +194,7 @@ class TestSuccess:
             seen.append("ran")
             return _REPORT
 
-        monkeypatch.setattr(consumer.runner, "run", fake_run)
+        monkeypatch.setattr(report_domain.runner, "run", fake_run)
 
         message = _message()
         original_ack = message.ack
@@ -234,6 +298,63 @@ class TestFailures:
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
 
+class TestSummaryJobs:
+    """The second kind of work. It shares every mechanism above and none of the inputs.
+
+    No `conversation_id` in these payloads, so nothing here reaches Postgres — the domain
+    logs the missing thread and moves on, which is the behaviour a job queued by a script
+    rather than by the API relies on.
+    """
+
+    async def test_the_window_is_read_and_handed_to_the_summariser(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """Gold is queried in the worker and passed whole: the agent has no tool to ask."""
+        asked: list[tuple[str, int]] = []
+
+        async def fake_gather(session: Any, project: str, since: Any, until: Any) -> Any:
+            asked.append((project, round((until - since).total_seconds() / 86400)))
+            return _WINDOW
+
+        async def fake_summarise(window: Any, deps: Any, settings: Any = None) -> ProgressSummary:
+            assert window is _WINDOW
+            return _SUMMARY
+
+        monkeypatch.setattr(report_domain, "gather_progress", fake_gather)
+        monkeypatch.setattr(report_domain, "summarise_progress", fake_summarise)
+        monkeypatch.setattr(report_domain, "session_scope", _no_session)
+
+        await consumer.handle(_summary_message(), FakeExchange())  # type: ignore[arg-type]
+
+        assert asked == [(PROJECT, 7)]
+        assert store["job-1"]["status"] == "done"
+
+    async def test_a_summary_job_with_no_project_is_not_retried_forever(
+        self, store: dict[str, Any]
+    ) -> None:
+        dlx = FakeExchange()
+        job = Job(kind=JobKind.SUMMARY, payload={"days": 7}, job_id="job-1")
+
+        await consumer.handle(  # type: ignore[arg-type]
+            FakeMessage(job.model_dump_json().encode()), dlx
+        )
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
+    async def test_a_kind_this_worker_does_not_know_is_an_unreadable_body(
+        self, store: dict[str, Any]
+    ) -> None:
+        """A worker older than the producer that queued the job. `JobKind` rejects it while
+        parsing, before any handler is chosen, and it goes straight to the dead letters —
+        another attempt on the same worker would fail the same way."""
+        dlx = FakeExchange()
+        body = b'{"kind":"librarian","payload":{},"job_id":"job-1","idempotency_key":"k"}'
+
+        await consumer.handle(FakeMessage(body), dlx)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
+
 class TestAttemptCounting:
     def test_a_message_with_no_header_is_a_first_attempt(self) -> None:
         """Published by an older deployment, or by hand through the management UI."""
@@ -285,3 +406,70 @@ class TestWhatTravelsWithAFailedJob:
         await retry.reject(FakeMessage(b"{}"), dlx, reason="provider 503")  # type: ignore[arg-type]
         published, _ = dlx.published[0]
         assert "provider 503" in published.headers["mycel-error"]
+
+
+class TestTheBudgetSurvivesARetry:
+    """The ceiling is per job, and a job is up to `MAX_ATTEMPTS` attempts.
+
+    Every case here used to pass while costing three times what it was allowed to, because
+    each attempt built a fresh `JobBudget` starting at zero.
+    """
+
+    async def test_an_attempt_starts_from_what_the_job_has_already_spent(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
+    ) -> None:
+        spent["job-1"] = Decimal("0.30")
+        seen: list[Decimal] = []
+
+        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+            seen.append(deps.budget.spent_usd)
+            return _REPORT
+
+        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+
+        assert seen == [Decimal("0.30")]
+
+    async def test_what_an_attempt_spends_is_published(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
+    ) -> None:
+        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+            deps.budget.spent_usd = Decimal("0.20")
+            return _REPORT
+
+        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+
+        assert spent["job-1"] == Decimal("0.20")
+
+    async def test_a_failed_attempt_still_publishes_what_it_spent(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
+    ) -> None:
+        """The expensive case: a run that dies half-way has already paid for its tokens."""
+
+        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+            deps.budget.spent_usd = Decimal("0.40")
+            raise AgentError("provider returned 503")
+
+        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+
+        assert spent["job-1"] == Decimal("0.40")
+
+    async def test_a_job_out_of_money_is_refused_before_the_model_is_called(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
+    ) -> None:
+        """Seeded over the ceiling, `runner.run`'s own `budget.check()` stops the attempt.
+
+        `runner.run` is real here — faking it would fake away the thing being tested.
+        """
+        spent["job-1"] = Decimal("0.99")
+        dlx = FakeExchange()
+        message = _message()
+
+        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+
+        # Straight to the dead-letter queue: another attempt spends money the job has not
+        # got, so this is not a transient failure.
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+        assert store["job-1"]["status"] == "failed"

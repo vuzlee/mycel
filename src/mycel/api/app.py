@@ -1,14 +1,17 @@
 """Where the whole HTTP layer is assembled.
 
 `uvicorn --factory mycel.api.app:create_app` points here. This is the only file that
-knows which domains the system has:
+knows which routers the system has:
 
-    include_router(managers.report.controller.router)
-    include_router(managers.sync.controller.router)
     include_router(health.router)
+    include_router(auth.router)
+    include_router(projects.router)
+    include_router(reports.router)
+    include_router(dashboard.router)
+    include_router(events.router)
 
-Adding a domain = one directory under managers/ and one line here. Existing domains
-stay untouched.
+Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
+here. Existing domains stay untouched.
 
 This file only assembles: create the app, mount routers, enable middleware, wire
 observability. No endpoints, no business logic.
@@ -30,7 +33,8 @@ produced afterwards have an id to attach. Starlette runs middleware in **reverse
 order of `add_middleware`, so what is added last sits outermost — which is why
 `request_id` is added *after* the others.
 
-Auth is not here: it is a `Depends()`, see `dependencies.py`.
+Auth is not here beyond mounting its router: who a request is comes from a `Depends()`,
+see `dependencies.py`.
 """
 
 from collections.abc import AsyncGenerator
@@ -38,18 +42,29 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.types import Scope
 
+from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import dependencies, health
 from mycel.api.middleware import RequestIdMiddleware
-from mycel.api.routes import reports
+from mycel.api.routes import auth, dashboard, events, projects, reports
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
+from mycel.infra.postgres.engine import dispose_engine
 from mycel.llm.budget import BudgetExceeded
 from mycel.observability.tracing import setup_tracing
+from mycel.services.auth import AuthError
 
 log = get_logger(__name__)
+
+#: Where `web/` lands once built. Relative to the repo root in a checkout and to `/app` in
+#: the image, which is why it is found by walking up from this file rather than configured.
+WEB_DIST = REPO_ROOT / "web" / "dist"
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -63,8 +78,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         uv run uvicorn --factory mycel.api.app:create_app
 
-    The module docstring above says `mycel.api.app:app`. It predates this decision; there
-    is no module-level `app`, on purpose.
+    The module docstring above says `mycel.api.app:app`. It predates this
+    decision; there is no module-level `app`, on purpose.
     """
     cfg = settings or get_settings()
     setup_logging(cfg.log_level)
@@ -76,13 +91,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-        """Flush spans on the way out.
+        """Flush spans and close the connection pool on the way out.
 
         `BatchSpanProcessor` holds spans in memory until its timer fires, so a process
         that exits promptly exports nothing — the same reason every `scripts/try_*.py`
         calls `shutdown()`.
         """
         yield
+        await dispose_engine()
         if provider is not None:
             provider.shutdown()
 
@@ -93,9 +109,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(projects.router)
     app.include_router(reports.router)
+    app.include_router(dashboard.router)
+    app.include_router(events.router)
+    app.include_router(events.page_router)
 
     _install_error_handlers(app)
+    _mount_web(app)
 
     if provider is not None:
         # Imported here rather than at module level: the instrumentation package is only
@@ -110,6 +132,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
 
     return app
+
+
+class _SinglePage(StaticFiles):
+    """Static files, with every unknown path answering `index.html`.
+
+    The router lives in the browser, so `/app/reports` is a real address there and no file
+    at all here. `html=True` alone does not cover it — it falls back to `index.html` for a
+    directory, not for a miss — and a route declared after the mount never runs, because a
+    mount owns its whole prefix. So the fallback belongs here, inside the mount.
+
+    A missing asset still 404s: only a path without a file extension is a route, and
+    answering HTML to a request for a `.js` that is not there hides a broken build behind
+    a syntax error.
+    """
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or "." in path.rsplit("/", 1)[-1]:
+                raise
+            return await super().get_response("index.html", scope)
+
+
+def _mount_web(app: FastAPI) -> None:
+    """Serve the built `web/` app at `/app`, if it was built.
+
+    After every router, so a static path can never shadow an API one. Conditional, so a
+    source checkout without `npm run build` still starts — the UI is a client of this
+    service, not a part of it that it fails without.
+    """
+    if not WEB_DIST.is_dir():
+        log.info("web/dist not built, /app not served")
+        return
+
+    app.mount("/app", _SinglePage(directory=WEB_DIST, html=True), name="web")
 
 
 def _install_error_handlers(app: FastAPI) -> None:
@@ -136,6 +194,15 @@ def _install_error_handlers(app: FastAPI) -> None:
                 "request_id": current_request_id.get() or None,
             },
         )
+
+    @app.exception_handler(AuthError)
+    async def _auth(request: Request, exc: AuthError) -> JSONResponse:
+        """A refused registration or login. 400, not 500: the caller's input was wrong.
+
+        The message is whatever `services/auth.py` chose, which is deliberately vague
+        about which half of a credential pair failed.
+        """
+        return problem(400, "auth_failed", str(exc))
 
     @app.exception_handler(BudgetExceeded)
     async def _budget(request: Request, exc: BudgetExceeded) -> JSONResponse:

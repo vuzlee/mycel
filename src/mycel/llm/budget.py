@@ -19,7 +19,7 @@ Different from `agents/core/guards.py`: this counts money across a whole job, gu
 behaviour within one run.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Protocol
 
@@ -118,28 +118,10 @@ class JobBudget:
             raise BudgetExceeded(self.job_id, self.spent_usd, self.ceiling_usd)
 
 
-class BudgetStore(Protocol):
-    """Where budgets live between runs.
-
-    A `Protocol` because a job outlives a process: the in-memory store below is right for
-    one worker, and Redis or Postgres becomes right the moment two workers share a job.
-    """
-
-    def get(self, job_id: str) -> JobBudget: ...
-    def put(self, budget: JobBudget) -> None: ...
-
-
-@dataclass
-class InMemoryBudgetStore:
-    """Single-process store. Correct only while one worker owns a whole job."""
-
-    ceiling_usd: Decimal = DEFAULT_CEILING_USD
-    _budgets: dict[str, JobBudget] = field(default_factory=dict)
-
-    def get(self, job_id: str) -> JobBudget:
-        if job_id not in self._budgets:
-            self._budgets[job_id] = JobBudget(job_id=job_id, ceiling_usd=self.ceiling_usd)
-        return self._budgets[job_id]
-
-    def put(self, budget: JobBudget) -> None:
-        self._budgets[budget.job_id] = budget
+# There is no `BudgetStore` abstraction here. There was one — a `Protocol` with `get`/`put`
+# and an in-memory implementation — and it was never wired into anything, because by the
+# time a job really did outlive a process the answer it needed was async, keyed by
+# `job_id`, and had to merge rather than overwrite. See `infra/redis/budgets.py`, which
+# seeds a `JobBudget` at the start of an attempt and writes the larger total back at the
+# end. An interface with one implementation and no second caller is a guess about the
+# future; this file keeps the arithmetic and lets the store live next to Redis.

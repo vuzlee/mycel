@@ -23,7 +23,7 @@ def config_dir(tmp_path: Path) -> Path:
     (tmp_path / AGENTS_SUBDIR).mkdir()
     (tmp_path / ENV_SUBDIR).mkdir()
     (tmp_path / ENV_SUBDIR / "base.yaml").write_text(
-        "pipeline:\n"
+        "etl:\n"
         "  batch_size: 500\n"
         "  workers: 4\n"
         "agents:\n"
@@ -34,7 +34,7 @@ def config_dir(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (tmp_path / ENV_SUBDIR / "dev.yaml").write_text(
-        "pipeline:\n  batch_size: 50\nagents:\n  defaults:\n    request_limit: 8\n",
+        "etl:\n  batch_size: 50\nagents:\n  defaults:\n    request_limit: 8\n",
         encoding="utf-8",
     )
     (tmp_path / AGENTS_SUBDIR / "analyst.yaml").write_text(
@@ -45,12 +45,12 @@ def config_dir(tmp_path: Path) -> Path:
 
 class TestLayering:
     def test_the_overlay_wins(self, config_dir: Path) -> None:
-        assert load_config("dev", config_dir)["pipeline"]["batch_size"] == 50
+        assert load_config("dev", config_dir)["etl"]["batch_size"] == 50
 
     def test_the_overlay_keeps_its_siblings(self, config_dir: Path) -> None:
-        """The reason the merge is recursive: `dev.yaml` sets one key of `pipeline` and must
+        """The reason the merge is recursive: `dev.yaml` sets one key of `etl` and must
         not take the rest of the block with it."""
-        assert load_config("dev", config_dir)["pipeline"]["workers"] == 4
+        assert load_config("dev", config_dir)["etl"]["workers"] == 4
 
     def test_it_merges_at_every_depth(self, config_dir: Path) -> None:
         """Two levels down, where a top-level merge would drop `model_spec` entirely."""
@@ -61,7 +61,7 @@ class TestLayering:
     def test_an_environment_with_no_overlay_is_fine(self, config_dir: Path) -> None:
         """Not every environment differs from base, and inventing an empty file to say so
         is noise."""
-        assert load_config("staging", config_dir)["pipeline"]["batch_size"] == 500
+        assert load_config("staging", config_dir)["etl"]["batch_size"] == 500
 
 
 class TestBadFiles:
@@ -71,9 +71,7 @@ class TestBadFiles:
             load_config("dev", tmp_path)
 
     def test_malformed_yaml_names_the_file(self, config_dir: Path) -> None:
-        (config_dir / ENV_SUBDIR / "dev.yaml").write_text(
-            "pipeline:\n  - [unclosed\n", encoding="utf-8"
-        )
+        (config_dir / ENV_SUBDIR / "dev.yaml").write_text("etl:\n  - [unclosed\n", encoding="utf-8")
         with pytest.raises(ConfigError, match="dev.yaml"):
             load_config("dev", config_dir)
 
@@ -85,7 +83,7 @@ class TestBadFiles:
     def test_an_empty_overlay_is_not(self, config_dir: Path) -> None:
         """A file holding only comments parses to None, which means "override nothing"."""
         (config_dir / ENV_SUBDIR / "dev.yaml").write_text("# nothing yet\n", encoding="utf-8")
-        assert load_config("dev", config_dir)["pipeline"]["batch_size"] == 500
+        assert load_config("dev", config_dir)["etl"]["batch_size"] == 500
 
 
 class TestAgentSettings:
@@ -117,7 +115,7 @@ class TestTheRealConfigDir:
 
     def test_the_committed_config_loads(self) -> None:
         for env in ("dev", "prod"):
-            assert load_config(env)["pipeline"]["batch_size"] > 0
+            assert load_config(env)["etl"]["batch_size"] > 0
 
     def test_the_analyst_file_is_valid(self) -> None:
         cfg = AgentSettings.from_config("analyst", env="prod")

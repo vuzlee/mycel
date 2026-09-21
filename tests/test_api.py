@@ -9,20 +9,43 @@ Whether the orchestrator is any good is `test_orchestrator.py`'s question; wheth
 survives a broker is `test_queue.py`'s.
 """
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from mycel.agents.core.exceptions import AgentError, ModelTimeout, RunawayStopped
 from mycel.api import dependencies
-from mycel.api.app import create_app
+from mycel.api.app import WEB_DIST, create_app
+from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
 from mycel.core.config import Settings
 from mycel.core.exceptions import ConfigError
+from mycel.domains.threads import Thread
+from mycel.infra.postgres.repositories.app import ConversationRow, ReportRow
+from mycel.infra.postgres.repositories.gold import AssigneeLoad, DayEffort, WorkItemRow
+from mycel.infra.redis.results import JobResult
 from mycel.llm.budget import BudgetExceeded
-from mycel.storage.redis.results import JobResult
+from mycel.services.auth import Principal
+from mycel.services.dashboard import Dashboard, EpicProgress
+
+#: Who every request in this file is made by. Signing in for real would need a database,
+#: which is `test_auth.py`'s subject — here the shell is under test, not the login.
+SIGNED_IN = Principal(id=1, email="tester@example.com")
+
+
+def _signed_in(app: FastAPI) -> None:
+    """Satisfy `Depends(current_user)` without a session table.
+
+    Overridden rather than stubbed with a cookie: a cookie would still be looked up in
+    Postgres, and these tests deliberately run without one.
+    """
+    app.dependency_overrides[current_user] = lambda: SIGNED_IN
 
 
 @pytest.fixture
@@ -30,38 +53,125 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """An app with tracing off, so tests neither export spans nor need credentials."""
     dependencies.reset_caches()
     app = create_app(Settings(otel_enabled=False))
+    _signed_in(app)
     with TestClient(app, raise_server_exceptions=False) as running:
         yield running
     dependencies.reset_caches()
 
 
-def _enqueues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
-    """Make the queue accept a job or fail, with no broker anywhere in sight."""
+def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
+    """Make the report domain accept a job or fail, with no broker anywhere in sight."""
 
-    async def fake_enqueue(question: str) -> str:
+    async def fake_request(user_id: int, question: str) -> str:
         if isinstance(result, Exception):
             raise result
         return result
 
-    monkeypatch.setattr("mycel.api.routes.reports.enqueue_report", fake_enqueue)
+    monkeypatch.setattr("mycel.api.routes.reports.request_report", fake_request)
 
 
-def _stored(monkeypatch: pytest.MonkeyPatch, result: JobResult | None) -> None:
-    """Make the result store answer, with no Redis anywhere in sight."""
+def _summaries(monkeypatch: pytest.MonkeyPatch, job_id: str) -> list[tuple[str, int]]:
+    """Capture what the summary route asked the domain for, and queue nothing."""
+    asked: list[tuple[str, int]] = []
+
+    async def fake_request(user_id: int, project: str, days: int) -> str:
+        asked.append((project, days))
+        return job_id
+
+    monkeypatch.setattr("mycel.api.routes.reports.request_summary", fake_request)
+    return asked
+
+
+def _stored(
+    monkeypatch: pytest.MonkeyPatch,
+    result: JobResult | None,
+    kept: ReportRow | None = None,
+) -> None:
+    """Make both halves of "written twice" answer, with neither Redis nor Postgres here.
+
+    Both, because the route reads both: Redis while a run is in flight, and the kept row
+    once the TTL has passed. Stubbing only the first leaves the second reaching for a real
+    database, which is a connection error dressed up as a 500.
+    """
 
     async def fake_fetch(job_id: str) -> JobResult | None:
         return result
 
+    async def fake_find(job_id: str) -> ReportRow | None:
+        return kept
+
     monkeypatch.setattr("mycel.api.routes.reports.results.fetch", fake_fetch)
+    monkeypatch.setattr("mycel.api.routes.reports.find_report", fake_find)
+
+
+#: What a finished run left behind, for the tests that read a kept row.
+KEPT_BODY = {"findings": [], "gaps": ["nothing was asked"]}
+
+
+def _kept(job_id: str, *, status: str = "done") -> ReportRow:
+    """A row as `app.report` keeps it, for the fallback half of the result endpoint.
+
+    A row that never ran has no body, which is how a `queued` one is told apart from a
+    finished one without a second argument nobody reads.
+    """
+    return ReportRow(
+        id=1,
+        conversation_id=1,
+        job_id=job_id,
+        question="what happened?",
+        status=status,
+        body=KEPT_BODY if status == "done" else None,
+        error=None,
+        spent_usd=Decimal("0.0216"),
+        created_at=datetime.now(UTC),
+    )
+
+
+class _FakeSession:
+    async def execute(self, statement: object) -> None:
+        return None
+
+
+def _database(monkeypatch: pytest.MonkeyPatch, up: bool) -> None:
+    """Stand in for Postgres, so the API tests need no server."""
+
+    @asynccontextmanager
+    async def fake_scope() -> AsyncIterator[_FakeSession]:
+        if not up:
+            raise OSError("connection refused")
+        yield _FakeSession()
+
+    monkeypatch.setattr("mycel.api.health.session_scope", fake_scope)
 
 
 class TestHealth:
     def test_liveness_answers_without_touching_anything(self, client: TestClient) -> None:
         assert client.get("/health/live").status_code == 200
 
-    def test_readiness_is_a_separate_endpoint(self, client: TestClient) -> None:
-        """Separate from liveness so a blinking dependency does not restart the container."""
-        assert client.get("/health/ready").status_code == 200
+    def test_readiness_reaches_the_database(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Readiness that checks nothing always passes, which is the same as no check."""
+        _database(monkeypatch, up=True)
+        assert client.get("/health/ready").json() == {"status": "ok", "database": "ok"}
+
+    def test_an_unreachable_database_answers_503(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """503, not a stack trace: a load balancer reads the code, and this endpoint is
+        polled every few seconds while a dependency is down."""
+        _database(monkeypatch, up=False)
+        response = client.get("/health/ready")
+
+        assert response.status_code == 503
+        assert response.json()["database"] == "unreachable"
+
+    def test_liveness_ignores_a_dead_database(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The whole reason the two are separate endpoints."""
+        _database(monkeypatch, up=False)
+        assert client.get("/health/live").status_code == 200
 
 
 class TestRequestId:
@@ -83,7 +193,7 @@ class TestRequestId:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The reset is in a `finally`, and this is what would catch it being moved."""
-        _enqueues(monkeypatch, ModelTimeout("gone"))
+        _queues(monkeypatch, ModelTimeout("gone"))
         response = client.post("/reports", json={"question": "anything"})
         assert response.headers[HEADER]
         assert response.json()["request_id"] == response.headers[HEADER]
@@ -100,7 +210,7 @@ class TestQueueingAReport:
         A caller that reads 202 as "here is your report" fails on the missing body rather
         than quietly treating a receipt as an answer.
         """
-        _enqueues(monkeypatch, "job-abc")
+        _queues(monkeypatch, "job-abc")
         response = client.post("/reports", json={"question": "what is true"})
 
         assert response.status_code == 202
@@ -110,6 +220,33 @@ class TestQueueingAReport:
         self, client: TestClient
     ) -> None:
         assert client.post("/reports", json={"question": ""}).status_code == 422
+
+
+class TestQueueingASummary:
+    """The second kind of work, behind the same receipt and the same polling endpoint."""
+
+    def test_a_summary_is_accepted_the_same_way_a_report_is(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _summaries(monkeypatch, "job-sum")
+        response = client.post("/reports/summary", json={"project": "MYC", "days": 7})
+
+        assert response.status_code == 202
+        assert response.json() == {"job_id": "job-sum", "status": "accepted"}
+
+    def test_the_window_defaults_rather_than_being_required(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A week, the same default the dashboard uses."""
+        asked = _summaries(monkeypatch, "job-sum")
+        client.post("/reports/summary", json={"project": "MYC"})
+
+        assert asked == [("MYC", 7)]
+
+    def test_a_year_is_an_export_not_a_standup(self, client: TestClient) -> None:
+        assert (
+            client.post("/reports/summary", json={"project": "MYC", "days": 365}).status_code == 422
+        )
 
 
 class TestCollectingAReport:
@@ -155,12 +292,30 @@ class TestCollectingAReport:
     def test_an_unknown_job_is_a_404(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Expired and never-existed are the same answer, on purpose.
-
-        See `storage/redis/results.py` for why.
-        """
+        """Only a miss in *both* stores is a 404: gone from Redis and never kept."""
         _stored(monkeypatch, None)
         assert client.get("/reports/nope").status_code == 404
+
+    def test_a_dropped_key_falls_back_to_the_kept_row(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Past the TTL the report is still a report. This is why 012 kept it twice."""
+        _stored(monkeypatch, None, kept=_kept("job-abc"))
+        body = client.get("/reports/job-abc").json()
+
+        assert body["status"] == "done"
+        assert body["report"]["gaps"] == ["nothing was asked"]
+        assert body["spent_usd"] == "0.0216"
+
+    def test_a_kept_row_that_never_ran_is_not_running(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A job still `queued` when Redis forgot it is failed, not in flight.
+
+        Telling a caller `running` sends them polling a job nobody will ever finish.
+        """
+        _stored(monkeypatch, None, kept=_kept("job-abc", status="queued"))
+        assert client.get("/reports/job-abc").json()["status"] == "failed"
 
 
 class TestErrorsComeBackAsThemselves:
@@ -187,7 +342,7 @@ class TestErrorsComeBackAsThemselves:
         status: int,
         kind: str,
     ) -> None:
-        _enqueues(monkeypatch, raised)
+        _queues(monkeypatch, raised)
         response = client.post("/reports", json={"question": "anything"})
         assert response.status_code == status
         assert response.json()["error"] == kind
@@ -200,13 +355,13 @@ class TestErrorsComeBackAsThemselves:
         Catching it here would turn every bug into a tidy JSON body and lose the traceback,
         which is the one thing a bug needs to leave behind.
         """
-        _enqueues(monkeypatch, RuntimeError("this is a bug"))
+        _queues(monkeypatch, RuntimeError("this is a bug"))
         assert client.post("/reports", json={"question": "anything"}).status_code == 500
 
     def test_no_error_response_leaks_a_traceback(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _enqueues(monkeypatch, ConfigError("GEMINI_API_KEY is unset"))
+        _queues(monkeypatch, ConfigError("GEMINI_API_KEY is unset"))
         body = client.post("/reports", json={"question": "anything"}).text
         assert "Traceback" not in body
         assert "mycel/api" not in body
@@ -239,13 +394,13 @@ class TestTheThingsThatFailSilently:
         started = threading.Event()
         release = threading.Event()
 
-        async def first_waits(question: str) -> str:
+        async def first_waits(user_id: int, question: str) -> str:
             if question == "slow":
                 started.set()
                 await asyncio.get_running_loop().run_in_executor(None, release.wait, 5)
             return f"job-{question}"
 
-        monkeypatch.setattr("mycel.api.routes.reports.enqueue_report", first_waits)
+        monkeypatch.setattr("mycel.api.routes.reports.request_report", first_waits)
 
         slow: list[int] = []
         thread = threading.Thread(
@@ -288,14 +443,16 @@ class TestTheThingsThatFailSilently:
         # how the provider was built.
         monkeypatch.setattr("mycel.api.app.setup_tracing", lambda cfg: provider)
 
-        async def one_span(question: str) -> str:
+        async def one_span(user_id: int, question: str) -> str:
             with provider.get_tracer("test").start_as_current_span("publish"):
                 return "job-abc"
 
-        monkeypatch.setattr("mycel.api.routes.reports.enqueue_report", one_span)
+        monkeypatch.setattr("mycel.api.routes.reports.request_report", one_span)
 
         dependencies.reset_caches()
-        with TestClient(create_app(Settings(otel_enabled=False))) as client:
+        app = create_app(Settings(otel_enabled=False))
+        _signed_in(app)
+        with TestClient(app) as client:
             assert client.post("/reports", json={"question": "trace me"}).status_code == 202
 
         spans = {span.name: span for span in exporter.get_finished_spans()}
@@ -306,3 +463,291 @@ class TestTheThingsThatFailSilently:
         assert publish_span.context.trace_id == http_span.context.trace_id
 
         trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+
+
+class TestTheDashboard:
+    """Synchronous, unlike `/reports`: a dashboard is a handful of queries, not minutes."""
+
+    def _answers(self, monkeypatch: pytest.MonkeyPatch, board: Dashboard) -> None:
+        async def fake_get(project: str, days: int = 7) -> Dashboard:
+            return board
+
+        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
+
+    def _late(self) -> WorkItemRow:
+        """One story, past its due date and still in progress — the row the screen is for."""
+        return WorkItemRow(
+            source="jira",
+            project="MYC",
+            issue_id="7",
+            issue_key="MYC-7",
+            kind="story",
+            parent_key="MYC-6",
+            title="dựng dashboard",
+            status="In Progress",
+            status_category="doing",
+            assignee_account_id="acct-1",
+            assignee_name="Dev One",
+            original_estimate_seconds=2 * 8 * 3600,
+            time_spent_seconds=3 * 8 * 3600,
+            due_at=datetime(2026, 9, 16, tzinfo=UTC),
+            created_at=datetime(2026, 9, 14, tzinfo=UTC),
+            resolved_at=None,
+            labels=[],
+            updated_at=datetime(2026, 9, 20, tzinfo=UTC),
+        )
+
+    def _board(self, **kw: object) -> Dashboard:
+        until = datetime(2026, 9, 21, tzinfo=UTC)
+        fields: dict[str, object] = {
+            "project": "MYC",
+            "since": until - timedelta(days=7),
+            "until": until,
+            "totals": {"todo": 1, "doing": 1, "done": 2},
+            "all_totals": {"todo": 2, "doing": 1, "done": 5},
+            "overdue": [self._late()],
+            "assignees": [
+                AssigneeLoad(
+                    account_id="acct-1",
+                    name="Dev One",
+                    items=3,
+                    done=2,
+                    estimated_seconds=2 * 8 * 3600,
+                    spent_seconds=3 * 8 * 3600,
+                )
+            ],
+            "epics": [
+                EpicProgress(
+                    issue_key="MYC-6",
+                    title="Pipeline and storage",
+                    status_category="doing",
+                    items=4,
+                    done=3,
+                    moved=3,
+                    moved_done=2,
+                )
+            ],
+            "effort_by_day": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
+        }
+        return Dashboard(**{**fields, **kw})  # type: ignore[arg-type]
+
+    def test_the_numbers_come_back(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["totals"] == {"todo": 1, "doing": 1, "done": 2}
+        assert body["assignees"][0]["name"] == "Dev One"
+        assert body["epics"][0]["issue_key"] == "MYC-6"
+
+    def test_a_late_ticket_is_visible_without_hunting(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Overdue is its own list, not a flag somebody has to go looking for."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert [item["issue_key"] for item in body["overdue"]] == ["MYC-7"]
+        assert body["overdue"][0]["title"] == "dựng dashboard"
+
+    def test_the_gap_is_reported_in_seconds(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Spent minus estimated, and gold's own unit. Days are the page's decision."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["assignees"][0]["gap_seconds"] == 8 * 3600
+
+    def test_effort_is_a_curve_over_days(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """From worklogs, so a back-filled project still has an honest time series."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["effort_by_day"] == [{"day": "2026-09-18", "seconds": 5 * 3600}]
+
+    def test_a_project_with_no_data_is_empty_not_missing(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A project set up but not yet synced is a normal state, not a 404."""
+        self._answers(
+            monkeypatch,
+            self._board(
+                totals={"todo": 0, "doing": 0, "done": 0},
+                overdue=[],
+                assignees=[],
+                epics=[],
+                effort_by_day=[],
+            ),
+        )
+        response = client.get("/dashboard/MYC")
+
+        assert response.status_code == 200
+        assert response.json()["assignees"] == []
+
+    def test_the_window_is_a_parameter(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, int] = {}
+
+        async def fake_get(project: str, days: int = 7) -> Dashboard:
+            seen["days"] = days
+            return self._board()
+
+        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
+        client.get("/dashboard/MYC?days=30")
+        assert seen["days"] == 30
+
+    def test_an_absurd_window_is_refused(self, client: TestClient) -> None:
+        """A year on one screen is an export, not a dashboard."""
+        assert client.get("/dashboard/MYC?days=4000").status_code == 422
+
+    def test_the_old_page_url_redirects_into_the_app(self, client: TestClient) -> None:
+        """The standalone page became `/app/dashboard` in 014; the old link still lands."""
+        response = client.get("/dashboard/MYC/page?days=30", follow_redirects=False)
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "/app/dashboard?project=MYC&days=30"
+
+
+class TestTheLists:
+    """The two lists a page reads before it can ask for anything else."""
+
+    def test_projects_are_filtered_by_permission(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The route lists what this person may read, not what the deployment has.
+
+        Today `may_read_project` says yes to everyone, which is exactly why this test
+        asserts against the filter rather than against its current answer.
+        """
+
+        async def fake_projects() -> list[str]:
+            return ["MYC", "OPS"]
+
+        async def fake_may_read(user: Principal, project: str) -> bool:
+            return project == "MYC"
+
+        monkeypatch.setattr("mycel.api.routes.projects.known_projects", fake_projects)
+        monkeypatch.setattr("mycel.api.routes.projects.may_read_project", fake_may_read)
+
+        assert client.get("/projects").json() == ["MYC"]
+
+    def test_threads_are_this_person_s(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Whose sidebar it is comes from the session, never from the query string."""
+        asked: list[int] = []
+
+        async def fake_threads(user_id: int, limit: int = 50) -> list[Thread]:
+            asked.append(user_id)
+            return [
+                Thread(
+                    conversation=ConversationRow(
+                        id=7,
+                        user_id=user_id,
+                        title="what happened?",
+                        kind="report",
+                        created_at=datetime.now(UTC),
+                    ),
+                    job_id="job-abc",
+                    status="done",
+                )
+            ]
+
+        monkeypatch.setattr("mycel.api.routes.projects.list_threads", fake_threads)
+        body = client.get("/conversations").json()
+
+        assert asked == [SIGNED_IN.id]
+        assert body[0]["job_id"] == "job-abc"
+
+    def test_a_thread_nobody_ran_still_shows(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A queued run the worker never picked up is the row someone most needs to see."""
+
+        async def fake_threads(user_id: int, limit: int = 50) -> list[Thread]:
+            return [
+                Thread(
+                    conversation=ConversationRow(
+                        id=8,
+                        user_id=user_id,
+                        title="never started",
+                        kind="report",
+                        created_at=datetime.now(UTC),
+                    ),
+                    job_id=None,
+                    status=None,
+                )
+            ]
+
+        monkeypatch.setattr("mycel.api.routes.projects.list_threads", fake_threads)
+        body = client.get("/conversations").json()
+
+        assert len(body) == 1 and body[0]["job_id"] is None
+
+
+class TestTheSinglePageApp:
+    """A reload at a deep route must serve the page, not a 404.
+
+    Skipped rather than failed without a build: the UI is a client of this service, and a
+    source checkout that has never run `npm run build` is a normal state.
+    """
+
+    @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
+    @pytest.mark.parametrize("path", ["/app/", "/app/reports", "/app/dashboard", "/app/login"])
+    def test_every_route_serves_the_page(self, client: TestClient, path: str) -> None:
+        response = client.get(path)
+
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+    @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
+    def test_a_missing_asset_is_still_missing(self, client: TestClient) -> None:
+        """HTML in place of a missing `.js` hides a broken build behind a syntax error."""
+        assert client.get("/app/assets/nope.js").status_code == 404
+
+
+class TestWhatNeedsALogin:
+    """Which doors are locked, and which deliberately are not.
+
+    This is the test that catches a route added later without `Depends(current_user)` —
+    the failure mode is silent, because an open endpoint works perfectly for everyone.
+    """
+
+    @pytest.fixture
+    def stranger(self) -> Iterator[TestClient]:
+        """The same app with nobody signed in. No override, no cookie."""
+        dependencies.reset_caches()
+        app = create_app(Settings(otel_enabled=False))
+        with TestClient(app, raise_server_exceptions=False) as running:
+            yield running
+        dependencies.reset_caches()
+
+    @pytest.mark.parametrize(
+        ("method", "path", "body"),
+        [
+            ("post", "/reports", {"question": "anything"}),
+            ("post", "/reports/summary", {"project": "MYC"}),
+            ("get", "/reports/job-abc", None),
+            ("get", "/reports/job-abc/events", None),
+            ("get", "/dashboard/MYC", None),
+            ("get", "/projects", None),
+            ("get", "/conversations", None),
+        ],
+    )
+    def test_a_stranger_gets_401(
+        self, stranger: TestClient, method: str, path: str, body: dict[str, Any] | None
+    ) -> None:
+        """A valid body on the POSTs, so a 422 cannot stand in for the 401 being tested."""
+        response = getattr(stranger, method)(path, **({"json": body} if body else {}))
+        assert response.status_code == 401
+
+    @pytest.mark.parametrize("path", ["/health/live", "/health/ready"])
+    def test_health_does_not_need_one(self, stranger: TestClient, path: str) -> None:
+        """A health check that needs a login is not a health check: a load balancer has
+        no account, and a 401 reads as a healthy service to nothing at all."""
+        assert stranger.get(path).status_code != 401
