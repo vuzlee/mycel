@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Using Mycel — from sign-up to a progress report</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap">
+<style>
+
+:root{
+  --paper:#FAF9F7; --card:#FFFFFF; --sunk:#F2F0EC;
+  --ink:#1F1E1D; --dim:#6B6862; --line:#E5E1DA;
+  --brand:#C4633D; --brand-soft:#FBEEE8; --brand-line:#E8C4B2;
+  --cool:#3D6B8C; --cool-soft:#EAF1F6;
+  --serif:"Source Serif 4",Georgia,serif;
+  --sans:Inter,system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --paper:#15140F; --card:#1E1C18; --sunk:#232019;
+  --ink:#EDEAE3; --dim:#9C968B; --line:#302C25;
+  --brand:#E08B67; --brand-soft:#2A1C15; --brand-line:#4A3227;
+  --cool:#7FA9C7; --cool-soft:#16202A;
+}}
+:root[data-theme=dark]{
+  --paper:#15140F; --card:#1E1C18; --sunk:#232019;
+  --ink:#EDEAE3; --dim:#9C968B; --line:#302C25;
+  --brand:#E08B67; --brand-soft:#2A1C15; --brand-line:#4A3227;
+  --cool:#7FA9C7; --cool-soft:#16202A;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:0 24px 120px;background:var(--paper);color:var(--ink);
+  font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto}
+
+nav.top{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;
+  padding:18px 0;margin-bottom:8px;font:12px/1 var(--mono);color:var(--dim)}
+nav.top b{font:600 15px/1 var(--serif);color:var(--ink)}
+nav.top a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line)}
+nav.top a:hover{color:var(--brand);border-color:var(--brand)}
+
+h1{font:600 38px/1.15 var(--serif);letter-spacing:-.02em;margin:24px 0 12px;text-wrap:balance}
+.lede{font-size:18px;color:var(--dim);margin:0 0 8px;max-width:56ch}
+h2{font:600 22px/1.3 var(--serif);margin:64px 0 6px;letter-spacing:-.01em;
+  display:flex;align-items:baseline;gap:12px}
+h2::before{content:attr(data-n);font:500 11px/1 var(--mono);color:var(--brand);
+  letter-spacing:.12em;flex:none}
+p{margin:12px 0;max-width:60ch}
+code{font:.86em var(--mono);background:var(--sunk);padding:2px 5px;border-radius:4px}
+b{font-weight:600}
+a{color:var(--brand)}
+
+/* ── diagram: flow layout, không toạ độ tay nên không bao giờ chồng chữ ── */
+.dg{margin:28px 0 8px}
+.lane{border:1px solid var(--line);border-radius:14px;background:var(--card);
+  padding:14px;margin:0}
+.lane + .lane{margin-top:0}
+.lane-h{font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 12px;display:flex;gap:8px;align-items:center}
+.lane-h em{font-style:normal;color:var(--brand)}
+.row{display:grid;gap:10px}
+.row.c3{grid-template-columns:repeat(3,1fr)}
+.row.c2{grid-template-columns:repeat(2,1fr)}
+.row.c4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:620px){.row.c3,.row.c2,.row.c4{grid-template-columns:1fr}}
+
+.box{border:1px solid var(--line);border-radius:10px;background:var(--paper);
+  padding:11px 12px;min-width:0}
+.box.key{border-color:var(--brand-line);background:var(--brand-soft)}
+.box.off{opacity:.68}
+.box h4{margin:0 0 6px;font:500 13px/1.35 var(--mono);word-break:break-word}
+.box p{margin:3px 0;font-size:12.5px;line-height:1.5;color:var(--dim);max-width:none}
+.box .cmd{font:12px/1.55 var(--mono);color:var(--ink);margin:4px 0;word-break:break-word}
+.box .f{font:11px/1.4 var(--mono);color:var(--dim);margin-top:7px;padding-top:6px;
+  border-top:1px dashed var(--line)}
+
+/* mũi tên: phần tử riêng trong dòng chảy, không đè lên gì */
+.ar{display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--dim);
+  font:11px/1.4 var(--mono)}
+.ar::before{content:"";flex:none;width:1px;height:18px;background:var(--line);
+  margin-left:28px}
+.ar span{padding-left:2px}
+.ar.key{color:var(--brand)}
+.ar.key::before{background:var(--brand-line)}
+.ar.back{color:var(--cool)}
+.ar.back::before{background:var(--cool)}
+.split{display:flex;gap:10px;align-items:center;padding:9px 0 9px 28px;
+  font:11px/1.4 var(--mono);color:var(--dim)}
+.split::before{content:"┬";color:var(--line);font-size:14px}
+figcaption{font:12px/1.5 var(--mono);color:var(--dim);margin-top:10px;text-align:center}
+figure{margin:0}
+
+/* hai cột đối chiếu */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two > div{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
+.two > div.key{border-color:var(--brand-line);background:var(--brand-soft)}
+.two h4{margin:0 0 6px;font:500 11px/1 var(--mono);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.two > div.key h4{color:var(--brand)}
+.two p{margin:6px 0;font-size:14px;max-width:none}
+
+.note{border-left:2px solid var(--brand);background:var(--brand-soft);
+  padding:12px 16px;border-radius:0 10px 10px 0;margin:20px 0}
+.note p{margin:6px 0;font-size:14.5px;max-width:none}
+.note p:first-child{margin-top:0}
+.note p:last-child{margin-bottom:0}
+
+/* ── sơ đồ: trục dọc + khung process. Mọi nhãn nằm trong ô grid riêng,
+      nên không có phần tử nào định vị đè lên phần tử khác. ── */
+.dg{margin:30px 0 10px;
+  width:min(880px, calc(100vw - 48px));
+  margin-inline:calc(50% - min(440px, (100vw - 48px)/2));}
+
+.proc{position:relative;border:1px solid var(--line);border-radius:14px;
+  background:var(--card);padding:34px 22px 26px;
+  display:grid;gap:4px}
+.proc > .tag{position:absolute;top:-9px;left:18px;background:var(--paper);
+  padding:0 9px;font:500 10px/1.8 var(--mono);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.proc.key{border-color:var(--brand-line);background:var(--brand-soft)}
+.proc.key > .tag{color:var(--brand)}
+
+.spine{max-width:440px;margin:0 auto;display:grid;gap:0}
+.node{border:1px solid var(--line);border-radius:10px;background:var(--paper);
+  padding:13px 16px;text-align:center}
+.node.key{border-color:var(--brand-line);background:var(--brand-soft)}
+.node h4{margin:0;font:500 13.5px/1.45 var(--mono);word-break:break-word}
+.node p{margin:6px 0 0;font:12.5px/1.55 var(--sans);color:var(--dim);max-width:none}
+.node .cmd{font:12px/1.65 var(--mono);color:var(--ink)}
+.node .f{margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);
+  font:11px/1.45 var(--mono);color:var(--dim)}
+
+/* nối: cột trái là đường kẻ + đầu nhọn, cột phải là nhãn.
+   Nhãn nằm trong ô riêng nên ô tự cao lên theo chữ — không bao giờ đè. */
+.lk{display:grid;grid-template-columns:1fr 1fr;align-items:center;
+  position:relative;min-height:46px}
+.lk::before{content:"";position:absolute;left:50%;top:0;bottom:5px;width:1px;
+  background:var(--line)}
+.lk::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--line);border-bottom:0}
+.lk > span{grid-column:2;padding:8px 0 8px 16px;font:11.5px/1.5 var(--mono);
+  color:var(--dim)}
+.lk.key::before{background:var(--brand-line)}
+.lk.key::after{border-top-color:var(--brand-line)}
+.lk.key > span{color:var(--brand)}
+.lk.up::before{background:var(--cool);top:5px;bottom:0}
+.lk.up::after{top:0;bottom:auto;border:5px solid transparent;
+  border-bottom-color:var(--cool);border-top:0}
+.lk.up > span{color:var(--cool)}
+
+/* nhánh rẽ: trục đi thẳng ở cột trái, đoạn ngang ngắn nối sang hộp bên phải.
+   Có padding dọc riêng nên nhánh không dính vào khối trên/dưới. */
+.branch{display:grid;grid-template-columns:1fr 1fr;align-items:center;
+  padding:18px 0}
+.branch .drop{position:relative;align-self:stretch}
+.branch .drop::before{content:"";position:absolute;right:0;top:0;bottom:0;width:1px;
+  background:var(--line)}
+.branch .side{position:relative;margin-left:34px;border:1px dashed var(--line);
+  border-radius:10px;padding:12px 15px;background:var(--paper)}
+/* đoạn ngang: chỉ dài bằng khoảng hở, xuất phát từ trục chứ không từ mép hình */
+.branch .side::after{content:"";position:absolute;left:-34px;top:50%;width:26px;
+  height:1px;background:var(--line)}
+.branch .side::before{content:"";position:absolute;left:-9px;top:50%;
+  transform:translateY(-50%);border:5px solid transparent;
+  border-left-color:var(--line);border-right:0}
+.branch .side h4{margin:0;font:500 12.5px/1.45 var(--mono);color:var(--dim)}
+.branch .side p{margin:5px 0 0;font:11.5px/1.55 var(--sans);color:var(--dim);max-width:none}
+
+/* dòng sự kiện trong Redis */
+.evs{display:grid;gap:8px;max-width:460px;margin:0 auto}
+.ev{display:grid;grid-template-columns:70px 54px 1fr;gap:12px;align-items:baseline;
+  border:1px solid var(--line);border-radius:8px;background:var(--paper);
+  padding:9px 14px;font:12px/1.5 var(--mono)}
+.ev b{color:var(--brand);font-weight:500}
+.ev i{font-style:normal;color:var(--dim)}
+.ev.next{border-style:dashed;color:var(--dim);grid-template-columns:1fr;
+  font:11.5px/1.5 var(--sans)}
+@media(max-width:480px){.ev{grid-template-columns:1fr;gap:2px}}
+
+/* hình 00 */
+.gapfig{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center}
+.gapfig .proc{padding:30px 18px 20px}
+.gapfig .x{text-align:center;font:11.5px/1.7 var(--mono);color:var(--dim)}
+.gapfig .x b{display:block;font:500 20px/1 var(--mono);color:var(--brand);margin:6px 0}
+@media(max-width:640px){.gapfig{grid-template-columns:1fr}}
+
+figcaption{margin-top:14px}
+pre{background:var(--sunk);border:1px solid var(--line);border-radius:10px;
+  font:12.5px/1.75 var(--mono);padding:14px 16px;overflow-x:auto;margin:14px 0}
+pre .c{color:var(--dim)}
+
+table{border-collapse:collapse;width:100%;font-size:14px;margin:16px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+td.m{font:12.5px var(--mono);white-space:nowrap}
+td.f{font:11.5px var(--mono);color:var(--dim);white-space:nowrap}
+
+ul{padding-left:18px;max-width:60ch}
+li{margin:8px 0}
+.seq{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);
+  font:12px var(--mono);color:var(--dim)}
+
+/* ── the walkthrough: one numbered step per block ── */
+.step{border:1px solid var(--line);border-radius:14px;background:var(--card);
+  padding:20px 22px;margin:18px 0}
+.step.key{border-color:var(--brand-line);background:var(--brand-soft)}
+.step > h3{margin:0 0 4px;font:600 17px/1.35 var(--serif);
+  display:flex;align-items:baseline;gap:10px}
+.step > h3::before{content:attr(data-n);font:500 11px/1 var(--mono);
+  color:var(--brand);letter-spacing:.12em;flex:none}
+.step p{font-size:14.5px}
+.step p:last-child{margin-bottom:0}
+.step pre{margin-top:12px}
+
+.warn{border-left:2px solid var(--cool);background:var(--cool-soft);
+  padding:12px 16px;border-radius:0 10px 10px 0;margin:20px 0}
+.warn p{margin:6px 0;font-size:14.5px;max-width:none}
+.warn p:first-child{margin-top:0}
+.warn p:last-child{margin-bottom:0}
+</style>
+
+<div class="wrap">
+<nav class="top">
+  <b>Mycel</b>
+  <span>how to use it</span>
+  <a href="architecture.html">architecture</a>
+  <a href="database.html">database</a>
+  <a href="stack.html">stack</a>
+  <a href="../README.md">readme</a>
+</nav>
+
+<h1>From sign-up to a progress report</h1>
+<p class="lede">Mycel turns the work already in your issue tracker into a report and a
+dashboard. Nothing is asked of anyone except the habit they already have: keep issues in
+Jira. This page walks the whole path, in order, and says what to check when a step does
+not do what it should.</p>
+
+<h2 data-n="00">What the system actually does</h2>
+
+<p>Nobody fills in a form and nobody learns a convention. People work their board as they
+already do. A scheduled sync pulls in what moved, an ETL normalises it, and two things read
+the result: a dashboard that counts, and an agent that writes a summary in words. A finished
+report goes out to Telegram, and due dates go out to a calendar.</p>
+
+<div class="dg">
+<figure>
+  <div class="spine">
+    <div class="node key">
+      <h4>Jira board</h4>
+      <p class="cmd">MYC-12 · In Progress · due Friday · 2d estimated</p>
+      <p>Someone moves a ticket. That is the whole input.</p>
+    </div>
+    <div class="lk key"><span>POST /search/jql, every 15 minutes</span></div>
+    <div class="node">
+      <h4>bronze → silver → gold</h4>
+      <p>Raw kept as it arrived · unwrapped · one row per work item, one per logged hour.</p>
+      <p class="f">etl/</p>
+    </div>
+    <div class="lk"><span>two readers, same window</span></div>
+    <div class="node">
+      <h4>Dashboard · Progress report</h4>
+      <p>Counts, in a request. And a written summary, from an agent.</p>
+      <p class="f">/app/dashboard · /app/reports</p>
+    </div>
+  </div>
+  <figcaption>Work → sync → read. Steps 03 to 06 below are one pass through this.</figcaption>
+</figure>
+</div>
+
+<div class="note">
+  <p><b>Mycel never writes to your board.</b> Jira is read, and only read. The two things
+  it writes to — Telegram and Google Calendar — are outputs: a finished report goes to a
+  chat, due dates go to a calendar, and nothing is ever read back out of either. A
+  deployment with neither configured still works; you simply get the dashboard and the
+  report and nothing arrives on your phone.</p>
+</div>
+
+<h2 data-n="01">Before anything: is the stack up?</h2>
+
+<pre>scripts/stack.sh up      <span class="c"># containers, migrations, api, worker, scheduler</span>
+scripts/stack.sh status  <span class="c"># what is running, and the links</span></pre>
+
+<p><code>up</code> is idempotent: it starts what is down and leaves what is up. What you
+want to see from <code>status</code> is every row <b>running</b> — especially
+<code>worker</code>. Without the worker both report endpoints hand back a job id for work
+nobody ever picks up, which on screen looks exactly like a slow model.</p>
+
+<div class="warn">
+  <p><b>If <code>api</code> says <code>foreign</code></b>, some other process is holding
+  port 8000 — usually a <code>uvicorn</code> left over from an earlier session, serving
+  older code with half the routes missing. <code>status</code> prints the pid and the
+  command to end it. Kill it and run <code>up</code> again.</p>
+</div>
+
+<h2 data-n="02">Create an account</h2>
+
+<div class="step key">
+  <h3 data-n="01">Open the app</h3>
+  <p><a href="http://localhost:8000/app/login">http://localhost:8000/app/login</a> — or
+  just <code>/app</code>, which sends you here when you are not signed in.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="02">Choose “Create one”</h3>
+  <p>The form is one form with two verbs: the link under the button switches it between
+  signing in and registering. Registration is open — anyone who can reach the page can
+  make an account, which is fine for a machine on your desk and is the first thing to
+  change if this is ever put on the Internet.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="03">Email and a password of at least 8 characters</h3>
+  <p>The email is only an identifier; nothing is sent to it. The password is hashed with
+  Argon2id and the plain text is never stored or logged.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="04">You are already signed in</h3>
+  <p>Registering logs you in, so there is no second form. A session cookie is set that
+  lasts 14 days. It is <code>HttpOnly</code>, so the page itself cannot read it — which is
+  the point: a token JavaScript can read is a token a script can steal.</p>
+</div>
+
+<p>Signing out is the icon at the bottom of the left rail, beside your email. It deletes
+the session row, so the cookie is dead everywhere, not merely forgotten by this browser.</p>
+
+<div class="note">
+  <p><b>Your history follows the account, not the browser.</b> Every run is saved against
+  your user, so signing in on another machine shows the same list. That is the reason
+  there is a login at all.</p>
+</div>
+
+<h2 data-n="03">Connect Jira</h2>
+
+<p>One-time setup, done outside the app. Skip this if someone has already pointed the
+deployment at a site.</p>
+
+<div class="step">
+  <h3 data-n="01">Make an API token</h3>
+  <p><a href="https://id.atlassian.com/manage-profile/security/api-tokens">id.atlassian.com</a>
+  → Security → API tokens → Create. Copy it now; the page never shows it again.</p>
+</div>
+
+<div class="step key">
+  <h3 data-n="02">Put four values in <code>.env</code></h3>
+  <pre>JIRA_BASE_URL=https://your-site.atlassian.net
+JIRA_EMAIL=you@example.com
+JIRA_API_TOKEN=ATATT3x…
+JIRA_PROJECT_KEY=MYC          <span class="c"># empty means every project you can see</span></pre>
+  <p>The email matters: the token authenticates <i>that</i> account, and the sync sees
+  exactly what that account can see on the board. Every credential lives in
+  <code>.env</code> and nothing reads one from anywhere else.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="03">Restart</h3>
+  <p><code>scripts/stack.sh restart</code>, then <code>scripts/stack.sh sync</code> to pull
+  once without waiting for the tick.</p>
+</div>
+
+<div class="warn">
+  <p><b>A Jira API token expires after exactly one year</b>, with no renewal path and no
+  warning through the API. What you get instead is a <code>401</code> on a sync that worked
+  yesterday. Mycel names that failure specifically rather than reporting a generic auth
+  error, because the cause is almost never a typo.</p>
+</div>
+
+<h2 data-n="04">Work the board</h2>
+
+<p>Nothing new to learn. The more of Jira's own fields a ticket carries, the more the
+report and the dashboard can say about it:</p>
+
+<table>
+  <tr><th>Field on the ticket</th><th>What it makes possible</th></tr>
+  <tr><td class="m">assignee</td><td>Per-person load, and who to ask about a blocked item.</td></tr>
+  <tr><td class="m">original estimate</td><td>Half of the estimated-versus-spent gap.</td></tr>
+  <tr><td class="m">time spent</td><td>The other half. Jira's running total on the ticket,
+  which is what the per-person table reads.</td></tr>
+  <tr><td class="m">work log</td><td>The only honest effort-per-day curve, because a work log
+  carries the date the work was done for.</td></tr>
+  <tr><td class="m">due date</td><td>What is at risk, and what lands on the calendar.</td></tr>
+  <tr><td class="m">parent (epic)</td><td>Progress grouped at the level a plan is discussed at.</td></tr>
+</table>
+
+<div class="note">
+  <p><b>Log hours against the day they were worked.</b> Jira lets a worklog carry its own
+  <i>started</i> date, and that is the one time field that can be back-dated honestly.
+  Created dates and status transitions are stamped by Jira with the moment of the API call,
+  so on a back-filled project they are a confident lie — which is why Mycel draws effort
+  from worklogs and never draws "issues resolved per day" at all.</p>
+</div>
+
+<h2 data-n="05">Pull the work in</h2>
+
+<p>The scheduler does this every 15 minutes on its own. To see a change immediately, run
+one sync by hand:</p>
+
+<pre>scripts/stack.sh sync</pre>
+
+<p>It prints how many issues it pulled. A sync only asks for what moved — the JQL carries
+<code>updated &gt;=</code> the last high-water mark — so a quiet quarter of an hour
+legitimately pulls zero. Zero when something <i>did</i> move means one of three things, in
+the order worth checking:</p>
+
+<ul>
+  <li><b><code>JIRA_PROJECT_KEY</code> is the wrong key.</b> It is the prefix on the issue
+  keys, <code>MYC</code>, not the project's display name.</li>
+  <li><b>The account the token belongs to cannot see that project.</b> The sync sees exactly
+  what that person sees when they log in.</li>
+  <li><b>The token expired.</b> One year, silently. The log line says <code>401</code>.</li>
+</ul>
+
+<h2 data-n="06">Read the numbers</h2>
+
+<p><a href="http://localhost:8000/app/dashboard">/app/dashboard</a> — pick the project and a
+window. It answers in the request because it is a handful of SQL queries and no model call,
+and it refreshes itself every 30 seconds.</p>
+
+<p>The page opens on <b>one number: the whole project, finished over existing</b>, drawn as a
+bar split by category. It sits apart from everything under it, because everything under it is
+the window. That separation is the point — a percentage drawn from a 7-day count would read a
+quiet week, two tickets moved and one of them done, as a project half finished.</p>
+
+<table>
+  <tr><th>Block</th><th>What it counts, and over what range</th></tr>
+  <tr><td class="m">progress</td><td>The <b>whole project</b>: items done over items that
+  exist, 0-100. The one figure on the page that is not the window, which is why it is drawn
+  above the divider and says so.</td></tr>
+  <tr><td class="m">work touched</td><td>Items changed in the window, counted by the status
+  category they are in <b>now</b> — not how many moved into it. Jira's own categories, so two
+  sites with different workflow names still compare. Every issue type counts as one, epics
+  included.</td></tr>
+  <tr><td class="m">past due</td><td>The <b>whole project</b>, not the window: due date in the
+  past and not done, most overdue first. A ticket overdue since last month that nobody has
+  touched since is the one most worth seeing, and a window is exactly what hides it.</td></tr>
+  <tr><td class="m">per person</td><td>The window picks <b>which tickets</b>; the estimate
+  and spent on them are Jira's running totals for the ticket's whole life, in man-days at its
+  eight-hour day. <b>Gap is spent minus estimated</b> — positive means over. An estimate of
+  zero means the tickets carry none, not that the work was free.</td></tr>
+  <tr><td class="m">epics</td><td>One bar per epic, drawn from the epic's <b>whole</b> size
+  — that is what makes two epics comparable. Under each bar, <b>moved</b> is how many of its
+  children changed in the window; a zero there is an epic nobody has touched lately, which is
+  worth seeing next to how far along it is. Every epic in the project appears, including ones
+  nothing moved under. The epic itself is never counted among its own children.</td></tr>
+  <tr><td class="m">effort logged</td><td>Hours from work logs, on the day the work was
+  logged <b>for</b>. The only block measuring effort <b>inside</b> the window, so it does not
+  add up to the spent column above. Not issues resolved per day — see the note in step
+  04.</td></tr>
+</table>
+
+<p>Progress and the epic bars are the whole project, and so is past due; the other three are
+the window. Each block says so on screen, because a count read under the wrong scope is worse
+than no count.</p>
+
+<div class="note">
+  <p><b>Two kinds of "spent" on one page, and they are allowed to differ.</b> Per person
+  sums what Jira holds <i>on the tickets</i> the window selected — running totals for each
+  ticket's whole life. Effort logged sums the work logs <i>dated</i> inside the window. A
+  ticket opened in June and touched yesterday puts every June hour in the first and none in
+  the second. Neither is wrong; they answer different questions.</p>
+</div>
+
+<p>A project with no data is an empty dashboard, not an error: a project that has been set
+up and has not synced yet is a normal state and the page says so.</p>
+
+<h2 data-n="07">Run a progress report</h2>
+
+<p><a href="http://localhost:8000/app/reports">/app/reports</a> — pick the same project and
+a window, press <b>Run report</b>. There is no text box, because everything the run needs is
+a project key and a number of days.</p>
+
+<div class="step">
+  <h3 data-n="01">It comes back immediately with a job id</h3>
+  <p>That is a receipt, not a report: a run takes minutes and every proxy in front of the
+  API would time out waiting. The work happens in the worker process.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="02">The run streams as it happens</h3>
+  <p>Reasoning, tool calls, and work delegated to other agents nested under the call that
+  asked for it. If the connection drops the browser resumes rather than replays.</p>
+</div>
+
+<div class="step key">
+  <h3 data-n="03">The summary arrives at the end</h3>
+  <p>It is read top-down. <b>A verdict</b> — on track, at risk, or off track — then <b>a
+  one-sentence headline</b>, then the counts, then the lists. A reader who stops after two
+  seconds has still been answered; everything below is the evidence for those three lines.</p>
+  <p>The lists are tables, not bullet points: issue, title, epic, who, estimate, spent and
+  due. The last three are what a standup argues about — without them the table says what
+  moved without saying whether it moved on time. An empty cell means the ticket carries no
+  estimate or no due date, which is not the same as a zero. What is at risk sits
+  above what shipped on purpose — highlights are the pleasant part of a standup and the part
+  nobody has to act on. An empty At risk table is the answer, so it is shown rather than
+  hidden. Per person is its own table: items, done, estimated, spent.</p>
+</div>
+
+<div class="note">
+  <p><b>The model fills columns, not sentences.</b> Each row is a set of fields — key, title,
+  epic, who — and a note only where the row needs a reason to be read. When those were one
+  string per line, every surface that wanted a table had to split the model's prose back
+  apart on a dash, and a dash can appear inside a ticket title. A column the model fills is
+  a column a renderer can align.</p>
+  <p>The prompt side is the same idea. Each work item reaches the model as named fields —
+  <code>key=</code> <code>status=</code> <code>kind=</code> <code>title=</code>
+  <code>who=</code> <code>estimated=</code> <code>spent=</code> <code>due=</code> — with the
+  same names its output row has, so copying is matching a label rather than counting a
+  position. The first version wrote the kind immediately before the title and got back
+  titles reading <code>story: 003 — API skeleton</code>. A field the ticket does not carry
+  is left off the line entirely, which is how the model learns that missing and zero are
+  different.</p>
+</div>
+
+<div class="note">
+  <p><b>The verdict is judged, not computed.</b> A threshold in code gives one rule — "anything
+  overdue is at risk" — and a project with a single ticket two days late stays amber forever.
+  The model has the whole window in front of it and can tell "late but moving" from "late and
+  stopped". Every number on the page is still SQL; only the verdict is the model's.</p>
+</div>
+
+<p>The summary does not come down the stream. The agent's output is structured and is
+handed back separately, which is why the page keeps polling for a moment after the events
+stop.</p>
+
+<div class="note">
+  <p><b>It is still there tomorrow.</b> Every run is written twice — to Redis, which knows
+  a run is still in flight and forgets it after an hour, and to Postgres, which is the
+  record. Reopening a report from the rail next week reads the second one.</p>
+</div>
+
+<h2 data-n="08">Get it on your phone</h2>
+
+<p>Two optional outputs. Neither is required, and a failure in either is logged and never
+fails the report that produced it — a notification that breaks the job it is announcing is
+worse than no notification.</p>
+
+<div class="step">
+  <h3 data-n="01">Telegram, for the finished report</h3>
+  <pre>TELEGRAM_BOT_TOKEN=8123456789:AAG…
+TELEGRAM_NOTIFY_CHAT_ID=-1002145887701
+PUBLIC_BASE_URL=https://mycel.example.com</pre>
+  <p>Make the bot with <a href="https://t.me/BotFather">@BotFather</a>, add it to the chat,
+  and get the chat id from <a href="https://t.me/userinfobot">@userinfobot</a>. What arrives
+  is the headline and a link back to the full report — a whole report in a chat bubble is a
+  report nobody scrolls. <code>PUBLIC_BASE_URL</code> is what that link is built from, so on
+  a real deployment it must not be left at localhost.</p>
+  <p>The bot only sends. <code>/setprivacy</code> does not matter any more.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="02">Google Calendar, for due dates</h3>
+  <pre>GOOGLE_CALENDAR_ID=…@group.calendar.google.com
+GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/key.json</pre>
+  <p>Make a service account, download its key, and share the calendar with the service
+  account's email — that sharing step is the one people miss, and without it every write is
+  a <code>404</code>. Each work item with a due date becomes an all-day event; re-syncing
+  updates it rather than creating a second one, and clearing a due date deletes it.</p>
+  <p>One-way, by design. A calendar event has a start and an end and nothing else — no
+  status, no parent, no estimate — so anything read back would be a worse copy of what the
+  database already holds.</p>
+</div>
+
+<h2 data-n="09">Ask something else</h2>
+
+<p><a href="http://localhost:8000/app">/app</a> is the open-ended one: ask a question in
+plain language and an agent goes and finds out, delegating to specialists as it needs
+them. It is the same streaming view and the same saved history.</p>
+
+<p>It now reaches the same data the two pages above do, so a question no fixed page was
+built for has an answer:</p>
+
+<table>
+  <tr><th>Ask this</th><th>What answers it</th></tr>
+  <tr><td>&ldquo;how is MYC going this week&rdquo;</td><td>The same summariser
+  <code>/app/reports</code> runs, on a window you name in the question.</td></tr>
+  <tr><td>&ldquo;who logged the most hours this month&rdquo;</td><td>The analyst, which
+  writes its own SQL against the work data and returns each figure with the query that
+  produced it.</td></tr>
+  <tr><td>&ldquo;what changed in Jira&rsquo;s API this year&rdquo;</td><td>The researcher,
+  which searches the web and cites urls.</td></tr>
+  <tr><td>&ldquo;anything important in the mail today&rdquo;</td><td>The researcher again.
+  It reads the sender, subject and date of messages from the last 24 hours &mdash; a week
+  or a month if that is what you ask for &mdash; and links each one. Bodies are never
+  read, so it says when a subject line is not enough to be sure.</td></tr>
+</table>
+
+<p>That data is read-only and enforced as such by Postgres, not only asked for in a prompt:
+a question that would change anything is refused and the agent says so.
+<code>/app/dashboard</code> and <code>/app/reports</code> are both still here and still
+work &mdash; asking is an addition, not a replacement.</p>
+
+<h2 data-n="10">When something looks wrong</h2>
+
+<table>
+  <tr><th>What you see</th><th>What it usually is</th></tr>
+  <tr><td>Login page on every reload</td><td>The cookie was cleared, or 14 days
+  passed. Sign in again.</td></tr>
+  <tr><td>Empty project dropdown</td><td>Nothing has synced yet.
+  <code>scripts/stack.sh sync</code>, then check its log line.</td></tr>
+  <tr><td>Sync pulls zero issues</td><td>Wrong <code>JIRA_PROJECT_KEY</code>, a project the
+  token's account cannot see, or a token that turned one year old.</td></tr>
+  <tr><td>Estimated is zero for everyone</td><td>The tickets carry no original estimate.
+  Mycel reports the field, it does not invent it.</td></tr>
+  <tr><td>Effort chart is flat, work is clearly happening</td><td>Nobody is logging work.
+  The curve comes from work logs and from nothing else.</td></tr>
+  <tr><td>Nothing arrives in Telegram</td><td><code>TELEGRAM_NOTIFY_CHAT_ID</code> is empty,
+  or the bot is not in that chat. The report itself is unaffected.</td></tr>
+  <tr><td>Calendar events never appear</td><td>The calendar is not shared with the service
+  account's email address.</td></tr>
+  <tr><td>Report queued and never moves</td><td>The worker is not running.
+  <code>scripts/stack.sh status</code>, then <code>logs worker</code>.</td></tr>
+  <tr><td>Report fails part-way</td><td>Usually the model provider — a free-tier quota or
+  a missing key in <code>.env</code>. The failure reason is shown on the run.</td></tr>
+  <tr><td><code>api</code> reads <code>foreign</code></td><td>A stale process on port
+  8000. <code>status</code> prints the pid and the command.</td></tr>
+</table>
+
+<h2 data-n="11">The short version</h2>
+
+<pre>scripts/stack.sh up
+<span class="c"># open /app/login, create an account</span>
+<span class="c"># in Jira: move a ticket, log an hour, set a due date</span>
+scripts/stack.sh sync
+<span class="c"># /app/dashboard  → the numbers</span>
+<span class="c"># /app/reports    → the written summary</span></pre>
+
+<p class="seq">
+  <a href="architecture.html">architecture</a> ·
+  <a href="database.html">database</a> ·
+  <a href="stack.html">stack</a> ·
+  <a href="../notes/flow/INDEX.md">notes index</a>
+</p>
+</div>
+</html>

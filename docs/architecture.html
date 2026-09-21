@@ -16,12 +16,12 @@
   --ink-faint:   #868B79;
 
   /* Three data layers */
-  --raw:    #8B6F47;
+  --bronze:    #8B6F47;
   --silver: #5E8159;
   --gold:   #A8861B;
   --accent: #A8861B;
 
-  --raw-wash:    #8b6f4718;
+  --bronze-wash:    #8b6f4718;
   --silver-wash: #5e815918;
   --gold-wash:   #a8861b18;
 
@@ -44,12 +44,12 @@
     --ink-soft:    #9BA391;
     --ink-faint:   #6E7666;
 
-    --raw:    #B8946A;
+    --bronze:    #B8946A;
     --silver: #8FB588;
     --gold:   #D9B43C;
     --accent: #D9B43C;
 
-    --raw-wash:    #b8946a1f;
+    --bronze-wash:    #b8946a1f;
     --silver-wash: #8fb5881f;
     --gold-wash:   #d9b43c1f;
   }
@@ -66,12 +66,12 @@
   --ink-soft:    #9BA391;
   --ink-faint:   #6E7666;
 
-  --raw:    #B8946A;
+  --bronze:    #B8946A;
   --silver: #8FB588;
   --gold:   #D9B43C;
   --accent: #D9B43C;
 
-  --raw-wash:    #b8946a1f;
+  --bronze-wash:    #b8946a1f;
   --silver-wash: #8fb5881f;
   --gold-wash:   #d9b43c1f;
 }
@@ -232,7 +232,7 @@ figcaption {
   border-top: 3px solid var(--tone);
 }
 
-.layer:nth-child(1) { --tone: var(--raw); }
+.layer:nth-child(1) { --tone: var(--bronze); }
 .layer:nth-child(2) { --tone: var(--silver); }
 .layer:nth-child(3) { --tone: var(--gold); }
 
@@ -313,7 +313,21 @@ figcaption {
   text-transform: uppercase;
 }
 
-.tree-row[data-tone="raw"]    .tree-path { color: var(--raw); }
+.tree-row.is-epic {
+  border-top: 1px solid var(--line);
+  margin-top: 0.625rem;
+  padding-top: 0.4375rem;
+}
+
+.tree-row.is-epic .tree-path {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.tree-row[data-tone="bronze"]    .tree-path { color: var(--bronze); }
 .tree-row[data-tone="silver"] .tree-path { color: var(--silver); }
 .tree-row[data-tone="gold"]   .tree-path { color: var(--gold); }
 
@@ -490,7 +504,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 
 .tbl .no { color: var(--ink-faint); }
 
-.tbl .tone-raw    .who { color: var(--raw); }
+.tbl .tone-bronze    .who { color: var(--bronze); }
 .tbl .tone-silver .who { color: var(--silver); }
 .tbl .tone-gold   .who { color: var(--gold); }
 .tbl .tone-accent .who { color: var(--accent); }
@@ -563,14 +577,14 @@ footer {
       <h2>Data flows one way through four layers</h2>
       <p>
         Each layer only reads the layer directly below it and writes to the one directly above. No shortcuts:
-        agents never touch <code>raw</code> or <code>silver</code>.
+        agents never touch <code>bronze</code> or <code>silver</code>.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 560" role="img"
-             aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the raw schema in PostgreSQL; etl transforms raw into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits traces to the OpenTelemetry Collector.">
+             aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the bronze schema in PostgreSQL; etl transforms bronze into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits traces to the OpenTelemetry Collector.">
           <defs>
             <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -620,17 +634,17 @@ footer {
 
           <!-- ===== Layer 1: sources ===== -->
           <rect x="218" y="86" width="200" height="64" rx="2"
-                fill="var(--raw-wash)" stroke="var(--raw)" stroke-width="1.4"/>
+                fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
           <text x="234" y="110" font-family="JetBrains Mono, monospace" font-size="12.5"
-                fill="var(--raw)">sources/</text>
+                fill="var(--bronze)">sources/</text>
           <text x="234" y="130" font-family="Inter Tight, sans-serif" font-size="11.5"
                 fill="var(--ink-soft)">pull in, no processing</text>
 
-          <!-- sources -> raw -->
-          <path d="M 318 150 L 318 196" stroke="var(--raw)" stroke-width="1.4"
-                fill="none" marker-end="url(#ar)" color="var(--raw)"/>
+          <!-- sources -> bronze -->
+          <path d="M 318 150 L 318 196" stroke="var(--bronze)" stroke-width="1.4"
+                fill="none" marker-end="url(#ar)" color="var(--bronze)"/>
           <text x="328" y="177" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--raw)">write verbatim</text>
+                fill="var(--bronze)">write verbatim</text>
 
           <!-- ===== PostgreSQL block ===== -->
           <rect x="190" y="196" width="500" height="214" rx="3"
@@ -638,11 +652,11 @@ footer {
           <text x="206" y="217" font-family="JetBrains Mono, monospace" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">POSTGRESQL — ONE DATABASE, THREE SCHEMAS</text>
 
-          <!-- raw -->
+          <!-- bronze -->
           <rect x="214" y="232" width="200" height="52" rx="2"
-                fill="var(--raw-wash)" stroke="var(--raw)" stroke-width="1.4"/>
+                fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
           <text x="230" y="254" font-family="JetBrains Mono, monospace" font-size="12.5"
-                fill="var(--raw)">raw</text>
+                fill="var(--bronze)">bronze</text>
           <text x="230" y="272" font-family="Inter Tight, sans-serif" font-size="11"
                 fill="var(--ink-soft)">original payload, immutable</text>
 
@@ -662,7 +676,7 @@ footer {
           <text x="466" y="338" font-family="Inter Tight, sans-serif" font-size="11"
                 fill="var(--ink-soft)">business tables, ready to use</text>
 
-          <!-- etl: raw -> silver -->
+          <!-- etl: bronze -> silver -->
           <path d="M 314 284 L 314 298" stroke="var(--silver)" stroke-width="1.4"
                 fill="none" marker-end="url(#ar)" color="var(--silver)"/>
 
@@ -704,7 +718,7 @@ footer {
 
             <rect x="758" y="114" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="133">analyst · writer · reviewer</text>
+            <text x="770" y="133">researcher · analyst · summariser</text>
 
             <rect x="758" y="150" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
@@ -745,7 +759,7 @@ footer {
           <rect x="408" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="424" y="497" font-family="JetBrains Mono, monospace" font-size="12"
-                fill="var(--ink)">core/ · storage/</text>
+                fill="var(--ink)">core/ · infra/</text>
           <text x="424" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
                 fill="var(--ink-soft)">config · session · SQL</text>
 
@@ -782,26 +796,29 @@ footer {
     </figure>
     <p class="path-note">
       <b>This is the data axis, not the request axis.</b> The flow
-      <code>sources → raw → etl → silver → gold</code> runs in the background on a schedule, measured in minutes.
+      <code>sources → bronze → etl → silver → gold</code> runs in the background on a schedule, measured in minutes.
       When a user presses a button the request takes a different axis —
-      <code>controller → pipeline → service</code>, measured in seconds. The two meet in exactly
+      <code>route → domain → service</code>, measured in seconds. The two meet in exactly
       one place: at <code>gold</code>. Part 2 covers the request axis.
     </p>
   </section>
   <section id="s02">
     <div class="section-head">
       <p class="eyebrow">1.2 · The contract between layers</p>
-      <h2>Why <code>raw</code> is kept untouched</h2>
+      <h2>Why <code>bronze</code> is kept untouched</h2>
       <p>
-        When transform logic is wrong — and it will be — it can be re-run from <code>raw</code> instead of
+        With one source, silver and gold hold the same columns —
+        <code>etl/promote.py</code> is the identity function until a second tracker gives it
+        something to reconcile.
+        When transform logic is wrong — and it will be — it can be re-run from <code>bronze</code> instead of
         calling the provider again. Providers have rate limits, deleted data, and APIs that change
-        schema. <code>raw</code> is the copy we control.
+        schema. <code>bronze</code> is the copy we control.
       </p>
     </div>
 
     <div class="layers">
       <article class="layer">
-        <div class="layer-name">raw</div>
+        <div class="layer-name">bronze</div>
         <p>The original payload, untouched. Append only — never edited, never deleted.</p>
         <dl>
           <dt>written by</dt><dd>sources/</dd>
@@ -812,21 +829,23 @@ footer {
 
       <article class="layer">
         <div class="layer-name">silver</div>
-        <p>Schema normalised, deduplicated, types coerced, timestamps unified to UTC.</p>
+        <p>The provider's envelope taken off: typed columns, timestamps in UTC, keyed on what
+        the source calls the row. Changes when <em>the source</em> changes.</p>
         <dl>
-          <dt>written by</dt><dd>etl/</dd>
-          <dt>read by</dt><dd>etl/</dd>
+          <dt>written by</dt><dd>etl/normalise.py</dd>
+          <dt>read by</dt><dd>etl/promote.py</dd>
           <dt>type</dt><dd>typed columns</dd>
         </dl>
       </article>
 
       <article class="layer">
         <div class="layer-name">gold</div>
-        <p>Business aggregate tables. This is the only contract with the AI layer.</p>
+        <p>What the product reads, and the only contract with the AI layer. Changes when
+        <em>the question</em> changes.</p>
         <dl>
-          <dt>written by</dt><dd>etl/</dd>
+          <dt>written by</dt><dd>etl/promote.py</dd>
           <dt>read by</dt><dd>agents/ · reports/</dd>
-          <dt>type</dt><dd>aggregate tables</dd>
+          <dt>type</dt><dd>query tables</dd>
         </dl>
       </article>
     </div>
@@ -842,15 +861,16 @@ footer {
       <p class="eyebrow">2.1 · Each layer's responsibility</p>
       <h2>Who does what in a request</h2>
       <p>
-        HTTP does not call services directly. It enters <code>managers/</code> — one directory per
-        business domain, holding a controller that receives the request and a pipeline that wires services together.
+        HTTP does not call services directly. A route in <code>api/routes/</code> validates the request
+        and hands it to a module in <code>domains/</code>, which chains services into the operation.
+        Nothing below the route knows HTTP exists.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 470" role="img"
-             aria-label="Six layers in a Mycel request: the UI makes an HTTP call into api/app.py; app.py mounts each manager's controller; each manager is one business domain with a controller that receives requests and a pipeline that chains services; the pipeline calls single-purpose services in order; services call down into the domain modules etl, agents and reports; at the bottom storage holds every SQL statement. The scheduler calls the pipeline directly, skipping the controller.">
+             aria-label="Six layers in a Mycel request: the UI makes an HTTP call into api/app.py; app.py mounts each router; each domain is a pair, a route module that receives requests and a domain module that chains services; the domain module calls single-purpose services in order; services call down into etl, agents and reports; at the bottom infra holds every SQL statement. The scheduler calls the domain module directly, skipping the route.">
           <defs>
             <marker id="m6" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -863,7 +883,7 @@ footer {
              text-anchor="end" letter-spacing="1.2">
             <text x="120" y="36">USERS</text>
             <text x="120" y="96">HTTP SHELL</text>
-            <text x="120" y="196">BUSINESS DOMAINS</text>
+            <text x="120" y="196">ROUTE → DOMAIN</text>
             <text x="120" y="320">SERVICES/</text>
             <text x="120" y="382">CAPABILITIES</text>
             <text x="120" y="440">DATA</text>
@@ -886,7 +906,7 @@ footer {
           <text x="152" y="92" font-family="JetBrains Mono, monospace" font-size="11.5"
                 fill="var(--ink)">api/app.py</text>
           <text x="152" y="109" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">mounts each manager's controller · middleware · tracing</text>
+                fill="var(--ink-soft)">mounts each router · middleware · tracing</text>
 
           <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -895,27 +915,27 @@ footer {
           <text x="238" y="64" font-family="JetBrains Mono, monospace" font-size="9"
                 fill="var(--ink-faint)">HTTP</text>
 
-          <!-- managers khung -->
+          <!-- route + domain frame -->
           <rect x="136" y="140" width="704" height="128" rx="3"
                 fill="none" stroke="var(--accent)" stroke-width="1.6"/>
           <text x="840" y="134" font-family="JetBrains Mono, monospace" font-size="10"
-                letter-spacing="1.5" fill="var(--accent)" text-anchor="end">MANAGERS/ — ONE DIRECTORY PER DOMAIN</text>
+                letter-spacing="1.5" fill="var(--accent)" text-anchor="end">ONE ROUTE MODULE + ONE DOMAIN MODULE PER DOMAIN</text>
 
           <!-- report domain -->
           <rect x="160" y="174" width="300" height="76" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.3"/>
           <text x="176" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
-                fill="var(--gold)">managers/report/</text>
+                fill="var(--gold)">report</text>
           <rect x="176" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
           <text x="186" y="217" font-family="JetBrains Mono, monospace" font-size="10"
-                fill="var(--ink)">controller.py</text>
+                fill="var(--ink)">routes/reports.py</text>
           <text x="186" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
                 fill="var(--ink-faint)">receive · validate · return</text>
           <rect x="316" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="326" y="217" font-family="JetBrains Mono, monospace" font-size="10"
-                fill="var(--accent)">pipeline.py</text>
+                fill="var(--accent)">domains/report.py</text>
           <text x="326" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -927,17 +947,17 @@ footer {
           <rect x="484" y="174" width="300" height="76" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.3"/>
           <text x="500" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
-                fill="var(--silver)">managers/sync/</text>
+                fill="var(--silver)">sync — not built, batch 007</text>
           <rect x="500" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
           <text x="510" y="217" font-family="JetBrains Mono, monospace" font-size="10"
-                fill="var(--ink)">controller.py</text>
+                fill="var(--ink)">routes/sync.py</text>
           <text x="510" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
                 fill="var(--ink-faint)">receive · validate · return</text>
           <rect x="640" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="650" y="217" font-family="JetBrains Mono, monospace" font-size="10"
-                fill="var(--accent)">pipeline.py</text>
+                fill="var(--accent)">domains/sync.py</text>
           <text x="650" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -945,19 +965,19 @@ footer {
             <path d="M 632 220 L 636 220"/>
           </g>
 
-          <!-- app -> controllers -->
+          <!-- app -> routes -->
           <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 242 118 L 242 170"/>
             <path d="M 420 118 L 566 118 L 566 170"/>
           </g>
 
-          <!-- scheduler -> pipeline (skips the controller) -->
+          <!-- scheduler -> domain (skips the route) -->
           <path d="M 750 48 L 750 62 L 906 62 L 906 220 L 772 220"
                 stroke="var(--silver)" stroke-width="1.4" stroke-dasharray="4 3"
                 fill="none" color="var(--silver)" marker-end="url(#m6)"/>
           <text x="900" y="84" font-family="JetBrains Mono, monospace" font-size="9"
-                fill="var(--silver)" text-anchor="end">calls the pipeline directly, no HTTP</text>
+                fill="var(--silver)" text-anchor="end">calls the domain directly, no HTTP</text>
 
           <!-- services -->
           <g font-family="JetBrains Mono, monospace" font-size="9.5" text-anchor="middle"
@@ -1007,8 +1027,8 @@ footer {
             <text x="578" y="384" fill="var(--ink)">reports/</text>
 
             <rect x="676" y="364" width="164" height="32" rx="2"
-                  fill="var(--raw-wash)" stroke="var(--raw)"/>
-            <text x="758" y="384" fill="var(--raw)">sources/</text>
+                  fill="var(--bronze-wash)" stroke="var(--bronze)"/>
+            <text x="758" y="384" fill="var(--bronze)">sources/</text>
           </g>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -1018,11 +1038,11 @@ footer {
             <path d="M 758 332 L 758 360"/>
           </g>
 
-          <!-- storage -->
+          <!-- infra -->
           <rect x="136" y="422" width="704" height="32" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="488" y="442" font-family="JetBrains Mono, monospace" font-size="11"
-                fill="var(--ink)" text-anchor="middle">storage/ — every SQL statement</text>
+                fill="var(--ink)" text-anchor="middle">infra/ — every SQL statement</text>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 218 396 L 218 418"/>
@@ -1033,9 +1053,11 @@ footer {
         </svg>
       </div>
       <figcaption>
-        <code>managers/</code> is split by <em>business domain</em>, not by technical role.
-        Changing the report flow means opening exactly one directory, <code>managers/report/</code>, instead of
-        jumping between three layers in three different places.
+A domain is a pair: one route module, one domain module. HTTP types stop at the route, so the
+        same domain module is what <code>scheduler/</code> and any script call — the dashed arrow.
+        Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard</code>
+        and <code>threads</code>. <code>auth</code> is the exception — it is a route plus a
+        service, with no domain module, because signing in chains nothing.
       </figcaption>
     </figure>
 
@@ -1050,23 +1072,23 @@ footer {
       <tbody>
         <tr>
           <td class="who">api/app.py</td>
-          <td>Create the app, mount each manager's controller, middleware, observability</td>
+          <td>Create the app, mount each router, middleware, observability</td>
           <td class="no">Hold endpoints · hold business logic</td>
         </tr>
         <tr>
-          <td class="who">managers/·/controller.py</td>
-          <td>Receive the request, validate, call the pipeline, return the response</td>
+          <td class="who">api/routes/·.py</td>
+          <td>Receive the request, validate, call a domain, return the response</td>
           <td class="no">SQL · call an LLM · business <code>if/else</code></td>
         </tr>
         <tr class="tone-accent">
-          <td class="who">managers/·/pipeline.py</td>
+          <td class="who">domains/·.py</td>
           <td>Define the <em>order</em> of the steps, calling services in turn</td>
-          <td class="no">Do a service's work · know whether it was called from HTTP or cron</td>
+          <td class="no">Do a service's work · import a FastAPI type · know who called it</td>
         </tr>
         <tr>
           <td class="who">services/</td>
-          <td>One single job, done end to end, reusable across pipelines</td>
-          <td class="no">Chain other services together — that is the pipeline's job</td>
+          <td>One single job, done end to end, reusable across domains</td>
+          <td class="no">Chain other services together — that is the domain module's job</td>
         </tr>
         <tr class="tone-gold">
           <td class="who">etl/ agents/ reports/</td>
@@ -1074,7 +1096,7 @@ footer {
           <td class="no">Read the HTTP request · write SQL by hand</td>
         </tr>
         <tr>
-          <td class="who">storage/</td>
+          <td class="who">infra/</td>
           <td>Every SQL statement, session and transaction</td>
           <td class="no">Hold business decisions</td>
         </tr>
@@ -1082,11 +1104,11 @@ footer {
     </table>
 
     <p class="path-note">
-      <b>How a pipeline differs from a service:</b> the pipeline is the <em>chain</em>, a service is
-      a <em>link</em>. <code>managers/report/pipeline.py</code> calls, in order,
-      <code>permission</code> → <code>queue</code> → <code>gather</code> →
+      <b>How a domain module differs from a service:</b> the domain is the <em>chain</em>, a service
+      is a <em>link</em>. <code>domains/report.py</code> calls, in order,
+      <code>permission</code> → <code>enqueue</code> → <code>gather</code> →
       <code>analyze</code> → <code>render</code>.
-      <code>managers/sync/pipeline.py</code> calls <code>fetch</code> →
+      <code>domains/sync.py</code> calls <code>fetch</code> →
       <code>transform</code> → <code>check</code>. Services are reused by both;
       a service itself does not know which chain it is in.
     </p>
@@ -1104,7 +1126,7 @@ footer {
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="The life of a report request: the report domain's pipeline pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits tasks across specialist agents, the agents query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
+             aria-label="The life of a report request: the report domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits tasks across specialist agents, the agents query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
           <defs>
             <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1115,7 +1137,7 @@ footer {
           <g font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">
             <rect x="16" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="79" y="75" fill="var(--ink)">pipeline</text>
+            <text x="79" y="75" fill="var(--ink)">domain</text>
             <text x="79" y="91" font-family="Inter Tight, sans-serif" font-size="10"
                   fill="var(--ink-soft)">report domain</text>
 
@@ -1166,18 +1188,18 @@ footer {
 
           <!-- retry -->
           <path d="M 411 100 L 411 124 L 268 124 L 268 104"
-                stroke="var(--raw)" stroke-width="1.2" fill="none"
-                color="var(--raw)" marker-end="url(#lc-ar)"/>
+                stroke="var(--bronze)" stroke-width="1.2" fill="none"
+                color="var(--bronze)" marker-end="url(#lc-ar)"/>
           <text x="348" y="139" font-family="JetBrains Mono, monospace" font-size="9.5"
-                fill="var(--raw)" text-anchor="middle">failure → retry</text>
+                fill="var(--bronze)" text-anchor="middle">failure → retry</text>
 
           <!-- dead letter -->
           <rect x="182" y="178" width="126" height="34" rx="2"
-                fill="var(--surface)" stroke="var(--raw)" stroke-dasharray="3 3"/>
+                fill="var(--surface)" stroke="var(--bronze)" stroke-dasharray="3 3"/>
           <text x="245" y="200" font-family="JetBrains Mono, monospace" font-size="10.5"
-                fill="var(--raw)" text-anchor="middle">dead-letter</text>
-          <path d="M 245 148 L 245 174" stroke="var(--raw)" stroke-width="1.2"
-                fill="none" color="var(--raw)" marker-end="url(#lc-ar)"/>
+                fill="var(--bronze)" text-anchor="middle">dead-letter</text>
+          <path d="M 245 148 L 245 174" stroke="var(--bronze)" stroke-width="1.2"
+                fill="none" color="var(--bronze)" marker-end="url(#lc-ar)"/>
           <text x="320" y="200" font-family="Inter Tight, sans-serif" font-size="10"
                 fill="var(--ink-faint)">out of retries — kept for inspection, not lost</text>
 
@@ -1194,9 +1216,73 @@ footer {
       </figcaption>
     </figure>
   </section>
+  <section id="s10">
+    <div class="section-head">
+      <p class="eyebrow">2.3 · Who is calling</p>
+      <h2>A cookie, and one row that can be deleted</h2>
+      <p>
+        The data is a team's own tracked work, so every request has to name a person. HTTP
+        remembers nothing between requests, so the browser carries a token and the server keeps
+        the matching row.
+      </p>
+    </div>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Decision</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="who">Argon2id, not bcrypt</td>
+          <td>bcrypt truncates silently at 72 bytes, so a long passphrase is only ever its
+            first 72 and nobody finds out.</td>
+        </tr>
+        <tr>
+          <td class="who">An opaque token, not a JWT</td>
+          <td>Revoking a JWT needs a server-side list of revoked ones — that list is
+            <code>app.session</code> with extra steps. So it is that table without them, and
+            logging out deletes the row.</td>
+        </tr>
+        <tr>
+          <td class="who">Expiry checked on read</td>
+          <td>The database holds <code>expires_at</code> and enforces nothing. A session one
+            second past expiry has to read as gone before any sweeper runs.</td>
+        </tr>
+        <tr>
+          <td class="who">HttpOnly · SameSite=Lax</td>
+          <td>A token a page can read is a token a cross-site script can steal. Lax keeps it
+            off cross-site POSTs, which is the CSRF defence this needs while every mutating
+            call comes from the app's own pages.</td>
+        </tr>
+        <tr>
+          <td class="who"><code>Depends(current_user)</code>,<br>not middleware</td>
+          <td>It reaches the OpenAPI schema and mypy checks it. A middleware that sets a
+            request attribute does neither.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Every security decision is in <code>services/auth.py</code> — one file to read before
+      trusting this, and one file to change when an answer stops being good enough. The route
+      layer in <code>api/routes/auth.py</code> only turns those calls into HTTP.
+    </p>
+
+    <p>
+      Authorisation is a separate question and is deliberately unfinished.
+      <code>services/permission.py</code> holds one function that always returns true: there is
+      no membership table, and inventing one that always answers true would be the same rule
+      with more code. What is already right is the <em>call site</em> — every route that reads
+      one project's data asks it first, before touching gold, so the day a rule exists it is
+      added in one place.
+    </p>
+  </section>
   <section id="s05">
     <div class="section-head">
-      <p class="eyebrow">2.3 · Dependency order</p>
+      <p class="eyebrow">2.4 · Dependency order</p>
       <h2>Dependency order</h2>
       <p>
         Arrows read as <em>“is imported by”</em>. No arrow points back upwards —
@@ -1207,7 +1293,7 @@ footer {
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's dependency graph: core is the bottom layer, imported by storage; storage is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by reports; jobs runs all of the above, while managers, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
+             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by reports; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1222,11 +1308,11 @@ footer {
 
             <rect x="172" y="112" width="104" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="224" y="136" fill="var(--ink)">storage</text>
+            <text x="224" y="136" fill="var(--ink)">infra</text>
 
             <rect x="324" y="56" width="104" height="38" rx="2"
-                  fill="var(--raw-wash)" stroke="var(--raw)"/>
-            <text x="376" y="80" fill="var(--raw)">sources</text>
+                  fill="var(--bronze-wash)" stroke="var(--bronze)"/>
+            <text x="376" y="80" fill="var(--bronze)">sources</text>
 
             <rect x="324" y="168" width="104" height="38" rx="2"
                   fill="var(--silver-wash)" stroke="var(--silver)"/>
@@ -1246,7 +1332,7 @@ footer {
 
             <rect x="628" y="30" width="256" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="756" y="54" fill="var(--ink)">managers · jobs · scheduler · api</text>
+            <text x="756" y="54" fill="var(--ink)">domains · jobs · scheduler · api</text>
           </g>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -1307,101 +1393,137 @@ footer {
         <span class="tree-path">src/mycel/</span>
         <span class="tree-note"></span>
       </div>
+      <div class="tree-row is-epic">
+        <span class="tree-path">E1 · Foundation</span>
+        <span class="tree-note">Models, agents, config, tracing. Knows how to build an agent and emit a span; knows nothing about what the product does.</span>
+      </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>core/</span>
         <span class="tree-note">Config, logging, exceptions, shared types. The bottom layer — imports no other module.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>storage/</span>
-        <span class="tree-note">Three stores, three kinds of data. Every access goes through here — not scattered through pipelines and agents.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>storage/postgres/</span>
-        <span class="tree-note">Transactional state: engine, session, a repository per <code>raw</code> · <code>silver</code> · <code>gold</code> layer. Every SQL statement lives here.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>storage/vectors/</span>
-        <span class="tree-note">Knowledge base search over embeddings (Qdrant). Embeddings come from <code>gold</code>, not raw. View permissions are a Qdrant filter, not a post-filter after top-k.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>storage/objects/</span>
-        <span class="tree-note">Large files: source PDFs, rendered reports (MinIO, S3 API). Postgres holds the metadata, the bucket holds the content. The API returns a presigned URL so files never pass through the API process.</span>
-      </div>
-      <div class="tree-row" data-tone="raw">
-        <span class="tree-path"><span class="dim">├─ </span>sources/</span>
-        <span class="tree-note">One file per provider. Same interface: take a time range, return raw records, write to <code>raw</code>.</span>
-      </div>
-      <div class="tree-row" data-tone="silver">
-        <span class="tree-path"><span class="dim">├─ </span>etl/</span>
-        <span class="tree-note">The <code>raw → silver → gold</code> transform steps. Scheduled background work — not the request-handling chain. Every step is idempotent.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>etl/checks/</span>
-        <span class="tree-note">Validation after each step: missing columns, unexpected nulls, row counts off. On failure it stops and does not write to the layer above.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>llm/</span>
         <span class="tree-note">The only gateway to any model. <code>router</code> picks local or cloud, <code>client</code> is the only place that imports a provider SDK, <code>cache</code> avoids repeat calls, <code>tokens</code>/<code>usage</code> count before and after, <code>budget</code> blocks going over the ceiling.</span>
       </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>mcp/</span>
+        <span class="tree-note">MCP client only: toolsets built from <code>config/mcp/servers.yaml</code>, declared servers and never discovery — a tool&rsquo;s name and description go straight into the prompt, so the list of them belongs in a diff.</span>
+      </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note"><code>orchestrator</code> coordinates; <code>analyst</code> · <code>writer</code> · <code>reviewer</code> do one job each; <code>tools/</code> are the capabilities an agent can call (<code>query_gold</code> for exact-number questions, <code>search_docs</code> for vague ones); <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
+        <span class="tree-note">Four peers, differing in capability rather than rank: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the deployment&rsquo;s mailbox over IMAP (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
         <span class="tree-note">The shared foundation for <code>agents/</code> alone, with no business logic: the agent loop, <code>streaming/</code>, <code>hooks</code> (attach traces · log usage · add to budget), <code>guards</code>, <code>integrations/mcp</code>.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>queue/</span>
-        <span class="tree-note">The job layer <em>on top of</em> Kafka (the broker runs outside, KRaft mode). Kafka is an ordered log, not a task queue, so this is built by hand: tiered retry topics <code>jobs → jobs.retry.1m → jobs.retry.10m → jobs.dlq</code>, retry counts in the header, a raised <code>max.poll.interval.ms</code>. Commit after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
+        <span class="tree-path"><span class="dim">├─ </span>observability/</span>
+        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus. Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
       </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path"><span class="dim">├─ </span>managers/</span>
-        <span class="tree-note"><b>Entry points, split by business domain.</b> Adding a domain = adding a directory, with existing domains untouched.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>managers/report/</span>
-        <span class="tree-note">The report domain: <code>controller.py</code> (HTTP endpoints) · <code>pipeline.py</code> (the business chain) · <code>schemas.py</code>.</span>
+      <div class="tree-row is-epic">
+        <span class="tree-path">E2 · Entrypoints</span>
+        <span class="tree-note">The ways in. A route parses and authorises; a service answers inside the request, in SQL. Work that takes seconds is handed to E4.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>managers/sync/</span>
-        <span class="tree-note">The sync domain: the same three files, for the <code>fetch → transform → check</code> flow.</span>
+        <span class="tree-path"><span class="dim">├─ </span>api/</span>
+        <span class="tree-note">The HTTP shell, as thin as possible. Endpoints live in <code>api/routes/</code>, and each one validates then calls a module in <code>domains/</code>. There is authentication — the data is internal Slack and Gmail.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>api/app.py</span>
+        <span class="tree-note">The assembly point: create the app, mount each router, middleware, observability. The only file that knows which domains exist. <code>uvicorn --factory</code> points here.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>api/middleware.py</span>
+        <span class="tree-note">Only <code>request_id</code> — tracing, CORS, errors and rate limiting all use what already exists. Written as pure ASGI, not <code>BaseHTTPMiddleware</code> (which buffers the response and blocks SSE).</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>api/dependencies.py</span>
+        <span class="tree-note">What routes declare via <code>Depends()</code>: authentication, DB session, pagination. Authentication lives here rather than in middleware — it reaches the OpenAPI schema and mypy can check it.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>api/health.py</span>
+        <span class="tree-note"><code>/health/live</code> for the container restart policy, <code>/health/ready</code> for the load balancer. Belongs to no business domain.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>services/</span>
-        <span class="tree-note">Single links, one job per file: <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>. Names are verbs with no <code>_service</code> suffix. Reusable across pipelines.</span>
+        <span class="tree-note">Single links, one job per file: <code>auth</code>, <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>, <code>dashboard</code>. Names are verbs with no <code>_service</code> suffix. Reusable across domains.</span>
+      </div>
+      <div class="tree-row is-epic">
+        <span class="tree-path">E3 · Data</span>
+        <span class="tree-note">Everything that owns a table. Connectors fill bronze, the ETL lifts it to silver then gold, the scheduler decides when. Nothing here calls a model.</span>
+      </div>
+      <div class="tree-row" data-tone="bronze">
+        <span class="tree-path"><span class="dim">├─ </span>sources/</span>
+        <span class="tree-note">One file per provider. Same interface: take a time range, return raw records, write to <code>bronze</code>.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>infra/</span>
+        <span class="tree-note">Three stores, three kinds of data. Every access goes through here — not scattered through domains and agents.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>infra/postgres/</span>
+        <span class="tree-note">Transactional state: engine, session, a repository per <code>bronze</code> · <code>silver</code> · <code>gold</code> layer. Every SQL statement lives here.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>infra/vectors/</span>
+        <span class="tree-note">Knowledge base search over embeddings (Qdrant). Embeddings come from <code>gold</code>, not bronze. View permissions are a Qdrant filter, not a post-filter after top-k.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>infra/objects/</span>
+        <span class="tree-note">Large files: source PDFs, rendered reports (MinIO, S3 API). Postgres holds the metadata, the bucket holds the content. The API returns a presigned URL so files never pass through the API process.</span>
+      </div>
+      <div class="tree-row" data-tone="silver">
+        <span class="tree-path"><span class="dim">├─ </span>etl/</span>
+        <span class="tree-note">The <code>bronze → silver → gold</code> transform steps. Scheduled background work — not the request-handling chain. Every step is idempotent.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>etl/checks/</span>
+        <span class="tree-note">Validation after each step: missing columns, unexpected nulls, row counts off. On failure it stops and does not write to the layer above.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
+        <span class="tree-note">Answers <em>when to run</em>. Calls <code>domains/</code> directly — the same place a route calls, just without the HTTP link.</span>
+      </div>
+      <div class="tree-row is-epic">
+        <span class="tree-path">E4 · Background</span>
+        <span class="tree-note">Work that outlives the request that asked for it. A route hands over an id; <code>domains/</code> is the whole of one such unit of work, <code>queue/</code> moves it between processes.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>queue/</span>
+        <span class="tree-note">The job layer <em>on top of</em> RabbitMQ (the broker runs outside). A task queue, not an ordered log, so retry and dead-lettering are broker features: <code>mycel.jobs</code> → <code>jobs</code>, dead-lettering to <code>mycel.jobs.dlx</code> → <code>jobs.retry</code> (TTL, then back) and <code>jobs.dlq</code> (nothing consumes it). Ack after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">├─ </span>events/</span>
+        <span class="tree-note">The run narration: one event per step, published to a Redis Stream so <code>/events</code> can replay it as SSE. Separate from logs — logs are for operators, these are for the person watching a report being written.</span>
+      </div>
+      <div class="tree-row" data-tone="gold">
+        <span class="tree-path"><span class="dim">├─ </span>domains/</span>
+        <span class="tree-note"><b>The business chains, one module per domain, none of them aware of HTTP.</b> Adding a domain = one module here and one under <code>api/routes/</code>, with existing domains untouched.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>domains/report.py</span>
+        <span class="tree-note">Request a report, read what became of it. Queues the job and reads the result back out of <code>app.report</code>.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>domains/sync.py</span>
+        <span class="tree-note">The <code>fetch → transform → check</code> flow, against Jira. Called by <code>scheduler/</code> on a timer and by <code>stack.sh sync</code> by hand — never over HTTP.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  ├─ </span>domains/dashboard.py</span>
+        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. A query, so it answers inside the request rather than queueing.</span>
+      </div>
+      <div class="tree-row">
+        <span class="tree-path"><span class="dim">│  └─ </span>domains/threads.py</span>
+        <span class="tree-note">Whose sidebar history this is. <code>GET /conversations</code> reads it, so the list follows a person to any browser — which is why it stopped living in <code>localStorage</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>
         <span class="tree-note">Builds the final artifacts from agent output: prose, data tables, dashboards.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
-        <span class="tree-note">Answers <em>when to run</em>. Calls <code>pipeline</code> in <code>managers/</code> directly — the same place controllers call, just without the HTTP link.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>api/</span>
-        <span class="tree-note">The HTTP shell, as thin as possible. Business endpoints live in <code>managers/</code>; this only assembles them. There is authentication — the data is internal Slack and Gmail.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>app.py</span>
-        <span class="tree-note">The assembly point: create the app, mount each manager's controller, middleware, observability. The only file that knows which domains exist. <code>uvicorn</code> points here.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>middleware.py</span>
-        <span class="tree-note">Only <code>request_id</code> — tracing, CORS, errors and rate limiting all use what already exists. Written as pure ASGI, not <code>BaseHTTPMiddleware</code> (which buffers the response and blocks SSE).</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>dependencies.py</span>
-        <span class="tree-note">What controllers declare via <code>Depends()</code>: authentication, DB session, pagination. Authentication lives here rather than in middleware — it reaches the OpenAPI schema and mypy can check it.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>health.py</span>
-        <span class="tree-note"><code>/health/live</code> for the container restart policy, <code>/health/ready</code> for the load balancer. Belongs to no business domain.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">└─ </span>observability/</span>
-        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus. Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.
+        <span class="tree-path"><span class="dim">└─ </span>notify/</span>
+        <span class="tree-note">One-way outbound: Telegram messages and Google Calendar events. Both optional, and a failure here never fails the job that triggered it.</span>
       </div>
 
       <div class="tree-row is-head">
@@ -1478,7 +1600,7 @@ footer {
           <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
             <rect x="24" y="106" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="125">analyst — analyses the numbers</text>
+            <text x="40" y="125">analyst — reads gold, reports figures</text>
 
             <rect x="24" y="142" width="168" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
@@ -1684,7 +1806,7 @@ footer {
       <article class="op">
         <span class="op-svc">postgres</span>
         <span class="op-role">Data store</span>
-        <p>One database, three schemas. A separate volume so upgrading the image does not lose data.</p>
+        <p>One database, four schemas — <code>bronze</code> · <code>silver</code> · <code>gold</code> · <code>app</code>. A separate volume so upgrading the image does not lose data.</p>
       </article>
       <article class="op">
         <span class="op-svc">otel-collector</span>
@@ -1824,9 +1946,9 @@ footer {
             <text x="230" y="270">only then swap containers</text>
           </g>
           <text x="432" y="250" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--raw)">so the schema must be</text>
+                fill="var(--bronze)">so the schema must be</text>
           <text x="432" y="266" font-family="Inter Tight, sans-serif" font-size="10"
-                fill="var(--raw)">backward compatible by one step</text>
+                fill="var(--bronze)">backward compatible by one step</text>
 
           <!-- rollback -->
           <path d="M 924 262 L 936 262 L 936 108 L 786 108"
@@ -1914,7 +2036,7 @@ footer {
         <tr>
           <td class="who">More traffic adds pods</td>
           <td><code>HorizontalPodAutoscaler</code></td>
-          <td><code>api</code> on CPU, but <code>worker</code> has to scale on <em>Kafka consumer lag</em> — it waits on I/O, so CPU stays low while the queue backs up</td>
+          <td><code>api</code> on CPU, but <code>worker</code> has to scale on <em>queue depth</em> — it waits on I/O, so CPU stays low while the queue backs up</td>
         </tr>
         <tr>
           <td class="who">Services can reach each other</td>
@@ -1961,7 +2083,7 @@ footer {
 
     <p>
       <b>Stateful stores run as <code>StatefulSet</code> + PVC</b>, not
-      <code>Deployment</code>: Postgres, Kafka, Qdrant and MinIO need a stable identity and a volume that
+      <code>Deployment</code>: Postgres, RabbitMQ, Qdrant and MinIO need a stable identity and a volume that
       reattaches to the same pod. On-prem means providing the storage layer yourself — k3s local-path, or
       Longhorn if volumes should be able to move between machines. This is the most labour-intensive part of leaving the cloud.
     </p>
@@ -1980,8 +2102,8 @@ footer {
       <p class="eyebrow">4.4 · Status</p>
       <h2>What exists and what does not</h2>
       <p>
-        This page describes a design, not a running system. The section below draws the line
-        so nobody reads it the wrong way.
+        Most of this page now describes a running system. The table below draws the line
+        between what runs and what is still an intention.
       </p>
     </div>
 
@@ -2005,23 +2127,53 @@ footer {
           <td class="who">CI · build image</td>
           <td>Workflows exist: lint, type check, migrations, tests; builds an image tagged by SHA</td>
         </tr>
-        <tr class="tone-raw">
+        <tr class="tone-bronze">
           <td class="who">Helm chart · Argo CD · Harbor</td>
-          <td class="no">Only <code>values</code>, <code>Application</code> and the decision docs. No real manifests in <code>templates/</code> yet, and no cluster to deploy to</td>
+          <td class="no">Only <code>values</code>, <code>Application</code> and the decision docs. <code>deploy/helm/*/templates/</code> holds a README and nothing else, and there is no cluster to deploy to</td>
         </tr>
-        <tr class="tone-raw">
-          <td class="who">sources/ — connector</td>
-          <td class="no">No provider runs for real yet. Slack/Gmail/Confluence are still intentions</td>
+        <tr>
+          <td class="who">sources/ — Jira</td>
+          <td>Built — <code>search_issues</code> and <code>issue_worklogs</code> run against a
+            real site. <b>Read-only:</b> nothing in this repo writes back to Jira</td>
         </tr>
-        <tr class="tone-raw">
-          <td class="who">etl/ · agents/ · reports/</td>
-          <td class="no">No transform step or agent has been implemented</td>
+        <tr>
+          <td class="who">etl/ — bronze → silver → gold</td>
+          <td>Built — <code>normalise.py</code> and <code>promote.py</code>, driven by
+            <code>services/transform.py</code> under an advisory lock</td>
         </tr>
-        <tr class="tone-raw">
+        <tr>
+          <td class="who">agents/ · reports/</td>
+          <td>Built — orchestrator, analyst, researcher (web + mail), summariser; a report is rendered in
+            <code>services/render.py</code> and kept in <code>app.report</code></td>
+        </tr>
+        <tr>
+          <td class="who">app/ — sign-in, dashboard, reports</td>
+          <td>Built — Argon2id, an opaque session cookie, four pages</td>
+        </tr>
+        <tr class="tone-bronze">
+          <td class="who">sources/ — anything but Jira</td>
+          <td class="no">Slack, Gmail and Confluence are still intentions. The
+            <code>source</code> column already leaves room for them</td>
+        </tr>
+        <tr class="tone-bronze">
+          <td class="who">Project membership</td>
+          <td class="no"><code>services/permission.py</code> always returns true. Every call
+            site already asks it, so the rule lands in one file when it exists</td>
+        </tr>
+        <tr class="tone-bronze">
+          <td class="who">Vector search · librarian</td>
+          <td class="no"><code>infra/vectors/</code> has no caller. Batches 008 and 009</td>
+        </tr>
+        <tr class="tone-bronze">
+          <td class="who">Object storage · LLM cache · metrics</td>
+          <td class="no"><code>infra/objects/</code>, <code>llm/cache.py</code> and
+            <code>observability/metrics.py</code> are written and have no caller</td>
+        </tr>
+        <tr class="tone-bronze">
           <td class="who">evals/ — golden set</td>
-          <td class="no">The skeleton and the merge-blocking rule exist, but no data pairs yet</td>
+          <td class="no">The skeleton and the merge-blocking rule exist. <code>evals/golden/</code> is empty</td>
         </tr>
-        <tr class="tone-raw">
+        <tr class="tone-bronze">
           <td class="who">Model local 3B</td>
           <td class="no">The specific work it carries is undecided. With no real high-volume work, the local layer can be dropped entirely</td>
         </tr>
@@ -2038,11 +2190,11 @@ footer {
     <ul class="rules">
       <li>
         <strong>One direction</strong>
-        <span>Data only flows raw → silver → gold. No layer reads back upwards.</span>
+        <span>Data only flows bronze → silver → gold. No layer reads back upwards.</span>
       </li>
       <li>
         <strong>Agents read gold only</strong>
-        <span>Agents never touch raw or silver. Gold is the only contract.</span>
+        <span>Agents never touch bronze or silver. Gold is the only contract.</span>
       </li>
       <li>
         <strong>Adding a source does not change existing code</strong>
@@ -2061,7 +2213,7 @@ footer {
         <span>A worse report does not turn a test red. Only the golden set catches it.</span>
       </li>
       <li>
-        <strong>Thin controllers, thick pipelines</strong>
+        <strong>Thin routes, thick domains</strong>
         <span>If <code>api/</code> could be deleted entirely and <code>scheduler</code> would still produce reports, the layers are in the right place.</span>
       </li>
       <li>
@@ -2076,7 +2228,6 @@ footer {
   </section>
   <footer>
     <span>Mycel v0.1 — a design. The skeleton is built; no connector runs for real yet.</span>
-    <span>Text version: <code>docs/architecture.md</code></span>
     <span class="mono">docs/architecture.html</span>
   </footer>
 

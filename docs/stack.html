@@ -203,12 +203,12 @@ footer p{margin:0 0 6px; max-width:70ch}
   <h1>Mycel <span class="fil">Stack</span></h1>
   <p class="lede">
     <em>Compose</em> — runs today. <em>Designed</em> — config only, not running yet.
-    <em>Not installed</em> — decided, but <code>pyproject.toml</code> is still empty.
+    <em>Not installed</em> — decided, but not a dependency yet.
   </p>
 
   <div class="tally" id="tally"></div>
   <div class="searchrow">
-    <input id="q" type="search" placeholder="Search: kafka, qdrant, probe…" autocomplete="off">
+    <input id="q" type="search" placeholder="Search: rabbitmq, qdrant, probe…" autocomplete="off">
     <button class="clearbtn" id="reset" type="button">Clear filters</button>
   </div>
 </header>
@@ -249,30 +249,30 @@ const S = {live:'Compose', draft:'Designed', absent:'Not installed'};
 
 const LAYERS = [
  {id:'app', idx:'L1', name:'Application', sub:'The request path — measured in seconds', items:[
-  {n:'FastAPI', v:'', port:'8000', role:'The HTTP shell. Endpoints live in <span class="path">managers/*/controller.py</span>.', st:'absent',
+  {n:'FastAPI', v:'0.141', port:'8000', role:'The HTTP shell. Endpoints live in <span class="path">api/routes/*.py</span>.', st:'live',
    note:'Exactly <b>one</b> hand-written middleware: <code>request_id</code>. And pure ASGI — <code>BaseHTTPMiddleware</code> buffers the response and blocks SSE.'},
-  {n:'uvicorn', v:'', port:'8000', role:'ASGI server.', st:'absent'},
-  {n:'Pydantic AI', v:'', port:'', role:'Agent framework: tool loop, streaming, hooks, MCP, schema retries.', st:'absent',
-   note:'Decided but <b>not yet reflected in the code</b> — <span class="path">agents/core/</span> is still written as if everything had to be built by hand.'},
-  {n:'Pydantic', v:'v2', port:'', role:'Data contracts: HTTP schemas and internal schemas.', st:'absent'},
+  {n:'uvicorn', v:'0.53', port:'8000', role:'ASGI server.', st:'live'},
+  {n:'Pydantic AI', v:'2.44 · slim', port:'', role:'Agent framework: tool loop, streaming, hooks, MCP, schema retries.', st:'live',
+   note:'<span class="path">agents/core/runner.py</span> drives it with <code>agent.iter()</code>, not <code>agent.run()</code> — a run killed by <code>UsageLimitExceeded</code> has already spent real money, and only the iterator hands back the partial usage to record.'},
+  {n:'Pydantic', v:'2.13', port:'', role:'Data contracts: HTTP schemas and internal schemas.', st:'live'},
  ]},
 
  {id:'data', idx:'L2', name:'Storage', sub:'Three stores, three kinds of data', items:[
-  {n:'PostgreSQL', v:'16-alpine', port:'5432', role:'Transactional state. One DB, three schemas <code>raw</code> · <code>silver</code> · <code>gold</code>. Agents read gold only.', st:'live',
+  {n:'PostgreSQL', v:'16-alpine', port:'5432', role:'Transactional state. One DB, four schemas <code>bronze</code> · <code>silver</code> · <code>gold</code> · <code>app</code>. Agents read gold only.', st:'live',
    note:'Pool size is sized against the <b>total process count</b>, not per process. Exceeding <code>max_connections</code> only fails under load.'},
   {n:'Qdrant', v:'latest', port:'6333', role:'Vector store. Embeddings built from gold.', st:'live',
    note:'View permissions are a <b>Qdrant filter</b>, not a post-filter applied after top-k.'},
   {n:'MinIO', v:'latest', port:'9000 · 9001', role:'S3-API object store. Postgres holds the metadata, the bucket holds the content.', st:'live',
-   note:'Always stream. A whole-file <code>read()</code> OOMs the worker, and Kafka hands that same job back — an infinite loop.'},
-  {n:'Alembic', v:'', port:'', role:'Migrations, one revision per schema change.', st:'absent',
+   note:'Always stream. A whole-file <code>read()</code> OOMs the worker, and the broker hands that same job back — an infinite loop.'},
+  {n:'Alembic', v:'1.20', port:'', role:'Migrations, one revision per schema change. At <code>0005</code>.', st:'live',
    note:'Runs <b>before</b> the new code ⇒ the schema must be backward compatible by one step.'},
  ]},
 
  {id:'queue', idx:'L3', name:'Job queue', sub:'The API does not wait for the LLM', items:[
-  {n:'Apache Kafka', v:'3.9.0 · KRaft', port:'9092', role:'The <code>jobs</code> topic. The job layer is in <span class="path">src/mycel/queue/</span>.', st:'live',
-   note:'It is an <b>ordered log, not a task queue</b>. Built by hand: tiered retry topics, retry count in the header, delay via a sleeping consumer, raised <code>max.poll.interval.ms</code> (the 5-minute default &lt; the time a report takes).'},
-  {n:'Kafka consumer', v:'', port:'', role:'The <code>worker</code> service.', st:'live',
-   note:'Commits <b>after</b> the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory, and must be derived from the work, not a fresh UUID.'},
+  {n:'RabbitMQ', v:'3 · management', port:'5672 · 15672', role:'The <code>jobs</code> queue. The job layer is in <span class="path">src/mycel/queue/</span>.', st:'live',
+   note:'A <b>task queue</b>, chosen over Kafka: retry and dead-letter are broker features here, not something to build. <code>mycel.jobs</code> → <code>jobs</code>, dead-lettering to <code>mycel.jobs.dlx</code> → <code>jobs.retry</code> (TTL, then back) and <code>jobs.dlq</code> (nothing consumes it; kept for inspection).'},
+  {n:'aio-pika consumer', v:'', port:'', role:'The <code>worker</code> service.', st:'live',
+   note:'Acks <b>after</b> the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory, and must be derived from the work, not a fresh UUID. A failure is rejected without requeue so it ages in <code>jobs.retry</code> instead of spinning.'},
  ]},
 
  {id:'ai', idx:'L4', name:'Inference', sub:'Local carries the volume, cloud does the reasoning', items:[
@@ -280,12 +280,12 @@ const LAYERS = [
    note:'Dev machine GTX 1660 Ti 6GB: Turing has no bf16, so <code>--dtype float16</code> and the context has to stay short.'},
   {n:'Qwen2.5-3B-Instruct', v:'AWQ 4-bit', port:'', role:'Classification, entity extraction, summarisation, embeddings.', st:'live',
    note:'3B is <b>not</b> good enough to write a report — it carries volume, not conclusions.'},
-  {n:'Cloud LLM', v:'left open', port:'', role:'The final reasoning. Selected by env.', st:'absent',
-   note:'<span class="path">llm/client.py</span> is the <b>only</b> file allowed to import a provider SDK.'},
+  {n:'Cloud LLM', v:'Gemini · Claude', port:'', role:'The final reasoning. Selected by env, resolved in <span class="path">llm/router.py</span>.', st:'live',
+   note:'<span class="path">agents/core/model_builder.py</span> is the <b>only</b> file allowed to import a provider SDK.'},
  ]},
 
  {id:'obs', idx:'L5', name:'Observability', sub:'Know how the system is running, and where it broke', items:[
-  {n:'OpenTelemetry SDK', v:'', port:'', role:'The common standard for the app to record what it is doing.', st:'absent',
+  {n:'OpenTelemetry SDK', v:'1.44', port:'', role:'The common standard for the app to record what it is doing.', st:'live',
    note:'<code>tracing.setup()</code> must run <b>before</b> <code>instrument_app()</code>, or spans fall into an empty provider — silently.'},
   {n:'OTel Collector', v:'contrib', port:'4317', role:'The single collection point. The app knows only one OTLP address.', st:'live'},
   {n:'Tempo', v:'latest', port:'3200', role:'Stores <b>traces</b> — the path of one request. Answers <em>where it broke</em>.', st:'live',
@@ -297,15 +297,15 @@ const LAYERS = [
    note:'The app only prints JSON to stdout, so no module knows Loki exists.'},
   {n:'Grafana', v:'latest', port:'3000', role:'Dashboards + datasources, provisioned from <span class="path">deploy/grafana/</span>.', st:'live',
    note:'The three signals join up because <code>trace_id</code> is in all three.'},
-  {n:'Langfuse (convention)', v:'', port:'', role:'LLM span attributes: model, tokens, cost.', st:'absent'},
+  {n:'Langfuse (convention)', v:'', port:'', role:'LLM span attributes: model, tokens, cost. Written by <span class="path">observability/llm_trace.py</span>.', st:'live'},
  ]},
 
  {id:'platform', idx:'L6', name:'On-prem platform', sub:'Compose for the dev machine; the cluster runs the same image via Helm', items:[
   {n:'Kubernetes (k3s)', v:'', port:'', role:'replicas · self-healing · autoscaling · a Service with stable DNS.', st:'draft',
    note:'Self-healing is only correct when the probes are: a hung pod with an open port looks healthy to K8s. <code>vllm</code> must have a <code>startupProbe</code>.'},
   {n:'HPA + KEDA', v:'', port:'', role:'Adds pods as load rises.', st:'draft',
-   note:'<code>api</code> on CPU; <code>worker</code> on <b>Kafka lag</b> (it waits on I/O, so CPU stays low); <code>vllm</code> does not autoscale.'},
-  {n:'StatefulSet + PVC', v:'', port:'', role:'Postgres, Kafka, Qdrant, MinIO.', st:'draft',
+   note:'<code>api</code> on CPU; <code>worker</code> on <b>queue depth</b> (it waits on I/O, so CPU stays low); <code>vllm</code> does not autoscale.'},
+  {n:'StatefulSet + PVC', v:'', port:'', role:'Postgres, RabbitMQ, Qdrant, MinIO.', st:'draft',
    note:'On-prem means providing the storage layer yourself (local-path or Longhorn) — the most labour-intensive part of leaving the cloud.'},
   {n:'Helm', v:'chart 0.1.0', port:'', role:'Versioned chart + per-env values. <span class="path">deploy/helm/</span>', st:'draft',
    note:'<code>version</code> is the chart, <code>appVersion</code> is the image SHA — rolling back the chart does not roll back the code. <code>templates/</code> has no real manifests yet.'},
@@ -329,14 +329,14 @@ const LAYERS = [
 
 const DEC = [
  ['A user request needs an immediate response','FastAPI','returns job_id, does not wait'],
- ['Document ingestion takes minutes','Kafka + worker','commit after finishing'],
+ ['A report takes minutes','RabbitMQ + worker','ack after finishing'],
  ['Knowledge base search','Qdrant','embeddings from gold'],
- ['Transactional state','PostgreSQL 16','one DB, three schemas'],
+ ['Transactional state','PostgreSQL 16','one DB, four schemas'],
  ['Large files','MinIO','S3 API, presigned URL'],
  ['LLM inference is expensive','vLLM + batched calls','local carries the high-volume work'],
  ['The API has to scale','Deployment.replicas','many pods behind one Service'],
  ['A pod dies','K8s self-healing','three probes, not one'],
- ['Traffic rises','HPA','worker scales on Kafka lag'],
+ ['Traffic rises','HPA','worker scales on queue depth'],
  ['Services call each other','K8s Service','stable DNS name'],
  ['Deployment reproducibility','Helm','chart version + per-env values'],
  ['Deployment automation','Argo CD','git is the source of truth'],
@@ -347,7 +347,7 @@ const DEC = [
 ];
 
 const PORTS = [
- ['8000','api','FastAPI'],['5432','postgres','PostgreSQL 16'],['9092','kafka','broker'],
+ ['8000','api','FastAPI'],['5432','postgres','PostgreSQL 16'],['5672','rabbitmq','broker'],
  ['6333','qdrant','HTTP + dashboard'],['9000','minio','S3 API'],['9001','minio','console'],
  ['8001','vllm','OpenAI-compatible'],['4317','otel-collector','OTLP gRPC'],
  ['9090','prometheus','UI + query'],['3100','loki','push + query'],['3000','grafana','dashboard'],

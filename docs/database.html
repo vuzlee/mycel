@@ -1,0 +1,1430 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mycel Database</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root {
+  /* Light forest floor */
+  --ground:      #FBFAF7;
+  --surface:     #F2F0E9;
+  --surface-alt: #E8E5DB;
+  --line:        #D6D2C4;
+  --line-soft:   #E3E0D4;
+  --ink:         #1C1F19;
+  --ink-soft:    #5A5F52;
+  --ink-faint:   #868B79;
+
+  /* Three data layers */
+  --bronze:    #8B6F47;
+  --silver: #5E8159;
+  --gold:   #A8861B;
+  --accent: #A8861B;
+
+  --bronze-wash:    #8b6f4718;
+  --silver-wash: #5e815918;
+  --gold-wash:   #a8861b18;
+
+  --step: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:      #0F1310;
+    --surface:     #171C17;
+    --surface-alt: #1F251E;
+    --line:        #2E362C;
+    --line-soft:   #242B23;
+    --ink:         #E6E9DF;
+    --ink-soft:    #9BA391;
+    --ink-faint:   #6E7666;
+
+    --bronze:    #B8946A;
+    --silver: #8FB588;
+    --gold:   #D9B43C;
+    --accent: #D9B43C;
+
+    --bronze-wash:    #b8946a1f;
+    --silver-wash: #8fb5881f;
+    --gold-wash:   #d9b43c1f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:      #0F1310;
+  --surface:     #171C17;
+  --surface-alt: #1F251E;
+  --line:        #2E362C;
+  --line-soft:   #242B23;
+  --ink:         #E6E9DF;
+  --ink-soft:    #9BA391;
+  --ink-faint:   #6E7666;
+
+  --bronze:    #B8946A;
+  --silver: #8FB588;
+  --gold:   #D9B43C;
+  --accent: #D9B43C;
+
+  --bronze-wash:    #b8946a1f;
+  --silver-wash: #8fb5881f;
+  --gold-wash:   #d9b43c1f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+  padding-block: clamp(2.5rem, 7vw, 5rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--step);
+}
+
+/* ---------- Typography ---------- */
+
+h1, h2, h3 {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  letter-spacing: -0.012em;
+}
+
+h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+p { margin: 0; max-width: 62ch; }
+
+.eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+code, .mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero-lede {
+  font-size: clamp(1.0625rem, 2.2vw, 1.25rem);
+  color: var(--ink-soft);
+  max-width: 54ch;
+}
+
+.hero-lede em {
+  font-family: Fraunces, Georgia, serif;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.hero-meta b {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* ---------- Sections ---------- */
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+figure { margin: 0; }
+
+figcaption {
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  max-width: 64ch;
+}
+
+.diagram {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.scroll-x {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.scroll-x .diagram { min-width: 620px; }
+
+/* ---------- Three-layer table ---------- */
+
+.layers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.layer {
+  background: var(--ground);
+  padding: 1.375rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border-top: 3px solid var(--tone);
+}
+
+.layer:nth-child(1) { --tone: var(--bronze); }
+.layer:nth-child(2) { --tone: var(--silver); }
+.layer:nth-child(3) { --tone: var(--gold); }
+
+.layer-name {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tone);
+  letter-spacing: 0.02em;
+}
+
+.layer p { font-size: 0.9375rem; color: var(--ink-soft); }
+
+.layer dl {
+  margin: 0.25rem 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.layer dt { color: var(--ink-faint); }
+.layer dd { margin: 0; color: var(--ink-soft); }
+
+/* ---------- Directory tree ---------- */
+
+.tree {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: start;
+}
+
+.tree-col {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: baseline;
+  padding-block: 0.0625rem;
+}
+
+.tree-row + .tree-row { border-top: 1px solid var(--line-soft); }
+
+.tree-row.is-head {
+  border-top: 1px solid var(--line);
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.tree-row:first-child { border-top: none; }
+
+.tree-path {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  white-space: pre;
+  color: var(--ink);
+}
+
+.tree-path .dim { color: var(--ink-faint); }
+
+.tree-note {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.tree-row.is-head .tree-path {
+  color: var(--ink-faint);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.tree-row[data-tone="bronze"]    .tree-path { color: var(--bronze); }
+.tree-row[data-tone="silver"] .tree-path { color: var(--silver); }
+.tree-row[data-tone="gold"]   .tree-path { color: var(--gold); }
+
+/* ---------- Principles ---------- */
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.75rem 2.5rem;
+}
+
+.rules li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--line);
+}
+
+.rules li strong {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.rules li span {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Operations table ---------- */
+
+.ops {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.op {
+  background: var(--ground);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.op-svc {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
+.op-role { font-size: 0.875rem; font-weight: 500; }
+
+.op p { font-size: 0.8125rem; color: var(--ink-soft); }
+
+/* ---------- Table of contents ---------- */
+
+.toc {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 2rem;
+}
+
+.toc a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9375rem;
+  border-top: 2px solid var(--line);
+  padding-top: 0.625rem;
+}
+
+.toc a:hover { color: var(--accent); border-top-color: var(--accent); }
+
+.toc a b {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+section, .part { scroll-margin-top: 1.5rem; }
+
+/* ---------- Part markers ---------- */
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid var(--accent);
+  margin-top: 1rem;
+}
+
+.part-num {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.part-title {
+  font-size: clamp(1.875rem, 4.5vw, 2.75rem);
+  letter-spacing: -0.018em;
+}
+
+.part-blurb {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  max-width: 56ch;
+}
+
+.path-note {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  max-width: 68ch;
+  line-height: 1.7;
+}
+
+.path-note b { font-weight: 500; color: var(--ink); }
+
+/* ---------- Shared compact table ---------- */
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tbl th {
+  text-align: left;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--ink-faint);
+  padding: 0 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: bottom;
+}
+
+.tbl td {
+  padding: 0.6875rem 1rem 0.6875rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.tbl td:last-child, .tbl th:last-child { padding-right: 0; }
+
+.tbl tr:last-child td { border-bottom: none; }
+
+.tbl .who {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.tbl .no { color: var(--ink-faint); }
+
+.tbl .tone-bronze    .who { color: var(--bronze); }
+.tbl .tone-silver .who { color: var(--silver); }
+.tbl .tone-gold   .who { color: var(--gold); }
+.tbl .tone-accent .who { color: var(--accent); }
+
+/* ---------- Footer ---------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 760px) {
+  .layers { grid-template-columns: 1fr; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+  .tbl thead { display: none; }
+  .tbl tr { border-bottom: 1px solid var(--line); padding-block: 0.75rem; }
+  .tbl tr:last-child { border-bottom: none; }
+  .tbl td { border: none; padding: 0.125rem 0; }
+  .tree, .tree-row { grid-template-columns: 1fr; gap: 0.125rem; }
+  .tree-row { padding-block: 0.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+<style>
+/* ---------- Column dictionary ---------- */
+
+.dict {
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--tone, var(--line));
+}
+
+.dict[data-tone="bronze"] { --tone: var(--bronze); }
+.dict[data-tone="silver"] { --tone: var(--silver); }
+.dict[data-tone="gold"]   { --tone: var(--gold); }
+.dict[data-tone="app"]    { --tone: var(--ink-faint); }
+
+.dict-head {
+  padding: 1.125rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+}
+
+.dict-name {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--tone);
+}
+
+.dict-head p { font-size: 0.875rem; color: var(--ink-soft); max-width: 70ch; }
+
+.col {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 12rem) minmax(0, 1fr);
+  gap: 0 1.5rem;
+  padding: 0.8125rem 1.25rem;
+  border-bottom: 1px solid var(--line-soft);
+  align-items: baseline;
+}
+
+.col:last-child { border-bottom: none; }
+
+.col-n {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.col-t {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  word-break: break-word;
+}
+
+.col-d { font-size: 0.875rem; color: var(--ink-soft); line-height: 1.55; min-width: 0; }
+.col-d b { font-weight: 500; color: var(--ink); }
+
+.col-d .ex {
+  display: block;
+  margin-top: 0.4375rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  padding: 0.25rem 0.5rem;
+  word-break: break-word;
+}
+
+.col[data-key] .col-n::after {
+  content: attr(data-key);
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.5625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  vertical-align: 0.1em;
+}
+
+.col[data-key="pk"] { background: var(--gold-wash); }
+.col[data-key="nk"] { background: var(--silver-wash); }
+.col[data-key="pk"] .col-n::after { color: var(--gold); }
+.col[data-key="nk"] .col-n::after { color: var(--silver); }
+
+.dict-foot {
+  padding: 0.8125rem 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  line-height: 1.7;
+}
+
+/* ---------- Key legend ---------- */
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.legend > div {
+  background: var(--ground);
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.legend b {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.legend[data-t] { }
+.legend > div.pk b { color: var(--gold); }
+.legend > div.nk b { color: var(--silver); }
+.legend p { font-size: 0.875rem; color: var(--ink-soft); }
+
+/* ---------- Flow strip ---------- */
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.flow > div {
+  background: var(--ground);
+  padding: 1.25rem 1.125rem 1.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 3px solid var(--tone);
+}
+
+.flow > div:nth-child(1) { --tone: var(--bronze); }
+.flow > div:nth-child(2) { --tone: var(--silver); }
+.flow > div:nth-child(3) { --tone: var(--gold); }
+
+.flow .sch {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tone);
+}
+
+.flow .tb {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.flow p { font-size: 0.875rem; color: var(--ink-soft); }
+
+/* ---------- Callout ---------- */
+
+.callout {
+  border-left: 2px solid var(--accent);
+  background: var(--surface);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.callout p { font-size: 0.9375rem; color: var(--ink-soft); max-width: 68ch; }
+.callout b { color: var(--ink); font-weight: 500; }
+
+pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  padding: 1rem 1.125rem;
+  overflow-x: auto;
+  margin: 0;
+  color: var(--ink);
+}
+
+pre .c { color: var(--ink-faint); }
+
+@media (max-width: 760px) {
+  .col { grid-template-columns: 1fr; gap: 0.1875rem; }
+  .col-t { color: var(--tone, var(--ink-faint)); }
+  .flow { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">Database reference · migration 0004</p>
+    <h1>Database</h1>
+    <p class="hero-lede">
+      One PostgreSQL database, <em>one schema per data layer</em> — so a <code>GRANT</code> can
+      follow the layer boundary. Agents get <code>SELECT</code> on <code>gold</code> and cannot
+      reach anything below it.
+    </p>
+    <div class="hero-meta">
+      <span><b>Database</b> mycel</span>
+      <span><b>Schemas</b> bronze · silver · gold · app · public</span>
+      <span><b>Tables</b> 6 in the pipeline + app + alembic bookkeeping</span>
+      <span><b>Engine</b> PostgreSQL 16</span>
+    </div>
+
+    <nav class="toc">
+      <a href="architecture.html"><b>Architecture</b><span>How the system runs</span></a>
+      <a href="stack.html"><b>Stack</b><span>What is deployed</span></a>
+    </nav>
+  </header>
+
+  <!-- ============ LAYERS ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">01 · The layers</p>
+      <h2>Raw in, contract out</h2>
+    </div>
+
+    <figure>
+      <div class="flow">
+        <div>
+          <span class="sch">bronze</span>
+          <span class="tb">jira_issue · jira_worklog</span>
+          <p>Jira's payload, exactly as it arrived. Nothing parsed.</p>
+        </div>
+        <div>
+          <span class="sch">silver</span>
+          <span class="tb">work_item · worklog</span>
+          <p>The issue with the provider's envelope taken off, and nothing else done to it.
+          Answers to the <em>source</em>.</p>
+        </div>
+        <div>
+          <span class="sch">gold</span>
+          <span class="tb">work_item · worklog</span>
+          <p>One row per piece of work, one per logged hour. The only layer agents read.</p>
+        </div>
+      </div>
+      <figcaption>
+        Data moves one way, through both hops: <code>etl/normalise.py</code> unwraps bronze into
+        silver, <code>etl/promote.py</code> lifts silver into gold.
+        <code>public.alembic_version</code> sits outside the chain — it is alembic's own
+        bookkeeping, and a per-layer schema cannot hold it, because the first migration is what
+        creates those schemas.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ============ KEYS ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">02 · Identity</p>
+      <h2>Two kinds of key, never interchangeable</h2>
+    </div>
+
+    <div class="legend">
+      <div class="pk">
+        <b>Primary key</b>
+        <p>Issued by PostgreSQL. Addresses a row, means nothing outside this database — copy
+        the data elsewhere and the numbers differ.</p>
+      </div>
+      <div class="nk">
+        <b>Natural key</b>
+        <p>Issued by the source: <code>(source, issue_key)</code> in <code>work_item</code>,
+        <code>(source, worklog_id)</code> in <code>worklog</code>. An edited issue keeps it, so
+        a re-sync updates the row instead of appending a second opinion.</p>
+      </div>
+    </div>
+
+    <p class="path-note">
+      <code>source</code> belongs in the key because Jira will not be the last tracker, and
+      <code>PROJ-12</code> is a name anyone can mint. The bronze tables are the exception:
+      Jira's own <code>id</code> is already unique and serves as the primary key directly.
+    </p>
+
+    <div class="callout">
+      <p><b>No foreign keys link the layers.</b> Deliberate — each layer must be rebuildable
+      on its own, from the layer below.</p>
+      <p><b>NULL means something here, it is not missing data.</b> The older rule was that
+      every column is <code>NOT NULL</code>, because a nullable column becomes an
+      <code>if</code> branch at every read site. An issue tracker breaks that rule legitimately:
+      <i>unassigned</i>, <i>unestimated</i>, <i>no due date</i> and <i>not resolved</i> are real
+      states of real work, and coercing them to <code>0</code> would be a lie. Columns that are
+      always present — keys, kind, status, title, the sync timestamps — stay
+      <code>NOT NULL</code>.</p>
+    </div>
+  </section>
+
+  <!-- ============ BRONZE ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">03 · bronze</p>
+      <h2>Written once, never edited</h2>
+    </div>
+
+    <div class="dict" data-tone="bronze">
+      <div class="dict-head">
+        <span class="dict-name">bronze.jira_issue</span>
+        <p>Written by <code>domains/sync.py</code>, read by <code>etl/</code>. The payload goes
+        down before anything is parsed, so whatever the normaliser gets wrong today can be re-run
+        against this table tomorrow without calling Jira again.</p>
+      </div>
+
+      <div class="col" data-key="pk">
+        <span class="col-n">issue_id</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">Jira's internal id. The primary key rather than the issue key,
+        because renaming a project rewrites every key and leaves the ids alone.
+        <span class="ex">10042</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">issue_key</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">The name people read. Lifted out of <code>payload</code> so a lookup
+        needs no JSON access.
+        <span class="ex">MYC-12</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">payload</span>
+        <span class="col-t">jsonb</span>
+        <span class="col-d">The whole issue. <b>jsonb</b>, not <code>text</code>: PostgreSQL
+        parses on write, so it can be queried in place —
+        <code>payload-&gt;'fields'-&gt;&gt;'summary'</code>.
+        <span class="ex">{"id":"10042","key":"MYC-12","fields":{…}}</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">fetched_at</span>
+        <span class="col-t">timestamptz · now()</span>
+        <span class="col-d">When <b>we</b> pulled it — not when the issue changed. That moment
+        lives in <code>gold.work_item.updated_at</code>. Filled by the database.
+        <span class="ex">2026-09-21 07:14:02+07</span></span>
+      </div>
+
+      <div class="dict-foot">PRIMARY KEY (issue_id)</div>
+    </div>
+
+    <div class="dict" data-tone="bronze">
+      <div class="dict-head">
+        <span class="dict-name">bronze.jira_worklog</span>
+        <p>A separate table because it is a separate API call, paged separately, that fails
+        independently of the issue it belongs to.</p>
+      </div>
+
+      <div class="col" data-key="pk">
+        <span class="col-n">worklog_id</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">Jira's id for the logged entry.
+        <span class="ex">10307</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">issue_key</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">Which issue the hours were logged against.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">payload</span>
+        <span class="col-t">jsonb</span>
+        <span class="col-d">The entry, verbatim.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">fetched_at</span>
+        <span class="col-t">timestamptz · now()</span>
+        <span class="col-d">When we pulled it.</span>
+      </div>
+
+      <div class="dict-foot">PRIMARY KEY (worklog_id)</div>
+    </div>
+  </section>
+
+  <!-- ============ SILVER ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">04 · silver</p>
+      <h2>The same columns, a different obligation</h2>
+    </div>
+
+    <div class="dict" data-tone="silver">
+      <div class="dict-head">
+        <span class="dict-name">silver.work_item · silver.worklog</span>
+        <p>Column for column identical to their gold counterparts below, natural keys included,
+        so this page does not list them twice. Read section 05 and you have read both.</p>
+      </div>
+
+      <div class="dict-foot">
+        UNIQUE uq_silver_work_item_natural_key (source, issue_key)<br>
+        UNIQUE uq_silver_worklog_natural_key (source, worklog_id)<br>
+        INDEX ix_silver_work_item_project_updated · ix_silver_work_item_due_at ·
+        ix_silver_worklog_project_started
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><b>Identical is the expected state, not a duplication to clean up.</b></p>
+      <ul>
+        <li><b>Silver answers to the source.</b> Jira adds a field, renames a status — this
+        table changes.</li>
+        <li><b>Gold answers to the question.</b> A new dashboard block — that table changes.</li>
+        <li><b>One source, one sentence.</b> Both describe the same table today, so
+        <code>etl/promote.py</code> is the identity function.</li>
+        <li><b>What it buys:</b> a place for the difference when a second tracker arrives.</li>
+        <li><b>What it costs:</b> every sync writes each row twice.</li>
+      </ul>
+      <p><b><code>silver.message</code> was dropped by migration 0005.</b> Empty since batch 016
+      removed its source. An unwritten table beside a live layer is a standing question about
+      which of the two is real.</p>
+    </div>
+  </section>
+
+  <!-- ============ GOLD ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">05 · gold</p>
+      <h2>The only layer agents read</h2>
+    </div>
+
+    <div class="dict" data-tone="gold">
+      <div class="dict-head">
+        <span class="dict-name">gold.work_item</span>
+        <p>One issue, one row. A <b>contract</b>: adding a column is free, changing what an
+        existing column means takes two releases, because the report, the dashboard and the
+        calendar writer all read it.</p>
+      </div>
+
+      <div class="col" data-key="pk">
+        <span class="col-n">id</span>
+        <span class="col-t">serial</span>
+        <span class="col-d">Internal row address. Not stable across databases — do not expose it.</span>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">source</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">Which tracker.
+        <span class="ex">jira</span></span>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">issue_key</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">The issue's name. Retitling, restatusing and logging hours all
+        <b>keep</b> it, so the next sync is an <code>UPDATE</code> rather than a second row.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">project</span>
+        <span class="col-t">varchar(32) · indexed</span>
+        <span class="col-d">One project is one team; every query starts here. Stored rather than
+        derived from the key, because an index on a column is cheaper than one on a substring
+        expression.
+        <span class="ex">MYC</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">issue_id</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">Points back at the bronze row.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">kind</span>
+        <span class="col-t">varchar(16)</span>
+        <span class="col-d">The issue type, <b>normalised</b>. Every Jira site names its own
+        types, so "Story" here and "User Story" there have to become one word before gold.
+        <span class="ex">epic · story · task · subtask</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">parent_key</span>
+        <span class="col-t">varchar(64) · nullable</span>
+        <span class="col-d">The hierarchy, held as a key rather than a foreign key: a sync can
+        fetch a child before its parent, and an FK would fail a transaction over an accident of
+        ordering. <code>NULL</code> on an epic, which has no parent.
+        <span class="ex">MYC-3</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">title</span>
+        <span class="col-t">text</span>
+        <span class="col-d">The summary, verbatim. <b>text</b> has no length limit and is no
+        slower than <code>varchar</code> in PostgreSQL.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">status</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">The site's <b>own</b> name for the status, untranslated. A team that
+        calls it "Đang review" should read that word in its report.
+        <span class="ex">In Progress · Đang review</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">status_category</span>
+        <span class="col-t">varchar(16)</span>
+        <span class="col-d">Jira's own three-way grouping. This is what counts and compares
+        across sites; <code>status</code> does not.
+        <span class="ex">todo · doing · done</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">assignee_account_id</span>
+        <span class="col-t">varchar(128) · nullable</span>
+        <span class="col-d">Since 2019 <code>accountId</code> is the only identifier Jira
+        supports — username and email were removed from the API for GDPR. This is what to group
+        by.
+        <span class="ex">557058:9f1a…</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">assignee_name</span>
+        <span class="col-t">varchar(128) · nullable</span>
+        <span class="col-d">Display only, and it <b>can change</b>. Grouping by it splits one
+        person in two the day they edit their profile.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">original_estimate_seconds</span>
+        <span class="col-t">bigint · nullable</span>
+        <span class="col-d">In <b>seconds</b>, because that is the unit Jira stores. Converted to
+        days only for display, in <code>services/analyze.py</code> and
+        <code>Dashboard.tsx</code> — a conversion in the warehouse is a rounding nobody can undo.
+        <span class="ex">28800 = one 8-hour day</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">time_spent_seconds</span>
+        <span class="col-t">bigint · nullable</span>
+        <span class="col-d">Jira's own total of logged work. The difference between this and the
+        line above is the number the dashboard exists to show.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">due_at</span>
+        <span class="col-t">timestamptz · indexed · nullable</span>
+        <span class="col-d">The deadline. Indexed because "what is overdue" runs on every
+        dashboard load, and it is the only column that leaves for Google Calendar.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">created_at</span>
+        <span class="col-t">timestamptz</span>
+        <span class="col-d">Stamped by Jira at the moment of the API call, so <b>wrong</b> for
+        anything entered after the fact. Recorded because it is free; no chart is drawn from it.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">resolved_at</span>
+        <span class="col-t">timestamptz · nullable</span>
+        <span class="col-d">The same problem, worse: a back-filled project produces one tidy,
+        entirely fictional day on which everything shipped. Effort curves come from
+        <code>worklog.started_at</code> instead.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">labels</span>
+        <span class="col-t">jsonb</span>
+        <span class="col-d">An array of strings, kept as-is. Nothing filters on it yet — kept
+        because collecting it costs nothing now and a full re-sync later.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">updated_at</span>
+        <span class="col-t">timestamptz · indexed</span>
+        <span class="col-d">When <b>Jira</b> last recorded a change, not when we wrote the row.
+        This is the sync's high-water mark: the next JQL asks
+        <code>updated &gt;=</code> this, so only what moved comes back.</span>
+      </div>
+
+      <div class="dict-foot">
+        PRIMARY KEY (id)<br>
+        UNIQUE uq_work_item_natural_key (source, issue_key)<br>
+        INDEX ix_work_item_project_updated (project, updated_at)<br>
+        INDEX ix_work_item_due_at (due_at)
+      </div>
+    </div>
+
+    <div class="dict" data-tone="gold">
+      <div class="dict-head">
+        <span class="dict-name">gold.worklog</span>
+        <p>One logged entry, one row. This is what turns effort into a curve over days rather
+        than a single running total sitting on an issue.</p>
+      </div>
+
+      <div class="col" data-key="pk">
+        <span class="col-n">id</span>
+        <span class="col-t">serial</span>
+        <span class="col-d">Internal row address.</span>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">source</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">As above, for the same reason.</span>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">worklog_id</span>
+        <span class="col-t">varchar(32)</span>
+        <span class="col-d">Jira's id for the entry. Editing an entry keeps it, so a re-sync is
+        an <code>UPDATE</code>.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">project</span>
+        <span class="col-t">varchar(32) · indexed</span>
+        <span class="col-d">Copied down from the issue so a chart needs no join. Indexed together
+        with <code>started_at</code> — the shape of the question "this project, this week".</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">issue_key</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">Which issue the hours went to.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">author_account_id</span>
+        <span class="col-t">varchar(128) · nullable</span>
+        <span class="col-d">Who logged it — <code>accountId</code> again, not a name.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">author_name</span>
+        <span class="col-t">varchar(128) · nullable</span>
+        <span class="col-d">Display only.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">time_spent_seconds</span>
+        <span class="col-t">bigint</span>
+        <span class="col-d">Seconds, for <b>this entry alone</b>. Summed by day it is a chart;
+        summed by person it is load.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">started_at</span>
+        <span class="col-t">timestamptz · indexed</span>
+        <span class="col-d"><b>The one time field that can be back-dated honestly.</b> The person
+        logging declares "these hours were Tuesday" and Jira records exactly that — unlike created
+        dates and status transitions, which are stamped at the moment of the API call. Everything
+        time-shaped in a report goes through this column.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">comment</span>
+        <span class="col-t">text · nullable</span>
+        <span class="col-d">What the person wrote, if anything. Usually the only sentence saying
+        <i>why</i> it took that long.</span>
+      </div>
+
+      <div class="dict-foot">
+        PRIMARY KEY (id)<br>
+        UNIQUE uq_worklog_natural_key (source, worklog_id)<br>
+        INDEX ix_worklog_project_started (project, started_at)
+      </div>
+    </div>
+
+    <p class="path-note">
+      The accepted values for <code>kind</code> and <code>status_category</code> live in
+      <code>etl/normalise.py</code>. The database itself accepts any string of the right length —
+      <b>there is no CHECK constraint yet</b>.
+    </p>
+
+    <div class="callout">
+      <p><b>What migration 0004 dropped.</b> <code>gold.progress_update</code> and
+      <code>bronze.telegram_message</code> were removed rather than deprecated. They held the
+      output of a hashtag convention — <code>#done</code>, <code>#wip</code>,
+      <code>#blocked</code> at the front of a chat message — which made a person do the parser's
+      job and still could not say what a task was estimated at, when it was due, or which epic it
+      belonged to. Keeping a table nothing writes to keeps an open question about which one is
+      real.</p>
+      <p><b>No status history.</b> <code>GET /issue/{key}/changelog</code> would give
+      transitions, but it costs one request per issue and returns timestamps that cannot be
+      back-dated. So Mycel does not ask, and nothing downstream claims to know how long an item
+      has been sitting in a status.</p>
+    </div>
+  </section>
+
+  <!-- ============ APP ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">06 · app</p>
+      <h2>Product data, not pipeline data</h2>
+    </div>
+
+    <p class="path-note">
+      Four tables from migration <code>0002</code>: <code>app.user</code> and
+      <code>app.session</code> for who is signed in, <code>app.conversation</code> and
+      <code>app.report</code> for what they have run. A report's <code>body</code> is
+      <code>jsonb</code> — that is what lets an agent's output schema change without a
+      migration, and it is exactly why batch 017 could replace the summary's shape without
+      touching this table.
+    </p>
+
+    <div class="callout">
+      <p><b>A separate schema, on purpose.</b> The medallion grant — agents get
+      <code>SELECT</code> on <code>gold</code> and nothing else — should not accidentally hand
+      them session tokens and password hashes. Product data sitting in its own schema does not
+      inherit a pipeline grant.</p>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.user</span>
+        <p>Someone who can sign in.</p>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">email</span>
+        <span class="col-t">varchar(254) · unique</span>
+        <span class="col-d">The identity itself. No separate username: two names for one
+        person is two things to keep in step for no gain.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">password_hash</span>
+        <span class="col-t">text</span>
+        <span class="col-d">Argon2id. No plaintext exists anywhere, not even in transit
+        through the model class — <code>services/auth.py</code> hashes before constructing
+        one.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.session</span>
+        <p>One browser, signed in, until it expires or signs out.</p>
+      </div>
+
+      <div class="col" data-key="pk">
+        <span class="col-n">id</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d"><b>The cookie value itself</b>: 32 random bytes, hex-encoded. Not a
+        JWT — revoking one needs a server-side list of the revoked, which is this table with
+        extra steps.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">expires_at</span>
+        <span class="col-t">timestamptz</span>
+        <span class="col-d">Checked on <b>read</b>, enforced by nothing. A session one second
+        past expiry must read as gone before any sweeper runs.
+        <span class="ex">14 days</span></span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">last_seen_at</span>
+        <span class="col-t">timestamptz</span>
+        <span class="col-d">Touched on every valid request. Nothing reads it yet.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.conversation · app.report</span>
+        <p>One thread in the sidebar, and one finished run kept beside it.</p>
+      </div>
+
+      <div class="col">
+        <span class="col-n">conversation.kind</span>
+        <span class="col-t">varchar(16)</span>
+        <span class="col-d">Separates the two product surfaces — a free-form chat and a
+        progress summary. Different pages, and only one of them has a chat to speak of.</span>
+      </div>
+
+      <div class="col" data-key="nk">
+        <span class="col-n">report.job_id</span>
+        <span class="col-t">varchar(64) · unique</span>
+        <span class="col-d">A redelivered job updates its row instead of writing a second
+        one.</span>
+      </div>
+
+      <div class="col">
+        <span class="col-n">report.spent_usd</span>
+        <span class="col-t">numeric(12,6)</span>
+        <span class="col-d">Not a float. These numbers are added up and reported; binary
+        floating point does not hold a decimal value exactly.</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><b>Redis and <code>app.report</code> coexist.</b> Redis holds a result for
+      <code>result_ttl_seconds</code> so a second process can read it — a holding area, always
+      described as one. This is the record. Redis answers <em>is it done yet</em>; this answers
+      <em>what did we produce last week</em>.</p>
+      <p><b>Expired sessions are not swept.</b>
+      <code>AppRepository.delete_expired_sessions</code> exists and nothing schedules it. An
+      expired row is deleted the moment someone reads it, which is enough while the cookie is
+      dead either way.</p>
+    </div>
+  </section>
+
+  <!-- ============ CONFUSABLES + TYPES ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">07 · Reading the columns</p>
+      <h2>Timestamps that look alike</h2>
+    </div>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Pair</th><th>Difference</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="who">fetched_at / updated_at</td>
+            <td>When we pulled it / when Jira recorded the change. The second is the next sync's
+            high-water mark; the first is only for forensics.</td></tr>
+        <tr><td class="who">resolved_at / worklog.started_at</td>
+            <td><b>The pair that matters most.</b> Jira stamps <code>resolved_at</code> at the
+            moment of the API call, so a back-filled project has one day on which everything
+            finished. <code>started_at</code> is declared by the person logging, so it can be
+            back-dated — which is why every time-shaped chart is drawn from worklogs.</td></tr>
+        <tr><td class="who">time_spent_seconds, in two tables</td>
+            <td>On <code>work_item</code> it is Jira's total for the whole issue. On
+            <code>worklog</code> it is one entry. Summing the second by issue gives the first —
+            unless someone overrode it by hand, in which case Jira's own total wins.</td></tr>
+        <tr><td class="who">id / natural key</td>
+            <td>Our row number / the source's ids. Only the second survives a rebuild.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">08 · Types</p>
+      <h2>Why each type was chosen</h2>
+    </div>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Type</th><th>Means</th><th>Chosen because</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="who">bigint</td><td>64-bit integer</td>
+            <td>A project's logged seconds, summed, exceed 32-bit range</td></tr>
+        <tr><td class="who">serial</td><td>auto-incrementing int</td>
+            <td>Internal primary key; PostgreSQL does the counting</td></tr>
+        <tr><td class="who">varchar(n)</td><td>bounded string</td>
+            <td>Anything longer than <code>n</code> is malformed — reject it at the database</td></tr>
+        <tr><td class="who">text</td><td>unbounded string</td>
+            <td>Human-written content; no slower than <code>varchar</code> in PostgreSQL</td></tr>
+        <tr><td class="who">jsonb</td><td>parsed JSON</td>
+            <td>Queried in place, without deserialising in Python</td></tr>
+        <tr><td class="who">timestamptz</td><td>instant with offset</td>
+            <td>Moving the server does not shift the numbers</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ APPLYING ============ -->
+
+  <section>
+    <div class="section-head">
+      <p class="eyebrow">09 · Operations</p>
+      <h2>Applying and rebuilding</h2>
+    </div>
+
+<pre>uv run alembic upgrade head   <span class="c"># create everything</span>
+uv run alembic current        <span class="c"># → 0004 (head)</span>
+uv run alembic downgrade base <span class="c"># drop everything</span></pre>
+
+    <div class="callout">
+      <p><b>A migration file is a description, not an action.</b> It does nothing until
+      <code>upgrade</code> runs. A fresh container, or a dropped volume, needs
+      <code>upgrade head</code> again.</p>
+      <p><b>Not seeing the tables in a DB client?</b> Check which schema is open. Clients default
+      to <code>public</code>, which holds only <code>alembic_version</code>.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Mycel · database reference</span>
+    <span><a href="architecture.html">architecture</a></span>
+    <span><a href="stack.html">stack</a></span>
+  </footer>
+
+</div>
