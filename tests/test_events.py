@@ -1,0 +1,266 @@
+"""Event envelope, emitter and the SSE frames, against fakes rather than a live Redis."""
+
+from decimal import Decimal
+from typing import Any
+
+import pytest
+from pydantic_ai import Agent, RunContext, messages
+from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.models.function import AgentInfo, FunctionModel
+
+from mycel.agents.core import runner
+from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.emit import RunEmitter
+from mycel.api.routes import events
+from mycel.events.event import AgentEvent, SequencedEvent
+from mycel.llm.budget import JobBudget
+
+pytestmark = pytest.mark.anyio
+
+
+class RecordingChannel:
+    def __init__(self) -> None:
+        self.published: list[AgentEvent] = []
+
+    async def publish(self, event: AgentEvent) -> None:
+        self.published.append(event)
+
+
+@pytest.fixture
+def channel() -> RecordingChannel:
+    return RecordingChannel()
+
+
+@pytest.fixture
+def deps(channel: RecordingChannel) -> MycelDeps:
+    return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), events=channel)
+
+
+def _response(*parts: Any) -> ModelResponse:
+    return ModelResponse(parts=list(parts))
+
+
+class Node:
+    """A node of the agent loop, with only the attribute the emitter reads."""
+
+    def __init__(self, **fields: Any) -> None:
+        self.__dict__.update(fields)
+
+
+class TestEmitter:
+    async def test_text_becomes_an_event(self, deps: MycelDeps, channel: RecordingChannel) -> None:
+        emitter = RunEmitter(deps, "analyst", None)
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="hello"))))
+
+        assert [(e.agent, e.type, e.payload["text"]) for e in channel.published] == [
+            ("analyst", "text", "hello")
+        ]
+
+    async def test_thinking_becomes_an_event(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """Reasoning is the agent's own prose, so it streams like text does."""
+        emitter = RunEmitter(deps, "analyst", None)
+        await emitter.node(
+            Node(
+                model_response=_response(
+                    messages.ThinkingPart(content="1.41 / 1.2", signature="opaque")
+                )
+            )
+        )
+
+        event = channel.published[0]
+        assert (event.type, event.payload) == ("thinking", {"text": "1.41 / 1.2"})
+
+    async def test_a_tool_call_carries_its_id(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """The id is what a nested run points back at."""
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.node(
+            Node(
+                model_response=_response(
+                    messages.ToolCallPart(tool_name="analyst", args="{}", tool_call_id="c1")
+                )
+            )
+        )
+
+        assert channel.published[0].payload["tool_call_id"] == "c1"
+
+    async def test_a_delegated_run_is_tagged_with_its_parent_call(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """Without this a client cannot tell nesting from interleaving."""
+        emitter = RunEmitter(deps, "analyst", "c1")
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="42"))))
+
+        assert channel.published[0].parent_tool_call_id == "c1"
+
+    async def test_an_unknown_node_is_skipped(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """A new node kind must not crash a run, only go unshown."""
+        await RunEmitter(deps, "analyst", None).node(Node(something_else=1))
+        assert channel.published == []
+
+    async def test_a_long_tool_result_is_truncated(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """Raw tool output can be a whole document; this goes to a browser."""
+        emitter = RunEmitter(deps, "researcher", None)
+        await emitter.node(
+            Node(
+                request=messages.ModelRequest(
+                    parts=[
+                        messages.ToolReturnPart(
+                            tool_name="web_search", content="x" * 5000, tool_call_id="c1"
+                        )
+                    ]
+                )
+            )
+        )
+
+        assert len(channel.published[0].payload["result"]) == 500
+
+
+class TestNullChannelIsTheDefault:
+    async def test_a_run_without_a_listener_publishes_nowhere(self) -> None:
+        """A script or a test must not need Redis to run an agent."""
+        deps = MycelDeps(job_id="j", budget=JobBudget("j", Decimal("1.00")))
+        await RunEmitter(deps, "analyst", None).emit("text", text="hi")
+
+
+class TestSequenceGaps:
+    def test_a_client_can_tell_a_gap_from_silence(self) -> None:
+        """The whole reason `seq` exists: 7 then 9 means one was dropped."""
+        received = [SequencedEvent(seq=n, agent="a", type="text") for n in (7, 9)]
+        assert received[1].seq - received[0].seq > 1
+
+
+class TestNestingThroughARealRun:
+    """The envelope's whole purpose, exercised end to end with a fake model."""
+
+    async def test_a_delegated_run_nests_under_the_call_that_made_it(
+        self, channel: RecordingChannel
+    ) -> None:
+        settings = AgentSettings(model_spec="local:qwen3-4b")
+        deps = MycelDeps(
+            job_id="job-1",
+            budget=JobBudget("job-1", Decimal("1.00")),
+            settings=settings,
+            events=channel,
+        )
+        child = Agent(name="analyst", deps_type=MycelDeps, output_type=str)
+        parent = Agent(name="orchestrator", deps_type=MycelDeps, output_type=str)
+
+        def child_says(msgs: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return ModelResponse(parts=[messages.TextPart("42")])
+
+        @parent.tool
+        async def analyst(ctx: RunContext[MycelDeps]) -> str:
+            """Delegate to the analyst."""
+            with child.override(model=FunctionModel(child_says)):
+                return await runner.delegate(child, "sub-question", ctx)
+
+        step = [0]
+
+        def parent_says(msgs: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            step[0] += 1
+            if step[0] == 1:
+                return ModelResponse(parts=[messages.ToolCallPart("analyst", {})])
+            return ModelResponse(parts=[messages.TextPart("done")])
+
+        with parent.override(model=FunctionModel(parent_says)):
+            await runner.run(parent, "go", deps)
+
+        by_agent = {e.agent for e in channel.published}
+        assert by_agent == {"orchestrator", "analyst"}
+
+        nested = [e for e in channel.published if e.agent == "analyst"]
+        call_id = next(
+            e.payload["tool_call_id"]
+            for e in channel.published
+            if e.type == "tool_called" and e.agent == "orchestrator"
+        )
+        # Every analyst event points at the call that started it — never at nothing.
+        assert {e.parent_tool_call_id for e in nested} == {call_id}
+
+    async def test_the_top_level_run_has_no_parent(self, channel: RecordingChannel) -> None:
+        """A client uses this to know which events sit at the root."""
+        deps = MycelDeps(
+            job_id="job-1",
+            budget=JobBudget("job-1", Decimal("1.00")),
+            settings=AgentSettings(model_spec="local:qwen3-4b"),
+            events=channel,
+        )
+        agent = Agent(name="orchestrator", deps_type=MycelDeps, output_type=str)
+
+        def says(msgs: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return ModelResponse(parts=[messages.TextPart("done")])
+
+        with agent.override(model=FunctionModel(says)):
+            await runner.run(agent, "go", deps)
+
+        assert {e.parent_tool_call_id for e in channel.published} == {None}
+
+
+class FakeRequest:
+    """A request that is connected until a test says otherwise."""
+
+    def __init__(self, disconnect_after: int | None = None) -> None:
+        self._checks = 0
+        self._disconnect_after = disconnect_after
+
+    async def is_disconnected(self) -> bool:
+        self._checks += 1
+        return self._disconnect_after is not None and self._checks > self._disconnect_after
+
+
+async def _collect(items: list[Any], request: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Drive `_frames` over a canned stream instead of Redis."""
+
+    async def fake_read(job_id: str, after: str = "0") -> Any:
+        for item in items:
+            yield item
+
+    monkeypatch.setattr(events.streams, "read", fake_read)
+    return [frame async for frame in events._frames(request, "job-1", "0")]
+
+
+class TestSseFrames:
+    async def test_an_event_becomes_a_frame_with_its_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The id is what the browser sends back as Last-Event-ID."""
+        event = SequencedEvent(seq=1, agent="analyst", type="text", payload={"text": "hi"})
+        frames = await _collect([("1700-0", event)], FakeRequest(), monkeypatch)
+
+        assert frames[0].startswith("id: 1700-0\ndata: {")
+        assert frames[0].endswith("\n\n")
+
+    async def test_the_type_travels_in_the_json_not_an_event_line(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An `event:` line would make a client drop every type it was not built for."""
+        event = SequencedEvent(seq=1, agent="analyst", type="text")
+        frames = await _collect([("1700-0", event)], FakeRequest(), monkeypatch)
+
+        assert "event:" not in frames[0]
+        assert '"type":"text"' in frames[0]
+
+    async def test_a_quiet_job_sends_a_keepalive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Otherwise a proxy closes a connection that is merely waiting."""
+        frames = await _collect([None, None], FakeRequest(), monkeypatch)
+        assert frames == [events.KEEPALIVE, events.KEEPALIVE]
+
+    async def test_a_disconnected_client_stops_the_stream(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without this the generator keeps reading Redis for nobody."""
+        event = SequencedEvent(seq=1, agent="analyst", type="text")
+        frames = await _collect(
+            [("1-0", event), ("2-0", event)], FakeRequest(disconnect_after=1), monkeypatch
+        )
+
+        assert len(frames) == 1

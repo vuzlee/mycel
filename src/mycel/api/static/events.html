@@ -1,0 +1,64 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Mycel — live run</title>
+<style>
+  body { font: 14px/1.5 ui-monospace, monospace; margin: 2rem; max-width: 60rem; }
+  form { display: flex; gap: .5rem; margin-bottom: 1rem; }
+  input { flex: 1; padding: .4rem; font: inherit; }
+  .event { border-left: 2px solid #ccc; padding: .2rem .6rem; margin: .2rem 0; }
+  .event[data-nested="true"] { margin-left: 2rem; border-color: #7a7; }
+  .agent { color: #666; }
+  .gap { color: #b00; }
+</style>
+
+<form id="ask">
+  <input id="question" value="Revenue went 1.2M in Q1 to 1.41M in Q2. How much growth?">
+  <button>Ask</button>
+</form>
+
+<div id="log"></div>
+
+<script>
+const log = document.getElementById("log");
+let lastSeq = 0;
+
+function render(event) {
+  if (lastSeq && event.seq > lastSeq + 1) {
+    add("gap", `— ${event.seq - lastSeq - 1} event(s) lost —`, false);
+  }
+  lastSeq = event.seq;
+  const body = event.payload.text ?? event.payload.tool ?? event.type;
+  add("", `${event.agent} · ${event.type} · ${body}`, !!event.parent_tool_call_id);
+}
+
+function add(cls, text, nested) {
+  const el = document.createElement("div");
+  el.className = `event ${cls}`;
+  el.dataset.nested = nested;
+  el.textContent = text;
+  log.append(el);
+}
+
+document.getElementById("ask").onsubmit = async (e) => {
+  e.preventDefault();
+  log.textContent = "";
+  lastSeq = 0;
+
+  const res = await fetch("/reports", {
+    method: "POST",
+    headers: {"content-type": "application/json"},
+    body: JSON.stringify({question: document.getElementById("question").value}),
+  });
+  const {job_id} = await res.json();
+  add("agent", `job ${job_id}`, false);
+
+  // EventSource resends Last-Event-ID by itself, so a dropped connection resumes.
+  const source = new EventSource(`/reports/${job_id}/events`);
+  source.onmessage = (m) => {
+    const event = JSON.parse(m.data);
+    render(event);
+    if (event.type === "run_finished" && !event.parent_tool_call_id) source.close();
+  };
+  source.onerror = () => add("gap", "connection lost — retrying", false);
+};
+</script>
