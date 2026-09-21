@@ -180,7 +180,7 @@ export function Home() {
             <a href="#what">What you get</a>
             <a href="#ask">What it asks</a>
             {user ? (
-              <Link to="/dashboard">Dashboard</Link>
+              <Link to="/">Ask</Link>
             ) : (
               <Link to="/register">Create an account</Link>
             )}

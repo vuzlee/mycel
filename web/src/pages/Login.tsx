@@ -42,8 +42,8 @@ export function Login() {
 
         <h1>Sign in</h1>
         <p className="lede">
-          Progress reports from what your team already posted. An account keeps your runs,
-          so they are still there on another machine tomorrow.
+          Ask about your team's week, the numbers behind it, or anything else. An account
+          keeps your runs, so they are still there on another machine tomorrow.
         </p>
 
         {sent.notice && <p className="notice">{sent.notice}</p>}

@@ -21,8 +21,6 @@ export function ProfilePanel({ threads }: { threads: Thread[] }) {
   const { user } = useAuth();
   if (!user) return null;
 
-  const reports = threads.filter((thread) => thread.kind === "report").length;
-
   return (
     <>
       <div className="identity">
@@ -39,10 +37,6 @@ export function ProfilePanel({ threads }: { threads: Thread[] }) {
         <div>
           <dt>Runs kept</dt>
           <dd>{threads.length}</dd>
-        </div>
-        <div>
-          <dt>Reports</dt>
-          <dd>{reports}</dd>
         </div>
         <div>
           <dt>Sign-in</dt>
@@ -98,15 +92,15 @@ const STEPS = [
   },
   {
     title: "Read the week",
-    body: "Progress report picks a project and a window and writes it up: what shipped, what is still moving, and which ticket is late.",
+    body: "Ask for a project's progress over any window and it writes it up: what shipped, what is still moving, and which ticket is late.",
   },
   {
     title: "Read the numbers",
-    body: "Dashboard is the same window counted instead of written: totals by status, estimated against spent per person, progress by epic, and effort logged per day.",
+    body: "Ask for a count instead and it writes its own SQL against the work data: totals by status, estimated against spent per person, effort logged per day. Every figure comes back with the query that produced it.",
   },
   {
     title: "Ask anything else",
-    body: "Ask is for questions outside your team's messages — something to look up, or figures you hand it in the question itself.",
+    body: "The same box reads your mailbox and searches the web, so a question does not have to be about your tracker to have an answer.",
   },
 ];
 

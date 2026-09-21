@@ -39,7 +39,7 @@ export function Flow() {
 
       <div className="produced">
         <article className="sheet">
-          <span className="label">Progress report</span>
+          <span className="label">An answer</span>
           <span className="line" style={{ width: "88%" }} />
           <span className="line" style={{ width: "64%" }} />
           <span className="line" style={{ width: "76%" }} />
@@ -47,7 +47,7 @@ export function Flow() {
         </article>
 
         <article className="sheet">
-          <span className="label">Dashboard</span>
+          <span className="label">With the figures</span>
           <div className="bars">
             <span data-tag="done" style={{ height: "80%" }} />
             <span data-tag="doing" style={{ height: "52%" }} />
@@ -55,7 +55,7 @@ export function Flow() {
             <span data-tag="late" style={{ height: "28%" }} />
           </div>
         </article>
-        <span className="caption">what you read on Monday</span>
+        <span className="caption">what comes back when you ask</span>
       </div>
     </div>
   );
