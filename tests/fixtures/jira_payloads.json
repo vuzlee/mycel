@@ -1,0 +1,315 @@
+{
+  "issues": [
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "10005",
+      "self": "https://example.atlassian.net/rest/api/3/issue/10005",
+      "key": "MYC-6",
+      "fields": {
+        "summary": "Pipeline and storage",
+        "issuetype": {
+          "self": "https://example.atlassian.net/rest/api/3/issuetype/10001",
+          "id": "10001",
+          "description": "Epics track collections of related bugs, stories, and tasks.",
+          "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+          "name": "Epic",
+          "subtask": false,
+          "avatarId": 10307,
+          "entityId": "54bc8551-eadd-4f32-8545-d22ac61914d1",
+          "hierarchyLevel": 1
+        },
+        "timespent": null,
+        "created": "2026-09-21T07:31:45.159+0700",
+        "duedate": null,
+        "resolutiondate": null,
+        "timeoriginalestimate": null,
+        "assignee": {
+          "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+          "accountId": "acct-1",
+          "emailAddress": "dev@example.com",
+          "displayName": "Dev One",
+          "active": true,
+          "timeZone": "Asia/Bangkok",
+          "accountType": "atlassian"
+        },
+        "updated": "2026-09-21T07:31:45.296+0700",
+        "timetracking": {},
+        "labels": [
+          "backfill"
+        ],
+        "status": {
+          "self": "https://example.atlassian.net/rest/api/3/status/10000",
+          "description": "",
+          "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+          "name": "To Do",
+          "id": "10000",
+          "statusCategory": {
+            "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+            "id": 2,
+            "key": "new",
+            "colorName": "blue-gray",
+            "name": "To Do"
+          }
+        }
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "10006",
+      "self": "https://example.atlassian.net/rest/api/3/issue/10006",
+      "key": "MYC-7",
+      "fields": {
+        "summary": "Postgres schemas and alembic migrations",
+        "issuetype": {
+          "self": "https://example.atlassian.net/rest/api/3/issuetype/10004",
+          "id": "10004",
+          "description": "Stories track functionality or features expressed as user goals.",
+          "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+          "name": "Story",
+          "subtask": false,
+          "avatarId": 10315,
+          "entityId": "e8e104c8-47ae-4d1e-bba3-0880ec3101c3",
+          "hierarchyLevel": 0
+        },
+        "parent": {
+          "id": "10005",
+          "key": "MYC-6",
+          "self": "https://example.atlassian.net/rest/api/3/issue/10005",
+          "fields": {
+            "summary": "Pipeline and storage",
+            "status": {
+              "self": "https://example.atlassian.net/rest/api/3/status/10000",
+              "description": "",
+              "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+              "name": "To Do",
+              "id": "10000",
+              "statusCategory": {
+                "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+                "id": 2,
+                "key": "new",
+                "colorName": "blue-gray",
+                "name": "To Do"
+              }
+            },
+            "priority": {
+              "self": "https://example.atlassian.net/rest/api/3/priority/3",
+              "iconUrl": "https://example.atlassian.net/images/icons/priorities/medium_new.svg",
+              "name": "Medium",
+              "id": "3"
+            },
+            "issuetype": {
+              "self": "https://example.atlassian.net/rest/api/3/issuetype/10001",
+              "id": "10001",
+              "description": "Epics track collections of related bugs, stories, and tasks.",
+              "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+              "name": "Epic",
+              "subtask": false,
+              "avatarId": 10307,
+              "entityId": "54bc8551-eadd-4f32-8545-d22ac61914d1",
+              "hierarchyLevel": 1
+            }
+          }
+        },
+        "timespent": 28800,
+        "created": "2026-09-21T07:31:47.240+0700",
+        "timeoriginalestimate": 57600,
+        "timetracking": {
+          "originalEstimate": "2d",
+          "remainingEstimate": "2d",
+          "timeSpent": "1d",
+          "originalEstimateSeconds": 57600,
+          "remainingEstimateSeconds": 57600,
+          "timeSpentSeconds": 28800
+        },
+        "labels": [
+          "backfill"
+        ],
+        "duedate": "2026-09-09",
+        "resolutiondate": null,
+        "assignee": {
+          "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+          "accountId": "acct-1",
+          "emailAddress": "dev@example.com",
+          "displayName": "Dev One",
+          "active": true,
+          "timeZone": "Asia/Bangkok",
+          "accountType": "atlassian"
+        },
+        "updated": "2026-09-21T07:31:53.355+0700",
+        "status": {
+          "self": "https://example.atlassian.net/rest/api/3/status/10002",
+          "description": "",
+          "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Done",
+          "id": "10002",
+          "statusCategory": {
+            "self": "https://example.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+          }
+        }
+      }
+    },
+    {
+      "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+      "id": "10007",
+      "self": "https://example.atlassian.net/rest/api/3/issue/10007",
+      "key": "MYC-8",
+      "fields": {
+        "summary": "Source connector and ETL to gold",
+        "issuetype": {
+          "self": "https://example.atlassian.net/rest/api/3/issuetype/10004",
+          "id": "10004",
+          "description": "Stories track functionality or features expressed as user goals.",
+          "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+          "name": "Story",
+          "subtask": false,
+          "avatarId": 10315,
+          "entityId": "e8e104c8-47ae-4d1e-bba3-0880ec3101c3",
+          "hierarchyLevel": 0
+        },
+        "parent": {
+          "id": "10005",
+          "key": "MYC-6",
+          "self": "https://example.atlassian.net/rest/api/3/issue/10005",
+          "fields": {
+            "summary": "Pipeline and storage",
+            "status": {
+              "self": "https://example.atlassian.net/rest/api/3/status/10000",
+              "description": "",
+              "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+              "name": "To Do",
+              "id": "10000",
+              "statusCategory": {
+                "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+                "id": 2,
+                "key": "new",
+                "colorName": "blue-gray",
+                "name": "To Do"
+              }
+            },
+            "priority": {
+              "self": "https://example.atlassian.net/rest/api/3/priority/3",
+              "iconUrl": "https://example.atlassian.net/images/icons/priorities/medium_new.svg",
+              "name": "Medium",
+              "id": "3"
+            },
+            "issuetype": {
+              "self": "https://example.atlassian.net/rest/api/3/issuetype/10001",
+              "id": "10001",
+              "description": "Epics track collections of related bugs, stories, and tasks.",
+              "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10307?size=medium",
+              "name": "Epic",
+              "subtask": false,
+              "avatarId": 10307,
+              "entityId": "54bc8551-eadd-4f32-8545-d22ac61914d1",
+              "hierarchyLevel": 1
+            }
+          }
+        },
+        "timespent": 54000,
+        "created": "2026-09-21T07:31:54.910+0700",
+        "timeoriginalestimate": 86400,
+        "timetracking": {
+          "originalEstimate": "3d",
+          "remainingEstimate": "3d",
+          "timeSpent": "1d 7h",
+          "originalEstimateSeconds": 86400,
+          "remainingEstimateSeconds": 86400,
+          "timeSpentSeconds": 54000
+        },
+        "labels": [
+          "backfill"
+        ],
+        "duedate": "2026-09-12",
+        "resolutiondate": "2026-09-21T07:32:07.440+0700",
+        "assignee": {
+          "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+          "accountId": "acct-1",
+          "emailAddress": "dev@example.com",
+          "displayName": "Dev One",
+          "active": true,
+          "timeZone": "Asia/Bangkok",
+          "accountType": "atlassian"
+        },
+        "updated": "2026-09-21T07:32:07.462+0700",
+        "status": {
+          "self": "https://example.atlassian.net/rest/api/3/status/10002",
+          "description": "",
+          "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+          "name": "Done",
+          "id": "10002",
+          "statusCategory": {
+            "self": "https://example.atlassian.net/rest/api/3/statuscategory/3",
+            "id": 3,
+            "key": "done",
+            "colorName": "green",
+            "name": "Done"
+          }
+        }
+      }
+    }
+  ],
+  "worklogs": [
+    {
+      "self": "https://example.atlassian.net/rest/api/3/issue/10006/worklog/10000",
+      "author": {
+        "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+        "accountId": "acct-1",
+        "emailAddress": "dev@example.com",
+        "displayName": "Dev One",
+        "active": true,
+        "timeZone": "Asia/Bangkok",
+        "accountType": "atlassian"
+      },
+      "updateAuthor": {
+        "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+        "accountId": "acct-1",
+        "emailAddress": "dev@example.com",
+        "displayName": "Dev One",
+        "active": true,
+        "timeZone": "Asia/Bangkok",
+        "accountType": "atlassian"
+      },
+      "created": "2026-09-21T07:31:49.177+0700",
+      "updated": "2026-09-21T07:31:49.177+0700",
+      "started": "2026-09-08T16:00:00.000+0700",
+      "timeSpent": "5h",
+      "timeSpentSeconds": 18000,
+      "id": "10000",
+      "issueId": "10006",
+      "issue_key": "MYC-7"
+    },
+    {
+      "self": "https://example.atlassian.net/rest/api/3/issue/10007/worklog/10002",
+      "author": {
+        "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+        "accountId": "acct-1",
+        "emailAddress": "dev@example.com",
+        "displayName": "Dev One",
+        "active": true,
+        "timeZone": "Asia/Bangkok",
+        "accountType": "atlassian"
+      },
+      "updateAuthor": {
+        "self": "https://example.atlassian.net/rest/api/3/user?accountId=acct-1",
+        "accountId": "acct-1",
+        "emailAddress": "dev@example.com",
+        "displayName": "Dev One",
+        "active": true,
+        "timeZone": "Asia/Bangkok",
+        "accountType": "atlassian"
+      },
+      "created": "2026-09-21T07:31:56.675+0700",
+      "updated": "2026-09-21T07:31:56.675+0700",
+      "started": "2026-09-10T16:00:00.000+0700",
+      "timeSpent": "6h",
+      "timeSpentSeconds": 21600,
+      "id": "10002",
+      "issueId": "10007",
+      "issue_key": "MYC-8"
+    }
+  ]
+}
