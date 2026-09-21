@@ -9,12 +9,12 @@
  */
 
 
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Thread } from "../api";
 import { useThreads } from "../threads";
 import { resolve, useTheme } from "../theme";
 import { Account } from "./Account";
-import { Bars, Chat, Close, Digest, Moon, Mycelium, Plus, Sun } from "./icons";
+import { Close, Moon, Mycelium, Plus, Sun } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -29,9 +29,10 @@ export function Sidebar({ current, open, onClose }: Props) {
   const navigate = useNavigate();
   const dark = resolve(theme) === "dark";
 
+  // Every thread reopens at `/`, including the ones a deleted `/reports` created: their
+  // `kind` is still "report" in the database and there is no page left to send them to.
   const open_ = (thread: Thread): void => {
-    const page = thread.kind === "report" ? "/reports" : "/";
-    navigate(thread.job_id ? `${page}?job=${thread.job_id}` : page);
+    navigate(thread.job_id ? `/?job=${thread.job_id}` : "/");
     onClose();
   };
 
@@ -61,21 +62,6 @@ export function Sidebar({ current, open, onClose }: Props) {
             <Close />
           </button>
         </header>
-
-        <nav className="nav">
-          <NavLink to="/" end onClick={onClose}>
-            <Chat />
-            Ask
-          </NavLink>
-          <NavLink to="/reports" onClick={onClose}>
-            <Digest />
-            Progress report
-          </NavLink>
-          <NavLink to="/dashboard" onClick={onClose}>
-            <Bars />
-            Dashboard
-          </NavLink>
-        </nav>
 
         <button
           className="new-run"
