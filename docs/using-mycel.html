@@ -591,6 +591,19 @@ before you can ask it.</p>
   read, so it says when a subject line is not enough to be sure.</td></tr>
 </table>
 
+<div class="note">
+  <p><b>The answer suggests what to ask next.</b> Under it sit up to three questions the
+  run itself wrote, from what it just found &mdash; a figure worth breaking down, a gap it
+  had to record. They come back with the answer rather than from a second call, so they
+  cost nothing and are about your answer rather than a fixed menu. Clicking one fills the
+  box; you still press Enter. An answer that closes its subject suggests nothing, which is
+  why the row is sometimes not there.</p>
+  <p><b>The page does not follow the run.</b> While the work is happening the view stays
+  where you put it, so a long tool call cannot pull you away mid-sentence. It scrolls once,
+  when the answer arrives. If the bottom is off screen a small arrow appears to take you
+  there.</p>
+</div>
+
 <p>That data is read-only and enforced as such by Postgres, not only asked for in a
 prompt: <code>run_sql</code> runs inside a read-only transaction, so a question that would
 change anything is refused by the database and the agent says so.</p>
