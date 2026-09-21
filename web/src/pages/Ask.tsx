@@ -25,16 +25,18 @@ import { ArrowRight } from "../components/icons";
 import { useRun } from "../run";
 import { useThreads } from "../threads";
 
-/* What the orchestrator can actually answer: questions it has to go and find out, and
-   figures handed to it in the question itself. Not "what did my team ship" — that lives
-   in gold, which these tools cannot reach, and the progress report is the page for it. */
-// One per agent, because these buttons are the capability documentation people actually
-// read — nobody opens the docs before typing a first question. Written when the analyst
-// had no path to the data, they described a system that knew nothing about your project.
+// One per capability, because these buttons are the capability documentation people
+// actually read — nobody opens the docs before typing a first question. Every screen the
+// app still has its own page for is reachable from here too: progress is the summariser,
+// the dashboard's numbers are the analyst writing its own SQL.
 const SEEDS = [
-  "How is MYC going this week?", // summariser
+  "How is MYC going this week?", // summariser — the progress report
+  "What is late right now, and who is it with?", // analyst — the dashboard's own question
   "Who logged the most hours this month, and on what?", // analyst, through run_sql
-  "What changed in the Jira API this year?", // researcher
+  "Compare hours logged this month with last month.", // analyst — two windows, one query
+  "Anything important in my mail today?", // researcher — read_mail(24)
+  "What came in this week that I have not replied to?", // researcher — read_mail(168)
+  "What changed in the Jira API this year?", // researcher — the web
 ];
 
 export function Ask() {
@@ -134,9 +136,8 @@ export function Ask() {
             Ask Mycel <em>anything</em>.
           </h1>
           <p>
-            Your team's own week, the numbers behind it, or something outside this system
-            entirely. Ask in plain language and watch the answer being put together. The
-            work data is read-only, so nothing you ask can change it.
+            Your team's week, the numbers, your mail, or anything outside. Read-only
+            &mdash; nothing you ask can change the work data.
           </p>
           {refused && <p className="failure">{refused}</p>}
           <span className="label">Try one</span>

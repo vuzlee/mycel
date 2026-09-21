@@ -910,8 +910,11 @@ details[open] > summary .chevron {
   margin-bottom: 12px;
 }
 
+/* Two columns once there is room: seven prompts in one column reads as a wall, and the
+   point of the list is that a capability is spotted at a glance. */
 .seeds {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
   gap: 9px;
 }
 
