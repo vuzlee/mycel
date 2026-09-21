@@ -540,6 +540,34 @@ class TestTheLists:
         assert len(body) == 1 and body[0]["job_id"] is None
 
 
+    def test_forgetting_a_thread_scopes_itself_to_the_caller(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The signed-in id goes to the domain, not one the caller could name."""
+        seen: list[tuple[int, int]] = []
+
+        async def fake_forget(user_id: int, conversation_id: int) -> bool:
+            seen.append((user_id, conversation_id))
+            return True
+
+        monkeypatch.setattr("mycel.api.routes.projects.forget_thread", fake_forget)
+        response = client.delete("/conversations/7")
+
+        assert response.status_code == 204
+        assert seen == [(SIGNED_IN.id, 7)]
+
+    def test_someone_elses_thread_is_a_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Not 403: the difference is the one thing someone probing ids would learn."""
+
+        async def fake_forget(user_id: int, conversation_id: int) -> bool:
+            return False
+
+        monkeypatch.setattr("mycel.api.routes.projects.forget_thread", fake_forget)
+
+        assert client.delete("/conversations/7").status_code == 404
+
 class TestTheSinglePageApp:
     """A reload at a deep route must serve the page, not a 404.
 
@@ -586,6 +614,7 @@ class TestWhatNeedsALogin:
             ("get", "/reports/job-abc/events", None),
             ("get", "/projects", None),
             ("get", "/conversations", None),
+            ("delete", "/conversations/1", None),
         ],
     )
     def test_a_stranger_gets_401(

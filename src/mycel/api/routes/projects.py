@@ -1,7 +1,8 @@
 """The two lists a page needs before it can ask for anything else.
 
     GET  /projects       which projects have work in them, for the picker
-    GET  /conversations  this person's threads, for the sidebar
+    GET     /conversations       this person's threads, for the sidebar
+    DELETE  /conversations/{id}  forget one, and every run under it
 
 Both are behind `current_user`: the second is by definition personal, and the first names
 the projects this deployment reads, which is not public either.
@@ -10,12 +11,12 @@ the projects this deployment reads, which is not public either.
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import known_projects
-from mycel.domains.threads import HISTORY_LIMIT, list_threads
+from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads
 from mycel.services.auth import Principal
 from mycel.services.permission import may_read_project
 
@@ -67,3 +68,17 @@ async def read_conversations(
         )
         for t in threads
     ]
+
+
+@router.delete("/conversations/{conversation_id}", status_code=204)
+async def delete_conversation(
+    conversation_id: int, user: Annotated[Principal, Depends(current_user)]
+) -> Response:
+    """Forget a thread. The reports under it go too, by cascade.
+
+    404 covers both "no such thread" and "not yours": the difference is the one thing
+    someone probing ids would want to learn.
+    """
+    if not await forget_thread(user.id, conversation_id):
+        raise HTTPException(status_code=404, detail="no such conversation")
+    return Response(status_code=204)

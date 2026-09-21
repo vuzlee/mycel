@@ -177,6 +177,20 @@ class AppRepository:
         )
         return _conversation(row) if row else None
 
+    async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
+        """Forget a thread, and every run under it.
+
+        `user_id` is in the WHERE rather than checked by the caller: a delete that scopes
+        itself cannot be made to delete someone else's row by a caller that forgot. The
+        reports go with it through `ON DELETE CASCADE`.
+        """
+        result = await self._session.execute(
+            delete(Conversation).where(
+                Conversation.id == conversation_id, Conversation.user_id == user_id
+            )
+        )
+        return bool(getattr(result, "rowcount", 0))
+
     # -- reports -------------------------------------------------------------
 
     async def upsert_report(

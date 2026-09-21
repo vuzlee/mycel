@@ -48,3 +48,14 @@ async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]
                 )
             )
         return threads
+
+
+async def forget_thread(user_id: int, conversation_id: int) -> bool:
+    """Delete one thread and its runs. False if it is not this person's, or not there.
+
+    The two cases are one answer on purpose: telling a caller that a thread exists but
+    belongs to someone else is telling them something they did not have.
+    """
+    async with session_scope() as session:
+        repo = AppRepository(session)
+        return await repo.delete_conversation(conversation_id, user_id)

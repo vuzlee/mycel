@@ -27,6 +27,7 @@ from mycel.etl.normalise import JIRA
 from mycel.infra.postgres.engine import async_dsn, dispose_engine
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.models import Base
+from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.repositories.gold import (
     SECONDS_PER_DAY,
@@ -814,3 +815,31 @@ class TestTheDashboard:
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
         assert board.totals == {"todo": 0, "doing": 0, "done": 0}
         assert (board.assignees, board.epics, board.overdue) == ([], [], [])
+
+
+@needs_postgres
+class TestForgettingAThread:
+    """Delete is the one write in `app` that has to be scoped by hand.
+
+    Nothing else in the sidebar can reach across users, because everything else reads by
+    `user_id`. A delete takes an id from the URL, so the owner goes in the WHERE.
+    """
+
+    async def test_the_runs_under_it_go_too(self, session: AsyncSession) -> None:
+        """`ON DELETE CASCADE` on `report.conversation_id`, proved rather than assumed."""
+        repo = AppRepository(session)
+        user = await repo.create_user("keep@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "what happened?")
+        await repo.upsert_report(thread.id, "job-1", "q", "done")
+
+        assert await repo.delete_conversation(thread.id, user.id) is True
+        assert await repo.report_by_job_id("job-1") is None
+
+    async def test_someone_elses_thread_is_left_alone(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        mine = await repo.create_user("mine@example.com", "x")
+        theirs = await repo.create_user("theirs@example.com", "x")
+        thread = await repo.create_conversation(theirs.id, "chat", "not yours")
+
+        assert await repo.delete_conversation(thread.id, mine.id) is False
+        assert await repo.conversation_by_id(thread.id) is not None
