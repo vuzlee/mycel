@@ -7,7 +7,6 @@ knows which routers the system has:
     include_router(auth.router)
     include_router(projects.router)
     include_router(reports.router)
-    include_router(dashboard.router)
     include_router(events.router)
 
 Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
@@ -51,7 +50,7 @@ from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import dependencies, health
 from mycel.api.middleware import RequestIdMiddleware
-from mycel.api.routes import auth, dashboard, events, projects, reports
+from mycel.api.routes import auth, events, projects, reports
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
@@ -112,7 +111,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router)
     app.include_router(projects.router)
     app.include_router(reports.router)
-    app.include_router(dashboard.router)
     app.include_router(events.router)
     app.include_router(events.page_router)
 
@@ -137,7 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 class _SinglePage(StaticFiles):
     """Static files, with every unknown path answering `index.html`.
 
-    The router lives in the browser, so `/app/reports` is a real address there and no file
+    The router lives in the browser, so `/app/login` is a real address there and no file
     at all here. `html=True` alone does not cover it — it falls back to `index.html` for a
     directory, not for a miss — and a route declared after the mount never runs, because a
     mount owns its whole prefix. So the fallback belongs here, inside the mount.

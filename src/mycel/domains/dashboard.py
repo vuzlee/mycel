@@ -1,8 +1,12 @@
-"""The dashboard domain: one project, one window, one picture of it.
+"""What a project's window looks like, counted rather than written.
 
-One step today — no queue, no agent, no model. A dashboard is a handful of queries, and it
-answers in milliseconds, so it runs inside the request rather than being handed to a
-worker. That is also what makes it the cheapest feature in the system.
+Batch 027 deleted `/app/dashboard` and the route under it, so `get_dashboard` has no
+caller left. It is kept rather than deleted because the queries under it are a verified
+read of gold, and the window constants here are what `domains/report.py` and the
+`summariser` tool both default to. `known_projects` is still called, by `/projects`.
+
+No queue, no agent, no model: this answers inside the request, in milliseconds, which is
+exactly the speed batch 027 traded away on purpose. See its note for why.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -23,6 +27,6 @@ async def get_dashboard(project: str, days: int = DEFAULT_DAYS) -> Dashboard:
 
 
 async def known_projects() -> list[str]:
-    """Which projects have data, for the picker on the dashboard and reports pages."""
+    """Which projects have data."""
     async with session_scope() as session:
         return await list_projects(session)
