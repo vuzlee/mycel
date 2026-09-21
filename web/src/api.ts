@@ -211,5 +211,11 @@ export const fetchProjects = (): Promise<string[]> =>
 export const fetchThreads = (): Promise<Thread[]> =>
   fetch("/conversations").then(json<Thread[]>);
 
+/** 204, no body. The runs under the thread go with it, in the database. */
+export async function forgetThread(id: number): Promise<void> {
+  const res = await fetch(`/conversations/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
 export const fetchDashboard = (project: string, days: number): Promise<Dashboard> =>
   fetch(`/dashboard/${project}?days=${days}`).then(json<Dashboard>);

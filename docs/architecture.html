@@ -1517,7 +1517,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>domains/threads.py</span>
-        <span class="tree-note">Whose sidebar history this is. <code>GET /conversations</code> reads it, so the list follows a person to any browser — which is why it stopped living in <code>localStorage</code>.</span>
+        <span class="tree-note">Whose sidebar history this is. <code>GET /conversations</code> reads it, so the list follows a person to any browser — which is why it stopped living in <code>localStorage</code>. <code>DELETE /conversations/{id}</code> forgets one, scoped by <code>user_id</code> in the WHERE rather than by a check the caller could skip.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>reports/</span>

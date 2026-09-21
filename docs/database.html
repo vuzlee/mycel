@@ -1315,6 +1315,13 @@ pre .c { color: var(--ink-faint); }
         progress summary. Different pages, and only one of them has a chat to speak of.</span>
       </div>
 
+      <div class="col" data-key="fk">
+        <span class="col-n">report.conversation_id</span>
+        <span class="col-t">int · on delete cascade</span>
+        <span class="col-d">Forgetting a thread in the sidebar forgets every run under it.
+        The cascade is why <code>DELETE /conversations/{id}</code> needs no second step.</span>
+      </div>
+
       <div class="col" data-key="nk">
         <span class="col-n">report.job_id</span>
         <span class="col-t">varchar(64) · unique</span>

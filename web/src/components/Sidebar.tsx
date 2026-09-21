@@ -14,7 +14,7 @@ import type { Thread } from "../api";
 import { useThreads } from "../threads";
 import { resolve, useTheme } from "../theme";
 import { Account } from "./Account";
-import { Close, Moon, Mycelium, Plus, Sun } from "./icons";
+import { Close, Moon, Mycelium, Plus, Sun, Trash } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -25,7 +25,7 @@ interface Props {
 
 export function Sidebar({ current, open, onClose }: Props) {
   const [theme, choose] = useTheme();
-  const { threads } = useThreads();
+  const { threads, forget } = useThreads();
   const navigate = useNavigate();
   const dark = resolve(theme) === "dark";
 
@@ -34,6 +34,13 @@ export function Sidebar({ current, open, onClose }: Props) {
   const open_ = (thread: Thread): void => {
     navigate(thread.job_id ? `/?job=${thread.job_id}` : "/");
     onClose();
+  };
+
+  // Deleting the thread on screen leaves the page showing a run that no longer has a
+  // home, so it goes back to an empty Ask. Deleting any other one leaves the page alone.
+  const drop = (thread: Thread): void => {
+    void forget(thread.id);
+    if (thread.job_id !== null && thread.job_id === current) navigate("/");
   };
 
   return (
@@ -92,6 +99,16 @@ export function Sidebar({ current, open, onClose }: Props) {
                   {thread.status !== null && thread.status !== "done" && (
                     <span className="state">{thread.status}</span>
                   )}
+                </button>
+                {/* Hidden until the row is hovered or the button is tabbed to: a delete
+                    sitting under every title, always lit, is a delete someone hits. */}
+                <button
+                  className="drop"
+                  title="Forget this thread"
+                  aria-label={`Forget ${thread.title}`}
+                  onClick={() => drop(thread)}
+                >
+                  <Trash />
                 </button>
               </li>
             ))}
