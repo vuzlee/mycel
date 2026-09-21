@@ -48,8 +48,12 @@
   /* Two content widths, because there are two kinds of content. `--thread` is prose and
      stops where a line stops being comfortable to read. `--board` is tables and figures,
      which are compared side by side and lose nothing by being wide — holding them at
-     reading width is what left a wide screen mostly empty. */
-  --thread: 45rem;
+     reading width is what left a wide screen mostly empty.
+
+     A run is not only prose: tool arguments and their results are code, and code wrapped
+     at a paragraph's measure reads worse, not better. So `--thread` is set by the widest
+     thing in the thread rather than by the narrowest. */
+  --thread: 58rem;
   --board: 78rem;
   --radius: 12px;
   --radius-sm: 8px;
@@ -492,7 +496,8 @@ a.brand:hover .mark {
 .thread {
   max-width: var(--thread);
   margin: 0 auto;
-  padding: 36px 24px 48px;
+  padding: 36px 28px 48px;
+  font-size: 15.5px;
 }
 
 /* ---------------------------------------------------------------- messages */
@@ -537,7 +542,7 @@ a.brand:hover .mark {
 
 .prose {
   white-space: pre-wrap;
-  max-width: 66ch;
+  max-width: 78ch;
   color: var(--ink);
 }
 
@@ -600,7 +605,7 @@ details[open] > summary .chevron {
   line-height: 1.75;
   color: var(--muted);
   white-space: pre-wrap;
-  max-width: 72ch;
+  max-width: 84ch;
 }
 
 /* ---------------------------------------------------------------- tool calls */
@@ -714,14 +719,14 @@ details[open] > summary .chevron {
   margin: 0 0 20px;
   padding: 0;
   list-style: none;
-  max-width: 66ch;
+  max-width: 78ch;
 }
 
 .answer .findings li {
   position: relative;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
   padding-left: 18px;
-  font-size: 15.5px;
+  font-size: 16.5px;
   line-height: 1.6;
 }
 
