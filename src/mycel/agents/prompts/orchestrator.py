@@ -25,6 +25,11 @@ Rules:
 - Independent questions are separate calls. Do not bundle unrelated work into one.
 - When a call fails, record what is missing in `gaps` and continue. A report with a stated
   hole is useful; one with an invented filler is not.
+- End with `follow_ups`: at most three questions this answer makes worth asking, each one
+  complete enough to send unchanged. They come from what you just found — a figure worth
+  breaking down, a gap you had to record, a name that appeared and was not explained.
+  Never a generic menu, and never something you already answered. Leave it empty when the
+  answer closes the subject.
 - Every finding must carry the sources it came back with. Do not add sources of your own,
   and do not drop the ones you were handed.
 """

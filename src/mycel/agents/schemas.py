@@ -29,7 +29,12 @@ class Finding(BaseModel):
 
 
 class Report(BaseModel):
-    """What the orchestrator hands back: the merged answer, holes included."""
+    """What the orchestrator hands back: the merged answer, holes included.
+
+    `follow_ups` rides along rather than coming from a second call. The agent that just
+    answered is the only thing that knows what this answer opened up, and asking it again
+    would spend one of a free tier's twenty daily requests on something it already knew.
+    """
 
     findings: list[Finding] = Field(description="What the specialists established.")
     gaps: list[str] = Field(
@@ -40,6 +45,16 @@ class Report(BaseModel):
         ),
     )
 
+
+    follow_ups: list[str] = Field(
+        default_factory=list,
+        description=(
+            "At most three questions worth asking next, each one a complete question "
+            "someone could send unchanged. They come from what this answer opened up — a "
+            "figure worth breaking down, a gap worth chasing — never from a fixed menu. "
+            "Empty when the answer closes the subject."
+        ),
+    )
 
 class WorkLine(BaseModel):
     """One ticket, as a row rather than a sentence.

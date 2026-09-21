@@ -52,10 +52,23 @@ def deps() -> MycelDeps:
     return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED)
 
 
-def _report_call(findings: list[dict[str, Any]], gaps: list[str] | None = None) -> ModelResponse:
+def _report_call(
+    findings: list[dict[str, Any]],
+    gaps: list[str] | None = None,
+    follow_ups: list[str] | None = None,
+) -> ModelResponse:
     """A model response that produces the final Report output."""
     return ModelResponse(
-        parts=[ToolCallPart("final_result", {"findings": findings, "gaps": gaps or []})]
+        parts=[
+            ToolCallPart(
+                "final_result",
+                {
+                    "findings": findings,
+                    "gaps": gaps or [],
+                    "follow_ups": follow_ups or [],
+                },
+            )
+        ]
     )
 
 
@@ -238,3 +251,40 @@ class TestTheSummariserTool:
 
         assert windows == [("MYC", 14)], "the window must be the one the model asked for"
         assert prompts == ["rendered progress"], "the summariser gets the rendered window"
+
+
+class TestWhatToAskNext:
+    """`follow_ups` rides on the answer rather than costing a second call.
+
+    The run that just answered is the only thing that knows what it opened up, and a
+    second request for suggestions would spend one of a free tier's twenty daily calls on
+    something already in the model's context.
+    """
+
+    async def test_the_suggestions_come_back_with_the_answer(self, deps: MycelDeps) -> None:
+        def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return _report_call(
+                [{"statement": "vu le logged 31 hours.", "sources": ["run_sql"]}],
+                follow_ups=["What did vu le spend those hours on?"],
+            )
+
+        agent = Orchestrator.build(LOCAL)
+        with agent.override(model=FunctionModel(respond)):
+            result = await agent.run("Who logged the most hours?", deps=deps)
+
+        assert result.output.follow_ups == ["What did vu le spend those hours on?"]
+
+    async def test_an_answer_that_closes_its_subject_suggests_nothing(
+        self, deps: MycelDeps
+    ) -> None:
+        """Empty is a real answer. A page showing a generic menu instead would be lying
+        about where the questions came from."""
+
+        def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return _report_call([{"statement": "Nothing is overdue.", "sources": ["run_sql"]}])
+
+        agent = Orchestrator.build(LOCAL)
+        with agent.override(model=FunctionModel(respond)):
+            result = await agent.run("Anything late?", deps=deps)
+
+        assert result.output.follow_ups == []
