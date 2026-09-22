@@ -5,6 +5,10 @@
  * and reopen, and the sidebar reopens one by navigating rather than by lifting state up
  * through a router that is already carrying it.
  *
+ * A thread is more than one turn since 031. `?thread=` rides beside `?job=`: the job is
+ * the run being watched, the thread is what the next question joins. A reload with only
+ * a job still works — the thread comes off the sidebar row that already lists it.
+ *
  * Which means a reload arrives with a job and no question — the question was only ever
  * in this component's state. The stream does not carry it either: a stream is tool calls
  * and reasoning, not the prompt that started them. But the sidebar has already fetched
@@ -14,10 +18,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { askReport } from "../api";
+import type { Turn } from "../api";
+import { askReport, fetchTurns } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
+import { PastTurns } from "../components/PastTurns";
 import { CopyJobId, Elapsed } from "../components/RunMeta";
 import { Shell, StatePill } from "../components/Shell";
 import { Thread } from "../components/Thread";
@@ -45,6 +51,7 @@ export function Ask() {
   const { threads, reload } = useThreads();
 
   const [asked, setAsked] = useState<string | null>(null);
+  const [past, setPast] = useState<Turn[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
@@ -56,17 +63,44 @@ export function Ask() {
   // memory, and the stream does not carry it — a stream is tool calls, not the prompt.
   // The sidebar already holds it as the thread's title, so reuse that rather than add a
   // second endpoint returning the same string.
-  const remembered = threads.find((t) => t.job_id === jobId)?.title ?? null;
+  const row = threads.find((t) => t.job_id === jobId) ?? null;
+  const remembered = row?.title ?? null;
   const question = asked ?? remembered;
+
+  // The thread the next question joins. From the URL when there is one, otherwise from
+  // the sidebar row for this job — a link pasted into a fresh tab carries only `?job=`.
+  const fromUrl = params.get("thread");
+  const threadId = fromUrl ? Number(fromUrl) : (row?.id ?? null);
 
   useEffect(() => {
     if (!jobId) return;
     setStartedAt((at) => at ?? Date.now());
   }, [jobId]);
 
+  // Everything this thread said before the run on screen. Turns are read from the kept
+  // rows, not the stream: those runs are over, and a stream belongs to one run.
+  useEffect(() => {
+    if (threadId === null) {
+      setPast([]);
+      return;
+    }
+    let live = true;
+    void fetchTurns(threadId)
+      .then((turns) => {
+        if (live) setPast(turns.filter((turn) => turn.job_id !== jobId));
+      })
+      .catch(() => {
+        if (live) setPast([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [threadId, jobId]);
+
   const startNew = useCallback(() => {
     setParams({}, { replace: false });
     setAsked(null);
+    setPast([]);
     setStartedAt(null);
     setRefused(null);
     composer.current?.focus();
@@ -87,10 +121,13 @@ export function Ask() {
   const ask = async (text: string): Promise<void> => {
     setRefused(null);
     try {
-      const { job_id } = await askReport(text);
+      // The open thread by default, a new one only when the reader asked for one with
+      // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
+      // thing that takes a click.
+      const { job_id, conversation_id } = await askReport(text, threadId ?? undefined);
       setAsked(text);
       setStartedAt(Date.now());
-      setParams({ job: job_id });
+      setParams({ job: job_id, thread: String(conversation_id) });
       reload();
     } catch (error) {
       setRefused(error instanceof Error ? error.message : String(error));
@@ -122,6 +159,7 @@ export function Ask() {
     >
       {jobId ? (
         <Thread
+          before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
           items={run.items}
           gaps={run.gaps}

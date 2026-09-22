@@ -29,7 +29,7 @@ from mycel.agents.schemas import ProgressSummary, Report
 from mycel.api.dependencies import current_user
 from mycel.core.logging import get_logger
 from mycel.domains.dashboard import DEFAULT_DAYS
-from mycel.domains.report import find_report, request_report, request_summary
+from mycel.domains.report import ThreadNotFound, find_report, request_report, request_summary
 from mycel.infra.redis import results
 from mycel.services.auth import Principal
 from mycel.services.permission import may_read_project
@@ -44,9 +44,16 @@ log = get_logger(__name__)
 
 
 class ReportRequest(BaseModel):
-    """What a caller asks for."""
+    """What a caller asks for.
+
+    Without `conversation_id` this is a first question and opens a thread. With one it is
+    a follow-up, and the earlier turns of that thread go to the agent with it.
+    """
 
     question: str = Field(min_length=1, max_length=4000, description="What to find out.")
+    conversation_id: int | None = Field(
+        default=None, description="Continue this thread instead of opening a new one."
+    )
 
 
 class SummaryRequest(BaseModel):
@@ -59,9 +66,14 @@ class SummaryRequest(BaseModel):
 
 
 class AcceptedResponse(BaseModel):
-    """The receipt for queued work. Deliberately not a report."""
+    """The receipt for queued work. Deliberately not a report.
+
+    `conversation_id` comes back so the caller can ask the next question into the same
+    thread without first looking the thread up by the job id it just received.
+    """
 
     job_id: str
+    conversation_id: int
     status: Literal["accepted"] = "accepted"
 
 
@@ -94,10 +106,19 @@ async def create_report(
 
     No `MycelDeps` and no budget here any more: the run happens in the worker, so the
     ceiling it bills against is the worker's (`job_ceiling_usd`), not the API's.
+
+    A thread that is not this caller's reads as 404, not 403: `ThreadNotFound` is one
+    exception for both cases so that a caller cannot learn which it was.
     """
-    job_id = await request_report(user.id, body.question)
-    log.info("report queued", extra={"job_id": job_id})
-    return AcceptedResponse(job_id=job_id)
+    try:
+        job_id, thread_id = await request_report(user.id, body.question, body.conversation_id)
+    except ThreadNotFound as missing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"no conversation {missing.args[0]}",
+        ) from missing
+    log.info("report queued", extra={"job_id": job_id, "conversation_id": thread_id})
+    return AcceptedResponse(job_id=job_id, conversation_id=thread_id)
 
 
 @router.post("/summary", status_code=status.HTTP_202_ACCEPTED, response_model=AcceptedResponse)
@@ -115,9 +136,9 @@ async def create_summary(
     if not await may_read_project(user, body.project):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not your project")
 
-    job_id = await request_summary(user.id, body.project, body.days)
+    job_id, thread_id = await request_summary(user.id, body.project, body.days)
     log.info("summary queued", extra={"job_id": job_id, "project": body.project})
-    return AcceptedResponse(job_id=job_id)
+    return AcceptedResponse(job_id=job_id, conversation_id=thread_id)
 
 
 @router.get("/{job_id}", response_model=ReportResponse)

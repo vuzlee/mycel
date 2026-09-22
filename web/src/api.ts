@@ -2,6 +2,8 @@
 
 export interface Accepted {
   job_id: string;
+  /** The thread this run landed in. Send it back to ask the next question into it. */
+  conversation_id: number;
   status: "accepted";
 }
 
@@ -79,6 +81,18 @@ export interface Thread {
   created_at: string;
   job_id: string | null;
   status: string | null;
+}
+
+/** One run inside a thread, as the page replays it. `body` is the same shape
+ *  `ReportResult.report` carries, because it is the same stored JSONB. */
+export interface Turn {
+  job_id: string;
+  question: string;
+  status: string;
+  body: (Partial<Report> & Partial<ProgressSummary>) | null;
+  spent_usd: string | null;
+  error: string | null;
+  created_at: string;
 }
 
 /** One work item, as the page lists it. Seconds, because days are a display decision
@@ -192,9 +206,12 @@ export async function me(): Promise<User | null> {
 
 // -- work -------------------------------------------------------------------
 
-/** 202, not 200: the server took the work and has not done it. */
-export const askReport = (question: string): Promise<Accepted> =>
-  post<Accepted>("/reports", { question });
+/** 202, not 200: the server took the work and has not done it.
+ *
+ *  Without a conversation this opens a thread; with one the question joins that thread
+ *  and the server sends its earlier turns to the agent along with it. */
+export const askReport = (question: string, conversationId?: number): Promise<Accepted> =>
+  post<Accepted>("/reports", { question, conversation_id: conversationId ?? null });
 
 export const askSummary = (project: string, days: number): Promise<Accepted> =>
   post<Accepted>("/reports/summary", { project, days });
@@ -213,6 +230,10 @@ export const fetchProjects = (): Promise<string[]> =>
 
 export const fetchThreads = (): Promise<Thread[]> =>
   fetch("/conversations").then(json<Thread[]>);
+
+/** Every run in one thread, oldest first. What a thread said before this tab opened it. */
+export const fetchTurns = (id: number): Promise<Turn[]> =>
+  fetch(`/conversations/${id}/turns`).then(json<Turn[]>);
 
 /** 204, no body. The runs under the thread go with it, in the database. */
 export async function forgetThread(id: number): Promise<void> {

@@ -13,11 +13,21 @@ from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
 
 
-async def enqueue_report(question: str, conversation_id: int) -> str:
-    """Queue a report and return the job id to poll with."""
+async def enqueue_report(question: str, conversation_id: int, history: str = "") -> str:
+    """Queue a report and return the job id to poll with.
+
+    `history` is the earlier turns of this thread, already trimmed by the domain. It rides
+    in the payload rather than being read by the worker on purpose: the idempotency key
+    hashes the payload, so the same question asked twice at different points in a thread
+    must differ here or the second job is dropped as a duplicate of the first.
+    """
     job = Job(
         kind=JobKind.REPORT,
-        payload={"question": question, "conversation_id": conversation_id},
+        payload={
+            "question": question,
+            "conversation_id": conversation_id,
+            "history": history,
+        },
     )
     return await publish(job)
 

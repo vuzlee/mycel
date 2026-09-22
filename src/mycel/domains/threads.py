@@ -9,7 +9,7 @@ Jira became the source: it is a gold question now, and it belongs beside the oth
 
 from dataclasses import dataclass
 
-from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow
+from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, ReportRow
 from mycel.infra.postgres.session import session_scope
 
 #: Most threads one sidebar shows. Beyond this the list is an archive, and an archive
@@ -48,6 +48,22 @@ async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]
                 )
             )
         return threads
+
+
+async def thread_turns(user_id: int, conversation_id: int) -> list[ReportRow]:
+    """Every run in one thread, oldest first. Empty if it is not this person's.
+
+    The page needs this because a thread is now more than one turn: `?job=` names the
+    run being watched, and the turns before it were never in this tab's memory. Empty
+    rather than an exception for a thread that is not theirs — same answer as a thread
+    that is not there, for the same reason as `forget_thread`.
+    """
+    async with session_scope() as session:
+        repo = AppRepository(session)
+        conversation = await repo.conversation_by_id(conversation_id)
+        if conversation is None or conversation.user_id != user_id:
+            return []
+        return await repo.reports_for_conversation(conversation_id)
 
 
 async def forget_thread(user_id: int, conversation_id: int) -> bool:

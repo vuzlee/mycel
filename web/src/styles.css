@@ -502,6 +502,26 @@ a.brand:hover .mark {
 
 /* ---------------------------------------------------------------- messages */
 
+/* A turn that already finished, above the one being watched. Dimmed and separated so the
+   thread reads as history-then-now rather than as one long answer: the run on screen is
+   the one the page is still following, and it should be the one the eye lands on. */
+.past {
+  margin-bottom: 34px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--rule);
+  opacity: 0.72;
+}
+
+.past:hover {
+  opacity: 1;
+}
+
+.past .answer {
+  margin-top: 20px;
+  padding-top: 0;
+  border-top: none;
+}
+
 .turn.user {
   display: flex;
   justify-content: flex-end;

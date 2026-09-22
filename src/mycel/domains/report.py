@@ -34,7 +34,7 @@ from mycel.agents.registry import build_deps
 from mycel.agents.schemas import ProgressSummary
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.app import AppRepository, ReportRow
+from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, ReportRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import budgets, results
 from mycel.infra.redis.streams import RedisEventChannel
@@ -54,26 +54,122 @@ DEFAULT_DAYS = 7
 #: How much of a question becomes the thread's title in the sidebar.
 TITLE_CHARS = 80
 
+#: How many earlier turns a follow-up carries. A follow-up leans on what was just said,
+#: not on the first thing asked, and every turn is paid for in tokens on every turn after
+#: it.
+HISTORY_TURNS = 6
 
-async def request_report(user_id: int, question: str) -> str:
-    """Open a thread for a question and queue the work. Returns the job id."""
+#: And a ceiling in characters, because one long answer outweighs six short turns. Counting
+#: turns alone does not bound anything.
+HISTORY_CHARS = 6000
+
+
+class ThreadNotFound(Exception):
+    """The conversation asked for is not this person's, or not there.
+
+    One exception for both, on purpose: telling a caller a thread exists but belongs to
+    someone else tells them something they did not have.
+    """
+
+
+async def request_report(
+    user_id: int, question: str, conversation_id: int | None = None
+) -> tuple[str, int]:
+    """Queue a question and return the job id with the thread it landed in.
+
+    With a `conversation_id` the question joins that thread and carries what it has said
+    so far; without one it opens a new thread, which is what a first question does.
+
+    The history is read here and travels in the payload rather than being looked up by the
+    worker. `idempotency_key` hashes kind plus payload, so the same words asked twice at
+    different points in a thread are different work and must hash differently — a worker
+    that re-read the history would make the second job a duplicate of the first and drop
+    it.
+    """
     async with session_scope() as session:
         repo = AppRepository(session)
-        thread = await repo.create_conversation(user_id, kind="chat", title=question[:TITLE_CHARS])
-        job_id = await enqueue_report(question, thread.id)
+        if conversation_id is None:
+            thread = await repo.create_conversation(
+                user_id, kind="chat", title=question[:TITLE_CHARS]
+            )
+            history = ""
+        else:
+            thread = await _thread_of(repo, user_id, conversation_id)
+            history = _recall(await repo.reports_for_conversation(thread.id))
+
+        job_id = await enqueue_report(question, thread.id, history)
         await repo.upsert_report(thread.id, job_id, question, status="queued")
-    return job_id
+    return job_id, thread.id
 
 
-async def request_summary(user_id: int, project: str, days: int = DEFAULT_DAYS) -> str:
-    """Open a thread for one project's progress and queue the work. Returns the job id."""
+async def _thread_of(repo: AppRepository, user_id: int, conversation_id: int) -> ConversationRow:
+    """The thread a follow-up names, once it is established that it is this person's."""
+    thread = await repo.conversation_by_id(conversation_id)
+    if thread is None or thread.user_id != user_id:
+        raise ThreadNotFound(conversation_id)
+    return thread
+
+
+def _recall(reports: list[ReportRow]) -> str:
+    """Earlier turns of a thread, as text for the prompt.
+
+    Text rather than `message_history`: the cap and the "omitted" line below are Mycel's
+    decisions, and handing the framework a message list would give it the trimming. The
+    stored turns are structured output anyway, not a message sequence — rebuilding them
+    into messages would invent a conversation that never happened.
+
+    Only finished turns. A failed one has nothing to remember, and showing a model how a
+    run went wrong is not context, it is an example to follow.
+    """
+    turns = [r for r in reports if r.status == "done" and r.body]
+    if not turns:
+        return ""
+
+    kept: list[str] = []
+    spent = 0
+    # Newest first, so the ceiling drops the oldest turns rather than the ones a follow-up
+    # is actually about.
+    for report in reversed(turns[-HISTORY_TURNS:]):
+        block = f"Q: {report.question}\nA: {_said(report.body or {})}"
+        if kept and spent + len(block) > HISTORY_CHARS:
+            break
+        kept.append(block)
+        spent += len(block)
+
+    kept.reverse()
+    dropped = len(turns) - len(kept)
+    head = "Earlier in this conversation"
+    if dropped:
+        head += f" ({dropped} earlier turn(s) omitted)"
+    return f"{head}:\n\n" + "\n\n".join(kept)
+
+
+def _said(body: dict[str, Any]) -> str:
+    """One stored answer, flattened to the sentences it asserted.
+
+    Findings and gaps only. Sources and follow-ups are for the reader: a url the model
+    cannot open and a question nobody asked are both noise in a prompt, and the follow-ups
+    would come back as questions the model thinks it was asked.
+    """
+    parts = [str(f.get("statement", "")).strip() for f in body.get("findings") or []]
+    parts += [f"Unanswered: {str(gap).strip()}" for gap in body.get("gaps") or []]
+    said = " ".join(p for p in parts if p)
+    return said or "(no findings)"
+
+
+async def request_summary(user_id: int, project: str, days: int = DEFAULT_DAYS) -> tuple[str, int]:
+    """Open a thread for one project's progress and queue the work.
+
+    Returns the job id and the thread, same pair as `request_report`: a caller given only
+    a job id would have to look the thread up again to ask a second question.
+    """
     title = f"Progress · {project} · {days}d"
     async with session_scope() as session:
         repo = AppRepository(session)
         thread = await repo.create_conversation(user_id, kind="report", title=title)
         job_id = await enqueue_summary(project, days, thread.id)
         await repo.upsert_report(thread.id, job_id, title, status="queued")
-    return job_id
+    return job_id, thread.id
 
 
 async def find_report(job_id: str) -> ReportRow | None:
@@ -107,16 +203,23 @@ async def record_failure(job: Job, error: str) -> None:
 
 
 async def _run_report(job: Job) -> None:
-    """A question for the orchestrator."""
+    """A question for the orchestrator, with whatever the thread has already said.
+
+    The history is prepended to the prompt rather than passed as `message_history`: see
+    `_recall` for why Mycel keeps the trimming, and why stored structured output is not a
+    message sequence.
+    """
     question = str(job.payload.get("question", "")).strip()
     if not question:
         raise ValueError("report job has no question")
+    history = str(job.payload.get("history", "")).strip()
+    prompt = f"{history}\n\nThe question now:\n{question}" if history else question
 
     settings = AgentSettings.from_config(Orchestrator.name)
     deps = await _deps(job, settings)
     _log_start(job, settings, deps)
     try:
-        report = await runner.run(Orchestrator.build(settings), question, deps)
+        report = await runner.run(Orchestrator.build(settings), prompt, deps)
     finally:
         await budgets.save(deps.budget)
 

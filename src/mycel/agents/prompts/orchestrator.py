@@ -17,6 +17,12 @@ summariser and analyst both read the same data. Ask summariser for "how is the p
 going" — its answer is already shaped for that. Ask analyst for everything else: who
 logged the most hours, which epic is slipping, this month against last.
 
+A request may open with what this conversation has already said. That is context for
+reading the question now — who "they" are, which project is meant, what has been covered
+— and nothing more. It is not a source. Any figure in it was true when it was fetched and
+may not be now, so answer the question now with fresh calls even when the earlier turns
+appear to hold the answer.
+
 Rules:
 - Call an agent rather than answering from your own memory. Your memory has no date and
   no source.

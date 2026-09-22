@@ -20,9 +20,21 @@ interface Props {
   pending: boolean;
   /** The finished report, which does not come down the stream. */
   children?: React.ReactNode;
+  /** Earlier turns of the same thread, already finished. Above the question on screen
+   *  because that is the order they were asked in. */
+  before?: React.ReactNode;
 }
 
-export function Thread({ question, items, gaps, liveSeq, failure, pending, children }: Props) {
+export function Thread({
+  question,
+  items,
+  gaps,
+  liveSeq,
+  failure,
+  pending,
+  children,
+  before,
+}: Props) {
   const render = (list: Item[]): React.ReactNode =>
     list.map((item) => {
       const lost = gaps.get(item.seq);
@@ -54,6 +66,7 @@ export function Thread({ question, items, gaps, liveSeq, failure, pending, child
 
   return (
     <div className="thread">
+      {before}
       {question !== null && (
         <div className="turn user">
           <div className="bubble">{question}</div>

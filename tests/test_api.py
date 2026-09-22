@@ -60,10 +60,12 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
     """Make the report domain accept a job or fail, with no broker anywhere in sight."""
 
-    async def fake_request(user_id: int, question: str) -> str:
+    async def fake_request(
+        user_id: int, question: str, conversation_id: int | None = None
+    ) -> tuple[str, int]:
         if isinstance(result, Exception):
             raise result
-        return result
+        return result, conversation_id or 1
 
     monkeypatch.setattr("mycel.api.routes.reports.request_report", fake_request)
 
@@ -72,9 +74,9 @@ def _summaries(monkeypatch: pytest.MonkeyPatch, job_id: str) -> list[tuple[str, 
     """Capture what the summary route asked the domain for, and queue nothing."""
     asked: list[tuple[str, int]] = []
 
-    async def fake_request(user_id: int, project: str, days: int) -> str:
+    async def fake_request(user_id: int, project: str, days: int) -> tuple[str, int]:
         asked.append((project, days))
-        return job_id
+        return job_id, 1
 
     monkeypatch.setattr("mycel.api.routes.reports.request_summary", fake_request)
     return asked
@@ -212,12 +214,54 @@ class TestQueueingAReport:
         response = client.post("/reports", json={"question": "what is true"})
 
         assert response.status_code == 202
-        assert response.json() == {"job_id": "job-abc", "status": "accepted"}
+        assert response.json() == {
+            "job_id": "job-abc",
+            "conversation_id": 1,
+            "status": "accepted",
+        }
 
     def test_an_empty_question_is_refused_before_anything_is_queued(
         self, client: TestClient
     ) -> None:
         assert client.post("/reports", json={"question": ""}).status_code == 422
+
+    def test_a_follow_up_names_the_thread_it_joins(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The conversation the caller asked for comes back, not a fresh one.
+
+        This is the whole of batch 031 at the HTTP edge: without the field a second
+        question opened a second thread, and the page had no way to say otherwise.
+        """
+        seen: list[int | None] = []
+
+        async def fake_request(
+            user_id: int, question: str, conversation_id: int | None = None
+        ) -> tuple[str, int]:
+            seen.append(conversation_id)
+            return "job-2", conversation_id or 99
+
+        monkeypatch.setattr("mycel.api.routes.reports.request_report", fake_request)
+        response = client.post(
+            "/reports", json={"question": "and last week?", "conversation_id": 7}
+        )
+
+        assert response.status_code == 202
+        assert seen == [7]
+        assert response.json()["conversation_id"] == 7
+
+    def test_someone_elses_thread_is_a_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """404, not 403: which of the two it was is the one thing worth hiding."""
+        from mycel.domains.report import ThreadNotFound
+
+        _queues(monkeypatch, ThreadNotFound(7))
+        response = client.post(
+            "/reports", json={"question": "and last week?", "conversation_id": 7}
+        )
+
+        assert response.status_code == 404
 
 
 class TestQueueingASummary:
@@ -230,7 +274,11 @@ class TestQueueingASummary:
         response = client.post("/reports/summary", json={"project": "MYC", "days": 7})
 
         assert response.status_code == 202
-        assert response.json() == {"job_id": "job-sum", "status": "accepted"}
+        assert response.json() == {
+            "job_id": "job-sum",
+            "conversation_id": 1,
+            "status": "accepted",
+        }
 
     def test_the_window_defaults_rather_than_being_required(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -392,11 +440,13 @@ class TestTheThingsThatFailSilently:
         started = threading.Event()
         release = threading.Event()
 
-        async def first_waits(user_id: int, question: str) -> str:
+        async def first_waits(
+            user_id: int, question: str, conversation_id: int | None = None
+        ) -> tuple[str, int]:
             if question == "slow":
                 started.set()
                 await asyncio.get_running_loop().run_in_executor(None, release.wait, 5)
-            return f"job-{question}"
+            return f"job-{question}", 1
 
         monkeypatch.setattr("mycel.api.routes.reports.request_report", first_waits)
 
@@ -441,9 +491,11 @@ class TestTheThingsThatFailSilently:
         # how the provider was built.
         monkeypatch.setattr("mycel.api.app.setup_tracing", lambda cfg: provider)
 
-        async def one_span(user_id: int, question: str) -> str:
+        async def one_span(
+            user_id: int, question: str, conversation_id: int | None = None
+        ) -> tuple[str, int]:
             with provider.get_tracer("test").start_as_current_span("publish"):
-                return "job-abc"
+                return "job-abc", 1
 
         monkeypatch.setattr("mycel.api.routes.reports.request_report", one_span)
 

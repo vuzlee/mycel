@@ -1,22 +1,23 @@
 """The two lists a page needs before it can ask for anything else.
 
     GET  /projects       which projects have work in them, for the picker
-    GET     /conversations       this person's threads, for the sidebar
-    DELETE  /conversations/{id}  forget one, and every run under it
+    GET     /conversations             this person's threads, for the sidebar
+    GET     /conversations/{id}/turns  every run in one thread, oldest first
+    DELETE  /conversations/{id}        forget one, and every run under it
 
 Both are behind `current_user`: the second is by definition personal, and the first names
 the projects this deployment reads, which is not public either.
 """
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import known_projects
-from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads
+from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads, thread_turns
 from mycel.services.auth import Principal
 from mycel.services.permission import may_read_project
 
@@ -37,6 +38,23 @@ class ThreadResponse(BaseModel):
     created_at: datetime
     job_id: str | None = None
     status: str | None = None
+
+
+class TurnResponse(BaseModel):
+    """One run inside a thread, as the page replays it.
+
+    The answer body comes back whole rather than summarised: the page already knows how
+    to render a finished report, and re-deriving it here would be a second opinion about
+    the same JSONB.
+    """
+
+    job_id: str
+    question: str
+    status: str
+    body: dict[str, Any] | None = None
+    spent_usd: str | None = None
+    error: str | None = None
+    created_at: datetime
 
 
 @router.get("/projects", response_model=list[str])
@@ -67,6 +85,29 @@ async def read_conversations(
             status=t.status,
         )
         for t in threads
+    ]
+
+
+@router.get("/conversations/{conversation_id}/turns", response_model=list[TurnResponse])
+async def read_turns(
+    conversation_id: int, user: Annotated[Principal, Depends(current_user)]
+) -> list[TurnResponse]:
+    """Every run in one thread, oldest first.
+
+    An empty list for a thread that is not theirs, same as one with no runs yet. The
+    distinction is the one thing someone walking ids would want, and no page needs it.
+    """
+    return [
+        TurnResponse(
+            job_id=turn.job_id,
+            question=turn.question,
+            status=turn.status,
+            body=turn.body,
+            spent_usd=str(turn.spent_usd) if turn.spent_usd is not None else None,
+            error=turn.error,
+            created_at=turn.created_at,
+        )
+        for turn in await thread_turns(user.id, conversation_id)
     ]
 
 
