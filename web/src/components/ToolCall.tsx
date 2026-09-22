@@ -5,7 +5,6 @@
  * indicator the stream offers: there is no event for a tool that has started.
  */
 
-import { useEffect, useRef, useState } from "react";
 import type { Item, ToolItem } from "../thread";
 import { Chevron, Spinner } from "./icons";
 
@@ -17,28 +16,16 @@ interface Props {
 export function ToolCall({ item, renderChildren }: Props) {
   const pending = item.result === null;
 
-  // A call is open while it is out and folds itself when it answers. It used to stay open
-  // for good once it had delegated, on the grounds that a sub-agent's work is what someone
-  // watching a run is watching for — true while it runs, and wrong the moment it is over:
-  // a finished thread was a wall of arguments and JSON with the answer somewhere below.
-  //
-  // Until the reader touches it. Then it is theirs, and the run stops moving it.
-  const [open, setOpen] = useState(pending);
-  const touched = useRef(false);
-
-  useEffect(() => {
-    if (!touched.current) setOpen(pending);
-  }, [pending]);
-
+  // A call is folded, and only the reader unfolds it. It used to open itself while it was
+  // out, on the grounds that a sub-agent's work is what someone watching a run is watching
+  // for. But opening and folding are the run rewriting the page under the reader: a call
+  // that folds above the viewport deletes its own height, the document gets shorter, and
+  // the view lands at the bottom without anything having scrolled. And it bought nothing —
+  // the summary row carries its own spinner, and the working line below the thread already
+  // says which call is out. So `<details>` is left to itself: the run never touches it, and
+  // no state here can contradict what the reader clicked.
   return (
-    <details
-      className="tool"
-      open={open}
-      onToggle={(event) => {
-        touched.current = true;
-        setOpen(event.currentTarget.open);
-      }}
-    >
+    <details className="tool">
       <summary>
         <Chevron className="chevron" />
         <span className="name">{item.tool}</span>
