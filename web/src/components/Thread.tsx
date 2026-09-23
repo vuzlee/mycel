@@ -6,6 +6,7 @@
  */
 
 import type { Item } from "../thread";
+import { Markdown } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolCall } from "./ToolCall";
 import { Working } from "./Working";
@@ -18,7 +19,8 @@ interface Props {
   failure: string | null;
   /** True until an answer or a failure is on screen — not merely until the stream shuts. */
   pending: boolean;
-  /** The finished report, which does not come down the stream. */
+  /** The kept answer. The same text the stream already showed, for a turn
+   *  reopened after its stream was over. */
   children?: React.ReactNode;
   /** Earlier turns of the same thread, already finished. Above the question on screen
    *  because that is the order they were asked in. */
@@ -54,7 +56,7 @@ export function Thread({
         return (
           <div>
             {item.agent !== "orchestrator" && <div className="agent-tag">{item.agent}</div>}
-            <div className="prose">{item.body}</div>
+            <Markdown body={item.body} />
           </div>
         );
       case "tool":

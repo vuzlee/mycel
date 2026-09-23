@@ -1,60 +1,21 @@
 """Agent output schemas, importable from outside `agents/`.
 
-An HTTP route declaring `response_model=Report` has to name the class, and reaching into
-`agents/agent/orchestrator.py` to borrow it would make the API layer depend on where an
-agent module happens to live. Here, both layers depend on the schema instead, and moving
-an agent moves nothing else.
+A schema named across a layer boundary belongs here rather than beside the agent that
+produces it: reaching into `agents/agent/summariser.py` to borrow one would make the
+borrowing layer depend on where an agent module happens to live. An output type nothing
+outside its own agent ever names stays beside that agent, next to the prompt that produces
+it.
 
-Only schemas that cross a layer boundary belong here. An output type nothing outside its
-own agent ever names stays beside that agent, where it is easier to read next to the prompt
-that produces it.
+The orchestrator is no longer here. Its output became markdown in batch 033 — a chatbot
+answers in whatever shape the question deserves, and `Report{findings, gaps}` forced every
+answer into one list. A `str` needs no schema, which is why this module now describes only
+the summariser's rows.
 """
 
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
-class Finding(BaseModel):
-    """One thing the report says, and who established it."""
-
-    statement: str = Field(description="One thing that is true, stated plainly.")
-    sources: list[str] = Field(
-        default_factory=list,
-        description=(
-            "Urls or tool calls the specialist cited for this statement, copied through "
-            "unchanged. Never invent one."
-        ),
-    )
-
-
-class Report(BaseModel):
-    """What the orchestrator hands back: the merged answer, holes included.
-
-    `follow_ups` rides along rather than coming from a second call. The agent that just
-    answered is the only thing that knows what this answer opened up, and asking it again
-    would spend one of a free tier's twenty daily requests on something it already knew.
-    """
-
-    findings: list[Finding] = Field(description="What the specialists established.")
-    gaps: list[str] = Field(
-        default_factory=list,
-        description=(
-            "What was asked but could not be answered, including work a specialist failed "
-            "to do. A stated hole is a finding; a filled-in guess is not."
-        ),
-    )
-
-
-    follow_ups: list[str] = Field(
-        default_factory=list,
-        description=(
-            "At most three questions worth asking next, each one a complete question "
-            "someone could send unchanged. They come from what this answer opened up — a "
-            "figure worth breaking down, a gap worth chasing — never from a fixed menu. "
-            "Empty when the answer closes the subject."
-        ),
-    )
 
 class WorkLine(BaseModel):
     """One ticket, as a row rather than a sentence.
@@ -107,7 +68,7 @@ class LoadLine(BaseModel):
 
 
 class ProgressSummary(BaseModel):
-    """What a team did over one window, as the summary page renders it.
+    """What a team did over one window, in rows.
 
     Rows rather than prose, because a standup answers a fixed set of questions and a
     paragraph makes the reader find them. `at_risk` is the one the meeting exists for, so
@@ -117,6 +78,10 @@ class ProgressSummary(BaseModel):
     wrote "MYC-14 — Work dashboard (E2) — vu le" and every surface that wanted a table had
     to take that sentence apart again. A column the model fills is a column a renderer can
     align.
+
+    Still rows even though the orchestrator now answers in markdown: this is what the
+    summariser hands *up*, and a table the orchestrator was given as columns is a table it
+    can lay out. Flattening here would make it re-derive the columns from prose.
     """
 
     period: str = Field(description="The window in plain words, e.g. '15-21 September 2026'.")

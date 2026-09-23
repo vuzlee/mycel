@@ -442,7 +442,7 @@ class TestTheMigration:
             ("app", "user"),
             ("app", "session"),
             ("app", "conversation"),
-            ("app", "report"),
+            ("app", "turn"),
         ],
     )
     async def test_upgrade_builds_what_the_models_declare(
@@ -650,7 +650,7 @@ class TestTheProgressWindow:
         self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The newest survive: a summary of this sprint that omits yesterday keeps the
-        wrong half. `dropped` is non-zero so `render` can say the report is partial."""
+        wrong half. `dropped` is non-zero so `render` can say the window is partial."""
         monkeypatch.setattr("mycel.services.gather.MAX_ITEMS", 2)
         await GoldRepository(session).upsert_items(
             [_item(f"MYC-{n}", updated_at=_at(15) + timedelta(hours=n)) for n in (1, 2, 3)]
@@ -663,7 +663,7 @@ class TestTheProgressWindow:
 
 @needs_postgres
 class TestTheDashboard:
-    """The same window the report reads, shaped for a screen.
+    """The same window the summariser reads, shaped for a screen.
 
     It goes through `gather_progress` rather than querying gold itself, so the two pages
     cannot disagree about what happened this week.
@@ -799,7 +799,7 @@ class TestTheDashboard:
         assert [a.items for a in board.assignees] == [2]
         assert [(e.issue_key, e.items) for e in board.epics] == [("MYC-6", 1)]
 
-    async def test_it_agrees_with_the_report_about_the_same_week(
+    async def test_it_agrees_with_the_summariser_about_the_same_week(
         self, session: AsyncSession
     ) -> None:
         """One code path, so there is nothing for them to disagree over."""
@@ -826,14 +826,14 @@ class TestForgettingAThread:
     """
 
     async def test_the_runs_under_it_go_too(self, session: AsyncSession) -> None:
-        """`ON DELETE CASCADE` on `report.conversation_id`, proved rather than assumed."""
+        """`ON DELETE CASCADE` on `turn.conversation_id`, proved rather than assumed."""
         repo = AppRepository(session)
         user = await repo.create_user("keep@example.com", "x")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")
-        await repo.upsert_report(thread.id, "job-1", "q", "done")
+        await repo.upsert_turn(thread.id, "job-1", "q", "done")
 
         assert await repo.delete_conversation(thread.id, user.id) is True
-        assert await repo.report_by_job_id("job-1") is None
+        assert await repo.turn_by_job_id("job-1") is None
 
     async def test_someone_elses_thread_is_left_alone(self, session: AsyncSession) -> None:
         repo = AppRepository(session)

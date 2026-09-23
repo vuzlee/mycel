@@ -1,5 +1,4 @@
-"""Answers *when to run*: sync sources on a timer, transform after a sync completes,
-periodic reports.
+"""Answers *when to run*: sync sources on a timer, transform after a sync completes.
 
 Calls `domains/` directly — the same place a route calls, just without the HTTP link in
 between. It never makes an HTTP call to itself.

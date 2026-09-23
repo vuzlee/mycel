@@ -93,7 +93,7 @@ export function Home() {
         </h1>
         <p>
           Nobody fills in a form and nobody chases anybody. Your team works the Jira board
-          they already keep, and the progress report is waiting when you want it.
+          they already keep, and you ask Mycel about it in your own words.
         </p>
       </section>
 
@@ -116,8 +116,8 @@ export function Home() {
         <h2 className="label">What it asks of your team</h2>
         <p className="note">
           Nothing they are not already doing. Keep issues in Jira — a status, an estimate
-          and a due date — and Mycel reads them. It never writes to your board, and the
-          finished report comes to you in Telegram.
+          and a due date — and Mycel reads them. It never writes to your board: every
+          answer is read-only, and nothing you ask can change the work data.
         </p>
       </section>
 
@@ -133,7 +133,7 @@ export function Home() {
       <section className="call">
         {user ? (
           <>
-            <h2>Your reports are waiting.</h2>
+            <h2>Your answers are waiting.</h2>
             <p>
               Signed in as <b>{user.email}</b>. Everything you have run is under this
               account, on any machine you sign in from.
@@ -147,7 +147,7 @@ export function Home() {
           <>
             <h2>Start with this week.</h2>
             <p>
-              An account takes an email and a password. Your reports are kept under it, so
+              An account takes an email and a password. Your threads are kept under it, so
               they are still there on another machine tomorrow.
             </p>
             <div className="both">
@@ -171,7 +171,7 @@ export function Home() {
             </span>
             Mycel
           </span>
-          <p>A team's own messages, turned into the report nobody wanted to write.</p>
+          <p>A team's own tracked work, answered in a sentence.</p>
         </div>
 
         <div className="columns">
@@ -209,8 +209,8 @@ export function Home() {
         <div className="fine">
           <span>© {new Date().getFullYear()} Mycel</span>
           <span>
-            Running on your own machine. Your messages stay in your database and are never
-            sent anywhere but the model that writes the report.
+            Running on your own machine. Your work data stays in your database and is never
+            sent anywhere but the model that answers the question.
           </span>
         </div>
       </footer>

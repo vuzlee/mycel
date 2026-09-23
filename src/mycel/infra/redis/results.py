@@ -1,26 +1,26 @@
-"""Where a finished job's report waits until somebody asks for it.
+"""Where a finished job's answer waits until somebody asks for it.
 
 **This is a holding area, not a record.** Batch 004 moved the work into a second process,
 which immediately raises a question that process boundary does not answer: the worker has
-the `Report` and the caller has only a job id. Redis with a TTL closes that gap without
+the answer and the caller has only a job id. Redis with a TTL closes that gap without
 deciding anything about the data layer, which is a later branch — `infra/` is still
-stubs, and designing the reports table here would mean designing it twice.
+stubs, and designing the turn table here would mean designing it twice.
 
 What that buys, and what it costs:
 
   + no migration, no schema, nothing to undo when the real store arrives
   + already in `docker-compose.yml`, and batch 005 wants Redis anyway
-  - a report vanishes after `result_ttl_seconds`
+  - an answer vanishes after `result_ttl_seconds`
   - a Redis restart loses every result, which is why nothing here is treated as a record
     of what was produced
 
 The state lives with the result rather than beside it: one key holds either `running`,
-`done` with a report, or `failed` with a reason, so a caller polling gets a straight answer
-instead of having to distinguish "no key yet" from "key expired".
+`done` with an answer, or `failed` with a reason, so a caller polling gets a straight
+answer instead of having to distinguish "no key yet" from "key expired".
 """
 
 import json
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -34,14 +34,15 @@ log = get_logger(__name__)
 class JobResult(BaseModel):
     """What a caller gets back when polling for a job.
 
-    `report` is left as a plain dict rather than typed as `Report`: this module is about
-    moving bytes between processes, and teaching it the agent layer's schema would tie the
-    queue to what the orchestrator happens to return today.
+    `answer` is markdown the orchestrator wrote. It was a `dict` of structured output until
+    batch 033, and a plain one rather than a typed `Report` so that this module — which
+    moves bytes between processes — would not have to know the agent layer's schema. The
+    concern stands and the answer to it got simpler: a string needs no schema at all.
     """
 
     job_id: str
     status: Literal["running", "done", "failed"]
-    report: dict[str, Any] | None = None
+    answer: str | None = None
     spent_usd: str | None = None
     error: str | None = None
 
@@ -59,16 +60,9 @@ async def mark_running(job_id: str) -> None:
     await _write(JobResult(job_id=job_id, status="running"))
 
 
-async def store(job_id: str, report: BaseModel, spent_usd: str) -> None:
-    """Record a finished report."""
-    await _write(
-        JobResult(
-            job_id=job_id,
-            status="done",
-            report=report.model_dump(mode="json"),
-            spent_usd=spent_usd,
-        )
-    )
+async def store(job_id: str, answer: str, spent_usd: str) -> None:
+    """Record a finished answer."""
+    await _write(JobResult(job_id=job_id, status="done", answer=answer, spent_usd=spent_usd))
 
 
 async def store_failure(job_id: str, error: str) -> None:

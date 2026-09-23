@@ -95,3 +95,39 @@ class TestWhereSpansGo:
             tracing._otlp_target(
                 Settings(otel_enabled=True, langfuse_public_key=SecretStr("pk-lf-1"))
             )
+
+
+class TestWhatIsNotTraced:
+    """A trace is one turn, and the page must not bury it.
+
+    `web/src/run.ts` polls the chat endpoint every three seconds, so without this a
+    two-minute run arrives as one real trace among forty empty ones — each an equal root
+    in the UI, which is what makes the real one unfindable.
+    """
+
+    @staticmethod
+    def _excluded(path: str) -> bool:
+        from opentelemetry.util.http import parse_excluded_urls
+
+        from mycel.api.app import UNTRACED
+
+        return bool(parse_excluded_urls(UNTRACED).url_disabled(path))
+
+    def test_the_poll_and_its_stream_are_dropped(self) -> None:
+        job = "215bad5ee1da4121947bafe1c26414b0"
+        assert self._excluded(f"/chat/{job}")
+        assert self._excluded(f"/chat/{job}/events")
+
+    def test_asking_a_question_is_still_the_root_of_its_trace(self) -> None:
+        """Drop this and the worker's run has no parent to hang off."""
+        assert not self._excluded("/chat")
+
+    def test_the_page_talking_to_itself_is_dropped(self) -> None:
+        assert self._excluded("/auth/me")
+        assert self._excluded("/health/live")
+        assert self._excluded("/app/login")
+
+    def test_real_work_is_kept(self) -> None:
+        assert not self._excluded("/auth/login")
+        assert not self._excluded("/conversations")
+        assert not self._excluded("/dashboard/MYC")

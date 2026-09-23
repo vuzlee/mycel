@@ -7,9 +7,13 @@ The first is **money**: a delegated run must be billed once, by the caller. `run
 forwards `usage=ctx.usage` and deliberately skips `budget.record()`, so a regression there
 double-charges silently and only shows up on an invoice.
 
-The second is **what a failing specialist does to a report**. It must come back as text the
-model can turn into a gap, not as an exception that kills the run — except for
+The second is **what a failing specialist does to a run**. It must come back as text the
+model can write around, not as an exception that kills the run — except for
 `BudgetExceeded`, which is the one failure that must end the job.
+
+Since batch 033 the output is a plain `str`, so a model's turn ends with a `TextPart`
+rather than a `final_result` tool call. That is the point of the change and not an
+incidental one: prose arrives on the stream as it is written, and a tool call does not.
 """
 
 from collections.abc import AsyncIterator
@@ -18,7 +22,7 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
-from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mycel.agents.agent.orchestrator import Orchestrator
@@ -26,7 +30,6 @@ from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ModelTimeout
-from mycel.agents.schemas import Report
 from mycel.agents.tools import delegate
 from mycel.agents.tools.delegate import build_toolset
 from mycel.llm.budget import BudgetExceeded, JobBudget
@@ -52,35 +55,20 @@ def deps() -> MycelDeps:
     return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED)
 
 
-def _report_call(
-    findings: list[dict[str, Any]],
-    gaps: list[str] | None = None,
-    follow_ups: list[str] | None = None,
-) -> ModelResponse:
-    """A model response that produces the final Report output."""
-    return ModelResponse(
-        parts=[
-            ToolCallPart(
-                "final_result",
-                {
-                    "findings": findings,
-                    "gaps": gaps or [],
-                    "follow_ups": follow_ups or [],
-                },
-            )
-        ]
-    )
+def _answer(text: str = "Done.") -> ModelResponse:
+    """A model response that ends the run. Free text, which is the whole output now."""
+    return ModelResponse(parts=[TextPart(text)])
 
 
-def _asks_then_reports(tool: str, question: str) -> Any:
-    """A model that calls one specialist, then reports whatever came back."""
+def _asks_then_answers(tool: str, question: str) -> Any:
+    """A model that calls one specialist, then writes up whatever came back."""
     step = [0]
 
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         step[0] += 1
         if step[0] == 1:
             return ModelResponse(parts=[ToolCallPart(tool, {"question": question})])
-        return _report_call([{"statement": "done", "sources": ["https://example.com/a"]}])
+        return _answer()
 
     return respond
 
@@ -115,11 +103,11 @@ class TestWiring:
         monkeypatch.setattr(runner, "delegate", _fake_delegate)
 
         agent = Orchestrator.build(LOCAL)
-        with agent.override(model=FunctionModel(_asks_then_reports("researcher", "who?"))):
+        with agent.override(model=FunctionModel(_asks_then_answers("researcher", "who?"))):
             result = await agent.run("Find out who.", deps=deps)
 
         assert seen == ["who?"], "the tool must forward the question unchanged"
-        assert isinstance(result.output, Report)
+        assert isinstance(result.output, str)
 
 
 class TestMoney:
@@ -148,7 +136,7 @@ class TestMoney:
         monkeypatch.setattr(runner, "delegate", _fake_delegate)
 
         agent = Orchestrator.build(LOCAL)
-        with agent.override(model=FunctionModel(_asks_then_reports("analyst", "1 to 2?"))):
+        with agent.override(model=FunctionModel(_asks_then_answers("analyst", "1 to 2?"))):
             await runner.run(agent, "Compute.", deps, LOCAL)
 
         assert len(recorded) == 1, "one run, one charge — the delegate must not record too"
@@ -158,7 +146,7 @@ class TestAFailingSpecialist:
     async def test_becomes_text_the_model_can_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """One unavailable source must not cost the whole report."""
+        """One unavailable source must not cost the whole run."""
 
         async def _fails(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
             raise ModelTimeout("researcher timed out")
@@ -177,7 +165,7 @@ class TestAFailingSpecialist:
                     content = getattr(part, "content", None)
                     if isinstance(content, str) and "could not answer" in content:
                         returned.append(content)
-            return _report_call([], gaps=["the researcher was unavailable"])
+            return _answer("The researcher was unavailable, so this is unanswered.")
 
         agent = Orchestrator.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
@@ -185,7 +173,7 @@ class TestAFailingSpecialist:
 
         assert returned, "the failure must arrive as a tool result, not as an exception"
         assert "researcher" in returned[0]
-        assert result.output.gaps == ["the researcher was unavailable"]
+        assert "unavailable" in result.output, "the model must be free to say so in the answer"
 
     async def test_running_out_of_money_still_ends_the_job(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -199,7 +187,7 @@ class TestAFailingSpecialist:
         monkeypatch.setattr(runner, "delegate", _overdrawn)
 
         agent = Orchestrator.build(LOCAL)
-        with agent.override(model=FunctionModel(_asks_then_reports("researcher", "q"))):
+        with agent.override(model=FunctionModel(_asks_then_answers("researcher", "q"))):
             with pytest.raises(BudgetExceeded):
                 await agent.run("Find out who.", deps=deps)
 
@@ -243,7 +231,7 @@ class TestTheSummariserTool:
                 return ModelResponse(
                     parts=[ToolCallPart("summariser", {"project": "MYC", "days": 14})]
                 )
-            return _report_call([{"statement": "done", "sources": ["gold.work_item"]}])
+            return _answer()
 
         agent = Orchestrator.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
@@ -251,40 +239,3 @@ class TestTheSummariserTool:
 
         assert windows == [("MYC", 14)], "the window must be the one the model asked for"
         assert prompts == ["rendered progress"], "the summariser gets the rendered window"
-
-
-class TestWhatToAskNext:
-    """`follow_ups` rides on the answer rather than costing a second call.
-
-    The run that just answered is the only thing that knows what it opened up, and a
-    second request for suggestions would spend one of a free tier's twenty daily calls on
-    something already in the model's context.
-    """
-
-    async def test_the_suggestions_come_back_with_the_answer(self, deps: MycelDeps) -> None:
-        def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-            return _report_call(
-                [{"statement": "vu le logged 31 hours.", "sources": ["run_sql"]}],
-                follow_ups=["What did vu le spend those hours on?"],
-            )
-
-        agent = Orchestrator.build(LOCAL)
-        with agent.override(model=FunctionModel(respond)):
-            result = await agent.run("Who logged the most hours?", deps=deps)
-
-        assert result.output.follow_ups == ["What did vu le spend those hours on?"]
-
-    async def test_an_answer_that_closes_its_subject_suggests_nothing(
-        self, deps: MycelDeps
-    ) -> None:
-        """Empty is a real answer. A page showing a generic menu instead would be lying
-        about where the questions came from."""
-
-        def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-            return _report_call([{"statement": "Nothing is overdue.", "sources": ["run_sql"]}])
-
-        agent = Orchestrator.build(LOCAL)
-        with agent.override(model=FunctionModel(respond)):
-            result = await agent.run("Anything late?", deps=deps)
-
-        assert result.output.follow_ups == []

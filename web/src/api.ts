@@ -7,64 +7,18 @@ export interface Accepted {
   status: "accepted";
 }
 
-/** The orchestrator's shape. */
-export interface Report {
-  findings: { statement: string; sources: string[] }[];
-  gaps: string[];
-  /** Questions this answer made worth asking, written by the run that answered. Empty
-   *  when it closed the subject — the page shows nothing rather than a generic menu. */
-  follow_ups?: string[];
-}
-
-/** The window's verdict, as the model judged it. */
-export type Health = "on_track" | "at_risk" | "off_track";
-
-/** One ticket as a row. Columns rather than a sentence, so the page can align them
- *  instead of parsing the model's prose back apart. */
-export interface WorkLine {
-  key: string;
-  title: string;
-  who: string;
-  epic: string;
-  /** Copied off the row with its unit. Empty when the ticket carries none. */
-  estimated: string;
-  spent: string;
-  /** The due date as the data gives it. Empty when the ticket has none. */
-  due: string;
-  /** Why the row matters, when it does. Empty on most shipped and in-flight rows. */
-  note: string;
-}
-
-/** One person's estimated against spent, already in man-days and already computed. */
-export interface LoadLine {
-  person: string;
-  items: number;
-  done: number;
-  estimated: string;
-  spent: string;
-  note: string;
-}
-
-/** The summariser's shape. The structure arrives with the data, so these rows are the
- *  model's judgement about it rather than its guess at what a hashtag meant. */
-export interface ProgressSummary {
-  period: string;
-  /** The whole window in one sentence, written to be read on its own. */
-  headline: string;
-  health: Health;
-  shipped: WorkLine[];
-  in_flight: WorkLine[];
-  at_risk: WorkLine[];
-  load: LoadLine[];
-  notes?: string[];
-}
-
-export interface ReportResult {
+/** `conversation_id` and `question` belong to this run, not to its thread: a thread's
+ *  title is the question that opened it, which is the wrong caption for every later
+ *  turn, and its latest job id is the wrong thread for a link naming an earlier one. */
+export interface ChatResult {
   job_id: string;
   status: "running" | "done" | "failed";
-  report: (Partial<Report> & Partial<ProgressSummary>) | null;
+  /** Markdown the orchestrator wrote. Null while it is still running. */
+  answer: string | null;
   spent_usd: string | null;
   error: string | null;
+  conversation_id: number | null;
+  question: string | null;
 }
 
 export interface User {
@@ -76,20 +30,23 @@ export interface User {
 
 export interface Thread {
   id: number;
-  kind: "chat" | "report";
+  /** `"chat"` for every thread since batch 033. A string rather than that one literal
+   *  because the column exists to grow a second kind, and a literal would make the day
+   *  it does a type error instead of a new branch. */
+  kind: string;
   title: string;
   created_at: string;
   job_id: string | null;
   status: string | null;
 }
 
-/** One run inside a thread, as the page replays it. `body` is the same shape
- *  `ReportResult.report` carries, because it is the same stored JSONB. */
+/** One run inside a thread, as the page replays it. `answer` is the same markdown
+ *  `ChatResult.answer` carries, because it is the same stored text. */
 export interface Turn {
   job_id: string;
   question: string;
   status: string;
-  body: (Partial<Report> & Partial<ProgressSummary>) | null;
+  answer: string | null;
   spent_usd: string | null;
   error: string | null;
   created_at: string;
@@ -99,6 +56,9 @@ export interface Turn {
  *  and this is the wire. */
 export interface Item {
   issue_key: string;
+  /** `"chat"` for every thread since batch 033. A string rather than that one literal
+   *  because the column exists to grow a second kind, and a literal would make the day
+   *  it does a type error instead of a new branch. */
   kind: string;
   title: string;
   status: string;
@@ -210,17 +170,14 @@ export async function me(): Promise<User | null> {
  *
  *  Without a conversation this opens a thread; with one the question joins that thread
  *  and the server sends its earlier turns to the agent along with it. */
-export const askReport = (question: string, conversationId?: number): Promise<Accepted> =>
-  post<Accepted>("/reports", { question, conversation_id: conversationId ?? null });
-
-export const askSummary = (project: string, days: number): Promise<Accepted> =>
-  post<Accepted>("/reports/summary", { project, days });
+export const askChat = (question: string, conversationId?: number): Promise<Accepted> =>
+  post<Accepted>("/chat", { question, conversation_id: conversationId ?? null });
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
-export async function fetchReport(jobId: string): Promise<ReportResult | null> {
-  const res = await fetch(`/reports/${jobId}`);
+export async function fetchChat(jobId: string): Promise<ChatResult | null> {
+  const res = await fetch(`/chat/${jobId}`);
   if (res.status === 404) return null;
-  return json<ReportResult>(res);
+  return json<ChatResult>(res);
 }
 
 // -- lists ------------------------------------------------------------------

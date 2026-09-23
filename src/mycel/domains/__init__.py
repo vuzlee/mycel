@@ -2,7 +2,7 @@
 
 A domain module chains services into the operations the product offers:
 
-    domains/report.py   request a report, read what became of it
+    domains/chat.py     ask a question, read what became of it
     domains/sync.py     pull a source and push it up to gold
 
 Three layers, each only knowing the one below:

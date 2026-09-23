@@ -44,7 +44,7 @@ document.getElementById("ask").onsubmit = async (e) => {
   log.textContent = "";
   lastSeq = 0;
 
-  const res = await fetch("/reports", {
+  const res = await fetch("/chat", {
     method: "POST",
     headers: {"content-type": "application/json"},
     body: JSON.stringify({question: document.getElementById("question").value}),
@@ -53,7 +53,7 @@ document.getElementById("ask").onsubmit = async (e) => {
   add("agent", `job ${job_id}`, false);
 
   // EventSource resends Last-Event-ID by itself, so a dropped connection resumes.
-  const source = new EventSource(`/reports/${job_id}/events`);
+  const source = new EventSource(`/chat/${job_id}/events`);
   source.onmessage = (m) => {
     const event = JSON.parse(m.data);
     render(event);

@@ -1,5 +1,6 @@
 """Turns the nodes of an agent run into events a client can render."""
 
+from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING
 
 from pydantic_ai import messages
@@ -14,6 +15,10 @@ if TYPE_CHECKING:
 RUN_STARTED = "run_started"
 RUN_FINISHED = "run_finished"
 TEXT = "text"
+#: A piece of `TEXT`, emitted while the model is still writing. A client appends deltas to
+#: the same bubble; a run whose model cannot stream sends `TEXT` alone, and both read the
+#: same way.
+TEXT_DELTA = "text_delta"
 THINKING = "thinking"
 TOOL_CALLED = "tool_called"
 TOOL_RETURNED = "tool_returned"
@@ -31,6 +36,7 @@ class RunEmitter:
         self._deps = deps
         self._agent = agent
         self._parent = parent_tool_call_id
+        self._streamed = False
 
     async def emit(self, type: str, **payload: object) -> None:
         await self._deps.events.publish(
@@ -53,10 +59,24 @@ class RunEmitter:
         if request is not None:
             await self._request(request)
 
+    async def stream(self, events: "AsyncIterable[object]") -> None:
+        """Emit the model's prose as it is written, rather than once the turn is over.
+
+        Sets a flag the finished response then reads: the same words must not go out twice,
+        once as deltas and once whole.
+        """
+        async for event in events:
+            delta = _delta(event)
+            if delta:
+                self._streamed = True
+                await self.emit(TEXT_DELTA, text=delta)
+
     async def _response(self, response: messages.ModelResponse) -> None:
+        streamed, self._streamed = self._streamed, False
         for part in response.parts:
             if isinstance(part, messages.TextPart):
-                await self.emit(TEXT, text=part.content)
+                if not streamed:
+                    await self.emit(TEXT, text=part.content)
             elif isinstance(part, messages.ThinkingPart):
                 # `content` only: `signature` is a provider round-trip token, not prose,
                 # and sending it out would leak an opaque credential-ish blob to a browser.
@@ -79,6 +99,20 @@ class RunEmitter:
                     result=_preview(part.content),
                 )
 
+
+def _delta(event: object) -> str:
+    """The text this stream event adds, or "" for events that add none.
+
+    A part starts with whatever the first chunk held and grows by deltas, so both carry
+    prose; everything else on the stream is a tool call or a part the run emits whole.
+    """
+    if isinstance(event, messages.PartStartEvent) and isinstance(event.part, messages.TextPart):
+        return event.part.content
+    if isinstance(event, messages.PartDeltaEvent) and isinstance(
+        event.delta, messages.TextPartDelta
+    ):
+        return event.delta.content_delta
+    return ""
 
 def _preview(value: object) -> str:
     text = value if isinstance(value, str) else str(value)

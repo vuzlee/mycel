@@ -1,8 +1,8 @@
 """Attach LLM-specific attributes to spans, following the conventions Langfuse reads.
 
 One model call is one child span; input, output, model, tokens and cost live on it. A
-report request is therefore a tree: HTTP -> domain -> queue -> worker -> orchestrator ->
-each agent -> each model call. When a report gets a number wrong, it can be traced back to
+question is therefore a tree: HTTP -> domain -> queue -> worker -> orchestrator ->
+each agent -> each model call. When an answer gets a number wrong, it can be traced back to
 the exact call that produced it.
 
 **pydantic-ai already emits most of this.** `Agent.instrument_all()`, called from

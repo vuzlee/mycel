@@ -15,7 +15,7 @@ class about what an agent is called — and therefore cannot send it to read ano
 **This is where the orchestrator is kept out of reach, not the directory tree.** It lives
 in `agent/` with the specialists because it is one, so the only thing preventing a
 specialist from delegating back to its own caller is that `build_toolset` in
-`tools/delegate.py` names `Analyst` and `Researcher` and nothing else.
+`tools/delegate.py` names the specialists and nothing else.
 
 `analyst`, `orchestrator`, `researcher` and `summariser` are here because they run.
 `librarian` is not: it reads the knowledge base, which needs a vector store that does not

@@ -1,12 +1,12 @@
 """Run the orchestrator against real models, calling real specialists. End to end.
 
     uv run python scripts/try_orchestrator.py
-    uv run python scripts/try_orchestrator.py "a report request"
+    uv run python scripts/try_orchestrator.py "a question"
 
 `tests/test_orchestrator.py` fakes `runner.delegate`, so it proves the plumbing: a failure
-becomes a gap, a delegated run is billed once. It cannot prove that a model handed two
-specialists actually splits a request between them, or that the sources survive two schema
-boundaries on the way back. That is what this script is for.
+is reported rather than raised, a delegated run is billed once. It cannot prove that a
+model handed two specialists actually splits a request between them, or that the sources
+survive the trip back. That is what this script is for.
 
 The prompt below needs both specialists on purpose — figures to compute and a fact to look
 up — because an orchestrator that only ever calls one of them is not orchestrating.
@@ -40,14 +40,9 @@ def main() -> int:
 
     # A whole-job ceiling, not a per-run one: every specialist spends from this same pot.
     deps = build_deps("try-orchestrator", ceiling_usd="1.00", settings=cfg)
-    report = runner.run_sync(Orchestrator.build(cfg), prompt, deps)
+    answer = runner.run_sync(Orchestrator.build(cfg), prompt, deps)
 
-    for finding in report.findings:
-        print(f"  {finding.statement}")
-        if finding.sources:
-            print(f"    {', '.join(finding.sources)}")
-    for gap in report.gaps:
-        print(f"  ! {gap}")
+    print(answer)
     print(f"\nspent: ${deps.budget.spent_usd}")
 
     if provider is not None:

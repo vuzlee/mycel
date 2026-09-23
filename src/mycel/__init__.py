@@ -1,4 +1,4 @@
-"""Mycel - multi-agent system that builds reports from multiple data sources."""
+"""Mycel - a chatbot that answers from a team's own tracked work, multi-agent inside."""
 
 from pathlib import Path
 

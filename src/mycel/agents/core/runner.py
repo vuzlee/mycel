@@ -26,6 +26,9 @@ failed, or was stopped.
 import asyncio
 from typing import TYPE_CHECKING, TypeVar
 
+from pydantic_ai import Agent
+from pydantic_ai.models import Model
+
 from mycel.agents.core.emit import RUN_FINISHED, RUN_STARTED, RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
 from mycel.agents.core.model_builder import build_model
@@ -33,7 +36,8 @@ from mycel.core.logging import get_logger
 from mycel.llm.budget import BudgetExceeded
 
 if TYPE_CHECKING:
-    from pydantic_ai import Agent, RunContext
+    from pydantic_ai import RunContext
+    from pydantic_ai.agent import AgentRun
     from pydantic_ai.usage import RunUsage
 
     from mycel.agents.core.config import AgentSettings
@@ -70,10 +74,7 @@ async def run(
         async with agent.iter(prompt, deps=deps, model=model, usage_limits=limits) as agent_run:
             try:
                 await emitter.emit(RUN_STARTED, prompt=prompt)
-                # One node per step of the agent loop: prompt, model request, tool calls,
-                # back to the model.
-                async for node in agent_run:
-                    await emitter.node(node)
+                await _drive(agent_run, emitter)
                 await emitter.emit(RUN_FINISHED)
             finally:
                 # `agent_run` exists before the loop runs and outlives it failing, so its
@@ -105,6 +106,33 @@ def run_sync(
     """
     return asyncio.run(run(agent, prompt, deps, settings))
 
+
+async def _drive(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter) -> None:
+    """Walk one agent loop, emitting as it goes.
+
+    One node per step: prompt, model request, tool calls, back to the model. A model request
+    is opened as a stream so its prose goes out while it is written; everything else is
+    emitted from the finished node. A model that cannot stream raises on `stream()` before
+    doing any work, and the ordinary iteration runs the node instead — the answer then
+    arrives as one `TEXT` event, which reads the same.
+    """
+    async for node in agent_run:
+        if Agent.is_model_request_node(node) and _can_stream(agent_run.ctx.deps.model):
+            async with node.stream(agent_run.ctx) as chunks:
+                await emitter.stream(chunks)
+        await emitter.node(node)
+
+def _can_stream(model: "Model") -> bool:
+    """Whether opening this model as a stream is safe to try.
+
+    Asking has to happen before the attempt, not after: `stream()` marks the node as
+    streamed on its way to failing, and the node cannot then be run the ordinary way.
+    `FunctionModel`, which the tests use, declares `request_stream` and then asserts on a
+    `stream_function` it was not given — hence the second question.
+    """
+    if type(model).request_stream is Model.request_stream:
+        return False
+    return getattr(model, "stream_function", False) is not None
 
 def _name_of(agent: "Agent[MycelDeps, OutputT]") -> str:
     """The agent's registry name, which is what a client groups events by."""
@@ -152,8 +180,7 @@ async def delegate(
     with translate_agent_errors(cfg.model_spec):
         async with agent.iter(prompt, deps=deps, model=model, usage=ctx.usage) as agent_run:
             await emitter.emit(RUN_STARTED, prompt=prompt)
-            async for node in agent_run:
-                await emitter.node(node)
+            await _drive(agent_run, emitter)
             await emitter.emit(RUN_FINISHED)
 
         result = agent_run.result

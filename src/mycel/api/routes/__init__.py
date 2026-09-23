@@ -1,6 +1,6 @@
 """Endpoints, kept out of `app.py` so that file only assembles.
 
-`reports.py` is the one route this batch has. It runs a report inside the request, which
-is a deliberate placeholder: batch 004 moves the work to a worker process and this route
-becomes a `202` with a job id. Nothing should be built on top of it in the meantime.
+One module per surface: `chat.py` queues a question and reads what became of it,
+`events.py` streams a running job, `auth.py` and `projects.py` the rest. A route validates,
+calls a domain and shapes the response — the order of steps is `domains/`.
 """

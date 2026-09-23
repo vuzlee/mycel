@@ -10,7 +10,7 @@ the projects this deployment reads, which is not public either.
 """
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
@@ -19,7 +19,7 @@ from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import known_projects
 from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads, thread_turns
 from mycel.services.auth import Principal
-from mycel.services.permission import may_read_project
+from mycel.services.permission import can_read_project
 
 router = APIRouter(tags=["projects"])
 
@@ -43,15 +43,15 @@ class ThreadResponse(BaseModel):
 class TurnResponse(BaseModel):
     """One run inside a thread, as the page replays it.
 
-    The answer body comes back whole rather than summarised: the page already knows how
-    to render a finished report, and re-deriving it here would be a second opinion about
-    the same JSONB.
+    `answer` comes back whole rather than summarised: it is markdown the page already
+    knows how to render, and shortening it here would be a second opinion about the same
+    text.
     """
 
     job_id: str
     question: str
     status: str
-    body: dict[str, Any] | None = None
+    answer: str | None = None
     spent_usd: str | None = None
     error: str | None = None
     created_at: datetime
@@ -64,7 +64,7 @@ async def read_projects(user: Annotated[Principal, Depends(current_user)]) -> li
     A list of keys and nothing else. A project has no attributes of its own in gold — its
     counts belong to a window, and asking for a window is what `/dashboard` is for.
     """
-    return [key for key in await known_projects() if await may_read_project(user, key)]
+    return [key for key in await known_projects() if await can_read_project(user, key)]
 
 
 @router.get("/conversations", response_model=list[ThreadResponse])
@@ -102,7 +102,7 @@ async def read_turns(
             job_id=turn.job_id,
             question=turn.question,
             status=turn.status,
-            body=turn.body,
+            answer=turn.answer,
             spent_usd=str(turn.spent_usd) if turn.spent_usd is not None else None,
             error=turn.error,
             created_at=turn.created_at,
@@ -115,7 +115,7 @@ async def read_turns(
 async def delete_conversation(
     conversation_id: int, user: Annotated[Principal, Depends(current_user)]
 ) -> Response:
-    """Forget a thread. The reports under it go too, by cascade.
+    """Forget a thread. The turns under it go too, by cascade.
 
     404 covers both "no such thread" and "not yours": the difference is the one thing
     someone probing ids would want to learn.

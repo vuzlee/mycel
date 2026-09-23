@@ -2,7 +2,7 @@
 
 **The idempotency key is mandatory**, not optional. Acking after the work finishes gives
 at-least-once: a worker dying mid-job means the broker redelivers it, and it had *already*
-done part of the work. Without a key, one report gets produced twice.
+done part of the work. Without a key, one answer gets produced twice.
 
 The key is derived from the work itself — kind plus the payload, hashed — not from a fresh
 UUID. With a UUID, two identical requests produce two different keys, which is exactly what
@@ -28,10 +28,14 @@ class JobKind(StrEnum):
 
     An enum rather than a free string: a typo in a routing key is a message that sits in a
     queue nobody consumes, which looks exactly like a slow worker.
+
+    One member since batch 033, when the product became one chat box: `summary` had its own
+    endpoint, and the capability is now reachable as a tool the orchestrator calls. Kept as
+    an enum because the value is baked into `idempotency_key`, and a second kind of work is
+    a member here rather than a string at every call site.
     """
 
-    REPORT = "report"
-    SUMMARY = "summary"
+    CHAT = "chat"
 
 
 class Job(BaseModel):
@@ -45,8 +49,8 @@ class Job(BaseModel):
     payload: dict[str, object] = Field(
         default_factory=dict,
         description=(
-            "Arguments for this kind of work. For `report`: `{'question', "
-            "'conversation_id'}`. For `summary`: `{'project', 'days', 'conversation_id'}`."
+            "Arguments for this kind of work. For `chat`: `{'question', "
+            "'conversation_id', 'history'}`."
         ),
     )
     job_id: str = Field(

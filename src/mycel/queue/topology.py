@@ -62,7 +62,7 @@ async def declare(channel: AbstractChannel) -> Topology:
     """Declare everything, idempotently, and hand back the bound objects.
 
     Durable throughout: a broker restart with transient queues loses every queued job, and
-    a report nobody knows was dropped is worse than one that fails loudly.
+    a job nobody knows was dropped is worse than one that fails loudly.
     """
     exchange = await channel.declare_exchange(EXCHANGE, ExchangeType.DIRECT, durable=True)
     dlx = await channel.declare_exchange(DLX, ExchangeType.DIRECT, durable=True)

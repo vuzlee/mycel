@@ -12,13 +12,12 @@ see `session_by_id` for why the caller decides what "expired" means.
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.models import Conversation, Report, Session, User
+from mycel.infra.postgres.models import Conversation, Session, Turn, User
 
 
 @dataclass(frozen=True)
@@ -58,15 +57,15 @@ class ConversationRow:
 
 
 @dataclass(frozen=True)
-class ReportRow:
-    """One finished run, as kept."""
+class TurnRow:
+    """One question and what came back, as kept."""
 
     id: int
     conversation_id: int
     job_id: str
     question: str
     status: str
-    body: dict[str, Any] | None
+    answer: str | None
     error: str | None
     spent_usd: Decimal | None
     created_at: datetime
@@ -182,7 +181,7 @@ class AppRepository:
 
         `user_id` is in the WHERE rather than checked by the caller: a delete that scopes
         itself cannot be made to delete someone else's row by a caller that forgot. The
-        reports go with it through `ON DELETE CASCADE`.
+        turns go with it through `ON DELETE CASCADE`.
         """
         result = await self._session.execute(
             delete(Conversation).where(
@@ -191,57 +190,55 @@ class AppRepository:
         )
         return bool(getattr(result, "rowcount", 0))
 
-    # -- reports -------------------------------------------------------------
+    # -- turns ---------------------------------------------------------------
 
-    async def upsert_report(
+    async def upsert_turn(
         self,
         conversation_id: int,
         job_id: str,
         question: str,
         status: str,
-        body: dict[str, Any] | None = None,
+        answer: str | None = None,
         error: str | None = None,
         spent_usd: Decimal | None = None,
     ) -> None:
-        """Write a run's state, replacing whatever that job id last said.
+        """Write a turn's state, replacing whatever that job id last said.
 
-        Upsert because a job is written twice — once as `running` when it is queued and
+        Upsert because a job is written twice — once as `queued` when it is enqueued and
         again when it finishes — and a third time if the broker redelivers it.
         """
-        stmt = insert(Report).values(
+        stmt = insert(Turn).values(
             conversation_id=conversation_id,
             job_id=job_id,
             question=question,
             status=status,
-            body=body,
+            answer=answer,
             error=error,
             spent_usd=spent_usd,
         )
         await self._session.execute(
             stmt.on_conflict_do_update(
-                constraint="uq_report_job_id",
+                constraint="uq_turn_job_id",
                 set_={
                     "status": stmt.excluded.status,
-                    "body": stmt.excluded.body,
+                    "answer": stmt.excluded.answer,
                     "error": stmt.excluded.error,
                     "spent_usd": stmt.excluded.spent_usd,
                 },
             )
         )
 
-    async def report_by_job_id(self, job_id: str) -> ReportRow | None:
+    async def turn_by_job_id(self, job_id: str) -> TurnRow | None:
         """What a job produced, however long ago — this is the record Redis is not."""
-        row = await self._session.scalar(select(Report).where(Report.job_id == job_id))
-        return _report(row) if row else None
+        row = await self._session.scalar(select(Turn).where(Turn.job_id == job_id))
+        return _turn(row) if row else None
 
-    async def reports_for_conversation(self, conversation_id: int) -> list[ReportRow]:
-        """Everything a thread produced, oldest first."""
+    async def turns_for_conversation(self, conversation_id: int) -> list[TurnRow]:
+        """Every turn in a thread, oldest first."""
         rows = await self._session.scalars(
-            select(Report)
-            .where(Report.conversation_id == conversation_id)
-            .order_by(Report.created_at)
+            select(Turn).where(Turn.conversation_id == conversation_id).order_by(Turn.created_at)
         )
-        return [_report(row) for row in rows]
+        return [_turn(row) for row in rows]
 
 
 def _user(row: User) -> UserRow:
@@ -270,14 +267,14 @@ def _conversation(row: Conversation) -> ConversationRow:
     )
 
 
-def _report(row: Report) -> ReportRow:
-    return ReportRow(
+def _turn(row: Turn) -> TurnRow:
+    return TurnRow(
         id=row.id,
         conversation_id=row.conversation_id,
         job_id=row.job_id,
         question=row.question,
         status=row.status,
-        body=row.body,
+        answer=row.answer,
         error=row.error,
         spent_usd=row.spent_usd,
         created_at=row.created_at,

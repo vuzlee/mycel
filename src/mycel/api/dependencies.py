@@ -10,7 +10,7 @@
     checkable under mypy strict. Middleware only stuffs things into `request.state`,
     where mypy sees nothing.
 
-A dependency answers only *who you are*; *which reports you may see* belongs to
+A dependency answers only *who you are*; *which projects you may see* belongs to
 `services/permission.py`, which needs business context the HTTP layer does not have.
 """
 

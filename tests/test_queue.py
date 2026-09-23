@@ -9,27 +9,25 @@ busy worker rather than a spinning one.
 `scripts/try_queue.py` is the other half: it runs the same paths against the real broker,
 where these fakes cannot tell the truth about routing.
 
-The agent is faked at `domains/report.runner.run` rather than at the consumer, because
+The agent is faked at `domains/chat.runner.run` rather than at the consumer, because
 batch 013 moved what a job *means* into the domain: the consumer now receives, dispatches
 and acks, and that is all it is tested for here.
 """
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.core.exceptions import AgentError
-from mycel.agents.schemas import Finding, ProgressSummary, Report, WorkLine
-from mycel.domains import report as report_domain
+from mycel.domains import chat as chat_domain
 from mycel.infra.redis import budgets, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, retry, topology
 from mycel.queue.job import Job, JobKind
-from mycel.services.gather import ProgressWindow
 
 pytestmark = pytest.mark.anyio
 
@@ -52,7 +50,7 @@ class FakeMessage:
         self.headers: dict[str, Any] = headers or {}
         self.content_type = "application/json"
         self.message_id = "job-1"
-        self.correlation_id = "report:abc"
+        self.correlation_id = "chat:abc"
         self.acked = False
         self.nacked = False
 
@@ -64,7 +62,7 @@ class FakeMessage:
 
 
 def _message(question: str = "how many?", **headers: Any) -> FakeMessage:
-    job = Job(kind=JobKind.REPORT, payload={"question": question}, job_id="job-1")
+    job = Job(kind=JobKind.CHAT, payload={"question": question}, job_id="job-1")
     return FakeMessage(job.model_dump_json().encode(), dict(headers))
 
 
@@ -99,7 +97,7 @@ def store(monkeypatch: pytest.MonkeyPatch, spent: dict[str, Decimal]) -> dict[st
     async def mark_running(job_id: str) -> None:
         written[job_id] = {"status": "running"}
 
-    async def store_result(job_id: str, report: Any, spent_usd: str) -> None:
+    async def store_result(job_id: str, answer: Any, spent_usd: str) -> None:
         written[job_id] = {"status": "done", "spent_usd": spent_usd}
 
     async def store_failure(job_id: str, error: str) -> None:
@@ -111,45 +109,18 @@ def store(monkeypatch: pytest.MonkeyPatch, spent: dict[str, Decimal]) -> dict[st
     return written
 
 
-def _runs(monkeypatch: pytest.MonkeyPatch, outcome: Report | Exception) -> None:
+def _runs(monkeypatch: pytest.MonkeyPatch, outcome: str | Exception) -> None:
     """Make the orchestrator return or raise, with no model anywhere in sight."""
 
-    async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+    async def fake_run(agent: object, prompt: str, deps: Any) -> str:
         if isinstance(outcome, Exception):
             raise outcome
         return outcome
 
-    monkeypatch.setattr(report_domain.runner, "run", fake_run)
+    monkeypatch.setattr(chat_domain.runner, "run", fake_run)
 
 
-_REPORT = Report(findings=[Finding(statement="42", sources=[])], gaps=[])
-
-PROJECT = "MYC"
-
-
-_SUMMARY = ProgressSummary(
-    period="last week",
-    shipped=[WorkLine(key="MYC-7", title="Schemas", who="Dev One")],
-)
-
-_WINDOW = ProgressWindow(
-    project=PROJECT,
-    since=datetime(2026, 9, 14, tzinfo=UTC),
-    until=datetime(2026, 9, 21, tzinfo=UTC),
-    items=[],
-    by_epic={},
-    epic_titles={},
-    totals={"todo": 0, "doing": 0, "done": 0},
-    by_assignee=[],
-    overdue=[],
-    effort_by_day=[],
-)
-
-
-def _summary_message(days: int = 7) -> FakeMessage:
-    job = Job(kind=JobKind.SUMMARY, payload={"project": PROJECT, "days": days}, job_id="job-1")
-    return FakeMessage(job.model_dump_json().encode())
-
+_ANSWER = "42, and here is why."
 
 @asynccontextmanager
 async def _no_session() -> AsyncIterator[None]:
@@ -157,29 +128,38 @@ async def _no_session() -> AsyncIterator[None]:
     yield None
 
 
+class _GoneThread:
+    """An `AppRepository` whose conversation has been deleted underneath it."""
+
+    def __init__(self, session: Any) -> None:
+        pass
+
+    async def upsert_turn(self, *args: Any, **kwargs: Any) -> None:
+        raise IntegrityError("INSERT INTO app.turn", {}, Exception("foreign key"))
+
 class TestIdempotencyKey:
     """The one thing at-least-once delivery makes mandatory."""
 
     def test_the_same_work_gets_the_same_key(self) -> None:
-        a = Job(kind=JobKind.REPORT, payload={"question": "revenue?"})
-        b = Job(kind=JobKind.REPORT, payload={"question": "revenue?"})
+        a = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
+        b = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
         assert a.idempotency_key == b.idempotency_key
         # ...while still being two distinct attempts, so both callers can poll.
         assert a.job_id != b.job_id
 
     def test_key_order_does_not_change_the_key(self) -> None:
         """Two dicts equal in Python must not hash differently, or the key is useless."""
-        a = Job(kind=JobKind.REPORT, payload={"a": 1, "b": 2})
-        b = Job(kind=JobKind.REPORT, payload={"b": 2, "a": 1})
+        a = Job(kind=JobKind.CHAT, payload={"a": 1, "b": 2})
+        b = Job(kind=JobKind.CHAT, payload={"b": 2, "a": 1})
         assert a.idempotency_key == b.idempotency_key
 
     def test_different_work_gets_a_different_key(self) -> None:
-        a = Job(kind=JobKind.REPORT, payload={"question": "revenue?"})
-        b = Job(kind=JobKind.REPORT, payload={"question": "headcount?"})
+        a = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
+        b = Job(kind=JobKind.CHAT, payload={"question": "headcount?"})
         assert a.idempotency_key != b.idempotency_key
 
     def test_a_caller_may_supply_its_own(self) -> None:
-        job = Job(kind=JobKind.REPORT, payload={"q": 1}, idempotency_key="nightly-2026-09-18")
+        job = Job(kind=JobKind.CHAT, payload={"q": 1}, idempotency_key="nightly-2026-09-18")
         assert job.idempotency_key == "nightly-2026-09-18"
 
 
@@ -190,11 +170,11 @@ class TestSuccess:
         """Ack order is the whole reason a dying worker does not lose a job."""
         seen: list[str] = []
 
-        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+        async def fake_run(agent: object, prompt: str, deps: Any) -> str:
             seen.append("ran")
-            return _REPORT
+            return _ANSWER
 
-        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
 
         message = _message()
         original_ack = message.ack
@@ -208,11 +188,11 @@ class TestSuccess:
         await consumer.handle(message, FakeExchange())  # type: ignore[arg-type]
         assert seen == ["ran", "acked"]
 
-    async def test_the_report_is_stored_for_the_caller(
+    async def test_the_answer_is_stored_for_the_caller(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
         """The API has only a job id; without this the work happened for nobody."""
-        _runs(monkeypatch, _REPORT)
+        _runs(monkeypatch, _ANSWER)
         await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
         assert store["job-1"]["status"] == "done"
 
@@ -286,11 +266,37 @@ class TestFailures:
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
-    async def test_a_report_job_with_no_question_is_not_retried_forever(
+    async def test_a_thread_deleted_mid_run_does_not_strand_the_job(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """The row the run would be written to went with the thread it hung off.
+
+        Both the success path and the failure path write that same row, so an exception
+        here escapes `_handle` entirely: the message is never acked and the broker
+        redelivers it at `consumer_timeout` to fail the same way. Recorded as a warning
+        instead, and the job is acked and done with.
+        """
+        _runs(monkeypatch, _ANSWER)
+        monkeypatch.setattr(chat_domain, "session_scope", _no_session)
+        monkeypatch.setattr(chat_domain, "AppRepository", _GoneThread)
+
+        job = Job(
+            kind=JobKind.CHAT,
+            payload={"question": "how many?", "conversation_id": 22},
+            job_id="job-1",
+        )
+        message = FakeMessage(job.model_dump_json().encode())
+
+        await consumer.handle(message, FakeExchange())  # type: ignore[arg-type]
+
+        assert message.acked
+        assert store["job-1"]["status"] == "done"
+
+    async def test_a_chat_job_with_no_question_is_not_retried_forever(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
         dlx = FakeExchange()
-        job = Job(kind=JobKind.REPORT, payload={}, job_id="job-1")
+        job = Job(kind=JobKind.CHAT, payload={}, job_id="job-1")
         message = FakeMessage(job.model_dump_json().encode())
 
         await consumer.handle(message, dlx)  # type: ignore[arg-type]
@@ -298,49 +304,7 @@ class TestFailures:
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
 
-class TestSummaryJobs:
-    """The second kind of work. It shares every mechanism above and none of the inputs.
-
-    No `conversation_id` in these payloads, so nothing here reaches Postgres — the domain
-    logs the missing thread and moves on, which is the behaviour a job queued by a script
-    rather than by the API relies on.
-    """
-
-    async def test_the_window_is_read_and_handed_to_the_summariser(
-        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
-    ) -> None:
-        """Gold is queried in the worker and passed whole: the agent has no tool to ask."""
-        asked: list[tuple[str, int]] = []
-
-        async def fake_gather(session: Any, project: str, since: Any, until: Any) -> Any:
-            asked.append((project, round((until - since).total_seconds() / 86400)))
-            return _WINDOW
-
-        async def fake_summarise(window: Any, deps: Any, settings: Any = None) -> ProgressSummary:
-            assert window is _WINDOW
-            return _SUMMARY
-
-        monkeypatch.setattr(report_domain, "gather_progress", fake_gather)
-        monkeypatch.setattr(report_domain, "summarise_progress", fake_summarise)
-        monkeypatch.setattr(report_domain, "session_scope", _no_session)
-
-        await consumer.handle(_summary_message(), FakeExchange())  # type: ignore[arg-type]
-
-        assert asked == [(PROJECT, 7)]
-        assert store["job-1"]["status"] == "done"
-
-    async def test_a_summary_job_with_no_project_is_not_retried_forever(
-        self, store: dict[str, Any]
-    ) -> None:
-        dlx = FakeExchange()
-        job = Job(kind=JobKind.SUMMARY, payload={"days": 7}, job_id="job-1")
-
-        await consumer.handle(  # type: ignore[arg-type]
-            FakeMessage(job.model_dump_json().encode()), dlx
-        )
-
-        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
-
+class TestAKindThisWorkerDoesNotKnow:
     async def test_a_kind_this_worker_does_not_know_is_an_unreadable_body(
         self, store: dict[str, Any]
     ) -> None:
@@ -421,11 +385,11 @@ class TestTheBudgetSurvivesARetry:
         spent["job-1"] = Decimal("0.30")
         seen: list[Decimal] = []
 
-        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+        async def fake_run(agent: object, prompt: str, deps: Any) -> str:
             seen.append(deps.budget.spent_usd)
-            return _REPORT
+            return _ANSWER
 
-        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
 
         assert seen == [Decimal("0.30")]
@@ -433,11 +397,11 @@ class TestTheBudgetSurvivesARetry:
     async def test_what_an_attempt_spends_is_published(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
     ) -> None:
-        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+        async def fake_run(agent: object, prompt: str, deps: Any) -> str:
             deps.budget.spent_usd = Decimal("0.20")
-            return _REPORT
+            return _ANSWER
 
-        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.20")
@@ -447,11 +411,11 @@ class TestTheBudgetSurvivesARetry:
     ) -> None:
         """The expensive case: a run that dies half-way has already paid for its tokens."""
 
-        async def fake_run(agent: object, prompt: str, deps: Any) -> Report:
+        async def fake_run(agent: object, prompt: str, deps: Any) -> str:
             deps.budget.spent_usd = Decimal("0.40")
             raise AgentError("provider returned 503")
 
-        monkeypatch.setattr(report_domain.runner, "run", fake_run)
+        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.40")

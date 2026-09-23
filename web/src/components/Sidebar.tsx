@@ -29,8 +29,8 @@ export function Sidebar({ current, open, onClose }: Props) {
   const navigate = useNavigate();
   const dark = resolve(theme) === "dark";
 
-  // Every thread reopens at `/`, including the ones a deleted `/reports` created: their
-  // `kind` is still "report" in the database and there is no page left to send them to.
+  // Every thread reopens at `/`. There is one page and one kind of thread since batch
+  // 033, so `kind` is not consulted — the job id is the whole address.
   const open_ = (thread: Thread): void => {
     navigate(thread.job_id ? `/?job=${thread.job_id}` : "/");
     onClose();

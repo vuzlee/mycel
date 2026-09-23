@@ -74,7 +74,7 @@ async def save(budget: JobBudget) -> None:
     """Publish what this attempt spent, keeping whichever total is larger.
 
     Called in a `finally`: a run that was stopped by its own limits, or that raised
-    half-way, has already spent real money, and an attempt that does not report its spend
+    half-way, has already spent real money, and an attempt that does not record its spend
     hands the next attempt a clean slate it did not earn.
     """
     client = await get_client()

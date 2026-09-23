@@ -2,8 +2,8 @@
 
 Batch 027 deleted `/app/dashboard` and the route under it, so `get_dashboard` has no
 caller left. It is kept rather than deleted because the queries under it are a verified
-read of gold, and the window constants here are what `domains/report.py` and the
-`summariser` tool both default to. `known_projects` is still called, by `/projects`.
+read of gold, and `DEFAULT_DAYS` here is what the `summariser` tool falls back to when the
+orchestrator names no window. `known_projects` is still called, by `/projects`.
 
 No queue, no agent, no model: this answers inside the request, in milliseconds, which is
 exactly the speed batch 027 traded away on purpose. See its note for why.

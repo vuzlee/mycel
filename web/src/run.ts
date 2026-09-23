@@ -2,15 +2,14 @@
  * One run, watched two ways at once.
  *
  * The stream says what the agent is doing; the result endpoint says what it produced.
- * Neither alone is enough — a structured answer never appears on the stream, and a run
- * that crashes leaves the stream silent, which looks exactly like a slow one.
- *
- * Both report pages need this, so it lives here rather than in either of them.
+ * Neither alone is enough — a run reopened after its stream expired has no events at all,
+ * and a run that crashes leaves the stream silent, which looks exactly like a slow one.
+ * The spend is only ever on the result, never on the stream.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { ReportResult } from "./api";
-import { Unauthorized, fetchReport } from "./api";
+import type { ChatResult } from "./api";
+import { Unauthorized, fetchChat } from "./api";
 import { useAuth } from "./auth";
 import { buildThread } from "./thread";
 import type { Item } from "./thread";
@@ -26,7 +25,7 @@ export interface Run {
   liveSeq: number | null;
   state: StreamState;
   failure: string | null;
-  result: ReportResult | null;
+  result: ChatResult | null;
   busy: boolean;
   /** True until an answer or a failure is on screen, not merely until the stream shuts. */
   pending: boolean;
@@ -37,7 +36,7 @@ export interface Run {
 export function useRun(jobId: string | null): Run {
   const { forget } = useAuth();
   const [failure, setFailure] = useState<string | null>(null);
-  const [result, setResult] = useState<ReportResult | null>(null);
+  const [result, setResult] = useState<ChatResult | null>(null);
 
   const stream = useJobStream(jobId);
   const items = useMemo(() => buildThread(stream.events), [stream.events]);
@@ -53,7 +52,7 @@ export function useRun(jobId: string | null): Run {
 
     const check = async (): Promise<void> => {
       try {
-        const fetched = await fetchReport(jobId);
+        const fetched = await fetchChat(jobId);
         if (!live) return;
         if (fetched === null) {
           setFailure("No such run — it was never queued, or it was removed.");

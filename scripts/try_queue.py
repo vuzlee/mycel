@@ -23,11 +23,11 @@ from mycel.infra.redis import results
 from mycel.infra.redis.client import close_clients
 from mycel.observability.tracing import setup_tracing
 from mycel.queue.connection import close_connection
-from mycel.services.enqueue import enqueue_report
+from mycel.services.enqueue import enqueue_chat
 
 QUESTION = "Revenue went 1,200,000 USD in Q1 to 1,410,000 USD in Q2. How much growth?"
 
-#: A report runs for minutes. Long enough that a worker which never picked the job up is
+#: A run takes minutes. Long enough that a worker which never picked the job up is
 #: visibly different from one still working, short enough to not hang a terminal forever.
 TIMEOUT_S = 600
 POLL_S = 2.0
@@ -52,9 +52,8 @@ async def _watch(job_id: str) -> int:
             last = state
 
         if result is not None and result.status == "done":
-            print(f"\nspent: ${result.spent_usd}")
-            for finding in (result.report or {}).get("findings", []):
-                print(f"  - {finding['statement']}")
+            print(f"\nspent: ${result.spent_usd}\n")
+            print(result.answer or "(no answer)")
             return 0
         if result is not None and result.status == "failed":
             print(f"\nfailed: {result.error}")
@@ -81,7 +80,7 @@ async def _main() -> int:
     try:
         # `conversation_id=0` rather than a thread: this script talks to the broker, not
         # to the product, and the worker logs the missing thread instead of failing.
-        job_id = await enqueue_report(question, conversation_id=0)
+        job_id = await enqueue_chat(question, conversation_id=0)
         print(f"job_id: {job_id}\n")
         return await _watch(job_id)
     finally:

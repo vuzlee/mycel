@@ -41,6 +41,21 @@ def _response(*parts: Any) -> ModelResponse:
     return ModelResponse(parts=list(parts))
 
 
+async def _events(*events: Any) -> Any:
+    for event in events:
+        yield event
+
+def _chunks(*pieces: str) -> Any:
+    """A model stream: the part starts with the first piece and grows by deltas."""
+    first, rest = pieces[0], pieces[1:]
+    return _events(
+        messages.PartStartEvent(index=0, part=messages.TextPart(content=first)),
+        *(
+            messages.PartDeltaEvent(index=0, delta=messages.TextPartDelta(content_delta=p))
+            for p in rest
+        ),
+    )
+
 class Node:
     """A node of the agent loop, with only the attribute the emitter reads."""
 
@@ -124,6 +139,73 @@ class TestEmitter:
         assert len(channel.published[0].payload["result"]) == 500
 
 
+class TestProseArrivesAsItIsWritten:
+    """Deltas are the point of the streamed path: a long answer must not land in one block.
+
+    The rule that keeps it honest is that the same words go out once. A model that streams
+    sends deltas and the finished part is then silent; a model that cannot sends the part
+    whole, and a reader cannot tell which happened.
+    """
+
+    async def test_each_piece_is_its_own_event(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.stream(_chunks("Hello", " there"))
+
+        assert [(e.type, e.payload["text"]) for e in channel.published] == [
+            ("text_delta", "Hello"),
+            ("text_delta", " there"),
+        ]
+
+    async def test_what_was_streamed_is_not_sent_again_whole(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.stream(_chunks("Hello", " there"))
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="Hello there"))))
+
+        assert [e.type for e in channel.published] == ["text_delta", "text_delta"]
+
+    async def test_a_model_that_cannot_stream_still_sends_its_answer(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="Hello there"))))
+
+        assert [(e.type, e.payload["text"]) for e in channel.published] == [
+            ("text", "Hello there")
+        ]
+
+    async def test_the_next_turn_starts_over(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """The flag is per turn: a streamed turn must not silence the one after it."""
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.stream(_chunks("first"))
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="first"))))
+        await emitter.node(Node(model_response=_response(messages.TextPart(content="second"))))
+
+        assert [(e.type, e.payload["text"]) for e in channel.published] == [
+            ("text_delta", "first"),
+            ("text", "second"),
+        ]
+
+    async def test_a_tool_call_on_the_stream_adds_no_prose(
+        self, deps: MycelDeps, channel: RecordingChannel
+    ) -> None:
+        """A streamed run still emits tool calls from the finished node, once."""
+        emitter = RunEmitter(deps, "orchestrator", None)
+        await emitter.stream(
+            _events(
+                messages.PartStartEvent(
+                    index=0, part=messages.ToolCallPart("analyst", {"question": "q"})
+                )
+            )
+        )
+
+        assert channel.published == []
+
 class TestNullChannelIsTheDefault:
     async def test_a_run_without_a_listener_publishes_nowhere(self) -> None:
         """A script or a test must not need Redis to run an agent."""
@@ -204,6 +286,37 @@ class TestNestingThroughARealRun:
 
         assert {e.parent_tool_call_id for e in channel.published} == {None}
 
+
+    async def test_a_streaming_model_reaches_the_client_in_pieces(
+        self, channel: RecordingChannel
+    ) -> None:
+        """The whole point, through `runner.run`: one answer, several events.
+
+        `FunctionModel` streams only when given a `stream_function`, which is also how the
+        runner decides whether to open the node as a stream at all.
+        """
+        deps = MycelDeps(
+            job_id="job-1",
+            budget=JobBudget("job-1", Decimal("1.00")),
+            settings=AgentSettings(model_spec="local:qwen3-4b"),
+            events=channel,
+        )
+        agent = Agent(name="orchestrator", deps_type=MycelDeps, output_type=str)
+
+        async def writes(msgs: list[ModelMessage], info: AgentInfo) -> Any:
+            for piece in ("The ", "answer ", "is 42."):
+                yield piece
+
+        with agent.override(model=FunctionModel(stream_function=writes)):
+            answer = await runner.run(agent, "go", deps)
+
+        assert answer == "The answer is 42."
+        prose = [(e.type, e.payload["text"]) for e in channel.published if "text" in e.payload]
+        assert prose == [
+            ("text_delta", "The "),
+            ("text_delta", "answer "),
+            ("text_delta", "is 42."),
+        ], "the answer must arrive in pieces, and not a fourth time whole"
 
 class FakeRequest:
     """A request that is connected until a test says otherwise."""

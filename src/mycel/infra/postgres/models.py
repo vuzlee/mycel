@@ -261,14 +261,15 @@ class Session(Base):
 
 
 class Conversation(Base):
-    """One thread in the sidebar: a chat, or a progress report.
+    """One thread in the sidebar, and the turns under it.
 
     Replaces the browser's `localStorage` list, which could not follow a user to a second
     machine and had no way to hold anything but a job id.
 
-    `kind` separates the two product surfaces — a free-form chat and a summary of one chat's
-    progress — because they are listed on different pages and only one of them has a
-    `chat_id` to speak of.
+    `kind` is `"chat"` for everything since batch 033, when the one other kind — a progress
+    summary opened by its own endpoint — was deleted along with that endpoint. Kept because
+    a second kind of thread is cheaper to add to a column that exists than to a table that
+    has to grow one.
     """
 
     __tablename__ = "conversation"
@@ -284,24 +285,24 @@ class Conversation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class Report(Base):
-    """A finished run, kept.
+class Turn(Base):
+    """One question and what came back, kept.
 
     Redis holds a result for `result_ttl_seconds` so a second process can read it; that was
     always described as a holding area rather than a record, and this is the record. The two
     coexist: Redis answers "is it done yet", this answers "what did we produce last week".
 
-    `body` is JSONB holding the serialised agent output. A column per field would need a
-    migration every time a finding grows an attribute, and the schema it mirrors is
-    versioned in Python next to the prompt that produces it.
+    `answer` is the markdown the orchestrator wrote. It was `body JSONB` until batch 033,
+    when the orchestrator's output stopped being a schema — JSONB was there so a finding
+    could grow an attribute without a migration, and text needs neither.
 
     `job_id` is unique so a redelivered job updates its row instead of writing a second one.
     """
 
-    __tablename__ = "report"
+    __tablename__ = "turn"
     __table_args__ = (
-        UniqueConstraint("job_id", name="uq_report_job_id"),
-        Index("ix_report_conversation", "conversation_id"),
+        UniqueConstraint("job_id", name="uq_turn_job_id"),
+        Index("ix_turn_conversation", "conversation_id"),
         {"schema": APP},
     )
 
@@ -312,7 +313,7 @@ class Report(Base):
     job_id: Mapped[str] = mapped_column(String(64))
     question: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16))
-    body: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     spent_usd: Mapped[Any | None] = mapped_column(Numeric(12, 6), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

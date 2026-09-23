@@ -12,9 +12,9 @@ from mycel.core.logging import get_logger
 from mycel.infra.redis import streams
 from mycel.services.auth import Principal
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
-#: Unprefixed, so `/live` cannot be matched as a job id by `/reports/{job_id}/events`.
+#: Unprefixed, so `/live` cannot be matched as a job id by `/chat/{job_id}/events`.
 page_router = APIRouter()
 
 PAGE = Path(__file__).parent.parent / "static" / "events.html"

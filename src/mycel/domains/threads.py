@@ -9,7 +9,7 @@ Jira became the source: it is a gold question now, and it belongs beside the oth
 
 from dataclasses import dataclass
 
-from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, ReportRow
+from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, TurnRow
 from mycel.infra.postgres.session import session_scope
 
 #: Most threads one sidebar shows. Beyond this the list is an archive, and an archive
@@ -38,8 +38,8 @@ async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]
         repo = AppRepository(session)
         threads = []
         for conversation in await repo.conversations_for(user_id, limit=limit):
-            reports = await repo.reports_for_conversation(conversation.id)
-            latest = reports[-1] if reports else None
+            turns = await repo.turns_for_conversation(conversation.id)
+            latest = turns[-1] if turns else None
             threads.append(
                 Thread(
                     conversation=conversation,
@@ -50,7 +50,7 @@ async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]
         return threads
 
 
-async def thread_turns(user_id: int, conversation_id: int) -> list[ReportRow]:
+async def thread_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
     """Every run in one thread, oldest first. Empty if it is not this person's.
 
     The page needs this because a thread is now more than one turn: `?job=` names the
@@ -63,7 +63,7 @@ async def thread_turns(user_id: int, conversation_id: int) -> list[ReportRow]:
         conversation = await repo.conversation_by_id(conversation_id)
         if conversation is None or conversation.user_id != user_id:
             return []
-        return await repo.reports_for_conversation(conversation_id)
+        return await repo.turns_for_conversation(conversation_id)
 
 
 async def forget_thread(user_id: int, conversation_id: int) -> bool:

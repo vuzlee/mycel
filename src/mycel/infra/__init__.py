@@ -8,7 +8,7 @@ Durable — a record, survives a restart:
 
 Ephemeral — in flight between processes, every key carries a TTL:
 
-  redis/       a finished job's report, a job's budget, a run's event stream
+  redis/       a finished job's answer, a job's budget, a run's event stream
 
 The line this package draws is not "kept forever" but "not our logic": a backend holds
 bytes, it decides nothing. That is why `queue/` is not here — AMQP is a message sent to
@@ -22,7 +22,7 @@ Why four backends rather than putting everything in Postgres:
   independently.
 - **Files.** Blobs in Postgres bloat the database, slow down backups, and every read pulls
   the whole file through a pooled connection. Object stores exist for this.
-- **In-flight state.** A report waiting to be collected is not a record; writing it to
+- **In-flight state.** An answer waiting to be collected is not a record; writing it to
   Postgres means a row whose only job is to be deleted.
 
 Every SQL query, every vector query, every file operation lives here — not scattered through

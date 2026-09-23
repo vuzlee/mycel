@@ -27,13 +27,17 @@ export function Working({ items }: Props) {
   );
 }
 
+/** The agents `tools/delegate.py` exposes. A tool that wraps an agent carries that
+ *  agent's own name, so there is no prefix to match on — the list is the only way to
+ *  tell one from an ordinary tool. */
+const AGENTS = new Set(["analyst", "researcher", "summariser"]);
+
 /**
- * A delegation reads better as the agent it woke up than as the tool that woke it, so
- * `ask_researcher` becomes "Asking researcher".
+ * A delegation reads better as the agent it woke up than as a tool being run, so
+ * `researcher` becomes "Asking researcher".
  */
 function phrase(call: ToolItem): string {
-  const delegate = /^ask_(.+)$/.exec(call.tool);
-  if (delegate?.[1]) return `Asking ${delegate[1].replace(/_/g, " ")}`;
+  if (AGENTS.has(call.tool)) return `Asking ${call.tool}`;
   return `Running ${call.tool.replace(/_/g, " ")}`;
 }
 

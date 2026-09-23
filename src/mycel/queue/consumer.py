@@ -22,7 +22,7 @@ Call `context.extract()` on receipt, before running, so the job's span attaches 
 of the request that created it.
 
 **Shutdown is not an afterthought.** On SIGTERM the loop stops taking new messages and lets
-the one in flight finish, because a report killed halfway is a report that gets redelivered
+the one in flight finish, because a run killed halfway is a run that gets redelivered
 and paid for twice.
 """
 
@@ -35,7 +35,7 @@ from opentelemetry import context as otel_context
 from mycel.agents.core.exceptions import AgentError
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
-from mycel.domains import report as report_domain
+from mycel.domains import chat as chat_domain
 from mycel.infra.redis import results
 from mycel.infra.redis.client import close_clients
 from mycel.llm.budget import BudgetExceeded
@@ -86,18 +86,18 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
         # Out of money is not transient: another attempt spends money the job does not
         # have. Straight to the dead-letter queue.
         log.warning("job refused for budget", extra={"job_id": job.job_id})
-        await report_domain.record_failure(job, str(exc))
+        await chat_domain.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except (AgentError, OSError) as exc:
         # A provider 503, a rate limit, a broken socket: worth another attempt in a minute.
         # The result is only marked failed on the last one, so a caller polling in between
         # sees `running` rather than a failure that is about to be retried.
         if retry.exhausted(message):
-            await report_domain.record_failure(job, str(exc))
+            await chat_domain.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
     except Exception as exc:  # noqa: BLE001 - see the docstring: the loop must survive
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
-        await report_domain.record_failure(job, repr(exc))
+        await chat_domain.record_failure(job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
 
 
@@ -108,7 +108,7 @@ async def _run(job: Job) -> None:
     budget and stored its result — the order of steps for one kind of work, written in the
     transport layer, where a second kind would have meant a second copy of it.
     """
-    await report_domain.run(job)
+    await chat_domain.run(job)
 
 
 async def run_worker(stop: asyncio.Event | None = None) -> None:

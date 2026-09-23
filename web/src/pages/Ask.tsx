@@ -7,19 +7,20 @@
  *
  * A thread is more than one turn since 031. `?thread=` rides beside `?job=`: the job is
  * the run being watched, the thread is what the next question joins. A reload with only
- * a job still works — the thread comes off the sidebar row that already lists it.
+ * a job still works — the run itself names its thread.
  *
  * Which means a reload arrives with a job and no question — the question was only ever
  * in this component's state. The stream does not carry it either: a stream is tool calls
- * and reasoning, not the prompt that started them. But the sidebar has already fetched
- * every thread, and a thread's title *is* the question, so the reload reads it from
- * there. One less endpoint than asking the server for a string it already sent.
+ * and reasoning, not the prompt that started them. So the poll carries both: since 032
+ * `GET /chat/{id}` returns the run's own `question` and `conversation_id`, which the
+ * sidebar cannot supply. A thread's title is the question that *opened* it, and its job
+ * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Turn } from "../api";
-import { askReport, fetchTurns } from "../api";
+import { askChat, fetchTurns } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
@@ -36,7 +37,7 @@ import { useThreads } from "../threads";
 // app still has its own page for is reachable from here too: progress is the summariser,
 // the dashboard's numbers are the analyst writing its own SQL.
 const SEEDS = [
-  "How is MYC going this week?", // summariser — the progress report
+  "How is MYC going this week?", // summariser — the progress summary
   "What is late right now, and who is it with?", // analyst — the dashboard's own question
   "Who logged the most hours this month, and on what?", // analyst, through run_sql
   "Compare hours logged this month with last month.", // analyst — two windows, one query
@@ -48,7 +49,7 @@ const SEEDS = [
 export function Ask() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
-  const { threads, reload } = useThreads();
+  const { reload } = useThreads();
 
   const [asked, setAsked] = useState<string | null>(null);
   const [past, setPast] = useState<Turn[]>([]);
@@ -61,16 +62,15 @@ export function Ask() {
 
   // Arriving from the sidebar or a reloaded link: the question is not in this tab's
   // memory, and the stream does not carry it — a stream is tool calls, not the prompt.
-  // The sidebar already holds it as the thread's title, so reuse that rather than add a
-  // second endpoint returning the same string.
-  const row = threads.find((t) => t.job_id === jobId) ?? null;
-  const remembered = row?.title ?? null;
-  const question = asked ?? remembered;
+  // The run itself says what it was asked, which the thread cannot: a thread's title is
+  // the question that opened it, and captions every later turn wrongly.
+  const question = asked ?? run.result?.question ?? null;
 
-  // The thread the next question joins. From the URL when there is one, otherwise from
-  // the sidebar row for this job — a link pasted into a fresh tab carries only `?job=`.
+  // The thread the next question joins. `?thread=` first because it is there the moment
+  // you navigate, while the run needs a poll to come back — and it is the run, not the
+  // sidebar, that knows the thread of a link naming a turn other than the latest.
   const fromUrl = params.get("thread");
-  const threadId = fromUrl ? Number(fromUrl) : (row?.id ?? null);
+  const threadId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
 
   useEffect(() => {
     if (!jobId) return;
@@ -124,7 +124,7 @@ export function Ask() {
       // The open thread by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
-      const { job_id, conversation_id } = await askReport(text, threadId ?? undefined);
+      const { job_id, conversation_id } = await askChat(text, threadId ?? undefined);
       setAsked(text);
       setStartedAt(Date.now());
       setParams({ job: job_id, thread: String(conversation_id) });
@@ -168,7 +168,7 @@ export function Ask() {
           pending={run.pending}
         >
           {run.result?.status === "done" && (
-            <Answer result={run.result} onFollow={setSeed} />
+            <Answer result={run.result} streamed={run.items.some((i) => i.kind === "text")} />
           )}
         </Thread>
       ) : (

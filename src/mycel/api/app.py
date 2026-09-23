@@ -6,7 +6,7 @@ knows which routers the system has:
     include_router(health.router)
     include_router(auth.router)
     include_router(projects.router)
-    include_router(reports.router)
+    include_router(chat.router)
     include_router(events.router)
 
 Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
@@ -50,7 +50,7 @@ from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import dependencies, health
 from mycel.api.middleware import RequestIdMiddleware
-from mycel.api.routes import auth, events, projects, reports
+from mycel.api.routes import auth, chat, events, projects
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
@@ -110,7 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
-    app.include_router(reports.router)
+    app.include_router(chat.router)
     app.include_router(events.router)
     app.include_router(events.page_router)
 
@@ -122,7 +122,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # needed when tracing is on, and importing it patches things process-wide.
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
+        FastAPIInstrumentor.instrument_app(
+            app, tracer_provider=provider, excluded_urls=UNTRACED
+        )
 
     # Added last so it sits outermost — Starlette runs middleware in reverse order of
     # `add_middleware`. Outermost is where request_id must be: everything inside it,
@@ -131,6 +133,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     return app
 
+
+#: Requests that make a span and say nothing with it.
+#:
+#: A trace is meant to be one unit of work, and here that is one turn: `POST /chat` is its
+#: root, and the job the worker picks up minutes later hangs off it through the
+#: `traceparent` in the message headers. Everything below is the *page*, not the work —
+#: and it is the page that talks constantly.
+#:
+#: The poll is the reason this list exists at all. `web/src/run.ts` asks
+#: `GET /chat/{job_id}` every three seconds, so a two-minute run buries its one real trace
+#: under forty empty ones, each an equal root in the UI. The stream, the session check and
+#: the static app are the same kind of noise, more slowly.
+#:
+#: Matched on a 32-hex job id rather than on `chat/`, so `POST /chat` keeps its span.
+#: Dropping that would cost the tree its root and leave every worker run an orphan.
+#:
+#: Agent spans come from pydantic-ai and never pass through this instrumentation, so
+#: nothing here can hide a model or tool call.
+UNTRACED = ",".join(
+    [
+        r"chat/[0-9a-f]{32}",  # the poll, and the stream under it
+        r"auth/me",
+        r"health/",
+        r"app",  # the single-page mount and its assets
+    ]
+)
 
 class _SinglePage(StaticFiles):
     """Static files, with every unknown path answering `index.html`.

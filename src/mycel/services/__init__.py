@@ -1,7 +1,7 @@
 """One file = one single job, done once.
 
 A service is a link; the modules in domains/ chain those links together. So a service
-must be reusable: `gather.py` serves both the report domain and the sync domain.
+must be reusable: `gather.py` serves both the chat domain and the sync domain.
 
 A service does not know which chain it sits in, nor who called it — HTTP and scheduler
 look the same. Complex business rules (transforms, reasoning, building artifacts) live in

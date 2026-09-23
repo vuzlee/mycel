@@ -11,6 +11,8 @@ export interface SequencedEvent {
 export const RUN_STARTED = "run_started";
 export const RUN_FINISHED = "run_finished";
 export const TEXT = "text";
+/** A piece of `TEXT`, arriving while the model writes. Merged into the same bubble. */
+export const TEXT_DELTA = "text_delta";
 export const THINKING = "thinking";
 export const TOOL_CALLED = "tool_called";
 export const TOOL_RETURNED = "tool_returned";

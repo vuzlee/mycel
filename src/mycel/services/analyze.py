@@ -1,33 +1,20 @@
-"""Hand data to agents/ for analysis, get structured results back.
+"""Turn a query result into the text an agent is given.
 
 The boundary between a query result and a prompt. `gather.py` reads the database, this
-turns what it read into the text an agent is given and runs the agent on it — so the
-agent module stays a prompt and a schema, and nothing under `agents/` ever imports a
-service.
+renders what it read — so the agent module stays a prompt and a schema, and nothing under
+`agents/` ever imports a service.
 
-If the model returns the wrong format, `runner.run` retries it here rather than letting
-bad data move on.
+Rendering only, since batch 033. This module used to run the summariser as well, for an
+endpoint that no longer exists; the agent is now reached as a tool, and `delegate.py` calls
+`render` on its way there.
 """
 
-from mycel.agents.agent.summariser import Summariser
-from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
-from mycel.agents.core.deps import MycelDeps
-from mycel.agents.schemas import ProgressSummary
 from mycel.infra.postgres.repositories.gold import SECONDS_PER_DAY, WorkItemRow
 from mycel.services.gather import ProgressWindow
 
 #: Date format in the prompt. ISO with a space: unambiguous to a model, and short enough
 #: that a few hundred rows do not spend the context on timestamps.
 STAMP = "%Y-%m-%d"
-
-
-async def summarise_progress(
-    window: ProgressWindow, deps: MycelDeps, settings: AgentSettings | None = None
-) -> ProgressSummary:
-    """Summarise one window. Every fact the model gets is in `render(window)`."""
-    cfg = settings or AgentSettings.from_config(Summariser.name)
-    return await runner.run(Summariser.build(cfg), render(window), deps, cfg)
 
 
 def render(window: ProgressWindow) -> str:

@@ -17,8 +17,8 @@ delegated agent's tokens into the caller's — so the single `record()` at the e
 calling run already bills every delegated token. That is also why nothing here calls
 `budget.record()`: doing so would charge the same tokens twice. See `core/runner.py`.
 
-**A failing delegation is a gap, not a dead run.** Each tool catches `AgentError` and
-returns the failure as text the model can read. Letting it propagate would kill a report
+**A failing delegation is reported, not a dead run.** Each tool catches `AgentError` and
+returns the failure as text the model can read. Letting it propagate would kill a whole run
 over one unavailable source. `BudgetExceeded` is deliberately *not* caught: out of money is
 the end of the job, and continuing would spend money the job does not have.
 
@@ -120,7 +120,7 @@ async def _delegate(
         # Returned, not raised: see the module docstring. `BudgetExceeded` is not an
         # `AgentError` and so passes through, ending the job as it should.
         log.warning("delegated agent failed", extra={"agent": name, "error": str(exc)})
-        return f"{name} could not answer: {exc}. Record this as a gap and continue."
+        return f"{name} could not answer: {exc}. Say so in the answer and continue."
     # Every delegated agent's output_type is a `BaseModel`, but `BaseAgent` is generic over
     # plain objects, so the guarantee is ours to state rather than the type system's.
     return cast(str, output.model_dump_json())

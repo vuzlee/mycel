@@ -44,8 +44,8 @@ export function Register() {
 
         <h1>Create an account</h1>
         <p className="lede">
-          Your runs and saved reports live under it, so they are still there on another
-          machine tomorrow.
+          Your threads live under it, so they are still there on another machine
+          tomorrow.
         </p>
 
         <Credentials

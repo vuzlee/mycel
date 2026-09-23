@@ -38,7 +38,7 @@ export function useJobStream(jobId: string | null): Stream {
     lastSeq.current = 0;
     setStream({ ...EMPTY, state: "running", gaps: new Map() });
 
-    const source = new EventSource(`/reports/${jobId}/events`);
+    const source = new EventSource(`/chat/${jobId}/events`);
 
     source.onmessage = (message: MessageEvent<string>) => {
       let event: SequencedEvent;

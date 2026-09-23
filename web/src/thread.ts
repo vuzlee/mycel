@@ -7,17 +7,24 @@
  *
  * Consecutive `text` and `thinking` events from the same agent are merged: a model streams
  * prose in pieces, and one bubble per piece is unreadable.
+ *
+ * Nothing is filtered out any more. Until batch 033 the orchestrator returned through
+ * pydantic-ai's `final_result` tool, and that one call had to be hidden — its args were
+ * the answer, and showing them printed the conclusion twice, once as JSON. A free-text
+ * answer arrives as `text` events instead, so every tool call left is work the run did.
  */
 
 import type { SequencedEvent } from "./types";
-import { TEXT, THINKING, TOOL_CALLED, TOOL_RETURNED, field, text, toolCallId } from "./types";
-
-/**
- * pydantic-ai's name for "here is my structured output". It is how a run returns, not
- * work it did, and its args are the answer the `Answer` component already renders from
- * the result endpoint. Showing it would print the conclusion twice, once as JSON.
- */
-const OUTPUT_TOOL = "final_result";
+import {
+  TEXT,
+  TEXT_DELTA,
+  THINKING,
+  TOOL_CALLED,
+  TOOL_RETURNED,
+  field,
+  text,
+  toolCallId,
+} from "./types";
 
 export interface ProseItem {
   kind: "text" | "thinking";
@@ -59,8 +66,10 @@ export function buildThread(events: SequencedEvent[]): Item[] {
   };
 
   for (const event of events) {
-    if (event.type === TEXT || event.type === THINKING) {
-      const kind = event.type === TEXT ? "text" : "thinking";
+    if (event.type === TEXT || event.type === TEXT_DELTA || event.type === THINKING) {
+      // A delta is a piece of the same bubble a whole `text` would have filled, so both
+      // land in one item and the reader cannot tell which model wrote in pieces.
+      const kind = event.type === THINKING ? "thinking" : "text";
       const siblings = siblingsFor(event, byToolCall, root);
       const last = siblings[siblings.length - 1];
       if (last && last.kind === kind && last.agent === event.agent) {
@@ -72,7 +81,6 @@ export function buildThread(events: SequencedEvent[]): Item[] {
     }
 
     if (event.type === TOOL_CALLED) {
-      if (field(event, "tool") === OUTPUT_TOOL) continue;
       const item: ToolItem = {
         kind: "tool",
         seq: event.seq,
@@ -112,7 +120,10 @@ function siblingsFor(
   return parent ? parent.children : root;
 }
 
-/** The assistant's answer so far: top-level prose only, sub-agent chatter excluded. */
+/** The assistant's answer so far: top-level prose only, sub-agent chatter excluded.
+ *
+ *  The main path since batch 033 — the answer is the prose, and there is no structured
+ *  output to read it off instead. */
 export function answerText(items: Item[]): string {
   return items
     .filter((item): item is ProseItem => item.kind === "text")

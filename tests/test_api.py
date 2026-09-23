@@ -27,7 +27,7 @@ from mycel.api.middleware import HEADER
 from mycel.core.config import Settings
 from mycel.core.exceptions import ConfigError
 from mycel.domains.threads import Thread
-from mycel.infra.postgres.repositories.app import ConversationRow, ReportRow
+from mycel.infra.postgres.repositories.app import ConversationRow, TurnRow
 from mycel.infra.redis.results import JobResult
 from mycel.llm.budget import BudgetExceeded
 from mycel.services.auth import Principal
@@ -58,7 +58,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 
 
 def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
-    """Make the report domain accept a job or fail, with no broker anywhere in sight."""
+    """Make the chat domain accept a job or fail, with no broker anywhere in sight."""
 
     async def fake_request(
         user_id: int, question: str, conversation_id: int | None = None
@@ -67,25 +67,13 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
             raise result
         return result, conversation_id or 1
 
-    monkeypatch.setattr("mycel.api.routes.reports.request_report", fake_request)
-
-
-def _summaries(monkeypatch: pytest.MonkeyPatch, job_id: str) -> list[tuple[str, int]]:
-    """Capture what the summary route asked the domain for, and queue nothing."""
-    asked: list[tuple[str, int]] = []
-
-    async def fake_request(user_id: int, project: str, days: int) -> tuple[str, int]:
-        asked.append((project, days))
-        return job_id, 1
-
-    monkeypatch.setattr("mycel.api.routes.reports.request_summary", fake_request)
-    return asked
+    monkeypatch.setattr("mycel.api.routes.chat.request_chat", fake_request)
 
 
 def _stored(
     monkeypatch: pytest.MonkeyPatch,
     result: JobResult | None,
-    kept: ReportRow | None = None,
+    kept: TurnRow | None = None,
 ) -> None:
     """Make both halves of "written twice" answer, with neither Redis nor Postgres here.
 
@@ -97,30 +85,30 @@ def _stored(
     async def fake_fetch(job_id: str) -> JobResult | None:
         return result
 
-    async def fake_find(job_id: str) -> ReportRow | None:
+    async def fake_find(job_id: str) -> TurnRow | None:
         return kept
 
-    monkeypatch.setattr("mycel.api.routes.reports.results.fetch", fake_fetch)
-    monkeypatch.setattr("mycel.api.routes.reports.find_report", fake_find)
+    monkeypatch.setattr("mycel.api.routes.chat.results.fetch", fake_fetch)
+    monkeypatch.setattr("mycel.api.routes.chat.find_turn", fake_find)
 
 
 #: What a finished run left behind, for the tests that read a kept row.
-KEPT_BODY = {"findings": [], "gaps": ["nothing was asked"]}
+KEPT_ANSWER = "Nothing was asked, so nothing happened."
 
 
-def _kept(job_id: str, *, status: str = "done") -> ReportRow:
-    """A row as `app.report` keeps it, for the fallback half of the result endpoint.
+def _kept(job_id: str, *, status: str = "done") -> TurnRow:
+    """A row as `app.turn` keeps it, for the fallback half of the result endpoint.
 
-    A row that never ran has no body, which is how a `queued` one is told apart from a
+    A row that never ran has no answer, which is how a `queued` one is told apart from a
     finished one without a second argument nobody reads.
     """
-    return ReportRow(
+    return TurnRow(
         id=1,
         conversation_id=1,
         job_id=job_id,
         question="what happened?",
         status=status,
-        body=KEPT_BODY if status == "done" else None,
+        answer=KEPT_ANSWER if status == "done" else None,
         error=None,
         spent_usd=Decimal("0.0216"),
         created_at=datetime.now(UTC),
@@ -194,24 +182,24 @@ class TestRequestId:
     ) -> None:
         """The reset is in a `finally`, and this is what would catch it being moved."""
         _queues(monkeypatch, ModelTimeout("gone"))
-        response = client.post("/reports", json={"question": "anything"})
+        response = client.post("/chat", json={"question": "anything"})
         assert response.headers[HEADER]
         assert response.json()["request_id"] == response.headers[HEADER]
 
 
-class TestQueueingAReport:
-    """202 and a job id, in milliseconds. The batch 003 endpoint ran the report inline."""
+class TestQueueingAQuestion:
+    """202 and a job id, in milliseconds. The batch 003 endpoint ran the work inline."""
 
     def test_a_request_is_accepted_rather_than_answered(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The status code is the contract: accepted, and not done.
 
-        A caller that reads 202 as "here is your report" fails on the missing body rather
+        A caller that reads 202 as "here is your answer" fails on the missing body rather
         than quietly treating a receipt as an answer.
         """
         _queues(monkeypatch, "job-abc")
-        response = client.post("/reports", json={"question": "what is true"})
+        response = client.post("/chat", json={"question": "what is true"})
 
         assert response.status_code == 202
         assert response.json() == {
@@ -223,7 +211,7 @@ class TestQueueingAReport:
     def test_an_empty_question_is_refused_before_anything_is_queued(
         self, client: TestClient
     ) -> None:
-        assert client.post("/reports", json={"question": ""}).status_code == 422
+        assert client.post("/chat", json={"question": ""}).status_code == 422
 
     def test_a_follow_up_names_the_thread_it_joins(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -241,9 +229,9 @@ class TestQueueingAReport:
             seen.append(conversation_id)
             return "job-2", conversation_id or 99
 
-        monkeypatch.setattr("mycel.api.routes.reports.request_report", fake_request)
+        monkeypatch.setattr("mycel.api.routes.chat.request_chat", fake_request)
         response = client.post(
-            "/reports", json={"question": "and last week?", "conversation_id": 7}
+            "/chat", json={"question": "and last week?", "conversation_id": 7}
         )
 
         assert response.status_code == 202
@@ -254,49 +242,18 @@ class TestQueueingAReport:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """404, not 403: which of the two it was is the one thing worth hiding."""
-        from mycel.domains.report import ThreadNotFound
+        from mycel.domains.chat import ThreadNotFound
 
         _queues(monkeypatch, ThreadNotFound(7))
         response = client.post(
-            "/reports", json={"question": "and last week?", "conversation_id": 7}
+            "/chat", json={"question": "and last week?", "conversation_id": 7}
         )
 
         assert response.status_code == 404
 
 
-class TestQueueingASummary:
-    """The second kind of work, behind the same receipt and the same polling endpoint."""
-
-    def test_a_summary_is_accepted_the_same_way_a_report_is(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        _summaries(monkeypatch, "job-sum")
-        response = client.post("/reports/summary", json={"project": "MYC", "days": 7})
-
-        assert response.status_code == 202
-        assert response.json() == {
-            "job_id": "job-sum",
-            "conversation_id": 1,
-            "status": "accepted",
-        }
-
-    def test_the_window_defaults_rather_than_being_required(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A week, the same default the dashboard uses."""
-        asked = _summaries(monkeypatch, "job-sum")
-        client.post("/reports/summary", json={"project": "MYC"})
-
-        assert asked == [("MYC", 7)]
-
-    def test_a_year_is_an_export_not_a_standup(self, client: TestClient) -> None:
-        assert (
-            client.post("/reports/summary", json={"project": "MYC", "days": 365}).status_code == 422
-        )
-
-
-class TestCollectingAReport:
-    def test_a_finished_report_comes_back_with_what_it_cost(
+class TestCollectingAnAnswer:
+    def test_a_finished_answer_comes_back_with_what_it_cost(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stored(
@@ -304,14 +261,14 @@ class TestCollectingAReport:
             JobResult(
                 job_id="job-abc",
                 status="done",
-                report={"findings": [], "gaps": ["nothing was asked"]},
+                answer=KEPT_ANSWER,
                 spent_usd="0.0216",
             ),
         )
-        body = client.get("/reports/job-abc").json()
+        body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "done"
-        assert body["report"]["gaps"] == ["nothing was asked"]
+        assert body["answer"] == KEPT_ANSWER
         # A string, not a float: money is Decimal everywhere else and JSON floats undo that.
         assert isinstance(body["spent_usd"], str)
         Decimal(body["spent_usd"])
@@ -321,16 +278,16 @@ class TestCollectingAReport:
     ) -> None:
         """A poller must be able to tell "not yet" from "never"."""
         _stored(monkeypatch, JobResult(job_id="job-abc", status="running"))
-        body = client.get("/reports/job-abc").json()
+        body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "running"
-        assert body["report"] is None
+        assert body["answer"] is None
 
     def test_a_failed_job_carries_its_reason(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _stored(monkeypatch, JobResult(job_id="job-abc", status="failed", error="provider 503"))
-        body = client.get("/reports/job-abc").json()
+        body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "failed"
         assert "provider 503" in body["error"]
@@ -340,17 +297,17 @@ class TestCollectingAReport:
     ) -> None:
         """Only a miss in *both* stores is a 404: gone from Redis and never kept."""
         _stored(monkeypatch, None)
-        assert client.get("/reports/nope").status_code == 404
+        assert client.get("/chat/nope").status_code == 404
 
     def test_a_dropped_key_falls_back_to_the_kept_row(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Past the TTL the report is still a report. This is why 012 kept it twice."""
+        """Past the TTL the answer is still the answer. This is why 012 kept it twice."""
         _stored(monkeypatch, None, kept=_kept("job-abc"))
-        body = client.get("/reports/job-abc").json()
+        body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "done"
-        assert body["report"]["gaps"] == ["nothing was asked"]
+        assert body["answer"] == KEPT_ANSWER
         assert body["spent_usd"] == "0.0216"
 
     def test_a_kept_row_that_never_ran_is_not_running(
@@ -361,7 +318,34 @@ class TestCollectingAReport:
         Telling a caller `running` sends them polling a job nobody will ever finish.
         """
         _stored(monkeypatch, None, kept=_kept("job-abc", status="queued"))
-        assert client.get("/reports/job-abc").json()["status"] == "failed"
+        assert client.get("/chat/job-abc").json()["status"] == "failed"
+
+    def test_a_running_run_still_names_its_thread_and_its_question(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Redis says `running`; the thread and the question come off the kept row.
+
+        `request_chat` writes that row at queue time, so it is there before a worker
+        touches the job. The page needs both from the first poll: a thread's title is the
+        question that *opened* it, and its latest job id is the wrong run for a link
+        naming an earlier one.
+        """
+        _stored(monkeypatch, JobResult(job_id="job-abc", status="running"), kept=_kept("job-abc"))
+        body = client.get("/chat/job-abc").json()
+
+        assert body["status"] == "running"
+        assert body["conversation_id"] == 1
+        assert body["question"] == "what happened?"
+
+    def test_a_dropped_key_still_names_its_thread_and_its_question(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Past the TTL both still come from `app.turn`, same as the answer does."""
+        _stored(monkeypatch, None, kept=_kept("job-abc"))
+        body = client.get("/chat/job-abc").json()
+
+        assert body["conversation_id"] == 1
+        assert body["question"] == "what happened?"
 
 
 class TestErrorsComeBackAsThemselves:
@@ -389,7 +373,7 @@ class TestErrorsComeBackAsThemselves:
         kind: str,
     ) -> None:
         _queues(monkeypatch, raised)
-        response = client.post("/reports", json={"question": "anything"})
+        response = client.post("/chat", json={"question": "anything"})
         assert response.status_code == status
         assert response.json()["error"] == kind
 
@@ -402,13 +386,13 @@ class TestErrorsComeBackAsThemselves:
         which is the one thing a bug needs to leave behind.
         """
         _queues(monkeypatch, RuntimeError("this is a bug"))
-        assert client.post("/reports", json={"question": "anything"}).status_code == 500
+        assert client.post("/chat", json={"question": "anything"}).status_code == 500
 
     def test_no_error_response_leaks_a_traceback(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         _queues(monkeypatch, ConfigError("GEMINI_API_KEY is unset"))
-        body = client.post("/reports", json={"question": "anything"}).text
+        body = client.post("/chat", json={"question": "anything"}).text
         assert "Traceback" not in body
         assert "mycel/api" not in body
 
@@ -428,7 +412,7 @@ class TestTheThingsThatFailSilently:
     ) -> None:
         """If anything on the path is sync and blocking, the second request waits.
 
-        The report itself no longer runs here, but a publish still crosses the network and
+        The run itself no longer happens here, but a publish still crosses the network and
         a blocking AMQP client on this path would serialise every caller. Asserted by
         having the first publish refuse to finish until the second has started, which can
         only happen if both are in flight at once. A blocking implementation deadlocks
@@ -448,19 +432,19 @@ class TestTheThingsThatFailSilently:
                 await asyncio.get_running_loop().run_in_executor(None, release.wait, 5)
             return f"job-{question}", 1
 
-        monkeypatch.setattr("mycel.api.routes.reports.request_report", first_waits)
+        monkeypatch.setattr("mycel.api.routes.chat.request_chat", first_waits)
 
         slow: list[int] = []
         thread = threading.Thread(
             target=lambda: slow.append(
-                client.post("/reports", json={"question": "slow"}).status_code
+                client.post("/chat", json={"question": "slow"}).status_code
             )
         )
         thread.start()
         assert started.wait(5), "the first request never reached the queue layer"
 
         # The first is still in flight. If the loop were blocked this would never return.
-        assert client.post("/reports", json={"question": "fast"}).status_code == 202
+        assert client.post("/chat", json={"question": "fast"}).status_code == 202
 
         release.set()
         thread.join(5)
@@ -497,13 +481,13 @@ class TestTheThingsThatFailSilently:
             with provider.get_tracer("test").start_as_current_span("publish"):
                 return "job-abc", 1
 
-        monkeypatch.setattr("mycel.api.routes.reports.request_report", one_span)
+        monkeypatch.setattr("mycel.api.routes.chat.request_chat", one_span)
 
         dependencies.reset_caches()
         app = create_app(Settings(otel_enabled=False))
         _signed_in(app)
         with TestClient(app) as client:
-            assert client.post("/reports", json={"question": "trace me"}).status_code == 202
+            assert client.post("/chat", json={"question": "trace me"}).status_code == 202
 
         spans = {span.name: span for span in exporter.get_finished_spans()}
         publish_span = spans["publish"]
@@ -523,7 +507,7 @@ class TestTheLists:
     ) -> None:
         """The route lists what this person may read, not what the deployment has.
 
-        Today `may_read_project` says yes to everyone, which is exactly why this test
+        Today `can_read_project` says yes to everyone, which is exactly why this test
         asserts against the filter rather than against its current answer.
         """
 
@@ -534,7 +518,7 @@ class TestTheLists:
             return project == "MYC"
 
         monkeypatch.setattr("mycel.api.routes.projects.known_projects", fake_projects)
-        monkeypatch.setattr("mycel.api.routes.projects.may_read_project", fake_may_read)
+        monkeypatch.setattr("mycel.api.routes.projects.can_read_project", fake_may_read)
 
         assert client.get("/projects").json() == ["MYC"]
 
@@ -552,7 +536,7 @@ class TestTheLists:
                         id=7,
                         user_id=user_id,
                         title="what happened?",
-                        kind="report",
+                        kind="chat",
                         created_at=datetime.now(UTC),
                     ),
                     job_id="job-abc",
@@ -578,7 +562,7 @@ class TestTheLists:
                         id=8,
                         user_id=user_id,
                         title="never started",
-                        kind="report",
+                        kind="chat",
                         created_at=datetime.now(UTC),
                     ),
                     job_id=None,
@@ -660,10 +644,9 @@ class TestWhatNeedsALogin:
     @pytest.mark.parametrize(
         ("method", "path", "body"),
         [
-            ("post", "/reports", {"question": "anything"}),
-            ("post", "/reports/summary", {"project": "MYC"}),
-            ("get", "/reports/job-abc", None),
-            ("get", "/reports/job-abc/events", None),
+            ("post", "/chat", {"question": "anything"}),
+            ("get", "/chat/job-abc", None),
+            ("get", "/chat/job-abc/events", None),
             ("get", "/projects", None),
             ("get", "/conversations", None),
             ("delete", "/conversations/1", None),

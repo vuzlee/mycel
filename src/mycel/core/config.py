@@ -52,14 +52,11 @@ class Settings(BaseSettings):
     #: Which project to sync. Empty means every project the account can see, which is
     #: right for a one-project site and wrong for a shared one.
     jira_project_key: str | None = None
-    #: Telegram is no longer a source: the bot sends notifications and reads nothing.
-    telegram_bot_token: SecretStr | None = None
-    telegram_notify_chat_id: str | None = None
 
-    # Outputs. Both one-way, both optional: a deployment with neither still works, and
+    # Outputs. One-way and optional: a deployment with nothing configured still works, and
     # `notify/` logs a missing credential rather than failing the job that produced the
     # thing it was going to send.
-    #: Where a notification's link points. A chat message has no page to be relative to,
+    #: Where a link out of this deployment points. Nothing has no page to be relative to,
     #: so this is the only place the deployment's own address is written down.
     public_base_url: str = "http://localhost:8000"
     #: The calendar due dates are written to. Give it one of its own — a bug then writes
@@ -104,7 +101,7 @@ class Settings(BaseSettings):
     #: Cached values, on a server that is allowed to evict them. A separate db index by
     #: default, so the two policies never share a keyspace.
     redis_cache_url: str = "redis://localhost:6379/1"
-    #: How long a finished report stays readable. Long enough for a caller to come back for
+    #: How long a finished answer stays readable. Long enough for a caller to come back for
     #: it, short enough that Redis is never asked to be a database.
     result_ttl_seconds: int = 3600
     #: How many events one job's stream keeps. Capped so a chatty run cannot fill Redis;
