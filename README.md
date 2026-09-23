@@ -1,227 +1,123 @@
 # Mycel
 
-A multi-agent system that answers questions about the work already in your issue tracker.
-Today it reads Jira; the source layer is pluggable.
+**Ask your issue tracker a question in plain language, get an answer with the numbers behind it.**
 
-Named after *mycelium*, the underground fungal network that connects a whole forest. Mycel
-works the same way: running in the background, quietly gathering data, processing it through
-several layers, and only then surfacing as a report.
-
-> **Status:** the chain runs end to end — Jira to gold to an answer, a Telegram message
-> and a calendar entry. There is one screen, Ask; batch 027 deleted the report and
-> dashboard pages once an agent could answer both. `TELEGRAM_NOTIFY_CHAT_ID` is the one
-> thing not yet exercised against a real chat.
-
-## What it does
+Named after *mycelium* — the underground fungal network that quietly connects a whole
+forest, moving nutrients between trees that never touch. Mycel works the same way: it runs
+in the background, pulls what moved in Jira, digests it through layer after layer, and only
+surfaces when you ask it something. The interesting part was never the fruiting body.
 
 ```
-Jira ──► bronze ──► gold ──┐
-         raw        ready  │       ┌─► summariser ─► a project's window
-                           ├─► Ask ─┼─► analyst ────► SQL over gold, read-only
-         your question ────┘       └─► researcher ─► the web, and your mailbox
-
-POST /reports/summary ──► Telegram · Google Calendar   (no page; cron calls it)
+Jira ──► bronze ──► gold ──┐                ┌─► summariser ─► a project's window
+         raw        ready  ├──► Ask ────────┼─► analyst ────► SQL over gold, read-only
+         your question ────┘                └─► researcher ─► the web, and your mailbox
 ```
 
-Three surfaces, three jobs:
+Today the source is Jira; the source layer is pluggable. Reports go out over Telegram and
+Google Calendar — both optional, both one-way. Mycel never writes to your board.
 
-| | Role | Direction |
-|---|---|---|
-| **Jira** | the source of record for what the work is | read |
-| **Telegram** | how a finished report reaches you | write |
-| **Google Calendar** | deadlines on a phone | write |
-
-Keep issues in Jira the way you already do. A scheduled sync pulls what moved, normalises
-it into `gold.work_item` and `gold.worklog`, and one box reads the result:
-
-- **Ask** — `POST /reports` takes a question in plain language and an orchestrator decides
-  who answers it. `summariser` writes up a project's window: a verdict (on track · at risk ·
-  off track), a headline, then the tables behind them — at risk, in flight, shipped, and
-  estimated against spent per person, as columns rather than a sentence per line. `analyst`
-  writes its own SQL against gold for anything countable and returns each figure with the
-  query that produced it. `researcher` reads the mailbox over IMAP (headers only) and
-  searches the web. Every run lands in Postgres, so it is still there tomorrow.
-- **Read-only, and enforced as such.** `run_sql` runs inside `SET TRANSACTION READ ONLY`,
-  so a question that would change the work data is refused by Postgres, not by a prompt.
-- **`POST /reports/summary`** is still there, without a page in front of it: it is the
-  entry point a scheduler or a cron would call, and it is what sends Telegram and Calendar.
-
-Both outputs are one-way and optional; a deployment with neither still works. Mycel never
-writes to your board, and never reads work back out of Calendar — an event has a start and
-an end and nothing else, so anything read back would be a worse copy of what gold holds.
-
-Effort curves come from worklogs, not resolution dates: Jira stamps a resolution with the
-moment of the API call, so a back-filled project would draw a confident, false line.
-
-The medallion layers live in one **PostgreSQL**, one schema each; agents read `gold` only.
-A fourth schema, `app`, holds users, sessions and saved reports — it is product data, not
-pipeline data, and does not inherit a pipeline grant.
-
-Reasoning goes through `llm/` — high-volume work runs on a local model, final reasoning calls
-a cloud model. No module imports a provider SDK directly.
-
-## Running it
+## Quickstart
 
 ```bash
 cp .env.example .env      # fill in DB and API keys
 scripts/stack.sh up       # containers, migrations, api, worker, scheduler
 ```
 
-One command, idempotent: it starts what is down, leaves what is up, applies migrations and
+One command, idempotent: starts what is down, leaves what is up, applies migrations, and
 waits until each service answers a real query rather than merely accepting TCP.
 
-| Command | What it does |
+| | |
 |---|---|
-| `scripts/stack.sh up` | Bring the stack up (the default — bare `stack.sh` does this) |
-| `scripts/stack.sh down` | Stop everything; named volumes keep the data |
-| `scripts/stack.sh status` | What is running, on which port, with the app URL |
-| `scripts/stack.sh logs api` | Follow `api`, `worker` or `scheduler` |
-| `scripts/stack.sh restart` | `down` then `up` — the usual way to pick up a code change |
-| `scripts/stack.sh sync` | Run one Jira sync now, without waiting for the tick |
-| `scripts/stack.sh relocate` | Move `mycel-pg` off an anonymous volume onto `mycel-pgdata`, keeping the data |
-| `scripts/stack.sh restore <dump>` | Load a dump made by `relocate` (defaults to the newest in `.run/`) |
-
-`down` stops the three host processes and the three containers; named volumes keep the
-data, so `up` after it starts where you left off. Three Python processes run on the host —
-`api`, `worker`, `scheduler` — and all three matter: without the worker both report
-endpoints hand back a job id nobody picks up, and without the scheduler nothing syncs until
-you run `sync` by hand.
-
-`scripts/seed_jira.py` fills a fresh Jira project with the work this repository has done,
-so the first sync does not read an empty board. Jira stamps `created` and every status
-transition with the moment of the API call, so neither is back-dated and nothing downstream
-claims to know how long an issue sat in a status; a worklog's `started` *is* settable, which
-makes logged effort the one honest time series in a back-filled project. Every seeded issue
-carries the label `backfill`.
-
-| Service | URL |
-|---|---|
-| API | http://localhost:8000 |
 | UI | http://localhost:8000/app — sign in at `/app/login` |
-| RabbitMQ | http://localhost:15672 |
-
-Postgres is on **5433**, not 5432, so it cannot collide with a system install.
-
-The stack script runs the API, the worker and the scheduler on the host under `uv run`,
-because those are the ones being edited and a container would need rebuilding for each
-change. The worker is not optional: without it both `POST /reports` endpoints return a job
-id for work nobody ever picks up, which looks like a slow model rather than a missing
-process.
-Everything else is a container. `docker-compose.yml` describes the full prod shape,
-including Grafana, Prometheus and the local-LLM profile.
-
-The compose CLI ships as a Docker plugin and is not always installed. Without it every
-`docker compose` line here has to become a hand-written `docker run`, so install it once:
+| API | http://localhost:8000 |
+| Postgres | **5433**, so it cannot collide with a system install |
 
 ```bash
-mkdir -p ~/.docker/cli-plugins
-curl -sSL -o ~/.docker/cli-plugins/docker-compose \
-  https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-chmod +x ~/.docker/cli-plugins/docker-compose
-docker compose version
+scripts/stack.sh status      # what is running, where
+scripts/stack.sh logs api    # follow api · worker · scheduler
+scripts/stack.sh sync        # one Jira sync now, don't wait for the tick
+scripts/stack.sh restart     # pick up a code change
+scripts/stack.sh down        # stop; named volumes keep the data
 ```
 
-### Who may read what
+All three host processes matter: no worker means `POST /reports` hands back a job id nobody
+picks up; no scheduler means nothing syncs until you run `sync` by hand.
 
-A project is readable when a row in `app.membership` says so — no row, no access, so a new
-account starts with nothing rather than with everything. Migration `0007` grants every
-existing account every project the database already knew about, so an upgrade does not lock
-out the people using it; anything synced afterwards is granted deliberately.
+New Jira project? `scripts/seed_jira.py` fills it with this repo's own history, so the first
+sync doesn't read an empty board.
 
-There is no admin screen yet. A deployment grants from a shell, through
+## Config
+
+Secrets and per-machine settings live in `.env` (see `.env.example`). Everything versioned —
+environments, agents, sources — is YAML under `config/`.
+
+| | |
+|---|---|
+| `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` | the three services |
+| `ANTHROPIC_API_KEY` · `GEMINI_API_KEY` | a run needs the key its model spec asks for, and no other |
+| `JOB_CEILING_USD` | spend ceiling for one queued job |
+| `TELEGRAM_*` · Google Calendar creds | outputs; leave blank and they're simply off |
+
+Access is a row in `app.membership`: no row, no project. A new account starts with nothing
+rather than with everything. There is no admin screen yet — grant from a shell via
 `services/permission.grant`.
 
-`migrations/grants.sql` is the other half, and runs by hand as a superuser after
-`alembic upgrade head`. It splits the database into two roles along the schema boundary the
-layers already draw: `mycel_etl` writes bronze, silver and gold; `mycel_app` reads gold and
-owns `app`. It is not a migration because a migration runs as the application's own role,
-and a role cannot take privileges away from itself.
+After `alembic upgrade head`, run `migrations/grants.sql` once as a superuser. It splits the
+database along the schema boundary the layers already draw — `mycel_etl` writes bronze,
+silver and gold; `mycel_app` reads gold and owns `app`. It isn't a migration because a role
+cannot take privileges away from itself.
 
-```bash
-psql "$DATABASE_URL" -v app_password=... -v etl_password=... -f migrations/grants.sql
-```
+## What you can ask it
 
-The UI is a separate build. `docker compose` does it for you; outside Docker, either build
-it once (`cd web && npm ci && npm run build`, then it is served at `/app`) or run it in dev
-mode (`npm run dev` on :5173, proxying the API to :8000). Neither is required — the API
-starts without it, and `/live` is a no-build fallback page for watching a stream.
+- **"How is PROJ doing this sprint?"** — `summariser` returns a verdict (on track · at risk ·
+  off track), a headline, then the tables behind them: at risk, in flight, shipped, and
+  estimated against spent per person.
+- **"Who logged the most hours on bugs last month?"** — `analyst` writes its own SQL against
+  gold and returns each figure with the query that produced it.
+- **"Any release notes from our vendor about this?"** — `researcher` searches the web and
+  reads the mailbox over IMAP, headers only.
+- **A report every Monday morning** — `POST /reports/summary` has no page in front of it; it
+  is what a cron calls, and what sends Telegram and Calendar.
 
-## Tests
+Two things are true by construction, not by prompt: `run_sql` runs inside
+`SET TRANSACTION READ ONLY`, so a question that would change work data is refused by
+Postgres itself; and effort curves come from worklogs, never resolution dates, because Jira
+stamps a resolution with the moment of the API call and a back-filled project would draw a
+confident, false line.
+
+## Developing
 
 ```bash
 uv run ruff check .          # lint
 uv run mypy                  # strict, src/ only
 uv run alembic upgrade head  # migrations apply
-uv run pytest --cov          # 564 tests, with a coverage floor
+uv run pytest --cov          # with a coverage floor
 ```
 
-The same four steps CI runs, in the same order — cheapest first, so a typo is caught in a
-second rather than after a database is up.
+The four steps CI runs, in that order — cheapest first. Tests that need Postgres, RabbitMQ
+or Redis skip without them; the rest run straight after `uv sync`. Two guards in
+`tests/conftest.py` make the suite safe anywhere: the DSN must end in `_test`, and
+`ALLOW_MODEL_REQUESTS = False` turns any real provider call into an error.
 
-Two guards make the suite safe to run anywhere, both in `tests/conftest.py`:
+Evals are not tests — tests catch broken code, evals catch a report that has no error and is
+simply worse than last time. See [evals/](evals/README.md).
 
-| Guard | What it prevents |
-|---|---|
-| The DSN must end in `_test` | Every Postgres fixture drops its schemas on teardown. `conftest` rewrites `DATABASE_URL` to a sibling database ending `_test` and creates it; `test_postgres.py` asserts it again. A stray DSN can never wipe a real database. |
-| `ALLOW_MODEL_REQUESTS = False` | Any real provider call raises instead of going to the network. A test suite that can spend money is one nobody runs. |
-
-Coverage carries a floor in `pyproject.toml` rather than a target. It exists so a change
-that guts a tested module fails loudly; raise it when the number genuinely climbs, never to
-turn a red run green.
-
-Some tests need a service, and skip without it rather than failing. The rest run straight
-after `uv sync`. SQLite is never used — it has no schemas, no `ON CONFLICT ... ON
-CONSTRAINT`, no JSONB and no advisory locks, which is most of what can break here.
-
-| Needs | Which tests |
-|---|---|
-| Postgres | `test_postgres.py`, `test_auth.py` — what only a database answers: upserts, windows, a unique email under a race |
-| RabbitMQ | `test_queue_live.py` — what only a broker answers: whether a routing key reaches the queue we think it does, and whether a rejected job really lands in `jobs.retry` |
-| all three | `test_end_to_end.py` — one question through HTTP, broker, worker, Redis and back. The model is the only thing stubbed: what it answers is `evals/`, not a join |
-
-```bash
-docker run -d --name mycel-test-pg -p 5433:5432 \
-  -e POSTGRES_USER=pg -e POSTGRES_PASSWORD=pg -e POSTGRES_DB=mycel postgres:16-alpine
-docker run -d --name mycel-test-rabbit -p 5673:5672 rabbitmq:3-alpine
-docker run -d --name mycel-test-redis -p 6380:6379 redis:7-alpine
-
-DATABASE_URL=postgresql://pg:pg@localhost:5433/mycel \
-RABBITMQ_URL=amqp://guest:guest@localhost:5673/ \
-REDIS_URL=redis://localhost:6380/0 uv run pytest --cov
-```
-
-The frontend is checked separately, because it needs Node and no database:
-
-```bash
-cd web && npm ci && npx tsc --noEmit && npm run build
-```
-
-**Evals are not tests.** Tests catch broken code; evals catch a report that has no error and
-is simply worse than last time. They call the real model, so CI runs them only when a PR
-touches `src/mycel/agents/`, `src/mycel/llm/` or `evals/` — see [evals/](evals/README.md).
-
-## Directory tree
+## Where things are
 
 ```
 src/mycel/     Source — see docs/ for what each layer does
-web/           The UI: React + TypeScript, built into the image, served at /app
-config/        Per-environment, per-agent and per-source YAML (secrets live in .env)
-deploy/        Infrastructure config: OTel, Grafana, vLLM, deploy environments
-evals/         Golden set for scoring report quality
+web/           React + TypeScript, built into the image, served at /app
+config/        Per-environment, per-agent and per-source YAML
+deploy/        OTel, Grafana, vLLM, deploy environments
 migrations/    Alembic migrations
-docs/          Design documentation
-notes/flow/    🇻🇳 plan/ — one batch each, written first; tmp/ — how the system runs
-tests/         Tests
+evals/         Golden set for scoring report quality
+notes/flow/    🇻🇳 plan/ — one batch each; tmp/ — how the system runs
 ```
-
-## Documentation
 
 | | |
 |---|---|
-| **[docs/using-mycel.html](docs/using-mycel.html)** | How to use it: sign up, connect Jira, read the report |
-| [notes/flow/tmp/dev.html](notes/flow/tmp/dev.html) | 🇻🇳 Sessions and the test suite — what you need before editing |
 | **[docs/architecture.html](docs/architecture.html)** | How the system is put together — read this first |
-| **[docs/database.html](docs/database.html)** | Schemas, tables and every column, with diagrams |
+| **[docs/using-mycel.html](docs/using-mycel.html)** | Sign up, connect Jira, read the report |
+| [docs/database.html](docs/database.html) | Schemas, tables, every column, with diagrams |
+| [deploy/envs/](deploy/envs/README.md) | Environment variables, staging and prod |
 | [deploy/inference/](deploy/inference/README.md) | Hardware constraints for the local model |
-| [deploy/envs/](deploy/envs/README.md) | Environment variables and how to reach staging/prod |
-| [evals/](evals/README.md) | Re-run before merging any prompt or model change |
