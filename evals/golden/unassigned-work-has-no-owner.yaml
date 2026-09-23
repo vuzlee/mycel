@@ -1,0 +1,26 @@
+# Half the rows carry no `who=`. The schema's `who` defaults to empty for exactly this,
+# and the failure to catch is a model filling the gap with the nearest name it saw —
+# which produces a load table crediting work to someone who never touched it.
+prompt: |
+  Project MYC, 2026-09-14 to 2026-09-20
+
+  Totals — done: 2, doing: 1, todo: 2
+
+  Work, by epic:
+    MYC-7 — Backlog
+      key=MYC-71  status=done  kind=task  title=Ports table in the architecture page  who=vu le  estimated=0.5d  spent=0.5d
+      key=MYC-72  status=done  kind=task  title=Palette is one violet hue
+      key=MYC-73  status=doing  kind=story  title=Permission has a real rule  estimated=5.0d  due=2026-11-01
+      key=MYC-74  status=todo  kind=task  title=Coverage floor in CI
+      key=MYC-75  status=todo  kind=task  title=End-to-end test  estimated=3.0d
+
+  Nothing is past its due date.
+
+  Per person — items, done, estimated vs spent (days):
+    vu le — 1 items, 1 done, estimated 0.5d, spent 0.5d (0.0d under)
+
+expect:
+  health: on_track
+  shipped_keys: [MYC-71, MYC-72]
+  load_people: [vu le]
+  absent_keys: [MYC-99]

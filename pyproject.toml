@@ -45,6 +45,8 @@ dev = [
   "httpx>=0.27",
   # Type stubs for the async driver, which ships none.
   "asyncpg-stubs>=0.29",
+  # Coverage, so "is this tested" has an answer instead of an opinion.
+  "pytest-cov>=5.0",
 ]
 
 [build-system]
@@ -70,7 +72,23 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src"]
+files = ["src", "evals"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/mycel"]
+branch = true
+
+[tool.coverage.report]
+# Lines that exist to be skipped, not to be run.
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
+]
+# The floor, not the target. It exists so a change that guts a tested module fails loudly;
+# raise it when the number genuinely climbs, never to make a red run green.
+fail_under = 70
+show_missing = true

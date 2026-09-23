@@ -1,0 +1,30 @@
+# The baseline case: work is moving, nothing is late. Its job is to catch the opposite
+# failure to every other case here — a model that has learned "find something at risk"
+# and manufactures a risk from a clean window.
+prompt: |
+  Project MYC, 2026-09-14 to 2026-09-20
+
+  Totals — done: 3, doing: 2, todo: 1
+
+  Work, by epic:
+    MYC-1 — Entry points
+      key=MYC-11  status=done  kind=story  title=Session cookie carries the token  who=vu le  estimated=2.0d  spent=1.8d
+      key=MYC-12  status=done  kind=task  title=Logout deletes the row  who=vu le  estimated=0.5d  spent=0.4d
+      key=MYC-13  status=doing  kind=story  title=Password reset endpoint  who=mai tran  estimated=3.0d  spent=1.0d  due=2026-10-02
+    MYC-2 — Data
+      key=MYC-21  status=done  kind=task  title=Jira worklogs land in bronze  who=mai tran  estimated=1.0d  spent=1.1d
+      key=MYC-22  status=doing  kind=story  title=Silver dedupes on issue key  who=vu le  estimated=2.0d  spent=0.5d  due=2026-10-05
+      key=MYC-23  status=todo  kind=task  title=Gold promotion is idempotent  estimated=1.0d
+
+  Nothing is past its due date.
+
+  Per person — items, done, estimated vs spent (days):
+    vu le — 3 items, 2 done, estimated 4.5d, spent 2.7d (1.8d under)
+    mai tran — 2 items, 1 done, estimated 4.0d, spent 2.1d (1.9d under)
+
+expect:
+  health: on_track
+  shipped_keys: [MYC-11, MYC-12, MYC-21]
+  at_risk_keys: []
+  load_people: [vu le, mai tran]
+  absent_keys: [MYC-99]

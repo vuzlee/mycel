@@ -14,8 +14,22 @@ jobs:
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-retries 10
         ports: ["5432:5432"]
+      # The broker and Redis are here so `test_queue_live.py` and `test_end_to_end.py` run
+      # rather than skip. They skip silently without one, which reads as a green suite.
+      rabbitmq:
+        image: rabbitmq:3-alpine
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping" --health-interval 5s --health-retries 20
+        ports: ["5672:5672"]
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+        ports: ["6379:6379"]
     env:
       DATABASE_URL: postgresql://mycel:mycel@localhost:5432/mycel_test
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672/
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -30,8 +44,10 @@ jobs:
       - name: Migrations apply cleanly
         run: uv run alembic upgrade head
 
+      # `--cov` carries its own floor from pyproject: a change that guts a tested module
+      # fails here rather than in a review nobody ran.
       - name: Test
-        run: uv run pytest
+        run: uv run pytest --cov
 
   # The frontend's `mypy`. A separate job rather than a step in `check`: it needs Node and
   # no database, and a Python-only change should not wait on an npm install.

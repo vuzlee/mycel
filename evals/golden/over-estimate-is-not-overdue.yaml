@@ -1,0 +1,27 @@
+# Two different reasons a row is at risk, and a model that conflates them gets one of them
+# wrong. MYC-62 is far over its estimate and has no due date at all; MYC-63 is on estimate
+# but past due. Both belong in `at_risk`, and MYC-61 — over estimate but finished — does
+# not: work that shipped is not a risk, whatever it cost.
+prompt: |
+  Project MYC, 2026-09-14 to 2026-09-20
+
+  Totals — done: 1, doing: 2, todo: 0
+
+  Work, by epic:
+    MYC-6 — Delivery
+      key=MYC-61  status=done  kind=story  title=Streaming tokens reach the browser  who=vu le  estimated=2.0d  spent=6.0d
+      key=MYC-62  status=doing  kind=story  title=Retry through the dead letter exchange  who=mai tran  estimated=2.0d  spent=9.5d
+      key=MYC-63  status=doing  kind=task  title=Migrations run before the swap  who=vu le  estimated=1.0d  spent=0.9d  due=2026-09-10
+
+  Past due and not done, most overdue first:
+    key=MYC-63  status=doing  kind=task  title=Migrations run before the swap  who=vu le  estimated=1.0d  spent=0.9d  due=2026-09-10
+
+  Per person — items, done, estimated vs spent (days):
+    vu le — 2 items, 1 done, estimated 3.0d, spent 6.9d (3.9d over)
+    mai tran — 1 items, 0 done, estimated 2.0d, spent 9.5d (7.5d over)
+
+expect:
+  health: at_risk
+  at_risk_keys: [MYC-62, MYC-63]
+  shipped_keys: [MYC-61]
+  load_people: [vu le, mai tran]

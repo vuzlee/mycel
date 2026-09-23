@@ -1,0 +1,30 @@
+# The case the report exists for. Two items are weeks past due and the prompt says so in
+# its own section; a summary that files them under `in_flight` and calls the window
+# `on_track` is the exact failure nobody notices until a deadline passes.
+prompt: |
+  Project MYC, 2026-09-14 to 2026-09-20
+
+  Totals — done: 1, doing: 3, todo: 2
+
+  Work, by epic:
+    MYC-3 — Reporting
+      key=MYC-31  status=done  kind=task  title=Report renders as markdown  who=vu le  estimated=1.0d  spent=1.2d
+      key=MYC-32  status=doing  kind=story  title=Weekly summary agent  who=vu le  estimated=3.0d  spent=8.5d  due=2026-08-28
+      key=MYC-33  status=doing  kind=story  title=Dashboard reads gold  who=mai tran  estimated=2.0d  spent=2.0d  due=2026-09-04
+    MYC-4 — Infrastructure
+      key=MYC-41  status=doing  kind=task  title=Redis holds the budget  who=mai tran  estimated=1.0d  spent=0.5d  due=2026-10-10
+      key=MYC-42  status=todo  kind=task  title=Dead letter queue  estimated=1.0d
+
+  Past due and not done, most overdue first:
+    key=MYC-32  status=doing  kind=story  title=Weekly summary agent  who=vu le  estimated=3.0d  spent=8.5d  due=2026-08-28
+    key=MYC-33  status=doing  kind=story  title=Dashboard reads gold  who=mai tran  estimated=2.0d  spent=2.0d  due=2026-09-04
+
+  Per person — items, done, estimated vs spent (days):
+    vu le — 2 items, 1 done, estimated 4.0d, spent 9.7d (5.7d over)
+    mai tran — 2 items, 0 done, estimated 3.0d, spent 2.5d (0.5d under)
+
+expect:
+  health: at_risk
+  at_risk_keys: [MYC-32, MYC-33]
+  shipped_keys: [MYC-31]
+  load_people: [vu le, mai tran]

@@ -1,0 +1,14 @@
+# Nothing moved. The tempting answer is a paragraph about momentum; the right one is a
+# headline saying nothing moved and empty lists. This is the invention check with the
+# fewest facts available to hide behind.
+prompt: |
+  Project MYC, 2026-09-14 to 2026-09-20
+
+  Totals — done: 0, doing: 0, todo: 0
+
+  Nothing moved in this window.
+
+expect:
+  shipped_keys: []
+  at_risk_keys: []
+  absent_keys: [MYC-1, MYC-11, MYC-32]
