@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700"
-     role="img" aria-label="Mycel end to end: a scheduler pulls Jira through the connectors into a bronze raw layer, which the ETL pipeline normalises to silver and promotes to gold. A question posted to the API returns a job id and goes on a message queue; a worker pulls it, and an orchestrator delegates to whichever specialist agents can answer, reading gold only. The answer streams back over SSE. Every component emits a span, and traces, metrics and logs share one trace id.">
+     role="img" aria-label="Mycel end to end: a scheduler pulls the external sources into a bronze raw layer, which the ETL pipeline normalises to silver and promotes to gold. A question posted to the API returns a job id and goes on a message queue; a worker pulls it, and an orchestrator delegates to whichever specialist agents can answer, reading gold only. The answer streams back over SSE. Every component emits a span, and traces, metrics and logs share one trace id.">
   <!-- Components, not folders. This is a system diagram: it says what the parts are and
        how a request moves between them, so it stays true through a refactor that renames
        every module. docs/architecture.html is where the code layout belongs.
 
        Four bands, four jobs: get the data in, take the question, answer it, watch the
-       whole thing. Only the blocks someone needs to hold in their head — the retry and
-       dead-letter queues are real, but they live inside the queue.
+       whole thing. Major components only — the connector layer, the retry and the
+       dead-letter queues are all real, and all inside a box drawn here.
 
        No agent is named: the roster is prose, because prose is corrected in one pass and
        a drawing is the last thing anyone remembers to redraw.
@@ -25,27 +25,23 @@
     <text x="48" y="56" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="10" letter-spacing="1.6" fill="#655d79">INGEST · ON A SCHEDULE</text>
 
-    <rect x="48" y="82" width="148" height="68" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="122" y="112" font-size="14" fill="#f0edf7" text-anchor="middle">Jira</text>
-    <text x="122" y="132" font-size="11" fill="#8f87a3" text-anchor="middle">external platform</text>
+    <rect x="48" y="82" width="186" height="68" rx="2" fill="#131019" stroke="#241f30"/>
+    <text x="68" y="112" font-size="14" fill="#f0edf7">External sources</text>
+    <text x="68" y="132" font-size="11" fill="#8f87a3">Jira today — the layer is pluggable</text>
 
-    <rect x="280" y="82" width="168" height="68" rx="2" fill="#25190f" stroke="#d29472" stroke-width="1.3"/>
-    <text x="300" y="112" font-size="14" fill="#d29472">Connectors</text>
-    <text x="300" y="132" font-size="11" fill="#8f87a3">pull in, no processing</text>
+    <rect x="354" y="82" width="186" height="68" rx="2" fill="#25190f" stroke="#d29472" stroke-width="1.3"/>
+    <text x="374" y="112" font-size="14" fill="#d29472">Bronze</text>
+    <text x="374" y="132" font-size="11" fill="#8f87a3">raw, exactly as it arrived</text>
 
-    <rect x="532" y="82" width="160" height="68" rx="2" fill="#25190f" stroke="#d29472" stroke-width="1.3"/>
-    <text x="552" y="112" font-size="14" fill="#d29472">Bronze</text>
-    <text x="552" y="132" font-size="11" fill="#8f87a3">raw, immutable</text>
+    <rect x="660" y="82" width="186" height="68" rx="2" fill="#141b26" stroke="#92aee0" stroke-width="1.3"/>
+    <text x="680" y="112" font-size="14" fill="#92aee0">Silver</text>
+    <text x="680" y="132" font-size="11" fill="#8f87a3">normalised, deduped</text>
 
-    <rect x="776" y="82" width="160" height="68" rx="2" fill="#141b26" stroke="#92aee0" stroke-width="1.3"/>
-    <text x="796" y="112" font-size="14" fill="#92aee0">Silver</text>
-    <text x="796" y="132" font-size="11" fill="#8f87a3">normalised, deduped</text>
+    <rect x="966" y="82" width="186" height="68" rx="2" fill="#1d1730" stroke="#b79cff" stroke-width="1.6"/>
+    <text x="986" y="112" font-size="14" fill="#b79cff">Gold</text>
+    <text x="986" y="132" font-size="11" fill="#8f87a3">business tables, ready to query</text>
 
-    <rect x="1012" y="82" width="140" height="68" rx="2" fill="#1d1730" stroke="#b79cff" stroke-width="1.6"/>
-    <text x="1032" y="112" font-size="14" fill="#b79cff">Gold</text>
-    <text x="1032" y="132" font-size="11" fill="#8f87a3">business tables</text>
-
-    <text x="532" y="184" font-size="10.5" fill="#655d79">one database, three schemas — every ETL step is idempotent, with checks between each one</text>
+    <text x="354" y="184" font-size="10.5" fill="#655d79">one database, three schemas — every ETL step is idempotent, with checks between each one</text>
 
     <!-- ══ band 2 · ask ═════════════════════════════════════════════════════ -->
     <rect x="24" y="272" width="568" height="190" rx="4" fill="none"
@@ -115,24 +111,17 @@
     <!-- ══ arrows ═══════════════════════════════════════════════════════════ -->
 
     <!-- band 1, each arrow carrying the name of the step it performs -->
-    <g fill="none" stroke="#d29472" stroke-width="1.3">
-      <path d="M196 116H260"/>
-      <path d="M448 116H512"/>
-    </g>
-    <g fill="#d29472">
-      <path d="M260 110 272 116 260 122z"/>
-      <path d="M512 110 524 116 512 122z"/>
-    </g>
-    <path d="M692 116H756" fill="none" stroke="#92aee0" stroke-width="1.3"/>
-    <path d="M756 110 768 116 756 122z" fill="#92aee0"/>
-    <path d="M936 116H992" fill="none" stroke="#b79cff" stroke-width="1.3"/>
-    <path d="M992 110 1004 116 992 122z" fill="#b79cff"/>
+    <path d="M234 116H330" fill="none" stroke="#d29472" stroke-width="1.3"/>
+    <path d="M330 110 342 116 330 122z" fill="#d29472"/>
+    <path d="M540 116H636" fill="none" stroke="#92aee0" stroke-width="1.3"/>
+    <path d="M636 110 648 116 636 122z" fill="#92aee0"/>
+    <path d="M846 116H942" fill="none" stroke="#b79cff" stroke-width="1.3"/>
+    <path d="M942 110 954 116 942 122z" fill="#b79cff"/>
 
     <g font-size="9.5" text-anchor="middle">
-      <text x="234" y="106" fill="#655d79">HTTP</text>
-      <text x="486" y="106" fill="#d29472">write verbatim</text>
-      <text x="730" y="106" fill="#92aee0">normalise</text>
-      <text x="968" y="106" fill="#b79cff">promote</text>
+      <text x="288" y="106" fill="#d29472">store verbatim</text>
+      <text x="594" y="106" fill="#92aee0">normalise</text>
+      <text x="900" y="106" fill="#b79cff">promote</text>
     </g>
 
     <!-- bands 2 and 3, one chain that happens to cross a frame in the middle -->
@@ -150,9 +139,9 @@
     </g>
 
     <!-- the only way out of the database, drawn in the gap between the bands -->
-    <path d="M1090 330V174" fill="none" stroke="#b79cff" stroke-width="1.5"/>
-    <path d="M1084 174 1090 162 1096 174z" fill="#b79cff"/>
-    <text x="1102" y="248" font-size="9.5" fill="#b79cff">reads gold only</text>
+    <path d="M1060 330V174" fill="none" stroke="#b79cff" stroke-width="1.5"/>
+    <path d="M1054 174 1060 162 1066 174z" fill="#b79cff"/>
+    <text x="1072" y="248" font-size="9.5" fill="#b79cff">reads gold only</text>
 
     <!-- the answer comes back the way it was asked, along the gap below both bands -->
     <g fill="none" stroke="#b79cff" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
