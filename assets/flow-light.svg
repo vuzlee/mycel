@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 816" width="1200" height="816"
      role="img" aria-label="Mycel at a glance, in four columns. Ingest: a scheduler drives connectors that pull each external platform into a bronze, silver and gold data lakehouse. Request: a prompt goes through the API gateway and its middleware, which publishes a job to the message broker and returns an id. Processing: a consumer picks the job up, an orchestrator delegates to specialist agents, and the agents read gold. The answer streams back to the client. Observability: traces, metrics and logs.">
   <!-- High-level design. Components and their contracts — not modules, not folders, not
        what is inside a component. docs/architecture.html is where the detail belongs.
@@ -41,7 +41,7 @@
     <rect x="324" y="36" width="252" height="432" rx="4" fill="none"
           stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="348" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#b3adc2">REQUEST · PRODUCER</text>
+          font-size="10" letter-spacing="1.2" fill="#b3adc2">PRODUCER</text>
 
     <rect x="348" y="100" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
     <text x="450" y="134" font-size="14" fill="#17141f" text-anchor="middle">Prompt</text>
@@ -56,10 +56,10 @@
     <text x="450" y="422" font-size="14" fill="#6d3fd1" text-anchor="middle">Message Broker</text>
 
     <!-- ══ column 3 · processing ═════════════════════════════════════════════ -->
-    <rect x="624" y="324" width="252" height="336" rx="4" fill="none"
+    <rect x="624" y="324" width="252" height="432" rx="4" fill="none"
           stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="648" y="360" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#b3adc2">PROCESSING · CONSUMER</text>
+          font-size="10" letter-spacing="1.2" fill="#b3adc2">CONSUMER</text>
 
     <rect x="648" y="388" width="204" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
     <text x="750" y="422" font-size="14" fill="#6d3fd1" text-anchor="middle">Worker</text>
@@ -74,6 +74,14 @@
       <circle cx="818" cy="609" r="5" opacity="0.58"/>
       <circle cx="836" cy="609" r="5" opacity="0.3"/>
     </g>
+
+    <rect x="648" y="676" width="204" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
+    <text x="750" y="710" font-size="14" fill="#17141f" text-anchor="middle">Tools</text>
+
+    <!-- An MCP server is an edge of the system, the same kind of thing as the database.
+         Drawn unfilled, like External Platforms: it is somebody else's process. -->
+    <rect x="924" y="676" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="1026" y="710" font-size="14" fill="#17141f" text-anchor="middle">MCP Servers</text>
 
     <!-- ══ column 4 · observability ══════════════════════════════════════════ -->
     <rect x="924" y="36" width="252" height="340" rx="4" fill="none"
@@ -121,6 +129,8 @@
       <path d="M552 416H636"/>
       <path d="M750 444V472"/>
       <path d="M750 540V568"/>
+      <path d="M750 636V664"/>
+      <path d="M852 704H912"/>
     </g>
     <g fill="#6d3fd1">
       <path d="M444 184 450 196 456 184z"/>
@@ -129,13 +139,15 @@
       <path d="M636 410 648 416 636 422z"/>
       <path d="M744 472 750 484 756 472z"/>
       <path d="M744 568 750 580 756 568z"/>
+      <path d="M744 664 750 676 756 664z"/>
+      <path d="M912 698 924 704 912 710z"/>
     </g>
     <text x="594" y="408" font-size="9.5" fill="#6d3fd1" text-anchor="middle">consume</text>
 
     <!-- the only way into the data, along the floor below both columns -->
-    <path d="M210 540V632H636" fill="none" stroke="#a87a1c" stroke-width="1.5"/>
-    <path d="M636 626 648 632 636 638z" fill="#a87a1c"/>
-    <text x="420" y="624" font-size="9.5" fill="#a87a1c" text-anchor="middle">read only</text>
+    <path d="M210 540V704H636" fill="none" stroke="#a87a1c" stroke-width="1.5"/>
+    <path d="M636 698 648 704 636 710z" fill="#a87a1c"/>
+    <text x="420" y="696" font-size="9.5" fill="#a87a1c" text-anchor="middle">read only</text>
 
     <!-- the answer goes back the way it was asked -->
     <g fill="none" stroke="#6d3fd1" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
@@ -144,6 +156,6 @@
     <path d="M336 126 348 132 336 138z" fill="#6d3fd1" opacity="0.6"/>
     <text x="474" y="504" font-size="9.5" fill="#6d3fd1" opacity="0.7" text-anchor="middle">stream</text>
 
-    <text x="600" y="694" font-size="11" fill="#b3adc2" text-anchor="middle">every component emits a span, on one trace</text>
+    <text x="600" y="790" font-size="11" fill="#b3adc2" text-anchor="middle">every component emits a span, on one trace</text>
   </g>
 </svg>
