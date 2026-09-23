@@ -3,67 +3,66 @@
   <!-- One violet hue (272°) carries the whole image; greys are that hue at very low
        saturation. Values are written into attributes because GitHub sanitises <style>
        inside an embedded SVG, so CSS variables would not survive. The dark variant is
-       the same file with the palette swapped. -->
+       the same file with the palette swapped.
+
+       Nothing here is labelled. A banner that named the agents would need redrawing the
+       day one is added, and a banner is the last thing anyone remembers to redraw. -->
   <rect width="1280" height="320" rx="20" fill="#faf9fc"/>
   <rect x="0.5" y="0.5" width="1279" height="319" rx="19.5" fill="none" stroke="#e7e3f0"/>
 
-  <!-- The network. Not a mushroom: the name already says that. This is what mycelium
-       does — one point on the left, threads branching out, the three on the right
-       brighter because those are the agents. -->
-  <g fill="none" stroke="#6d3fd1" stroke-linecap="round" stroke-linejoin="round">
-    <!-- faint outer filaments, texture only -->
-    <g stroke-width="1" opacity="0.18">
-      <path d="M660 160C720 120 740 60 812 46C880 34 920 44 976 76"/>
-      <path d="M660 160C724 200 744 260 818 274C886 286 924 276 976 244"/>
-      <path d="M700 148C762 126 800 62 880 62C932 62 950 68 976 76"/>
-      <path d="M700 172C762 194 800 258 880 258C932 258 950 252 976 244"/>
-      <path d="M800 96C848 108 900 140 976 160"/>
-      <path d="M800 224C848 212 900 180 976 160"/>
-    </g>
-    <!-- primary threads -->
-    <g stroke-width="2" opacity="0.5">
-      <path d="M660 160C716 160 736 106 800 96"/>
-      <path d="M660 160H800"/>
-      <path d="M660 160C716 160 736 214 800 224"/>
-    </g>
-    <!-- secondary threads, reaching the three bright nodes -->
-    <g stroke-width="2" opacity="0.75">
-      <path d="M800 96C872 86 900 76 976 76"/>
-      <path d="M800 96C860 100 892 128 976 160"/>
-      <path d="M800 160C876 160 908 160 976 160"/>
-      <path d="M800 224C860 220 892 192 976 160"/>
-      <path d="M800 224C872 234 900 244 976 244"/>
+  <!-- The app mark, at the size it was drawn for. -->
+  <g transform="translate(80 92) scale(1.75)">
+    <rect width="32" height="32" rx="9" fill="#6d3fd1"/>
+    <g transform="translate(4 4) scale(1.5)" fill="none" stroke="#ffffff" stroke-width="1.3"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 8.6V13"/>
+      <path d="M8 8.6 4.1 5.4M4.1 5.4V2.9M4.1 5.4H1.9"/>
+      <path d="M8 8.6 12.1 5.9M12.1 5.9l1.9-1.6M12.1 5.9l.5 2.3"/>
+      <circle cx="8" cy="8.6" r="1.25" fill="#ffffff" stroke="none"/>
     </g>
   </g>
 
-  <!-- junctions along the way -->
-  <g fill="#6d3fd1" opacity="0.45">
-    <circle cx="800" cy="96" r="4"/>
-    <circle cx="800" cy="160" r="4"/>
-    <circle cx="800" cy="224" r="4"/>
-  </g>
-  <!-- the origin -->
-  <circle cx="660" cy="160" r="7" fill="#6d3fd1" opacity="0.7"/>
-
-  <!-- the three agents -->
-  <g>
-    <circle cx="976" cy="76" r="9" fill="#6d3fd1"/>
-    <circle cx="976" cy="160" r="9" fill="#6d3fd1"/>
-    <circle cx="976" cy="244" r="9" fill="#6d3fd1"/>
-  </g>
-  <g font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="15"
-     fill="#6f6782" dominant-baseline="middle">
-    <text x="1000" y="76">summariser</text>
-    <text x="1000" y="160">analyst</text>
-    <text x="1000" y="244">researcher</text>
-  </g>
-
-  <!-- wordmark -->
-  <text x="80" y="150" font-family="Instrument Serif, Georgia, serif" font-size="92"
+  <!-- Wordmark. -->
+  <text x="164" y="150" font-family="Instrument Serif, Georgia, serif" font-size="80"
         fill="#17141f">Mycel</text>
-  <text x="82" y="196" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
-        font-size="20" fill="#6f6782">Ask your issue tracker a question in plain language.</text>
-  <text x="82" y="228" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
-        font-size="20" fill="#6f6782">Get an answer with the numbers behind it.</text>
-  <rect x="80" y="252" width="56" height="3" rx="1.5" fill="#6d3fd1"/>
+  <text x="166" y="190" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+        font-size="19" fill="#6f6782">Ask your issue tracker a question in plain language.</text>
+  <text x="166" y="218" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+        font-size="19" fill="#6f6782">Get an answer with the numbers behind it.</text>
+
+  <!-- The network. Not a mushroom: the name already says that. This is what mycelium
+       does — one origin on the left, threads branching out and rejoining, no count that
+       means anything. -->
+  <g fill="none" stroke="#6d3fd1" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-width="1" opacity="0.16">
+      <path d="M760 160C820 118 840 56 912 44C980 32 1020 44 1076 78"/>
+      <path d="M760 160C824 202 844 262 918 274C986 286 1024 274 1076 242"/>
+      <path d="M800 146C862 122 900 58 980 58C1032 58 1050 66 1076 78"/>
+      <path d="M800 174C862 198 900 262 980 262C1032 262 1050 254 1076 242"/>
+      <path d="M900 94C948 108 1000 140 1076 160"/>
+      <path d="M900 226C948 212 1000 180 1076 160"/>
+    </g>
+    <g stroke-width="2" opacity="0.45">
+      <path d="M760 160C816 160 836 104 900 94"/>
+      <path d="M760 160H900"/>
+      <path d="M760 160C816 160 836 216 900 226"/>
+    </g>
+    <g stroke-width="2" opacity="0.72">
+      <path d="M900 94C972 84 1000 74 1076 74"/>
+      <path d="M900 94C960 98 992 126 1076 160"/>
+      <path d="M900 160C976 160 1008 160 1076 160"/>
+      <path d="M900 226C960 222 992 194 1076 160"/>
+      <path d="M900 226C972 236 1000 246 1076 246"/>
+    </g>
+  </g>
+
+  <g fill="#6d3fd1">
+    <circle cx="760" cy="160" r="7" opacity="0.7"/>
+    <circle cx="900" cy="94" r="4" opacity="0.45"/>
+    <circle cx="900" cy="160" r="4" opacity="0.45"/>
+    <circle cx="900" cy="226" r="4" opacity="0.45"/>
+    <circle cx="1076" cy="74" r="8"/>
+    <circle cx="1076" cy="160" r="8"/>
+    <circle cx="1076" cy="246" r="8"/>
+  </g>
 </svg>

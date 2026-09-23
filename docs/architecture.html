@@ -801,7 +801,7 @@ footer {
 
             <rect x="758" y="114" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="133" font-size="7.5">researcher · analyst · writer</text>
+            <text x="770" y="133" font-size="8">specialists — one per capability</text>
 
             <rect x="758" y="150" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
@@ -1496,7 +1496,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note">Four peers, differing in capability rather than rank: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the deployment&rsquo;s mailbox over IMAP (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
+        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the deployment&rsquo;s mailbox over IMAP (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
@@ -1683,17 +1683,18 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
                 fill="var(--ink-soft)">splits tasks, merges results</text>
 
           <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
-            <rect x="24" y="106" width="192" height="30" rx="2"
+            <!-- One box, not a list. The roster is in section 3.1 and in agents/registry.py,
+                 either of which can gain a peer without this figure going stale. -->
+            <rect x="24" y="106" width="192" height="102" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="125" font-size="8.5">analyst — reads gold, gives figures</text>
-
-            <rect x="24" y="142" width="192" height="30" rx="2"
-                  fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="161" font-size="9.5">writer — writes the summary</text>
-
-            <rect x="24" y="178" width="192" height="30" rx="2"
-                  fill="var(--surface)" stroke="var(--line)" stroke-dasharray="3 3"/>
-            <text x="40" y="197" font-size="8.5" fill="var(--ink-faint)">reviewer — checks against sources</text>
+            <g fill="var(--gold)">
+              <circle cx="42" cy="132" r="5"/>
+              <circle cx="58" cy="132" r="5" opacity="0.66"/>
+              <circle cx="74" cy="132" r="5" opacity="0.4"/>
+            </g>
+            <text x="40" y="162" font-size="9.5" fill="var(--ink)">specialists</text>
+            <text x="40" y="180" font-size="8.5">peers, not ranks — each differs</text>
+            <text x="40" y="195" font-size="8.5">by the tools it is given</text>
           </g>
 
           <!-- orchestrator -> agents -->

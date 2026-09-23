@@ -21,7 +21,7 @@ surfaces when you ask it something. The interesting part was never the fruiting 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <img src="assets/flow-light.svg" alt="Jira syncs into bronze then gold; a question goes to Ask, which routes it to the summariser, analyst or researcher" width="100%">
+  <img src="assets/flow-light.svg" alt="Jira syncs into bronze then gold; a question goes to Ask, which routes it to whichever specialist agent can answer" width="100%">
 </picture>
 
 Today the source is Jira; the source layer is pluggable. Reports go out over Telegram and
