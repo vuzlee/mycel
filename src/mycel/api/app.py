@@ -94,8 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Flush spans and close the connection pool on the way out.
 
         `BatchSpanProcessor` holds spans in memory until its timer fires, so a process
-        that exits promptly exports nothing — the same reason every `scripts/try_*.py`
-        calls `shutdown()`.
+        that exits promptly exports nothing unless it is shut down explicitly.
         """
         yield
         await dispose_engine()

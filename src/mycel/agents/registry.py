@@ -19,7 +19,7 @@ specialist from delegating back to its own caller is that `build_toolset` in
 
 `analyst`, `orchestrator`, `researcher` and `summariser` are here because they run.
 `librarian` is not: it reads the knowledge base, which needs a vector store that does not
-exist yet — see `notes/deferred.md`. An agent appears here when it has code and not
+exist yet. An agent appears here when it has code and not
 before, because a registry listing agents that cannot run is a lie told to the orchestrator.
 """
 

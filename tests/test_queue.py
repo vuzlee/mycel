@@ -6,8 +6,8 @@ the failure behaviour, because every one of these fails *silently* in production
 acked too early is simply gone, and a job requeued at the head of the queue looks like a
 busy worker rather than a spinning one.
 
-`scripts/try_queue.py` is the other half: it runs the same paths against the real broker,
-where these fakes cannot tell the truth about routing.
+`test_queue_live.py` is the other half: it runs against a real broker, where these fakes
+cannot tell the truth about routing, and skips when there is none.
 
 The agent is faked at `domains/chat.runner.run` rather than at the consumer, because
 batch 013 moved what a job *means* into the domain: the consumer now receives, dispatches
