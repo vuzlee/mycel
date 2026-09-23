@@ -13,7 +13,7 @@
 
     <!-- ══ band 1 · ingest ══════════════════════════════════════════════════ -->
     <rect x="24" y="24" width="1152" height="152" rx="4" fill="none"
-          stroke="#efecf6" stroke-width="1.2" stroke-dasharray="5 5"/>
+          stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="44" y="52" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="10" letter-spacing="1.6" fill="#b3adc2">INGEST · ON A SCHEDULE</text>
 
@@ -46,7 +46,7 @@
 
     <!-- ══ band 2 · ask ═════════════════════════════════════════════════════ -->
     <rect x="24" y="200" width="568" height="152" rx="4" fill="none"
-          stroke="#efecf6" stroke-width="1.2" stroke-dasharray="5 5"/>
+          stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="44" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="10" letter-spacing="1.6" fill="#b3adc2">ASK · ONE WAY IN</text>
 
@@ -69,7 +69,7 @@
 
     <!-- ══ band 3 · answer ══════════════════════════════════════════════════ -->
     <rect x="616" y="200" width="560" height="152" rx="4" fill="none"
-          stroke="#efecf6" stroke-width="1.2" stroke-dasharray="5 5"/>
+          stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="636" y="228" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="10" letter-spacing="1.6" fill="#b3adc2">ANSWER · IN THE WORKER</text>
 
@@ -93,7 +93,7 @@
 
     <!-- ══ band 4 · observability ═══════════════════════════════════════════ -->
     <rect x="24" y="376" width="1152" height="112" rx="4" fill="none"
-          stroke="#efecf6" stroke-width="1.2" stroke-dasharray="5 5"/>
+          stroke="#c9c1de" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="44" y="404" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="10" letter-spacing="1.6" fill="#b3adc2">OBSERVABILITY · EVERY BOX ABOVE EMITS A SPAN</text>
 
@@ -151,22 +151,22 @@
       <path d="M626 272 638 278 626 284z"/>
       <path d="M842 272 854 278 842 284z"/>
     </g>
-    <text x="597" y="268" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="9" fill="#b3adc2" text-anchor="middle">a worker</text>
-    <text x="597" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="9" fill="#b3adc2" text-anchor="middle">pulls it</text>
+    <!-- No label on the hand-off between bands: it crosses two frame edges, and the
+         band it arrives in is already titled "in the worker". -->
+
 
     <!-- the only way out of the database -->
     <path d="M1090 248V144" fill="none" stroke="#6d3fd1" stroke-width="1.5"/>
     <path d="M1084 144 1090 132 1096 144z" fill="#6d3fd1"/>
-    <text x="1102" y="200" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+    <!-- In the gap between the bands, so it crosses neither frame. -->
+    <text x="1102" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
           font-size="9" fill="#6d3fd1">reads gold only</text>
 
     <!-- the answer comes back the way it was asked -->
     <g fill="none" stroke="#6d3fd1" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
-      <path d="M730 308V366H34V284"/>
+      <path d="M730 308V366H36V278H42"/>
     </g>
-    <path d="M28 284 34 272 40 284z" fill="#6d3fd1" opacity="0.6"/>
+    <path d="M36 272 48 278 36 284z" fill="#6d3fd1" opacity="0.6"/>
     <text x="400" y="362" font-size="10.5" fill="#b3adc2" text-anchor="middle">the answer streams back over SSE, written as it arrives</text>
 
     <text x="600" y="508" font-size="10.5" fill="#b3adc2" text-anchor="middle">a slow or expensive answer is one trace away from an explanation</text>
