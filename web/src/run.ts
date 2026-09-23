@@ -13,7 +13,6 @@ import { Unauthorized, fetchChat } from "./api";
 import { useAuth } from "./auth";
 import { buildThread } from "./thread";
 import type { Item } from "./thread";
-import type { StreamState } from "./types";
 import type { Follow } from "./useJobStream";
 import { useFollow, useJobStream } from "./useJobStream";
 
@@ -23,7 +22,6 @@ export interface Run {
   items: Item[];
   gaps: Map<number, number>;
   liveSeq: number | null;
-  state: StreamState;
   failure: string | null;
   result: ChatResult | null;
   busy: boolean;
@@ -88,7 +86,6 @@ export function useRun(jobId: string | null): Run {
     items,
     gaps: stream.gaps,
     liveSeq: busy ? (stream.events[stream.events.length - 1]?.seq ?? null) : null,
-    state: failure ? "error" : stream.state,
     failure,
     result,
     busy,

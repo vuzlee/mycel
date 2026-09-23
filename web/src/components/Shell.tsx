@@ -51,13 +51,3 @@ export function Shell({ current = null, header, scrollRef, jump, children, foote
     </div>
   );
 }
-
-/** The run-state pill, in the header of both pages that run something. */
-export function StatePill({ state }: { state: string }) {
-  return (
-    <span className="pill" data-state={state}>
-      <span className="dot" />
-      {state}
-    </span>
-  );
-}

@@ -18,7 +18,7 @@ export const TOOL_CALLED = "tool_called";
 export const TOOL_RETURNED = "tool_returned";
 
 /** Connection state of a job's stream, as the composer and the header read it. */
-export type StreamState = "idle" | "queued" | "running" | "done" | "error";
+export type StreamState = "idle" | "running" | "done" | "error";
 
 export function text(event: SequencedEvent): string {
   const value = event.payload.text;

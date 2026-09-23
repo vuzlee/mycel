@@ -13,13 +13,16 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.emit import RunEmitter
 from mycel.api.routes import events
-from mycel.events.event import AgentEvent, SequencedEvent
+from mycel.events.channel import NullChannel, RecordingChannel
+from mycel.events.event import TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
 
 
-class RecordingChannel:
+class Collector:
+    """Keeps everything published, so a test can read what a run said."""
+
     def __init__(self) -> None:
         self.published: list[AgentEvent] = []
 
@@ -28,12 +31,12 @@ class RecordingChannel:
 
 
 @pytest.fixture
-def channel() -> RecordingChannel:
-    return RecordingChannel()
+def channel() -> Collector:
+    return Collector()
 
 
 @pytest.fixture
-def deps(channel: RecordingChannel) -> MycelDeps:
+def deps(channel: Collector) -> MycelDeps:
     return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), events=channel)
 
 
@@ -64,7 +67,7 @@ class Node:
 
 
 class TestEmitter:
-    async def test_text_becomes_an_event(self, deps: MycelDeps, channel: RecordingChannel) -> None:
+    async def test_text_becomes_an_event(self, deps: MycelDeps, channel: Collector) -> None:
         emitter = RunEmitter(deps, "analyst", None)
         await emitter.node(Node(model_response=_response(messages.TextPart(content="hello"))))
 
@@ -73,7 +76,7 @@ class TestEmitter:
         ]
 
     async def test_thinking_becomes_an_event(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """Reasoning is the agent's own prose, so it streams like text does."""
         emitter = RunEmitter(deps, "analyst", None)
@@ -89,7 +92,7 @@ class TestEmitter:
         assert (event.type, event.payload) == ("thinking", {"text": "1.41 / 1.2"})
 
     async def test_a_tool_call_carries_its_id(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """The id is what a nested run points back at."""
         emitter = RunEmitter(deps, "orchestrator", None)
@@ -104,7 +107,7 @@ class TestEmitter:
         assert channel.published[0].payload["tool_call_id"] == "c1"
 
     async def test_a_delegated_run_is_tagged_with_its_parent_call(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """Without this a client cannot tell nesting from interleaving."""
         emitter = RunEmitter(deps, "analyst", "c1")
@@ -113,14 +116,14 @@ class TestEmitter:
         assert channel.published[0].parent_tool_call_id == "c1"
 
     async def test_an_unknown_node_is_skipped(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """A new node kind must not crash a run, only go unshown."""
         await RunEmitter(deps, "analyst", None).node(Node(something_else=1))
         assert channel.published == []
 
     async def test_a_long_tool_result_is_truncated(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """Raw tool output can be a whole document; this goes to a browser."""
         emitter = RunEmitter(deps, "researcher", None)
@@ -148,7 +151,7 @@ class TestProseArrivesAsItIsWritten:
     """
 
     async def test_each_piece_is_its_own_event(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.stream(_chunks("Hello", " there"))
@@ -159,7 +162,7 @@ class TestProseArrivesAsItIsWritten:
         ]
 
     async def test_what_was_streamed_is_not_sent_again_whole(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.stream(_chunks("Hello", " there"))
@@ -168,7 +171,7 @@ class TestProseArrivesAsItIsWritten:
         assert [e.type for e in channel.published] == ["text_delta", "text_delta"]
 
     async def test_a_model_that_cannot_stream_still_sends_its_answer(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.node(Node(model_response=_response(messages.TextPart(content="Hello there"))))
@@ -178,7 +181,7 @@ class TestProseArrivesAsItIsWritten:
         ]
 
     async def test_the_next_turn_starts_over(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """The flag is per turn: a streamed turn must not silence the one after it."""
         emitter = RunEmitter(deps, "orchestrator", None)
@@ -192,7 +195,7 @@ class TestProseArrivesAsItIsWritten:
         ]
 
     async def test_a_tool_call_on_the_stream_adds_no_prose(
-        self, deps: MycelDeps, channel: RecordingChannel
+        self, deps: MycelDeps, channel: Collector
     ) -> None:
         """A streamed run still emits tool calls from the finished node, once."""
         emitter = RunEmitter(deps, "orchestrator", None)
@@ -224,7 +227,7 @@ class TestNestingThroughARealRun:
     """The envelope's whole purpose, exercised end to end with a fake model."""
 
     async def test_a_delegated_run_nests_under_the_call_that_made_it(
-        self, channel: RecordingChannel
+        self, channel: Collector
     ) -> None:
         settings = AgentSettings(model_spec="local:qwen3-4b")
         deps = MycelDeps(
@@ -268,7 +271,7 @@ class TestNestingThroughARealRun:
         # Every analyst event points at the call that started it — never at nothing.
         assert {e.parent_tool_call_id for e in nested} == {call_id}
 
-    async def test_the_top_level_run_has_no_parent(self, channel: RecordingChannel) -> None:
+    async def test_the_top_level_run_has_no_parent(self, channel: Collector) -> None:
         """A client uses this to know which events sit at the root."""
         deps = MycelDeps(
             job_id="job-1",
@@ -288,7 +291,7 @@ class TestNestingThroughARealRun:
 
 
     async def test_a_streaming_model_reaches_the_client_in_pieces(
-        self, channel: RecordingChannel
+        self, channel: Collector
     ) -> None:
         """The whole point, through `runner.run`: one answer, several events.
 
@@ -377,3 +380,56 @@ class TestSseFrames:
         )
 
         assert len(frames) == 1
+
+
+class TestATurnKeepsItsToolCalls:
+    """What `app.turn.steps` gets, so a reopened thread is not an empty middle (MYC-41)."""
+
+    async def test_everything_still_reaches_the_stream(self) -> None:
+        """The recorder wraps, it does not replace: a page watching live loses nothing."""
+        inner = Collector()
+        recorder = RecordingChannel(inner)
+
+        await recorder.publish(AgentEvent(agent="a", type="thinking", payload={"text": "hm"}))
+        await recorder.publish(AgentEvent(agent="a", type=TOOL_CALLED, payload={"tool": "sql"}))
+
+        assert [event.type for event in inner.published] == ["thinking", TOOL_CALLED]
+
+    async def test_only_tool_calls_are_kept(self) -> None:
+        """Reasoning is worth watching and not worth storing; a call is what makes an
+        answer checkable."""
+        recorder = RecordingChannel(NullChannel())
+
+        for type_ in ("run_started", "thinking", TOOL_CALLED, TOOL_RETURNED, "text"):
+            await recorder.publish(AgentEvent(agent="a", type=type_))
+
+        assert [step["type"] for step in recorder.steps] == [TOOL_CALLED, TOOL_RETURNED]
+
+    async def test_steps_are_numbered_from_one(self) -> None:
+        """Their own sequence, not the stream's: the stream counts every event, so a kept
+        list carrying its numbers would replay as one long gap."""
+        recorder = RecordingChannel(NullChannel())
+
+        for _ in range(3):
+            await recorder.publish(AgentEvent(agent="a", type=TOOL_CALLED))
+
+        assert [step["seq"] for step in recorder.steps] == [1, 2, 3]
+
+    async def test_a_turn_that_called_nothing_keeps_nothing(self) -> None:
+        recorder = RecordingChannel(NullChannel())
+        await recorder.publish(AgentEvent(agent="a", type="text", payload={"text": "hello"}))
+
+        assert recorder.steps == []
+
+    async def test_the_head_survives_the_ceiling_and_the_rest_is_counted(self) -> None:
+        """A looping run writes the same call forever. The first calls are the ones that
+        chose the direction, so they are what is kept — and the loss is reported rather
+        than silent."""
+        recorder = RecordingChannel(NullChannel())
+
+        for n in range(RecordingChannel.MAX_STEPS + 5):
+            await recorder.publish(AgentEvent(agent="a", type=TOOL_CALLED, payload={"n": n}))
+
+        assert len(recorder.steps) == RecordingChannel.MAX_STEPS
+        assert recorder.steps[0]["payload"] == {"n": 0}
+        assert recorder.dropped == 5

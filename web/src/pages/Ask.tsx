@@ -26,7 +26,7 @@ import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
 import { PastTurns } from "../components/PastTurns";
 import { CopyJobId, Elapsed } from "../components/RunMeta";
-import { Shell, StatePill } from "../components/Shell";
+import { Shell } from "../components/Shell";
 import { Thread } from "../components/Thread";
 import { ArrowRight } from "../components/icons";
 import { useRun } from "../run";
@@ -53,6 +53,9 @@ export function Ask() {
 
   const [asked, setAsked] = useState<string | null>(null);
   const [past, setPast] = useState<Turn[]>([]);
+  // Only ever set by asking, never by arriving: a reopened run started before this tab
+  // existed, and a clock counting from mount would report the age of the page as the age
+  // of the run.
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
@@ -71,11 +74,6 @@ export function Ask() {
   // sidebar, that knows the thread of a link naming a turn other than the latest.
   const fromUrl = params.get("thread");
   const threadId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
-
-  useEffect(() => {
-    if (!jobId) return;
-    setStartedAt((at) => at ?? Date.now());
-  }, [jobId]);
 
   // Everything this thread said before the run on screen. Turns are read from the kept
   // rows, not the stream: those runs are over, and a stream belongs to one run.
@@ -143,7 +141,6 @@ export function Ask() {
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       header={
         <>
-          <StatePill state={refused ? "error" : run.state} />
           {startedAt !== null && <Elapsed since={startedAt} running={run.busy} />}
           {jobId && <CopyJobId jobId={jobId} />}
         </>

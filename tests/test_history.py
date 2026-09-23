@@ -29,6 +29,7 @@ def _turn(n: int, question: str, answer: str, status: str = "done") -> TurnRow:
         answer=answer if status == "done" else None,
         error=None,
         spent_usd=Decimal("0.01"),
+        steps=None,
         created_at=datetime.now(UTC) + timedelta(seconds=n),
     )
 

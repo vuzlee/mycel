@@ -19,6 +19,7 @@ a record, and this is where the record is kept.
 """
 
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
@@ -29,6 +30,7 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.events.channel import EventChannel, RecordingChannel
 from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, TurnRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import budgets, results
@@ -155,14 +157,20 @@ async def run(job: Job) -> None:
     prompt = f"{history}\n\nThe question now:\n{question}" if history else question
 
     settings = AgentSettings.from_config(Orchestrator.name)
-    deps = await _deps(job, settings)
+    recorder = RecordingChannel(RedisEventChannel(job.job_id))
+    deps = await _deps(job, settings, recorder)
     _log_start(job, settings, deps)
     try:
         answer = await runner.run(Orchestrator.build(settings), prompt, deps)
     finally:
         await budgets.save(deps.budget)
 
-    await _finish(job, answer, question, deps.budget.spent_usd)
+    if recorder.dropped:
+        log.warning(
+            "tool calls past the ceiling were not kept",
+            extra={"job_id": job.job_id, "dropped": recorder.dropped},
+        )
+    await _finish(job, answer, question, deps.budget.spent_usd, recorder.steps)
     log.info(
         "job finished",
         extra={
@@ -179,7 +187,7 @@ async def record_failure(job: Job, error: str) -> None:
     await _record(job, status="failed", error=error[:500])
 
 
-async def _deps(job: Job, settings: AgentSettings) -> MycelDeps:
+async def _deps(job: Job, settings: AgentSettings, events: EventChannel) -> MycelDeps:
     """What one attempt runs with.
 
     The budget is seeded from Redis rather than from zero: this runs once per *attempt*,
@@ -191,14 +199,28 @@ async def _deps(job: Job, settings: AgentSettings) -> MycelDeps:
         ceiling_usd=ceiling,
         settings=settings,
         budget=await budgets.load(job.job_id, ceiling),
-        events=RedisEventChannel(job.job_id),
+        events=events,
     )
 
 
-async def _finish(job: Job, answer: str, question: str, spent: Decimal) -> None:
-    """Write a finished run to both stores: Redis to be polled, Postgres to be kept."""
+async def _finish(
+    job: Job, answer: str, question: str, spent: Decimal, steps: list[dict[str, Any]]
+) -> None:
+    """Write a finished run to both stores: Redis to be polled, Postgres to be kept.
+
+    The steps go with the answer and only with it. A failed run leaves half a chain of
+    tool calls, which is something to read in the logs, not something a thread should
+    replay as if it were work done.
+    """
     await results.store(job.job_id, answer, str(spent))
-    await _record(job, status="done", question=question, answer=answer, spent_usd=spent)
+    await _record(
+        job,
+        status="done",
+        question=question,
+        answer=answer,
+        spent_usd=spent,
+        steps=steps or None,
+    )
 
 
 async def _record(
@@ -208,6 +230,7 @@ async def _record(
     answer: str | None = None,
     error: str | None = None,
     spent_usd: Decimal | None = None,
+    steps: list[dict[str, Any]] | None = None,
 ) -> None:
     """Update the durable row this job already has, if it still has one.
 
@@ -240,6 +263,7 @@ async def _record(
                 answer=answer,
                 error=error,
                 spent_usd=spent_usd,
+                steps=steps,
             )
     except IntegrityError:
         log.warning(

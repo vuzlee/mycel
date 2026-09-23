@@ -397,55 +397,6 @@ a.brand:hover .mark {
   border-bottom: 1px solid var(--rule);
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 25px;
-  padding: 0 11px 0 9px;
-  border-radius: 999px;
-  border: 1px solid var(--rule-2);
-  background: var(--surface);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--faint);
-}
-
-.pill[data-state="running"] {
-  border-color: var(--accent-line);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.pill[data-state="running"] .dot {
-  background: var(--accent);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.pill[data-state="done"] .dot {
-  background: var(--accent);
-}
-
-.pill[data-state="error"] {
-  border-color: var(--flag);
-  background: var(--flag-soft);
-  color: var(--flag);
-}
-
-.pill[data-state="error"] .dot {
-  background: var(--flag);
-}
-
 @keyframes pulse {
   50% {
     opacity: 0.3;

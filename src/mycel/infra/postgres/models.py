@@ -344,6 +344,10 @@ class Turn(Base):
     could grow an attribute without a migration, and text needs neither.
 
     `job_id` is unique so a redelivered job updates its row instead of writing a second one.
+
+    `steps` is the tool calls this turn made, in the shape the stream sent them. Reasoning
+    is not kept: it is worth watching live and not worth storing, while a tool call is what
+    makes the answer checkable. Null for every turn that ran before batch 037.
     """
 
     __tablename__ = "turn"
@@ -363,6 +367,10 @@ class Turn(Base):
     answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     spent_usd: Mapped[Any | None] = mapped_column(Numeric(12, 6), nullable=True)
+    # `none_as_null` because a turn that recorded nothing must write SQL NULL, not the
+    # JSON literal `null` — the upsert coalesces on this column, and a JSON `null` is a
+    # value, so it would overwrite the steps an earlier attempt wrote.
+    steps: Mapped[list[Any] | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

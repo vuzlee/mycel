@@ -818,6 +818,41 @@ class TestTheDashboard:
 
 
 @needs_postgres
+class TestATurnKeepsItsToolCalls:
+    """`app.turn.steps`, so a thread reopened after the stream expired is not an empty
+    middle (MYC-41)."""
+
+    async def test_the_steps_come_back_as_they_were_written(
+        self, session: AsyncSession
+    ) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("steps@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "what happened?")
+        steps = [{"seq": 1, "agent": "analyst", "type": "tool_called", "payload": {"t": "sql"}}]
+
+        await repo.upsert_turn(thread.id, "job-1", "q", "done", answer="a", steps=steps)
+
+        kept = await repo.turn_by_job_id("job-1")
+        assert kept is not None and kept.steps == steps
+
+    async def test_a_later_write_without_steps_does_not_erase_them(
+        self, session: AsyncSession
+    ) -> None:
+        """A redelivery that ends in failure must not wipe what a successful attempt
+        already recorded."""
+        repo = AppRepository(session)
+        user = await repo.create_user("redeliver@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "what happened?")
+        steps = [{"seq": 1, "agent": "analyst", "type": "tool_called", "payload": {}}]
+
+        await repo.upsert_turn(thread.id, "job-2", "q", "done", answer="a", steps=steps)
+        await repo.upsert_turn(thread.id, "job-2", "q", "failed", error="boom")
+
+        kept = await repo.turn_by_job_id("job-2")
+        assert kept is not None and kept.status == "failed" and kept.steps == steps
+
+
+@needs_postgres
 class TestForgettingAThread:
     """Delete is the one write in `app` that has to be scoped by hand.
 

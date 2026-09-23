@@ -12,8 +12,9 @@ see `session_by_id` for why the caller decides what "expired" means.
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,6 +86,9 @@ class TurnRow:
     answer: str | None
     error: str | None
     spent_usd: Decimal | None
+    #: The tool calls this turn made, as the stream sent them. `None` for a turn that ran
+    #: before batch 037, and for one that failed.
+    steps: list[Any] | None
     created_at: datetime
 
 
@@ -295,6 +299,7 @@ class AppRepository:
         answer: str | None = None,
         error: str | None = None,
         spent_usd: Decimal | None = None,
+        steps: list[Any] | None = None,
     ) -> None:
         """Write a turn's state, replacing whatever that job id last said.
 
@@ -309,6 +314,7 @@ class AppRepository:
             answer=answer,
             error=error,
             spent_usd=spent_usd,
+            steps=steps,
         )
         await self._session.execute(
             stmt.on_conflict_do_update(
@@ -318,6 +324,9 @@ class AppRepository:
                     "answer": stmt.excluded.answer,
                     "error": stmt.excluded.error,
                     "spent_usd": stmt.excluded.spent_usd,
+                    # Coalesced, not overwritten: a redelivery that ends in failure must
+                    # not wipe the steps a successful earlier attempt already wrote.
+                    "steps": func.coalesce(stmt.excluded.steps, Turn.steps),
                 },
             )
         )
@@ -376,5 +385,6 @@ def _turn(row: Turn) -> TurnRow:
         answer=row.answer,
         error=row.error,
         spent_usd=row.spent_usd,
+        steps=row.steps,
         created_at=row.created_at,
     )

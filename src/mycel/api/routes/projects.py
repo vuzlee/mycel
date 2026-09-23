@@ -10,7 +10,7 @@ the projects this deployment reads, which is not public either.
 """
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
@@ -46,6 +46,10 @@ class TurnResponse(BaseModel):
     `answer` comes back whole rather than summarised: it is markdown the page already
     knows how to render, and shortening it here would be a second opinion about the same
     text.
+
+    `steps` is the tool calls that turn made, in the same shape the live stream sends —
+    so the page replays a finished turn with the builder it already has. Null for a turn
+    that ran before batch 037, and for one that failed.
     """
 
     job_id: str
@@ -54,6 +58,7 @@ class TurnResponse(BaseModel):
     answer: str | None = None
     spent_usd: str | None = None
     error: str | None = None
+    steps: list[dict[str, Any]] | None = None
     created_at: datetime
 
 
@@ -106,6 +111,7 @@ async def read_turns(
             answer=turn.answer,
             spent_usd=str(turn.spent_usd) if turn.spent_usd is not None else None,
             error=turn.error,
+            steps=turn.steps,
             created_at=turn.created_at,
         )
         for turn in await thread_turns(user.id, conversation_id)

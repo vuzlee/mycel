@@ -1,5 +1,7 @@
 /** Every HTTP call. The stream itself is `EventSource`, in `useJobStream`. */
 
+import type { SequencedEvent } from "./types";
+
 export interface Accepted {
   job_id: string;
   /** The thread this run landed in. Send it back to ask the next question into it. */
@@ -49,6 +51,10 @@ export interface Turn {
   answer: string | null;
   spent_usd: string | null;
   error: string | null;
+  /** The tool calls that turn made, in the same shape the stream sends — so a finished
+   *  turn replays through `buildThread`, not through a second builder. Null for a turn
+   *  that ran before the column existed, and for one that failed. */
+  steps: SequencedEvent[] | null;
   created_at: string;
 }
 

@@ -5,23 +5,31 @@ from typing import TYPE_CHECKING
 
 from pydantic_ai import messages
 
-from mycel.events.event import AgentEvent
+from mycel.events.event import (
+    RUN_FINISHED,
+    RUN_STARTED,
+    TEXT,
+    TEXT_DELTA,
+    THINKING,
+    TOOL_CALLED,
+    TOOL_RETURNED,
+    AgentEvent,
+)
+
+__all__ = [
+    "PREVIEW_CHARS",
+    "RUN_FINISHED",
+    "RUN_STARTED",
+    "TEXT",
+    "TEXT_DELTA",
+    "THINKING",
+    "TOOL_CALLED",
+    "TOOL_RETURNED",
+    "RunEmitter",
+]
 
 if TYPE_CHECKING:
     from mycel.agents.core.deps import MycelDeps
-
-#: Kept small on purpose. A client ignores types it does not know, so adding one later is
-#: safe; removing one is not.
-RUN_STARTED = "run_started"
-RUN_FINISHED = "run_finished"
-TEXT = "text"
-#: A piece of `TEXT`, emitted while the model is still writing. A client appends deltas to
-#: the same bubble; a run whose model cannot stream sends `TEXT` alone, and both read the
-#: same way.
-TEXT_DELTA = "text_delta"
-THINKING = "thinking"
-TOOL_CALLED = "tool_called"
-TOOL_RETURNED = "tool_returned"
 
 #: Enough to show what a tool was asked and what it said, not enough to leak a whole
 #: document into a browser. Raw model output does not go out at all — only `TextPart` and

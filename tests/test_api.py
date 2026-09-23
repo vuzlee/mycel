@@ -111,6 +111,7 @@ def _kept(job_id: str, *, status: str = "done") -> TurnRow:
         answer=KEPT_ANSWER if status == "done" else None,
         error=None,
         spent_usd=Decimal("0.0216"),
+        steps=None,
         created_at=datetime.now(UTC),
     )
 

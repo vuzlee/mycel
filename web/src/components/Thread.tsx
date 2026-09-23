@@ -1,14 +1,11 @@
 /**
  * The conversation: the question asked, then everything the run did about it.
  *
- * A gap marker is rendered wherever `seq` jumped. It is deliberately loud — an event this
- * page never received is exactly what a stream is supposed to make visible.
+ * The steps themselves render in `Steps`, which a finished turn reuses.
  */
 
 import type { Item } from "../thread";
-import { Markdown } from "./Markdown";
-import { ThinkingBlock } from "./ThinkingBlock";
-import { ToolCall } from "./ToolCall";
+import { Steps } from "./Steps";
 import { Working } from "./Working";
 
 interface Props {
@@ -37,35 +34,6 @@ export function Thread({
   children,
   before,
 }: Props) {
-  const render = (list: Item[]): React.ReactNode =>
-    list.map((item) => {
-      const lost = gaps.get(item.seq);
-      return (
-        <div key={`${item.kind}-${item.seq}`}>
-          {lost && <p className="gap">— {lost} event(s) lost —</p>}
-          {body(item)}
-        </div>
-      );
-    });
-
-  const body = (item: Item): React.ReactNode => {
-    switch (item.kind) {
-      case "thinking":
-        return <ThinkingBlock body={item.body} live={item.seq === liveSeq} />;
-      case "text":
-        return (
-          <div>
-            {item.agent !== "orchestrator" && <div className="agent-tag">{item.agent}</div>}
-            <Markdown body={item.body} />
-          </div>
-        );
-      case "tool":
-        return <ToolCall item={item} renderChildren={render} />;
-      case "mark":
-        return <p className="gap">{item.label}</p>;
-    }
-  };
-
   return (
     <div className="thread">
       {before}
@@ -74,7 +42,9 @@ export function Thread({
           <div className="bubble">{question}</div>
         </div>
       )}
-      <div className="turn items">{render(items)}</div>
+      <div className="turn items">
+        <Steps items={items} gaps={gaps} liveSeq={liveSeq} />
+      </div>
       {pending && <Working items={items} />}
       {children}
       {failure && <p className="failure">{failure}</p>}
