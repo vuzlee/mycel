@@ -26,87 +26,87 @@
     <rect x="24" y="36" width="252" height="564" rx="4" fill="none"
           stroke="#b3a9cc" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="48" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#948ca8">INGEST</text>
+          font-size="11.5" letter-spacing="1.2" fill="#948ca8">INGEST</text>
 
     <rect x="48" y="100" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="150" y="134" font-size="14" fill="#17141f" text-anchor="middle">External Platforms</text>
+    <text x="150" y="134" font-size="16" fill="#17141f" text-anchor="middle">External Platforms</text>
 
     <rect x="48" y="196" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="150" y="230" font-size="14" fill="#17141f" text-anchor="middle">Connectors</text>
+    <text x="150" y="230" font-size="16" fill="#17141f" text-anchor="middle">Connectors</text>
 
     <rect x="48" y="292" width="204" height="56" rx="2" fill="#faf5f3" stroke="#9c5a3c" stroke-width="1.3"/>
-    <text x="150" y="326" font-size="14" fill="#9c5a3c" text-anchor="middle">Bronze</text>
+    <text x="150" y="326" font-size="16" fill="#9c5a3c" text-anchor="middle">Bronze</text>
 
     <rect x="48" y="388" width="204" height="56" rx="2" fill="#f5f7fa" stroke="#4f6d9e" stroke-width="1.3"/>
-    <text x="150" y="422" font-size="14" fill="#4f6d9e" text-anchor="middle">Silver</text>
+    <text x="150" y="422" font-size="16" fill="#4f6d9e" text-anchor="middle">Silver</text>
 
     <rect x="48" y="484" width="204" height="56" rx="2" fill="#fdf6e6" stroke="#a87a1c" stroke-width="1.6"/>
-    <text x="150" y="518" font-size="14" fill="#a87a1c" text-anchor="middle">Gold</text>
+    <text x="150" y="518" font-size="16" fill="#a87a1c" text-anchor="middle">Gold</text>
 
-    <text x="48" y="574" font-size="11" fill="#948ca8">Data Lakehouse</text>
+    <text x="48" y="574" font-size="12.5" fill="#948ca8">Data Lakehouse</text>
 
     <!-- ══ column 2 · producer ═══════════════════════════════════════════════ -->
     <rect x="324" y="36" width="252" height="432" rx="4" fill="none"
           stroke="#b3a9cc" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="348" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#948ca8">PRODUCER</text>
+          font-size="11.5" letter-spacing="1.2" fill="#948ca8">PRODUCER</text>
 
     <rect x="348" y="100" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="450" y="134" font-size="14" fill="#17141f" text-anchor="middle">Prompt</text>
+    <text x="450" y="134" font-size="16" fill="#17141f" text-anchor="middle">Prompt</text>
 
     <rect x="348" y="196" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="450" y="230" font-size="14" fill="#17141f" text-anchor="middle">API Gateway</text>
+    <text x="450" y="230" font-size="16" fill="#17141f" text-anchor="middle">API Gateway</text>
 
     <rect x="348" y="292" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="450" y="326" font-size="14" fill="#17141f" text-anchor="middle">Middleware</text>
+    <text x="450" y="326" font-size="16" fill="#17141f" text-anchor="middle">Middleware</text>
 
     <rect x="348" y="388" width="204" height="56" rx="2" fill="#f5f1fd" stroke="#6d3fd1" stroke-width="1.6"/>
-    <text x="450" y="422" font-size="14" fill="#6d3fd1" text-anchor="middle">Message Broker</text>
+    <text x="450" y="422" font-size="16" fill="#6d3fd1" text-anchor="middle">Message Broker</text>
 
     <!-- ══ column 4 · observability ══════════════════════════════════════════ -->
     <rect x="924" y="36" width="252" height="340" rx="4" fill="none"
           stroke="#b3a9cc" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="948" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#948ca8">OBSERVABILITY</text>
+          font-size="11.5" letter-spacing="1.2" fill="#948ca8">OBSERVABILITY</text>
 
     <rect x="948" y="100" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="1050" y="134" font-size="14" fill="#17141f" text-anchor="middle">Traces</text>
+    <text x="1050" y="134" font-size="16" fill="#17141f" text-anchor="middle">Traces</text>
 
     <rect x="948" y="196" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="1050" y="230" font-size="14" fill="#17141f" text-anchor="middle">Metrics</text>
+    <text x="1050" y="230" font-size="16" fill="#17141f" text-anchor="middle">Metrics</text>
 
     <rect x="948" y="292" width="204" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
-    <text x="1050" y="326" font-size="14" fill="#17141f" text-anchor="middle">Logs</text>
+    <text x="1050" y="326" font-size="16" fill="#17141f" text-anchor="middle">Logs</text>
 
     <!-- ══ column 3 · consumer ═══════════════════════════════════════════════ -->
     <rect x="624" y="420" width="528" height="516" rx="4" fill="none"
           stroke="#b3a9cc" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="648" y="456" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#948ca8">CONSUMER</text>
+          font-size="11.5" letter-spacing="1.2" fill="#948ca8">CONSUMER</text>
 
     <rect x="696" y="484" width="180" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
-    <text x="786" y="518" font-size="14" fill="#6d3fd1" text-anchor="middle">Worker</text>
+    <text x="786" y="518" font-size="16" fill="#6d3fd1" text-anchor="middle">Worker</text>
 
     <rect x="672" y="580" width="228" height="228" rx="4" fill="none"
           stroke="#b3a9cc" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="696" y="608" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#948ca8">MULTI-AGENT SYSTEM</text>
+          font-size="11.5" letter-spacing="1.2" fill="#948ca8">MULTI-AGENT SYSTEM</text>
 
     <rect x="696" y="628" width="180" height="56" rx="2" fill="#f5f1fd" stroke="#6d3fd1" stroke-width="1.6"/>
-    <text x="786" y="662" font-size="14" fill="#6d3fd1" text-anchor="middle">Orchestrator</text>
+    <text x="786" y="662" font-size="16" fill="#6d3fd1" text-anchor="middle">Orchestrator</text>
 
     <!-- Stacked, not side by side: the orchestrator is a peer that happens to fan out to
          the others, and a vertical pair says that without needing a count. -->
     <rect x="696" y="724" width="180" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
-    <text x="786" y="758" font-size="14" fill="#17141f" text-anchor="middle">Sub-agents</text>
+    <text x="786" y="758" font-size="16" fill="#17141f" text-anchor="middle">Sub-agents</text>
 
     <rect x="696" y="856" width="180" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
-    <text x="786" y="890" font-size="14" fill="#17141f" text-anchor="middle">Tools</text>
+    <text x="786" y="890" font-size="16" fill="#17141f" text-anchor="middle">Tools</text>
 
     <!-- Same weight as Tools: to an agent both are simply something it calls, and a
          second meaning on the same row would read as a second tier. -->
     <rect x="912" y="856" width="180" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.3"/>
-    <text x="1002" y="890" font-size="14" fill="#17141f" text-anchor="middle">MCP Servers</text>
+    <text x="1002" y="890" font-size="16" fill="#17141f" text-anchor="middle">MCP Servers</text>
 
     <!-- ══ arrows ════════════════════════════════════════════════════════════ -->
 
@@ -124,7 +124,7 @@
     <path d="M150 444V472" fill="none" stroke="#a87a1c" stroke-width="1.3"/>
     <path d="M144 472 150 484 156 472z" fill="#a87a1c"/>
 
-    <g font-size="9.5">
+    <g font-size="11">
       <text x="164" y="177" fill="#9c5a3c">pull</text>
       <text x="164" y="273" fill="#9c5a3c">store raw</text>
       <text x="164" y="369" fill="#4f6d9e">normalise</text>
@@ -152,21 +152,21 @@
       <path d="M780 844 786 856 792 844z"/>
       <path d="M996 844 1002 856 1008 844z"/>
     </g>
-    <text x="642" y="504" font-size="9.5" fill="#6d3fd1" text-anchor="middle">consume</text>
-    <text x="800" y="708" font-size="9.5" fill="#6d3fd1">delegate</text>
+    <text x="636" y="496" font-size="11" fill="#6d3fd1" text-anchor="middle">consume</text>
+    <text x="800" y="708" font-size="11" fill="#6d3fd1">delegate</text>
 
     <!-- the only way into the data, along the floor below the first two columns -->
     <path d="M210 540V884H684" fill="none" stroke="#a87a1c" stroke-width="1.5"/>
     <path d="M684 878 696 884 684 890z" fill="#a87a1c"/>
-    <text x="440" y="876" font-size="9.5" fill="#a87a1c" text-anchor="middle">read only</text>
+    <text x="440" y="876" font-size="11" fill="#a87a1c" text-anchor="middle">read only</text>
 
     <!-- the answer goes back the way it was asked -->
     <g fill="none" stroke="#6d3fd1" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
       <path d="M696 656H300V132H336"/>
     </g>
     <path d="M336 126 348 132 336 138z" fill="#6d3fd1" opacity="0.6"/>
-    <text x="498" y="648" font-size="9.5" fill="#6d3fd1" opacity="0.7" text-anchor="middle">stream</text>
+    <text x="498" y="648" font-size="11" fill="#6d3fd1" opacity="0.7" text-anchor="middle">stream</text>
 
-    <text x="600" y="978" font-size="11" fill="#948ca8" text-anchor="middle">every component emits a span, on one trace</text>
+    <text x="600" y="978" font-size="12.5" fill="#948ca8" text-anchor="middle">every component emits a span, on one trace</text>
   </g>
 </svg>
