@@ -21,7 +21,7 @@ surfaces when you ask it something. The interesting part was never the fruiting 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <img src="assets/flow-light.svg" alt="Each external platform is pulled by its own connector into bronze, then silver and gold; a question goes through the API to a queue, a worker orchestrates whichever specialist agents can answer, and every step is one span in one trace" width="100%">
+  <img src="assets/flow-light.svg" alt="Four columns: connectors pull external platforms into a bronze, silver and gold lakehouse; a prompt goes through the API gateway and middleware onto a message broker; a worker consumes the job and an orchestrator delegates to agents that read gold; traces, metrics and logs alongside" width="100%">
 </picture>
 
 Today the source is Jira; the source layer is pluggable. Reports go out over Telegram and
