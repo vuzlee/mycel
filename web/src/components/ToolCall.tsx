@@ -6,6 +6,7 @@
  */
 
 import type { Item, ToolItem } from "../thread";
+import { labelFor } from "../toolLabel";
 import { Chevron, Spinner } from "./icons";
 
 interface Props {
@@ -28,8 +29,7 @@ export function ToolCall({ item, renderChildren }: Props) {
     <details className="tool">
       <summary>
         <Chevron className="chevron" />
-        <span className="name">{item.tool}</span>
-        <span className="peek">{item.args || "{}"}</span>
+        <span className="name">{labelFor(item.tool)}</span>
         {pending && (
           <span className="working">
             <Spinner className="spin" size={11} />
@@ -38,6 +38,8 @@ export function ToolCall({ item, renderChildren }: Props) {
         )}
       </summary>
       <div className="detail">
+        <span className="label">Tool</span>
+        <pre>{item.tool}</pre>
         <span className="label">Arguments</span>
         <pre>{item.args || "{}"}</pre>
         {item.result !== null && (

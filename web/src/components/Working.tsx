@@ -7,6 +7,7 @@
  */
 
 import type { Item, ToolItem } from "../thread";
+import { labelFor } from "../toolLabel";
 import { Mycelium } from "./icons";
 
 interface Props {
@@ -20,25 +21,11 @@ export function Working({ items }: Props) {
     <p className="working-line">
       <Mycelium className="grow" />
       <span>
-        {call ? phrase(call) : "Working through it"}
+        {call ? labelFor(call.tool) : "Working through it"}
         <span className="ellipsis" />
       </span>
     </p>
   );
-}
-
-/** The agents `tools/delegate.py` exposes. A tool that wraps an agent carries that
- *  agent's own name, so there is no prefix to match on — the list is the only way to
- *  tell one from an ordinary tool. */
-const AGENTS = new Set(["analyst", "researcher", "summariser"]);
-
-/**
- * A delegation reads better as the agent it woke up than as a tool being run, so
- * `researcher` becomes "Asking researcher".
- */
-function phrase(call: ToolItem): string {
-  if (AGENTS.has(call.tool)) return `Asking ${call.tool}`;
-  return `Running ${call.tool.replace(/_/g, " ")}`;
 }
 
 /** The innermost unfinished call: the outer ones are only waiting on this one. */

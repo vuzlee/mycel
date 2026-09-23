@@ -724,20 +724,16 @@ details[open] > summary .chevron {
   align-items: center;
   gap: 9px;
   padding: 9px 13px;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 
+/* Prose, not code: the row says what the run is doing, and a monospace face would read
+   as the name of the function it used to be. */
 .tool .name {
-  color: var(--accent);
-  font-weight: 500;
-  flex: none;
-}
-
-.tool .peek {
   flex: 1;
   min-width: 0;
-  color: var(--faint);
+  color: var(--accent);
+  font-weight: 500;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
