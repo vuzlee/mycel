@@ -1,17 +1,28 @@
-# Mycel
+<div align="center">
 
-**Ask your issue tracker a question in plain language, get an answer with the numbers behind it.**
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+  <img src="assets/banner-light.svg" alt="Mycel — ask your issue tracker a question in plain language" width="100%">
+</picture>
+
+<p>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-6d3fd1?style=flat-square&labelColor=2b2536">
+  <a href="https://github.com/vuzlee/mycel/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/vuzlee/mycel/ci.yml?branch=main&style=flat-square&label=ci&labelColor=2b2536&color=6d3fd1"></a>
+  <img alt="Ruff" src="https://img.shields.io/badge/lint-ruff-6d3fd1?style=flat-square&labelColor=2b2536">
+  <img alt="mypy strict" src="https://img.shields.io/badge/mypy-strict-6d3fd1?style=flat-square&labelColor=2b2536">
+</p>
+
+</div>
 
 Named after *mycelium* — the underground fungal network that quietly connects a whole
 forest, moving nutrients between trees that never touch. Mycel works the same way: it runs
 in the background, pulls what moved in Jira, digests it through layer after layer, and only
 surfaces when you ask it something. The interesting part was never the fruiting body.
 
-```
-Jira ──► bronze ──► gold ──┐                ┌─► summariser ─► a project's window
-         raw        ready  ├──► Ask ────────┼─► analyst ────► SQL over gold, read-only
-         your question ────┘                └─► researcher ─► the web, and your mailbox
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
+  <img src="assets/flow-light.svg" alt="Jira syncs into bronze then gold; a question goes to Ask, which routes it to the summariser, analyst or researcher" width="100%">
+</picture>
 
 Today the source is Jira; the source layer is pluggable. Reports go out over Telegram and
 Google Calendar — both optional, both one-way. Mycel never writes to your board.
@@ -105,6 +116,7 @@ simply worse than last time. See [evals/](evals/README.md).
 ## Where things are
 
 ```
+assets/        Banner and diagram, hand-written SVG in light and dark
 src/mycel/     Source — see docs/ for what each layer does
 web/           React + TypeScript, built into the image, served at /app
 config/        Per-environment, per-agent and per-source YAML

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420"
+     role="img" aria-label="Jira syncs into bronze then gold; a question goes to Ask, which routes it to the summariser, analyst or researcher">
+  <!-- Deliberately draws only what has held still for twenty batches: the medallion
+       layers and the three agents. A picture of the twelve compose services would be
+       wrong after the next batch and nobody reopens an image file. -->
+  <rect width="1200" height="420" fill="none"/>
+  <g font-family="ui-sans-serif, system-ui, -apple-system, sans-serif">
+
+    <!-- source -->
+    <g>
+      <rect x="40" y="60" width="140" height="64" rx="12" fill="#131019" stroke="#332c42"/>
+      <text x="110" y="88" font-size="17" fill="#f0edf7" text-anchor="middle">Jira</text>
+      <text x="110" y="108" font-size="12" fill="#6b6380" text-anchor="middle">source of record</text>
+    </g>
+
+    <!-- medallion layers -->
+    <g>
+      <rect x="260" y="60" width="140" height="64" rx="12" fill="#0f0d15" stroke="#332c42"/>
+      <text x="330" y="88" font-size="17" fill="#f0edf7" text-anchor="middle">bronze</text>
+      <text x="330" y="108" font-size="12" fill="#6b6380" text-anchor="middle">raw</text>
+    </g>
+    <g>
+      <rect x="480" y="60" width="140" height="64" rx="12" fill="#1d1730" stroke="#3a2f5c"/>
+      <text x="550" y="88" font-size="17" fill="#f0edf7" text-anchor="middle">gold</text>
+      <text x="550" y="108" font-size="12" fill="#6b6380" text-anchor="middle">ready to query</text>
+    </g>
+
+    <!-- the question -->
+    <g>
+      <rect x="40" y="228" width="140" height="64" rx="12" fill="#131019" stroke="#332c42"/>
+      <text x="110" y="256" font-size="17" fill="#f0edf7" text-anchor="middle">your question</text>
+      <text x="110" y="276" font-size="12" fill="#6b6380" text-anchor="middle">plain language</text>
+    </g>
+
+    <!-- the router -->
+    <g>
+      <rect x="480" y="216" width="140" height="88" rx="12" fill="#b79cff"/>
+      <text x="550" y="252" font-size="19" fill="#14101d" text-anchor="middle">Ask</text>
+      <text x="550" y="274" font-size="12" fill="#14101d" text-anchor="middle">an orchestrator</text>
+      <text x="550" y="290" font-size="12" fill="#14101d" text-anchor="middle">picks who answers</text>
+    </g>
+
+    <!-- the three agents -->
+    <g>
+      <rect x="800" y="140" width="220" height="64" rx="12" fill="#131019" stroke="#3a2f5c"/>
+      <text x="820" y="168" font-size="16" fill="#f0edf7">summariser</text>
+      <text x="820" y="188" font-size="12" fill="#6b6380">a project's window</text>
+    </g>
+    <g>
+      <rect x="800" y="228" width="220" height="64" rx="12" fill="#131019" stroke="#3a2f5c"/>
+      <text x="820" y="256" font-size="16" fill="#f0edf7">analyst</text>
+      <text x="820" y="276" font-size="12" fill="#6b6380">SQL over gold, read-only</text>
+    </g>
+    <g>
+      <rect x="800" y="316" width="220" height="64" rx="12" fill="#131019" stroke="#3a2f5c"/>
+      <text x="820" y="344" font-size="16" fill="#f0edf7">researcher</text>
+      <text x="820" y="364" font-size="12" fill="#6b6380">the web, and your mailbox</text>
+    </g>
+
+    <!-- arrows. Arrowheads are explicit triangles rather than <marker>, because a
+         marker is the first thing a strict SVG sanitiser or a simple renderer drops,
+         and an arrow with no head reads as an unfinished line. -->
+    <g fill="none" stroke="#b79cff" stroke-width="2">
+      <path d="M180 92H246"/>
+      <path d="M400 92H466"/>
+      <path d="M550 124V202"/>
+      <path d="M180 260H466"/>
+      <path d="M620 250C680 250 700 172 786 172"/>
+      <path d="M620 260H786"/>
+      <path d="M620 270C680 270 700 348 786 348"/>
+    </g>
+    <g fill="#b79cff">
+      <path d="M246 86 258 92 246 98z"/>
+      <path d="M466 86 478 92 466 98z"/>
+      <path d="M544 202 550 214 556 202z"/>
+      <path d="M466 254 478 260 466 266z"/>
+      <path d="M786 166 798 172 786 178z"/>
+      <path d="M786 254 798 260 786 266z"/>
+      <path d="M786 342 798 348 786 354z"/>
+    </g>
+
+    <text x="566" y="172" font-size="12" fill="#6b6380">reads</text>
+  </g>
+</svg>
