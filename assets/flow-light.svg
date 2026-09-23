@@ -1,152 +1,211 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560"
-     role="img" aria-label="Mycel end to end: a scheduler syncs Jira into bronze, normalises it to silver and promotes it to gold; a question posted to the API is queued to a worker, where an orchestrator delegates to whichever specialist agent can answer, reading gold over read-only SQL and streaming the answer back over SSE; every step emits a span, and traces, metrics and logs share one trace id.">
-  <!-- Four bands, because the system has four jobs: get the data in, take the question,
-       answer it, and watch the whole thing. Nothing here names an individual agent — see
-       docs/architecture.html for the roster, which changes; this picture should not. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640"
+     role="img" aria-label="Mycel end to end: a scheduler pulls Jira into the sources layer, which writes bronze verbatim; etl normalises bronze to silver and promotes silver to gold, with checks between every step. A question posted to the api returns a job id and goes on the queue, failing into jobs.retry or jobs.dlq; a worker pulls it, and an orchestrator delegates to whichever specialist agents can answer, reading gold only. The answer streams back over SSE. Every box emits a span, and traces, metrics and logs share one trace id.">
+  <!-- Drawn in the same hand as the four-layer figure in docs/architecture.html: one
+       colour per medallion layer, mono for names and sans for what they are, the label
+       on the arrow rather than beside it.
+
+       Four bands, because the system has four jobs: get the data in, take the question,
+       answer it, and watch the whole thing. No agent is named anywhere — the roster is
+       prose, in docs/architecture.html, because prose is corrected in one pass and a
+       drawing is the last thing anyone remembers to redraw. -->
   <g font-family="ui-sans-serif, system-ui, -apple-system, sans-serif">
 
-    <!-- ══ band 1 · ingest ══ -->
-    <rect x="24" y="24" width="1152" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
-    <text x="48" y="52" font-size="11" letter-spacing="1.6" fill="#9d96ae">INGEST · ON A SCHEDULE</text>
+    <!-- ══ band 1 · ingest ══════════════════════════════════════════════════ -->
+    <rect x="24" y="24" width="1152" height="192" rx="3" fill="none"
+          stroke="#e7e3f0" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="40" y="52" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="10" letter-spacing="1.6" fill="#9d96ae">INGEST · ON A SCHEDULE</text>
 
-    <g>
-      <rect x="48" y="66" width="150" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="123" y="100" font-size="16" fill="#17141f" text-anchor="middle">Jira</text>
-      <text x="123" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">source of record</text>
+    <rect x="48" y="76" width="120" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="108" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#17141f" text-anchor="middle">Jira</text>
+    <text x="108" y="118" font-size="10.5" fill="#6f6782" text-anchor="middle">source of record</text>
+
+    <rect x="244" y="76" width="150" height="56" rx="2" fill="#f5eeeb" stroke="#9c5a3c" stroke-width="1.4"/>
+    <text x="260" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#9c5a3c">sources/</text>
+    <text x="260" y="118" font-size="10.5" fill="#6f6782">pull in, no processing</text>
+
+    <rect x="470" y="76" width="140" height="56" rx="2" fill="#f5eeeb" stroke="#9c5a3c" stroke-width="1.4"/>
+    <text x="486" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#9c5a3c">bronze</text>
+    <text x="486" y="118" font-size="10.5" fill="#6f6782">immutable payload</text>
+
+    <rect x="686" y="76" width="140" height="56" rx="2" fill="#eef0f5" stroke="#4f6d9e" stroke-width="1.4"/>
+    <text x="702" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#4f6d9e">silver</text>
+    <text x="702" y="118" font-size="10.5" fill="#6f6782">normalised, deduped</text>
+
+    <rect x="902" y="76" width="140" height="56" rx="2" fill="#f0ecfa" stroke="#6d3fd1" stroke-width="1.8"/>
+    <text x="918" y="100" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#6d3fd1">gold</text>
+    <text x="918" y="118" font-size="10.5" fill="#6f6782">business tables</text>
+
+    <!-- the three schemas are one database -->
+    <path d="M470 150 V160 H1042 V150" fill="none" stroke="#e7e3f0" stroke-width="1.2"/>
+    <text x="756" y="180" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="10" letter-spacing="1.4" fill="#9d96ae" text-anchor="middle">POSTGRESQL — ONE DATABASE, THREE SCHEMAS</text>
+    <text x="756" y="199" font-size="10.5" fill="#9d96ae" text-anchor="middle">etl/ — idempotent steps, with checks between every one</text>
+
+    <!-- ══ band 2 · ask ═════════════════════════════════════════════════════ -->
+    <rect x="24" y="238" width="568" height="192" rx="3" fill="none"
+          stroke="#e7e3f0" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="40" y="266" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="10" letter-spacing="1.6" fill="#9d96ae">ASK · ONE WAY IN</text>
+
+    <rect x="48" y="282" width="150" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="123" y="306" font-size="12.5" fill="#17141f" text-anchor="middle">your question</text>
+    <text x="123" y="324" font-size="10.5" fill="#6f6782" text-anchor="middle">plain language</text>
+
+    <rect x="236" y="282" width="150" height="56" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="252" y="306" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#17141f">api/</text>
+    <text x="252" y="324" font-size="10.5" fill="#6f6782">a job id at once</text>
+
+    <rect x="424" y="282" width="144" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.4"/>
+    <text x="440" y="306" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#6d3fd1">mycel.jobs</text>
+    <text x="440" y="324" font-size="10.5" fill="#6f6782">the queue</text>
+
+    <text x="536" y="350" font-size="10" fill="#9d96ae" text-anchor="start">on failure</text>
+    <text x="48" y="378" font-size="10.5" fill="#9d96ae">at-least-once delivery, so every job</text>
+    <text x="48" y="394" font-size="10.5" fill="#9d96ae">carries an idempotency key</text>
+
+    <rect x="300" y="366" width="130" height="44" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="314" y="386" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11" fill="#6f6782">jobs.retry</text>
+    <text x="314" y="401" font-size="9.5" fill="#9d96ae">TTL, then back</text>
+
+    <rect x="438" y="366" width="130" height="44" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="452" y="386" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11" fill="#6f6782">jobs.dlq</text>
+    <text x="452" y="401" font-size="9.5" fill="#9d96ae">nothing consumes it</text>
+
+    <!-- ══ band 3 · answer ══════════════════════════════════════════════════ -->
+    <rect x="616" y="238" width="560" height="192" rx="3" fill="none"
+          stroke="#e7e3f0" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="632" y="266" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="10" letter-spacing="1.6" fill="#9d96ae">ANSWER · IN THE WORKER</text>
+
+    <rect x="640" y="282" width="180" height="56" rx="2" fill="#f0ecfa" stroke="#6d3fd1" stroke-width="1.8"/>
+    <text x="656" y="306" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12.5" fill="#6d3fd1">orchestrator</text>
+    <text x="656" y="324" font-size="10.5" fill="#6f6782">splits the work, merges it back</text>
+
+    <rect x="858" y="282" width="294" height="56" rx="2" fill="#ffffff" stroke="#6d3fd1" stroke-width="1.4"/>
+    <g fill="#6d3fd1">
+      <circle cx="882" cy="310" r="6"/>
+      <circle cx="902" cy="310" r="6" opacity="0.6"/>
+      <circle cx="922" cy="310" r="6" opacity="0.32"/>
+    </g>
+    <text x="944" y="306" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="12" fill="#17141f">specialists</text>
+    <text x="944" y="324" font-size="10.5" fill="#6f6782">one per capability</text>
+
+    <text x="858" y="374" font-size="10.5" fill="#9d96ae">each differs only by the tools it is given —</text>
+    <text x="858" y="392" font-size="10.5" fill="#9d96ae">gold over read-only SQL · the web · your mailbox</text>
+
+    <!-- ══ band 4 · observability ═══════════════════════════════════════════ -->
+    <rect x="24" y="478" width="1152" height="116" rx="3" fill="none"
+          stroke="#e7e3f0" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <text x="40" y="506" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="10" letter-spacing="1.6" fill="#9d96ae">OBSERVABILITY · EVERY BOX ABOVE EMITS A SPAN</text>
+
+    <rect x="48" y="522" width="264" height="48" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="64" y="542" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11.5" fill="#17141f">traces</text>
+    <text x="64" y="559" font-size="10.5" fill="#6f6782">where a run went, and what it cost</text>
+
+    <rect x="336" y="522" width="264" height="48" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="352" y="542" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11.5" fill="#17141f">metrics</text>
+    <text x="352" y="559" font-size="10.5" fill="#6f6782">whether it is broken right now</text>
+
+    <rect x="624" y="522" width="264" height="48" rx="2" fill="#ffffff" stroke="#e7e3f0"/>
+    <text x="640" y="542" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11.5" fill="#17141f">logs</text>
+    <text x="640" y="559" font-size="10.5" fill="#6f6782">why</text>
+
+    <rect x="912" y="522" width="240" height="48" rx="2" fill="#f0ecfa" stroke="#6d3fd1" stroke-width="1.2"/>
+    <text x="1032" y="542" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="11.5" fill="#6d3fd1" text-anchor="middle">one trace id</text>
+    <text x="1032" y="559" font-size="10.5" fill="#6f6782" text-anchor="middle">joins all three</text>
+
+    <!-- ══ arrows. Explicit triangles rather than <marker>: a sanitiser drops
+         a marker first, and a simple renderer ignores it. ══════════════════ -->
+
+    <!-- band 1, with the label on the arrow -->
+    <g fill="none" stroke="#9c5a3c" stroke-width="1.4">
+      <path d="M168 104H230"/>
+      <path d="M394 104H456"/>
+    </g>
+    <g fill="#9c5a3c">
+      <path d="M230 98 242 104 230 110z"/>
+      <path d="M456 98 468 104 456 110z"/>
+    </g>
+    <path d="M610 104H672" fill="none" stroke="#4f6d9e" stroke-width="1.4"/>
+    <path d="M672 98 684 104 672 110z" fill="#4f6d9e"/>
+    <path d="M826 104H888" fill="none" stroke="#6d3fd1" stroke-width="1.4"/>
+    <path d="M888 98 900 104 888 110z" fill="#6d3fd1"/>
+
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" text-anchor="middle">
+      <text x="205" y="96" fill="#9d96ae">HTTP</text>
+      <text x="431" y="96" fill="#9c5a3c">write verbatim</text>
+      <text x="647" y="96" fill="#4f6d9e">normalise</text>
+      <text x="863" y="96" fill="#6d3fd1">promote</text>
     </g>
 
-    <g>
-      <rect x="266" y="66" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="336" y="100" font-size="15" fill="#17141f" text-anchor="middle">bronze</text>
-      <text x="336" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">raw, as it arrived</text>
-    </g>
-    <g>
-      <rect x="440" y="66" width="140" height="76" rx="10" fill="#f3f1f8" stroke="#d9d3e6"/>
-      <text x="510" y="100" font-size="15" fill="#17141f" text-anchor="middle">silver</text>
-      <text x="510" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">envelope unwrapped</text>
-    </g>
-    <g>
-      <rect x="614" y="66" width="140" height="76" rx="10" fill="#efe9fc" stroke="#d6c8f7"/>
-      <text x="684" y="100" font-size="15" fill="#6d3fd1" text-anchor="middle">gold</text>
-      <text x="684" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">ready to query</text>
-    </g>
-
-    <g>
-      <rect x="812" y="66" width="164" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="894" y="98" font-size="14" fill="#17141f" text-anchor="middle">checks</text>
-      <text x="894" y="118" font-size="11" fill="#9d96ae" text-anchor="middle">between every step</text>
-    </g>
-    <text x="1000" y="96" font-size="11" fill="#9d96ae">idempotent —</text>
-    <text x="1000" y="114" font-size="11" fill="#9d96ae">a bad row never rises</text>
-
-    <!-- ══ band 2 · ask ══ -->
-    <rect x="24" y="196" width="560" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
-    <text x="48" y="224" font-size="11" letter-spacing="1.6" fill="#9d96ae">ASK · ONE WAY IN</text>
-
-    <g>
-      <rect x="48" y="238" width="150" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="123" y="270" font-size="15" fill="#17141f" text-anchor="middle">your question</text>
-      <text x="123" y="290" font-size="11" fill="#9d96ae" text-anchor="middle">plain language</text>
-    </g>
-    <g>
-      <rect x="240" y="238" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="310" y="264" font-size="15" fill="#17141f" text-anchor="middle">API</text>
-      <text x="310" y="284" font-size="11" fill="#9d96ae" text-anchor="middle">hands back a</text>
-      <text x="310" y="300" font-size="11" fill="#9d96ae" text-anchor="middle">job id at once</text>
-    </g>
-    <g>
-      <rect x="422" y="238" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="492" y="264" font-size="15" fill="#17141f" text-anchor="middle">queue</text>
-      <text x="492" y="284" font-size="11" fill="#9d96ae" text-anchor="middle">a worker pulls it,</text>
-      <text x="492" y="300" font-size="11" fill="#9d96ae" text-anchor="middle">retries, dead-letters</text>
-    </g>
-
-    <!-- ══ band 3 · answer ══ -->
-    <rect x="616" y="196" width="560" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
-    <text x="640" y="224" font-size="11" letter-spacing="1.6" fill="#9d96ae">ANSWER · IN THE WORKER</text>
-
-    <g>
-      <rect x="640" y="238" width="150" height="76" rx="10" fill="#6d3fd1"/>
-      <text x="715" y="268" font-size="16" fill="#ffffff" text-anchor="middle">orchestrator</text>
-      <text x="715" y="290" font-size="11" fill="#efe9fc" text-anchor="middle">picks who answers</text>
-    </g>
-
-    <g>
-      <rect x="832" y="238" width="320" height="76" rx="10" fill="#ffffff" stroke="#d6c8f7"/>
-      <g fill="#6d3fd1">
-        <circle cx="866" cy="268" r="7"/>
-        <circle cx="890" cy="268" r="7" opacity="0.66"/>
-        <circle cx="914" cy="268" r="7" opacity="0.4"/>
-      </g>
-      <text x="938" y="273" font-size="15" fill="#17141f">specialist agents</text>
-      <text x="856" y="300" font-size="11" fill="#9d96ae">gold over read-only SQL · the web · your mailbox</text>
-    </g>
-
-    <!-- ══ band 4 · observability ══ -->
-    <rect x="24" y="368" width="1152" height="106" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
-    <text x="48" y="396" font-size="11" letter-spacing="1.6" fill="#9d96ae">OBSERVABILITY · EVERY STEP ABOVE IS A SPAN</text>
-
-    <g>
-      <rect x="48" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="68" y="437" font-size="13" fill="#17141f">traces — where it went</text>
-    </g>
-    <g>
-      <rect x="312" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="332" y="437" font-size="13" fill="#17141f">metrics — is it broken</text>
-    </g>
-    <g>
-      <rect x="576" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="596" y="437" font-size="13" fill="#17141f">logs — why</text>
-    </g>
-    <g>
-      <rect x="840" y="410" width="312" height="44" rx="10" fill="#efe9fc" stroke="#d6c8f7"/>
-      <text x="996" y="437" font-size="13" fill="#6d3fd1" text-anchor="middle">joined by one trace id</text>
-    </g>
-
-    <!-- ══ arrows. Explicit triangles rather than <marker>, which a sanitiser drops
-         first and a simple renderer ignores. ══ -->
-    <g fill="none" stroke="#6d3fd1" stroke-width="2">
-      <path d="M198 104H252"/>
-      <path d="M406 104H426"/>
-      <path d="M580 104H600"/>
-      <path d="M198 276H226"/>
-      <path d="M380 276H408"/>
-      <path d="M562 276H626"/>
-      <path d="M790 276H818"/>
+    <!-- band 2 -->
+    <g fill="none" stroke="#6d3fd1" stroke-width="1.4">
+      <path d="M198 310H220"/>
+      <path d="M386 310H408"/>
     </g>
     <g fill="#6d3fd1">
-      <path d="M252 98 264 104 252 110z"/>
-      <path d="M426 98 438 104 426 110z"/>
-      <path d="M600 98 612 104 600 110z"/>
-      <path d="M226 270 238 276 226 282z"/>
-      <path d="M408 270 420 276 408 282z"/>
-      <path d="M626 270 638 276 626 282z"/>
-      <path d="M818 270 830 276 818 282z"/>
+      <path d="M220 304 232 310 220 316z"/>
+      <path d="M408 304 420 310 408 316z"/>
     </g>
 
-    <!-- checks sit between the steps, so they hang off the chain rather than joining it -->
-    <g fill="none" stroke="#d6c8f7" stroke-width="1.5" stroke-dasharray="4 4">
-      <path d="M754 104H812"/>
+    <!-- the queue's two failure exits, both leaving where the decision is taken -->
+    <g fill="none" stroke="#9d96ae" stroke-width="1.2" stroke-dasharray="3 3">
+      <path d="M460 338V352H365V354"/>
+      <path d="M500 338V354"/>
+    </g>
+    <g fill="#9d96ae">
+      <path d="M359 354 365 366 371 354z"/>
+      <path d="M494 354 500 366 506 354z"/>
     </g>
 
-    <!-- agents read gold -->
-    <g fill="none" stroke="#6d3fd1" stroke-width="2" stroke-dasharray="5 4" opacity="0.6">
-      <path d="M992 238V160"/>
-    </g>
-    <path d="M986 160 992 148 998 160z" fill="#6d3fd1" opacity="0.6"/>
-    <text x="1004" y="196" font-size="11" fill="#9d96ae">reads gold</text>
+    <!-- queue -> worker, the hand-off between bands -->
+    <path d="M568 310H626" fill="none" stroke="#6d3fd1" stroke-width="1.4"/>
+    <path d="M626 304 638 310 626 316z" fill="#6d3fd1"/>
+    <text x="597" y="299" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="8.5" fill="#9d96ae" text-anchor="middle">a worker</text>
+    <text x="597" y="329" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="8.5" fill="#9d96ae" text-anchor="middle">pulls it</text>
 
-    <!-- the answer streams back -->
-    <g fill="none" stroke="#6d3fd1" stroke-width="2" stroke-dasharray="5 4" opacity="0.6">
-      <path d="M715 314V344H123V320"/>
-    </g>
-    <path d="M117 320 123 308 129 320z" fill="#6d3fd1" opacity="0.6"/>
-    <text x="360" y="338" font-size="11" fill="#9d96ae">the answer streams back over SSE, written as it arrives</text>
+    <!-- band 3 -->
+    <path d="M820 310H842" fill="none" stroke="#6d3fd1" stroke-width="1.4"/>
+    <path d="M842 304 854 310 842 316z" fill="#6d3fd1"/>
 
-    <!-- observability band spans everything above -->
-    <g fill="none" stroke="#d6c8f7" stroke-width="1.5" stroke-dasharray="3 5">
-      <path d="M600 474V500H600"/>
+    <!-- the only way out of the database -->
+    <path d="M1090 282V138H990V144" fill="none" stroke="#6d3fd1" stroke-width="1.6"/>
+    <path d="M984 144 990 132 996 144z" fill="#6d3fd1"/>
+    <text x="1100" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="9" fill="#6d3fd1">reads gold only</text>
+
+    <!-- the answer comes back the way it was asked -->
+    <g fill="none" stroke="#6d3fd1" stroke-width="1.4" stroke-dasharray="4 4" opacity="0.65">
+      <path d="M730 338V452H36V310H42"/>
     </g>
-    <text x="600" y="520" font-size="11" fill="#9d96ae" text-anchor="middle">a slow or expensive answer is one trace away from an explanation</text>
+    <path d="M42 304 54 310 42 316z" fill="#6d3fd1" opacity="0.65"/>
+    <text x="430" y="446" font-size="10" fill="#9d96ae" text-anchor="middle">the answer streams back over SSE, written as it arrives</text>
+
+    <!-- everything above hangs off the band below -->
+    <g fill="none" stroke="#e7e3f0" stroke-width="1.2" stroke-dasharray="3 3">
+      <path d="M900 478V440"/>
+    </g>
+    <path d="M894 440 900 430 906 440z" fill="#e7e3f0"/>
+
+    <text x="600" y="622" font-size="10.5" fill="#9d96ae" text-anchor="middle">a slow or expensive answer is one trace away from an explanation</text>
   </g>
 </svg>
