@@ -14,7 +14,9 @@ translation table in someone's head.
 
 from datetime import UTC, datetime, time
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from mycel.core.config import get_settings
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 
 JIRA = "jira"
@@ -119,15 +121,25 @@ def _stamp(value: Any) -> datetime | None:
 def _due(value: Any) -> datetime | None:
     """A due date is a bare `YYYY-MM-DD`: no time, no zone.
 
-    Read as the end of that day in UTC rather than the start, so an item due today is not
-    already late at nine in the morning.
+    Read as the end of that day rather than the start, so an item due today is not already
+    late at nine in the morning — and the end of the day in the *team's* zone, not UTC. A
+    UTC+7 team reading it as UTC gets seven hours in which overdue work still counts as on
+    time. Stored in UTC either way; only the moment the day ends moves.
     """
     if not isinstance(value, str) or not value:
         return None
     try:
-        return datetime.combine(datetime.fromisoformat(value).date(), time.max, tzinfo=UTC)
+        day = datetime.fromisoformat(value).date()
     except ValueError:
         return None
+    return datetime.combine(day, time.max, tzinfo=_zone()).astimezone(UTC)
+
+def _zone() -> ZoneInfo:
+    """The team's zone, falling back to UTC if the name is not one the system knows."""
+    try:
+        return ZoneInfo(get_settings().timezone)
+    except Exception:
+        return ZoneInfo("UTC")
 
 
 def _seconds(fields: dict[str, Any], flat: str, nested: str) -> int | None:

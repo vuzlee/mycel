@@ -168,6 +168,85 @@ class TestTheWorklogCall:
         assert await jira.issue_worklogs("MYC-6") == []
 
 
+class TestWritingBack:
+    """Off by default, and a transition is looked up rather than hardcoded."""
+
+    def _armed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(jira, "get_settings", lambda: _settings(jira_write_enabled=True))
+
+    async def test_commenting_is_refused_until_it_is_armed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Commenting on fifty issues by mistake is not recoverable the way a bad read is."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds({"id": "1"}))
+
+        with pytest.raises(SourceError, match="writing is off"):
+            await jira.add_comment("MYC-7", "two stories shipped")
+
+    async def test_a_comment_goes_as_a_document_not_a_string(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The v3 API rejects plain text, and it rejects it as a 400 with no clue why."""
+        self._armed(monkeypatch)
+        seen: dict[str, Any] = {}
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            seen.update(json.loads(request.content))
+            return httpx2.Response(201, json={"id": "10200"})
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+        created = await jira.add_comment("MYC-7", "two stories shipped")
+
+        assert created["id"] == "10200"
+        assert seen["body"]["type"] == "doc"
+        text = seen["body"]["content"][0]["content"][0]["text"]
+        assert text == "two stories shipped"
+
+    async def test_a_transition_is_looked_up_by_name(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ids are per workflow: a hardcoded one is right until somebody edits the workflow,
+        and then it silently moves issues somewhere else."""
+        self._armed(monkeypatch)
+        sent: list[dict[str, Any]] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            if request.method == "GET":
+                return httpx2.Response(
+                    200,
+                    json={"transitions": [{"id": "31", "to": {"name": "Done"}}]},
+                )
+            sent.append(json.loads(request.content))
+            return httpx2.Response(204)
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+        await jira.transition("MYC-7", "done")
+
+        assert sent == [{"transition": {"id": "31"}}]
+
+    async def test_a_move_the_workflow_does_not_allow_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A transition that did not happen looks exactly like one that did, from a 204."""
+        self._armed(monkeypatch)
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            _responds({"transitions": [{"id": "31", "to": {"name": "In Progress"}}]}),
+        )
+
+        with pytest.raises(SourceError, match="cannot move"):
+            await jira.transition("MYC-7", "Done")
+
+    async def test_transitions_can_be_read_without_arming_writes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        moves = {"transitions": [{"id": "31", "to": {"name": "Done"}}]}
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds(moves))
+
+        assert [t["id"] for t in await jira.transitions_for("MYC-7")] == ["31"]
+
+
 class TestHowJiraFails:
     async def test_a_missing_base_url_says_so(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(jira, "get_settings", lambda: Settings(jira_base_url=None))
