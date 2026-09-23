@@ -24,9 +24,9 @@
 
     <!-- ══ column 1 · ingest ═════════════════════════════════════════════════ -->
     <rect x="24" y="36" width="252" height="564" rx="4" fill="none"
-          stroke="#4a4162" stroke-width="1.3" stroke-dasharray="6 5"/>
+          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="48" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#655d79">INGEST</text>
+          font-size="10" letter-spacing="1.2" fill="#847b9c">INGEST</text>
 
     <rect x="48" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
     <text x="150" y="134" font-size="14" fill="#f0edf7" text-anchor="middle">External Platforms</text>
@@ -43,13 +43,13 @@
     <rect x="48" y="484" width="204" height="56" rx="2" fill="#2a2111" stroke="#e0b955" stroke-width="1.6"/>
     <text x="150" y="518" font-size="14" fill="#e0b955" text-anchor="middle">Gold</text>
 
-    <text x="48" y="574" font-size="11" fill="#655d79">Data Lakehouse</text>
+    <text x="48" y="574" font-size="11" fill="#847b9c">Data Lakehouse</text>
 
     <!-- ══ column 2 · producer ═══════════════════════════════════════════════ -->
     <rect x="324" y="36" width="252" height="432" rx="4" fill="none"
-          stroke="#4a4162" stroke-width="1.3" stroke-dasharray="6 5"/>
+          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="348" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#655d79">PRODUCER</text>
+          font-size="10" letter-spacing="1.2" fill="#847b9c">PRODUCER</text>
 
     <rect x="348" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
     <text x="450" y="134" font-size="14" fill="#f0edf7" text-anchor="middle">Prompt</text>
@@ -65,9 +65,9 @@
 
     <!-- ══ column 4 · observability ══════════════════════════════════════════ -->
     <rect x="924" y="36" width="252" height="340" rx="4" fill="none"
-          stroke="#4a4162" stroke-width="1.3" stroke-dasharray="6 5"/>
+          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="948" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#655d79">OBSERVABILITY</text>
+          font-size="10" letter-spacing="1.2" fill="#847b9c">OBSERVABILITY</text>
 
     <rect x="948" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
     <text x="1050" y="134" font-size="14" fill="#f0edf7" text-anchor="middle">Traces</text>
@@ -80,17 +80,17 @@
 
     <!-- ══ column 3 · consumer ═══════════════════════════════════════════════ -->
     <rect x="624" y="420" width="528" height="516" rx="4" fill="none"
-          stroke="#4a4162" stroke-width="1.3" stroke-dasharray="6 5"/>
+          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="648" y="456" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#655d79">CONSUMER</text>
+          font-size="10" letter-spacing="1.2" fill="#847b9c">CONSUMER</text>
 
     <rect x="696" y="484" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
     <text x="786" y="518" font-size="14" fill="#b79cff" text-anchor="middle">Worker</text>
 
     <rect x="672" y="580" width="228" height="228" rx="4" fill="none"
-          stroke="#4a4162" stroke-width="1.3" stroke-dasharray="6 5"/>
+          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
     <text x="696" y="608" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="10" letter-spacing="1.2" fill="#655d79">MULTI-AGENT SYSTEM</text>
+          font-size="10" letter-spacing="1.2" fill="#847b9c">MULTI-AGENT SYSTEM</text>
 
     <rect x="696" y="628" width="180" height="56" rx="2" fill="#1d1730" stroke="#b79cff" stroke-width="1.6"/>
     <text x="786" y="662" font-size="14" fill="#b79cff" text-anchor="middle">Orchestrator</text>
@@ -167,6 +167,6 @@
     <path d="M336 126 348 132 336 138z" fill="#b79cff" opacity="0.6"/>
     <text x="498" y="648" font-size="9.5" fill="#b79cff" opacity="0.7" text-anchor="middle">stream</text>
 
-    <text x="600" y="978" font-size="11" fill="#655d79" text-anchor="middle">every component emits a span, on one trace</text>
+    <text x="600" y="978" font-size="11" fill="#847b9c" text-anchor="middle">every component emits a span, on one trace</text>
   </g>
 </svg>
