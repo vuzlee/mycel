@@ -69,14 +69,13 @@ environments, agents, sources — is YAML under `config/`.
 | `JOB_CEILING_USD` | spend ceiling for one queued job |
 | `TELEGRAM_*` · Google Calendar creds | outputs; leave blank and they're simply off |
 
-Access is a row in `app.membership`: no row, no project. A new account starts with nothing
-rather than with everything. There is no admin screen yet — grant from a shell via
-`services/permission.grant`.
+Access is a row in `app.membership`: no row, no project, so a new account starts with
+nothing rather than with everything. Grant it from the account menu in the app — anyone who
+may read a project may share it.
 
-After `alembic upgrade head`, run `migrations/grants.sql` once as a superuser. It splits the
-database along the schema boundary the layers already draw — `mycel_etl` writes bronze,
-silver and gold; `mycel_app` reads gold and owns `app`. It isn't a migration because a role
-cannot take privileges away from itself.
+`scripts/stack.sh grants` splits the database into two roles once, after the migrations:
+`mycel_etl` writes bronze, silver and gold; `mycel_app` reads gold and owns `app`. It is a
+separate step rather than a migration because a role cannot take privileges from itself.
 
 ## What you can ask it
 
@@ -116,14 +115,14 @@ simply worse than last time. See [evals/](evals/README.md).
 ## Where things are
 
 ```
-assets/        Banner and diagram, hand-written SVG in light and dark
-src/mycel/     Source — see docs/ for what each layer does
+src/mycel/     Source — one folder per layer
 web/           React + TypeScript, built into the image, served at /app
 config/        Per-environment, per-agent and per-source YAML
-deploy/        OTel, Grafana, vLLM, deploy environments
-migrations/    Alembic migrations
+migrations/    Alembic migrations, plus the grants split
+deploy/        OTel, Grafana, Helm, vLLM, deploy environments
 evals/         Golden set for scoring report quality
-notes/flow/    🇻🇳 plan/ — one batch each; tmp/ — how the system runs
+docs/          Design documentation
+assets/        Banner and diagram, hand-written SVG
 ```
 
 | | |
