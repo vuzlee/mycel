@@ -1,79 +1,162 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mycel Architecture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
 
 <style>
 :root {
-  /* Light forest floor */
-  --ground:      #FBFAF7;
-  --surface:     #F2F0E9;
-  --surface-alt: #E8E5DB;
-  --line:        #D6D2C4;
-  --line-soft:   #E3E0D4;
-  --ink:         #1C1F19;
-  --ink-soft:    #5A5F52;
-  --ink-faint:   #868B79;
+  color-scheme: light;
 
-  /* Three data layers */
-  --bronze:    #8B6F47;
-  --silver: #5E8159;
-  --gold:   #A8861B;
-  --accent: #A8861B;
+  /* Surfaces, lightest first. */
+  --ground: #faf9fc;
+  --paper: #faf9fc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --surface-alt: #f3f1f8;
+  --sunk: #f3f1f8;
 
-  --bronze-wash:    #8b6f4718;
-  --silver-wash: #5e815918;
-  --gold-wash:   #a8861b18;
+  /* Text, strongest first. */
+  --ink: #17141f;
+  --ink-2: #453e56;
+  --ink-soft: #6f6782;
+  --dim: #6f6782;
+  --ink-faint: #9d96ae;
+
+  --line: #e7e3f0;
+  --line-soft: #f0edf7;
+  --rule-2: #d9d3e6;
+
+  --accent: #6d3fd1;
+  --brand: #6d3fd1;
+  --accent-soft: #efe9fc;
+  --brand-soft: #efe9fc;
+  --brand-line: #d6c8f7;
+
+  /* A second, cooler voice for asides that must not read as the accent. */
+  --cool: #3a5ba8;
+  --cool-soft: #eaeefa;
+
+  /*
+   * The three data layers. They must stay tellable apart at a glance, so they step
+   * around the wheel rather than sitting on the accent — but each is pulled toward the
+   * page's violet so the set still reads as one family.
+   */
+  --bronze: #9c5a3c;
+  --silver: #4f6d9e;
+  --gold: #6d3fd1;
+  --bronze-wash: #9c5a3c18;
+  --silver-wash: #4f6d9e18;
+  --gold-wash: #6d3fd118;
+
+  /* Status: present, provisional, missing, wrong. */
+  --live: #3f7d58;
+  --live-bg: #e6f2ea;
+  --draft: #8a6510;
+  --draft-bg: #f7efd8;
+  --absent: #8f87a3;
+  --absent-bg: #efedf4;
+  --warn: #a63d6b;
+
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --step: clamp(2.5rem, 6vw, 4.5rem);
-}
-
-:root:not([data-theme="light"]) {
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground:      #0F1310;
-    --surface:     #171C17;
-    --surface-alt: #1F251E;
-    --line:        #2E362C;
-    --line-soft:   #242B23;
-    --ink:         #E6E9DF;
-    --ink-soft:    #9BA391;
-    --ink-faint:   #6E7666;
 
-    --bronze:    #B8946A;
-    --silver: #8FB588;
-    --gold:   #D9B43C;
-    --accent: #D9B43C;
+    --ground: #0b0910;
+    --paper: #0b0910;
+    --surface: #131019;
+    --card: #131019;
+    --surface-alt: #0f0d15;
+    --sunk: #0f0d15;
 
-    --bronze-wash:    #b8946a1f;
-    --silver-wash: #8fb5881f;
-    --gold-wash:   #d9b43c1f;
+    --ink: #f0edf7;
+    --ink-2: #c5bed6;
+    --ink-soft: #8f87a3;
+    --dim: #8f87a3;
+    --ink-faint: #6b6380;
+
+    --line: #241f30;
+    --line-soft: #1a1624;
+    --rule-2: #332c42;
+
+    --accent: #b79cff;
+    --brand: #b79cff;
+    --accent-soft: #1d1730;
+    --brand-soft: #1d1730;
+    --brand-line: #3a2f5c;
+
+    --cool: #8aa6e0;
+    --cool-soft: #151a2a;
+
+    --bronze: #d29472;
+    --silver: #92aee0;
+    --gold: #b79cff;
+    --bronze-wash: #d294721f;
+    --silver-wash: #92aee01f;
+    --gold-wash: #b79cff1f;
+
+    --live: #6fc894;
+    --live-bg: #14251b;
+    --draft: #d8ad55;
+    --draft-bg: #2a2110;
+    --absent: #6b6380;
+    --absent-bg: #1a1624;
+    --warn: #f090b4;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground:      #0F1310;
-  --surface:     #171C17;
-  --surface-alt: #1F251E;
-  --line:        #2E362C;
-  --line-soft:   #242B23;
-  --ink:         #E6E9DF;
-  --ink-soft:    #9BA391;
-  --ink-faint:   #6E7666;
 
-  --bronze:    #B8946A;
-  --silver: #8FB588;
-  --gold:   #D9B43C;
-  --accent: #D9B43C;
+  --ground: #0b0910;
+  --paper: #0b0910;
+  --surface: #131019;
+  --card: #131019;
+  --surface-alt: #0f0d15;
+  --sunk: #0f0d15;
 
-  --bronze-wash:    #b8946a1f;
-  --silver-wash: #8fb5881f;
-  --gold-wash:   #d9b43c1f;
+  --ink: #f0edf7;
+  --ink-2: #c5bed6;
+  --ink-soft: #8f87a3;
+  --dim: #8f87a3;
+  --ink-faint: #6b6380;
+
+  --line: #241f30;
+  --line-soft: #1a1624;
+  --rule-2: #332c42;
+
+  --accent: #b79cff;
+  --brand: #b79cff;
+  --accent-soft: #1d1730;
+  --brand-soft: #1d1730;
+  --brand-line: #3a2f5c;
+
+  --cool: #8aa6e0;
+  --cool-soft: #151a2a;
+
+  --bronze: #d29472;
+  --silver: #92aee0;
+  --gold: #b79cff;
+  --bronze-wash: #d294721f;
+  --silver-wash: #92aee01f;
+  --gold-wash: #b79cff1f;
+
+  --live: #6fc894;
+  --live-bg: #14251b;
+  --draft: #d8ad55;
+  --draft-bg: #2a2110;
+  --absent: #6b6380;
+  --absent-bg: #1a1624;
+  --warn: #f090b4;
 }
 
 * { box-sizing: border-box; }
@@ -82,7 +165,7 @@ body {
   margin: 0;
   background: var(--ground);
   color: var(--ink);
-  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -101,7 +184,7 @@ body {
 /* ---------- Typography ---------- */
 
 h1, h2, h3 {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-weight: 600;
   text-wrap: balance;
   margin: 0;
@@ -127,7 +210,7 @@ h3 {
 p { margin: 0; max-width: 62ch; }
 
 .eyebrow {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -136,7 +219,7 @@ p { margin: 0; max-width: 62ch; }
 }
 
 code, .mono {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125em;
 }
 
@@ -155,7 +238,7 @@ code, .mono {
 }
 
 .hero-lede em {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-style: italic;
   color: var(--ink);
 }
@@ -166,7 +249,7 @@ code, .mono {
   gap: 0.5rem 1.75rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
 }
@@ -237,7 +320,7 @@ figcaption {
 .layer:nth-child(3) { --tone: var(--gold); }
 
 .layer-name {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--tone);
@@ -252,7 +335,7 @@ figcaption {
   grid-template-columns: auto 1fr;
   gap: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
 }
 
 .layer dt { color: var(--ink-faint); }
@@ -268,7 +351,7 @@ figcaption {
 }
 
 .tree-col {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   line-height: 1.9;
 }
@@ -292,7 +375,7 @@ figcaption {
 .tree-row:first-child { border-top: none; }
 
 .tree-path {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   white-space: pre;
   color: var(--ink);
@@ -351,7 +434,7 @@ figcaption {
 }
 
 .rules li strong {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-weight: 600;
   font-size: 1rem;
 }
@@ -380,7 +463,7 @@ figcaption {
 }
 
 .op-svc {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--accent);
 }
@@ -413,7 +496,7 @@ figcaption {
 .toc a:hover { color: var(--accent); border-top-color: var(--accent); }
 
 .toc a b {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   font-weight: 400;
   letter-spacing: 0.12em;
@@ -435,7 +518,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 }
 
 .part-num {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -472,7 +555,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 
 .tbl th {
   text-align: left;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -496,7 +579,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 .tbl tr:last-child td { border-bottom: none; }
 
 .tbl .who {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--ink);
   white-space: nowrap;
@@ -553,7 +636,7 @@ footer {
       <span><b>Storage</b> PostgreSQL · 3 schema</span>
       <span><b>LLM</b> vLLM 3B local + cloud</span>
       <span><b>Runtime</b> Python 3.11 · Docker</span>
-      <span><b>Observability</b> OTel → Tempo · Prometheus · Loki → Grafana</span>
+      <span><b>Observability</b> OTel → Langfuse Cloud</span>
     </div>
 
     <nav class="toc">
@@ -584,7 +667,7 @@ footer {
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 560" role="img"
-             aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the bronze schema in PostgreSQL; etl transforms bronze into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits traces to the OpenTelemetry Collector.">
+             aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the bronze schema in PostgreSQL; etl transforms bronze into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits OpenTelemetry spans.">
           <defs>
             <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -601,10 +684,10 @@ footer {
           </defs>
 
           <!-- ===== Left column: external providers ===== -->
-          <text x="24" y="30" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="24" y="30" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">EXTERNAL SOURCES</text>
 
-          <g font-family="Inter Tight, sans-serif" font-size="12" fill="var(--ink-soft)">
+          <g font-family="var(--sans)" font-size="12" fill="var(--ink-soft)">
             <rect x="24" y="44" width="118" height="34" rx="2" fill="var(--surface)"
                   stroke="var(--line)"/>
             <text x="83" y="65" text-anchor="middle">Slack</text>
@@ -629,51 +712,51 @@ footer {
             <path d="M 142 145 L 176 145 L 176 118 L 214 118"/>
             <path d="M 142 187 L 168 187 L 168 118 L 214 118"/>
           </g>
-          <text x="178" y="82" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="178" y="82" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="middle">HTTP</text>
 
           <!-- ===== Layer 1: sources ===== -->
           <rect x="218" y="86" width="200" height="64" rx="2"
                 fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
-          <text x="234" y="110" font-family="JetBrains Mono, monospace" font-size="12.5"
+          <text x="234" y="110" font-family="var(--mono)" font-size="12.5"
                 fill="var(--bronze)">sources/</text>
-          <text x="234" y="130" font-family="Inter Tight, sans-serif" font-size="11.5"
+          <text x="234" y="130" font-family="var(--sans)" font-size="11.5"
                 fill="var(--ink-soft)">pull in, no processing</text>
 
           <!-- sources -> bronze -->
           <path d="M 318 150 L 318 196" stroke="var(--bronze)" stroke-width="1.4"
                 fill="none" marker-end="url(#ar)" color="var(--bronze)"/>
-          <text x="328" y="177" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="328" y="177" font-family="var(--mono)" font-size="9.5"
                 fill="var(--bronze)">write verbatim</text>
 
           <!-- ===== PostgreSQL block ===== -->
           <rect x="190" y="196" width="500" height="214" rx="3"
                 fill="none" stroke="var(--line)" stroke-width="1.2" stroke-dasharray="4 4"/>
-          <text x="206" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="206" y="217" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">POSTGRESQL — ONE DATABASE, THREE SCHEMAS</text>
 
           <!-- bronze -->
           <rect x="214" y="232" width="200" height="52" rx="2"
                 fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
-          <text x="230" y="254" font-family="JetBrains Mono, monospace" font-size="12.5"
+          <text x="230" y="254" font-family="var(--mono)" font-size="12.5"
                 fill="var(--bronze)">bronze</text>
-          <text x="230" y="272" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="230" y="272" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">original payload, immutable</text>
 
           <!-- silver -->
           <rect x="214" y="298" width="200" height="52" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.4"/>
-          <text x="230" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
+          <text x="230" y="320" font-family="var(--mono)" font-size="12.5"
                 fill="var(--silver)">silver</text>
-          <text x="230" y="338" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="230" y="338" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">normalised, deduplicated</text>
 
           <!-- gold -->
           <rect x="450" y="298" width="200" height="52" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.8"/>
-          <text x="466" y="320" font-family="JetBrains Mono, monospace" font-size="12.5"
+          <text x="466" y="320" font-family="var(--mono)" font-size="12.5"
                 fill="var(--gold)">gold</text>
-          <text x="466" y="338" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="466" y="338" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">business tables, ready to use</text>
 
           <!-- etl: bronze -> silver -->
@@ -687,9 +770,9 @@ footer {
           <!-- etl label -->
           <rect x="434" y="232" width="216" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="450" y="252" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="450" y="252" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">etl/</text>
-          <text x="450" y="268" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="450" y="268" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">idempotent transform steps</text>
           <g stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 3" fill="none">
             <path d="M 434 254 L 324 254"/>
@@ -699,32 +782,32 @@ footer {
           <!-- gold -> agents : the only way out of the DB -->
           <path d="M 650 324 L 700 324 L 700 152 L 738 152"
                 stroke="var(--gold)" stroke-width="2" fill="none" marker-end="url(#ar-gold)"/>
-          <text x="664" y="240" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="664" y="240" font-family="var(--mono)" font-size="9.5"
                 fill="var(--gold)" transform="rotate(-90 664 240)" text-anchor="middle">reads gold only</text>
 
           <!-- ===== Agent layer ===== -->
-          <text x="742" y="30" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="742" y="30" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">AI LAYER</text>
 
           <rect x="742" y="44" width="174" height="180" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="758" y="66" font-family="JetBrains Mono, monospace" font-size="12.5"
+          <text x="758" y="66" font-family="var(--mono)" font-size="12.5"
                 fill="var(--gold)">agents/</text>
 
-          <g font-family="Inter Tight, sans-serif" font-size="11" fill="var(--ink-soft)">
+          <g font-family="var(--sans)" font-size="11" fill="var(--ink-soft)">
             <rect x="758" y="78" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="97">orchestrator — chia task</text>
+            <text x="770" y="97" font-size="8">orchestrator — splits tasks</text>
 
             <rect x="758" y="114" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="133">researcher · analyst · summariser</text>
+            <text x="770" y="133" font-size="7.5">researcher · analyst · writer</text>
 
             <rect x="758" y="150" width="142" height="30" rx="2"
                   fill="var(--ground)" stroke="var(--line)"/>
-            <text x="770" y="169">tools — query, chart</text>
+            <text x="770" y="169" font-size="9">tools — query, chart</text>
 
-            <text x="770" y="202" font-size="10.5" fill="var(--ink-faint)">the orchestrator merges the results</text>
+            <text x="770" y="202" font-size="8" fill="var(--ink-faint)">orchestrator merges the results</text>
           </g>
 
           <!-- agents -> reports -->
@@ -733,41 +816,41 @@ footer {
 
           <rect x="742" y="258" width="174" height="56" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="758" y="280" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="758" y="280" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">reports/</text>
-          <text x="758" y="299" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="758" y="299" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">answers · summaries</text>
 
           <!-- ===== Control layer ===== -->
-          <text x="24" y="462" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="24" y="462" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">CONTROL &amp; OPERATIONS LAYER</text>
 
           <rect x="24" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="40" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="40" y="497" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">scheduler/</text>
-          <text x="40" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="40" y="515" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">runs jobs on a schedule</text>
 
           <rect x="216" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="232" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="232" y="497" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">api/</text>
-          <text x="232" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="232" y="515" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-soft)">manual trigger · read reports</text>
 
           <rect x="408" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="424" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="424" y="497" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">core/ · infra/</text>
-          <text x="424" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="424" y="515" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">config · session · SQL</text>
 
           <rect x="600" y="476" width="316" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="616" y="497" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="616" y="497" font-family="var(--mono)" font-size="12"
                 fill="var(--accent)">observability/</text>
-          <text x="616" y="515" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="616" y="515" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">logs · traces · metrics — every layer emits</text>
 
           <!-- scheduler/api triggers -->
@@ -776,9 +859,9 @@ footer {
             <path d="M 112 476 L 112 436 L 318 436 L 318 152" opacity="0.75"/>
             <path d="M 304 476 L 304 448 L 700 448 L 700 340" opacity="0.75"/>
           </g>
-          <text x="128" y="431" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="128" y="431" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)">triggers sync + transform</text>
-          <text x="470" y="443" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="470" y="443" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)">report request</text>
 
           <!-- observability collection -->
@@ -879,7 +962,7 @@ footer {
           </defs>
 
           <!-- left column labels -->
-          <g font-family="JetBrains Mono, monospace" font-size="9" fill="var(--ink-faint)"
+          <g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)"
              text-anchor="end" letter-spacing="1.2">
             <text x="120" y="36">USERS</text>
             <text x="120" y="96">HTTP SHELL</text>
@@ -892,51 +975,51 @@ footer {
           <!-- UI -->
           <rect x="136" y="18" width="180" height="30" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="226" y="38" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="226" y="38" font-family="var(--sans)" font-size="11"
                 fill="var(--ink)" text-anchor="middle">UI · someone presses a button</text>
 
           <rect x="660" y="18" width="180" height="30" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="750" y="38" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="750" y="38" font-family="var(--sans)" font-size="11"
                 fill="var(--ink)" text-anchor="middle">scheduler — time is up</text>
 
           <!-- app.py -->
           <rect x="136" y="72" width="360" height="46" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="152" y="92" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="152" y="92" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">api/app.py</text>
-          <text x="152" y="109" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="152" y="109" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">mounts each router · middleware · tracing</text>
 
           <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 226 48 L 226 68"/>
           </g>
-          <text x="238" y="64" font-family="JetBrains Mono, monospace" font-size="9"
+          <text x="238" y="64" font-family="var(--mono)" font-size="9"
                 fill="var(--ink-faint)">HTTP</text>
 
           <!-- route + domain frame -->
           <rect x="136" y="140" width="704" height="128" rx="3"
                 fill="none" stroke="var(--accent)" stroke-width="1.6"/>
-          <text x="840" y="134" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="840" y="134" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.5" fill="var(--accent)" text-anchor="end">ONE ROUTE MODULE + ONE DOMAIN MODULE PER DOMAIN</text>
 
           <!-- report domain -->
           <rect x="160" y="174" width="300" height="76" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.3"/>
-          <text x="176" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="176" y="194" font-family="var(--mono)" font-size="11.5"
                 fill="var(--gold)">report</text>
           <rect x="176" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
-          <text x="186" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="186" y="217" font-family="var(--mono)" font-size="10"
                 fill="var(--ink)">routes/reports.py</text>
-          <text x="186" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">receive · validate · return</text>
+          <text x="186" y="231" font-family="var(--sans)" font-size="8.5"
+                fill="var(--ink-faint)">receive · validate</text>
           <rect x="316" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
-          <text x="326" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="326" y="217" font-family="var(--mono)" font-size="10"
                 fill="var(--accent)">domains/report.py</text>
-          <text x="326" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
+          <text x="326" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -946,19 +1029,19 @@ footer {
           <!-- sync domain -->
           <rect x="484" y="174" width="300" height="76" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.3"/>
-          <text x="500" y="194" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="500" y="194" font-family="var(--mono)" font-size="11.5"
                 fill="var(--silver)">sync — not built, batch 007</text>
           <rect x="500" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
-          <text x="510" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="510" y="217" font-family="var(--mono)" font-size="10"
                 fill="var(--ink)">routes/sync.py</text>
-          <text x="510" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
-                fill="var(--ink-faint)">receive · validate · return</text>
+          <text x="510" y="231" font-family="var(--sans)" font-size="8.5"
+                fill="var(--ink-faint)">receive · validate</text>
           <rect x="640" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
-          <text x="650" y="217" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="650" y="217" font-family="var(--mono)" font-size="10"
                 fill="var(--accent)">domains/sync.py</text>
-          <text x="650" y="231" font-family="Inter Tight, sans-serif" font-size="9.5"
+          <text x="650" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -976,11 +1059,11 @@ footer {
           <path d="M 750 48 L 750 62 L 906 62 L 906 220 L 772 220"
                 stroke="var(--silver)" stroke-width="1.4" stroke-dasharray="4 3"
                 fill="none" color="var(--silver)" marker-end="url(#m6)"/>
-          <text x="900" y="84" font-family="JetBrains Mono, monospace" font-size="9"
+          <text x="900" y="84" font-family="var(--mono)" font-size="9"
                 fill="var(--silver)" text-anchor="end">calls the domain directly, no HTTP</text>
 
           <!-- services -->
-          <g font-family="JetBrains Mono, monospace" font-size="9.5" text-anchor="middle"
+          <g font-family="var(--mono)" font-size="9.5" text-anchor="middle"
              fill="var(--ink)">
             <rect x="136" y="302" width="128" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
@@ -1013,7 +1096,7 @@ footer {
           </g>
 
           <!-- capabilities -->
-          <g font-family="JetBrains Mono, monospace" font-size="10.5" text-anchor="middle">
+          <g font-family="var(--mono)" font-size="10.5" text-anchor="middle">
             <rect x="136" y="364" width="164" height="32" rx="2"
                   fill="var(--silver-wash)" stroke="var(--silver)"/>
             <text x="218" y="384" fill="var(--silver)">etl/</text>
@@ -1041,7 +1124,7 @@ footer {
           <!-- infra -->
           <rect x="136" y="422" width="704" height="32" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="488" y="442" font-family="JetBrains Mono, monospace" font-size="11"
+          <text x="488" y="442" font-family="var(--mono)" font-size="11"
                 fill="var(--ink)" text-anchor="middle">infra/ — every SQL statement</text>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -1136,35 +1219,35 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             </marker>
           </defs>
 
-          <g font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">
+          <g font-family="var(--mono)" font-size="11" text-anchor="middle">
             <rect x="16" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="79" y="75" fill="var(--ink)">domain</text>
-            <text x="79" y="91" font-family="Inter Tight, sans-serif" font-size="10"
+            <text x="79" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">report domain</text>
 
             <rect x="182" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="245" y="75" fill="var(--ink)">queue</text>
-            <text x="245" y="91" font-family="Inter Tight, sans-serif" font-size="10"
+            <text x="245" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">queue</text>
 
             <rect x="348" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
             <text x="411" y="75" fill="var(--gold)">orchestrator</text>
-            <text x="411" y="91" font-family="Inter Tight, sans-serif" font-size="10"
+            <text x="411" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">chia task</text>
 
             <rect x="514" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
             <text x="577" y="75" fill="var(--gold)">agent ×N</text>
-            <text x="577" y="91" font-family="Inter Tight, sans-serif" font-size="10"
+            <text x="577" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">gold + llm</text>
 
             <rect x="680" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="743" y="75" fill="var(--ink)">reports</text>
-            <text x="743" y="91" font-family="Inter Tight, sans-serif" font-size="10"
+            <text x="743" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">build the artifact</text>
 
             <rect x="846" y="56" width="78" height="44" rx="2"
@@ -1185,28 +1268,28 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <path d="M 245 56 L 245 40 L 79 40 L 79 52"
                 stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
                 fill="none" color="var(--ink-faint)" marker-end="url(#lc-ar)"/>
-          <text x="162" y="34" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="162" y="34" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="middle">returns the job id immediately, no waiting</text>
 
           <!-- retry -->
           <path d="M 411 100 L 411 124 L 268 124 L 268 104"
                 stroke="var(--bronze)" stroke-width="1.2" fill="none"
                 color="var(--bronze)" marker-end="url(#lc-ar)"/>
-          <text x="348" y="139" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="348" y="139" font-family="var(--mono)" font-size="9.5"
                 fill="var(--bronze)" text-anchor="middle">failure → retry</text>
 
           <!-- dead letter -->
           <rect x="182" y="178" width="126" height="34" rx="2"
                 fill="var(--surface)" stroke="var(--bronze)" stroke-dasharray="3 3"/>
-          <text x="245" y="200" font-family="JetBrains Mono, monospace" font-size="10.5"
+          <text x="245" y="200" font-family="var(--mono)" font-size="10.5"
                 fill="var(--bronze)" text-anchor="middle">dead-letter</text>
           <path d="M 245 148 L 245 174" stroke="var(--bronze)" stroke-width="1.2"
                 fill="none" color="var(--bronze)" marker-end="url(#lc-ar)"/>
-          <text x="320" y="200" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="320" y="200" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-faint)">out of retries — kept for inspection, not lost</text>
 
           <!-- the enclosing trace -->
-          <text x="16" y="16" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="16" y="16" font-family="var(--mono)" font-size="9.5"
                 fill="var(--accent)">a single trace — every step is a span</text>
           <path d="M 292 12 L 924 12" stroke="var(--accent)" stroke-width="1"
                 stroke-dasharray="2 4" opacity="0.55" fill="none"/>
@@ -1303,7 +1386,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             </marker>
           </defs>
 
-          <g font-family="JetBrains Mono, monospace" font-size="11.5" text-anchor="middle">
+          <g font-family="var(--mono)" font-size="11.5" text-anchor="middle">
             <rect x="20" y="112" width="104" height="38" rx="2"
                   fill="var(--surface-alt)" stroke="var(--line)"/>
             <text x="72" y="136" fill="var(--ink)">core</text>
@@ -1334,7 +1417,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
             <rect x="628" y="30" width="256" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="756" y="54" fill="var(--ink)">domains · jobs · scheduler · api</text>
+            <text x="756" y="54" font-size="10" fill="var(--ink)">domains · jobs · scheduler · api</text>
           </g>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -1348,17 +1431,17 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             <path d="M 700 108 L 700 72"/>
           </g>
 
-          <text x="474" y="92" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="474" y="92" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="middle">reads gold only</text>
 
           <!-- observability cuts across -->
-          <text x="20" y="246" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="20" y="246" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-faint)">imported by every layer above</text>
           <line x1="20" y1="272" x2="920" y2="272" stroke="var(--accent)"
                 stroke-width="1.2" stroke-dasharray="3 4"/>
           <rect x="380" y="256" width="180" height="32" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="470" y="277" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="470" y="277" font-family="var(--mono)" font-size="11.5"
                 fill="var(--accent)" text-anchor="middle">observability</text>
         </svg>
       </div>
@@ -1473,7 +1556,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>infra/objects/</span>
-        <span class="tree-note">Large files: source PDFs, rendered reports (MinIO, S3 API). Postgres holds the metadata, the bucket holds the content. The API returns a presigned URL so files never pass through the API process.</span>
+        <span class="tree-note">Docstring only, and deliberately so: large files over an S3 API, with Postgres holding the metadata and the bucket the content. MinIO was dropped from compose &mdash; a report is markdown, which is a <code>TEXT</code> column. The file records why it would come back, and how.</span>
       </div>
       <div class="tree-row" data-tone="silver">
         <span class="tree-path"><span class="dim">├─ </span>etl/</span>
@@ -1543,7 +1626,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Infrastructure config: <code>otel/</code> (collector · Tempo · Prometheus · Loki · Promtail), <code>grafana/</code>, Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
+        <span class="tree-note">Infrastructure config: <code>otel/</code>, <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
@@ -1589,28 +1672,28 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           </defs>
 
           <!-- ===== agents ===== -->
-          <text x="24" y="28" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="24" y="28" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">AGENTS/</text>
 
           <rect x="24" y="42" width="168" height="46" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="40" y="62" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="40" y="62" font-family="var(--mono)" font-size="12"
                 fill="var(--gold)">orchestrator</text>
-          <text x="40" y="79" font-family="Inter Tight, sans-serif" font-size="10.5"
+          <text x="40" y="79" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-soft)">splits tasks, merges results</text>
 
-          <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
-            <rect x="24" y="106" width="168" height="30" rx="2"
+          <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+            <rect x="24" y="106" width="192" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="125">analyst — reads gold, reports figures</text>
+            <text x="40" y="125" font-size="8.5">analyst — reads gold, gives figures</text>
 
-            <rect x="24" y="142" width="168" height="30" rx="2"
+            <rect x="24" y="142" width="192" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="40" y="161">writer — writes the summary</text>
+            <text x="40" y="161" font-size="9.5">writer — writes the summary</text>
 
-            <rect x="24" y="178" width="168" height="30" rx="2"
+            <rect x="24" y="178" width="192" height="30" rx="2"
                   fill="var(--surface)" stroke="var(--line)" stroke-dasharray="3 3"/>
-            <text x="40" y="197" fill="var(--ink-faint)">reviewer — checks against sources</text>
+            <text x="40" y="197" font-size="8.5" fill="var(--ink-faint)">reviewer — checks against sources</text>
           </g>
 
           <!-- orchestrator -> agents -->
@@ -1622,10 +1705,10 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <!-- tools -->
           <rect x="24" y="232" width="168" height="46" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="40" y="252" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="40" y="252" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">tools/</text>
-          <text x="40" y="269" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">query gold · compute · draw charts</text>
+          <text x="40" y="269" font-family="var(--sans)" font-size="9"
+                fill="var(--ink-soft)">query gold · compute · charts</text>
 
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none" color="var(--ink-faint)"
              marker-end="url(#ai-ar)">
@@ -1635,7 +1718,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <!-- gold -->
           <rect x="24" y="316" width="168" height="40" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="40" y="341" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="40" y="341" font-family="var(--mono)" font-size="11.5"
                 fill="var(--gold)">gold</text>
           <g stroke="var(--gold)" stroke-width="1.2" fill="none" color="var(--gold)"
              marker-end="url(#ai-ar)">
@@ -1643,7 +1726,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           </g>
 
           <!-- ===== llm/ : the only gateway ===== -->
-          <text x="256" y="28" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="256" y="28" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">LLM/ — THE ONLY GATEWAY</text>
 
           <rect x="256" y="42" width="236" height="314" rx="3"
@@ -1651,25 +1734,25 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
           <rect x="280" y="70" width="188" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="296" y="90" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="296" y="90" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">cache</text>
-          <text x="296" y="106" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="296" y="106" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">repeated prompt → no second call</text>
 
           <rect x="280" y="130" width="188" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="296" y="150" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="296" y="150" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">budget</text>
-          <text x="296" y="166" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="296" y="166" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">over the token ceiling → stop</text>
 
           <rect x="280" y="190" width="188" height="44" rx="2"
                 fill="var(--accent)" stroke="var(--accent)" opacity="0.14"/>
           <rect x="280" y="190" width="188" height="44" rx="2"
                 fill="none" stroke="var(--accent)" stroke-width="1.6"/>
-          <text x="296" y="210" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="296" y="210" font-family="var(--mono)" font-size="11.5"
                 fill="var(--accent)">router</text>
-          <text x="296" y="226" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="296" y="226" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">picks local or cloud</text>
 
           <!-- agents -> llm -->
@@ -1677,7 +1760,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
              marker-end="url(#ai-ar)">
             <path d="M 192 65 L 224 65 L 224 92 L 276 92"/>
           </g>
-          <text x="200" y="58" font-family="JetBrains Mono, monospace" font-size="9"
+          <text x="200" y="58" font-family="var(--mono)" font-size="9"
                 fill="var(--gold)">every call</text>
 
           <!-- flow inside llm -->
@@ -1688,37 +1771,37 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           </g>
 
           <!-- ===== backend ===== -->
-          <text x="556" y="28" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="556" y="28" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.6" fill="var(--ink-faint)">WHERE THE MODEL ACTUALLY RUNS</text>
 
           <!-- local -->
           <rect x="556" y="42" width="360" height="130" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.4"/>
-          <text x="576" y="66" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="576" y="66" font-family="var(--mono)" font-size="12"
                 fill="var(--silver)">vLLM — local</text>
-          <text x="576" y="86" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="86" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">Qwen 2.5 3B · AWQ 4-bit · GTX 1660 Ti 6GB</text>
           <line x1="576" y1="98" x2="896" y2="98" stroke="var(--silver)" opacity="0.35"/>
-          <text x="576" y="118" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="118" font-family="var(--sans)" font-size="11"
                 fill="var(--ink)">High-volume work, short output:</text>
-          <text x="576" y="136" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="136" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">classification · entity extraction · relevance scoring</text>
-          <text x="576" y="154" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="154" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">per-record summaries · data never leaves the machine</text>
 
           <!-- cloud -->
           <rect x="556" y="192" width="360" height="130" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="576" y="216" font-family="JetBrains Mono, monospace" font-size="12"
+          <text x="576" y="216" font-family="var(--mono)" font-size="12"
                 fill="var(--gold)">API cloud</text>
-          <text x="576" y="236" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="236" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">large model · long context</text>
           <line x1="576" y1="248" x2="896" y2="248" stroke="var(--gold)" opacity="0.35"/>
-          <text x="576" y="268" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="268" font-family="var(--sans)" font-size="11"
                 fill="var(--ink)">The final reasoning:</text>
-          <text x="576" y="286" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="286" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">synthesising sources · writing the report</text>
-          <text x="576" y="304" font-family="Inter Tight, sans-serif" font-size="11"
+          <text x="576" y="304" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">decisions needing lots of context</text>
 
           <!-- router -> backends -->
@@ -1734,10 +1817,10 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <!-- evals -->
           <rect x="556" y="338" width="360" height="40" rx="2"
                 fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="576" y="363" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="576" y="363" font-family="var(--mono)" font-size="11.5"
                 fill="var(--accent)">evals/</text>
-          <text x="648" y="363" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--ink-soft)">golden set — a prompt change that drops the score blocks the merge</text>
+          <text x="648" y="363" font-family="var(--sans)" font-size="10.5"
+                fill="var(--ink-soft)">golden set — a score drop blocks the merge</text>
           <g stroke="var(--accent)" stroke-width="1.1" stroke-dasharray="3 3" fill="none"
              color="var(--accent)" marker-end="url(#ai-ar)" opacity="0.8">
             <path d="M 736 322 L 736 334"/>
@@ -1760,88 +1843,121 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
   </div>
   <section id="s09">
     <div class="section-head">
-      <p class="eyebrow">4.1 · The operational stack</p>
-      <h2>The operational stack</h2>
+      <p class="eyebrow">4.1 &middot; The operational stack</p>
+      <h2>Three containers are required; the rest sit behind a profile</h2>
       <p>
-        One <code>docker compose up</code> brings up both the app and the observability layer. Add
-        <code>--profile local-llm</code> to run the 3B model on the machine itself. This is the <em>dev machine</em>
-        stack — on a cluster the same image runs through Helm, see the next section.
+        <code>docker compose up</code> brings up what the code actually talks to. Everything else
+        is real config that is simply not this batch's turn &mdash; it costs no RAM until the
+        profile is named, and deleting it would delete the decision with it.
       </p>
     </div>
 
     <div class="ops">
       <article class="op">
-        <span class="op-svc">api</span>
-        <span class="op-role">Front door</span>
-        <p>Takes report requests, returns finished results, health checks for the load balancer.</p>
+        <span class="op-svc">postgres</span>
+        <span class="op-role">Data store &middot; required</span>
+        <p>One database, four schemas &mdash; <code>bronze</code> &middot; <code>silver</code> &middot; <code>gold</code> &middot; <code>app</code>. A separate volume, so upgrading the image does not lose data.</p>
       </article>
       <article class="op">
-        <span class="op-svc">scheduler</span>
-        <span class="op-role">The clock</span>
-        <p>Pushes work onto the queue when the time comes. It does not execute anything, so its death loses no jobs.</p>
+        <span class="op-svc">rabbitmq</span>
+        <span class="op-role">Job queue &middot; required</span>
+        <p>A task queue, not a log: retry and dead-lettering are broker features here rather than something to build. Chosen over Kafka, whose JVM costs ~1.2&nbsp;GiB for a few reports an hour.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">redis</span>
+        <span class="op-role">In-flight state &middot; required</span>
+        <p>Where the worker puts events for the API to read back, plus job status and budget. Every key has a TTL, so nothing here is storage &mdash; that is what Postgres is for.</p>
+      </article>
+      <article class="op">
+        <span class="op-svc">qdrant</span>
+        <span class="op-role">Vector store &middot; idle</span>
+        <p>Up, but nothing writes to it until the indexer batch lands. Kept out of Postgres so it scales on its own.</p>
       </article>
       <article class="op">
         <span class="op-svc">worker</span>
         <span class="op-role">The hands</span>
-        <p>Pulls jobs and runs them: syncs, transforms, report generation. <code>--scale worker=N</code>, but pods beyond the partition count sit idle.</p>
+        <p>Pulls jobs and runs them. This is where agents actually execute. In dev it runs straight on the host with <code>uv run</code>, so editing code needs no rebuild.</p>
       </article>
       <article class="op">
-        <span class="op-svc">kafka</span>
-        <span class="op-role">Job queue</span>
-        <p>KRaft mode, no Zookeeper. The partition count is the parallelism ceiling; it can be increased but not decreased.</p>
+        <span class="op-svc">scheduler</span>
+        <span class="op-role">The clock</span>
+        <p>A tick every 15 minutes, calling <code>domains/sync.py</code> directly &mdash; no HTTP, no queue. Always one replica, <code>Recreate</code>: two of them fire every schedule twice.</p>
       </article>
       <article class="op">
-        <span class="op-svc">qdrant</span>
-        <span class="op-role">Vector store</span>
-        <p>Knowledge base search over embeddings. Kept out of Postgres so it scales independently.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">minio</span>
-        <span class="op-role">Object store</span>
-        <p>Large files over the S3 API: source PDFs, rendered reports. Moving to real S3 is just an endpoint change.</p>
+        <span class="op-svc">api</span>
+        <span class="op-role">Front door &middot; <code>--profile api</code></span>
+        <p>In dev, uvicorn runs on the host instead: reload is faster. It stays in compose for production.</p>
       </article>
       <article class="op">
         <span class="op-svc">vllm</span>
-        <span class="op-role">Model local</span>
-        <p>Optional, enabled with the <code>local-llm</code> profile. Without it every call goes to the cloud.</p>
+        <span class="op-role">Local model &middot; <code>--profile local-llm</code></span>
+        <p>~8&nbsp;GiB and a GPU. The cloud tier is Gemini, so this stays off until there is hardware to carry it.</p>
       </article>
       <article class="op">
-        <span class="op-svc">postgres</span>
-        <span class="op-role">Data store</span>
-        <p>One database, four schemas — <code>bronze</code> · <code>silver</code> · <code>gold</code> · <code>app</code>. A separate volume so upgrading the image does not lose data.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">otel-collector</span>
-        <span class="op-role">Collection point</span>
-        <p>The app sends OTLP to one place; the collector routes it to Tempo and Prometheus.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">tempo</span>
-        <span class="op-role">Trace storage</span>
-        <p>One report request is one trace: from HTTP, through the gold query, down to each model call.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">prometheus</span>
-        <span class="op-role">Metrics storage</span>
-        <p>Sync latency, record counts per layer, tokens and cost per model, job failure rate.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">loki</span>
-        <span class="op-role">Log storage</span>
-        <p>Answers <em>why it broke</em>: stack traces, the payload the provider returned. Joined to traces by <code>trace_id</code>.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">promtail</span>
-        <span class="op-role">Gom log</span>
-        <p>Reads container stdout and ships it to Loki. The app only prints JSON and does not know Loki exists.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">grafana</span>
-        <span class="op-role">The screen</span>
-        <p>Dashboards and datasources, provisioned from <code>deploy/grafana/</code> so they are versioned with the code. Click from a metric to a trace, from a trace to logs.</p>
+        <span class="op-svc">prometheus &middot; grafana<br>loki &middot; promtail</span>
+        <span class="op-role">Observability &middot; <code>--profile monitoring</code></span>
+        <p>The app exposes no <code>/metrics</code> yet, so switching them on would show empty dashboards. On one machine <code>docker logs</code> answers the same questions.</p>
       </article>
     </div>
+
+    <p class="path-note">
+      Traces do <b>not</b> go through a local collector. The app ships OTLP straight to Langfuse
+      Cloud, which understands agents and tool calls &mdash; Grafana sees only anonymous spans. Tempo
+      and the collector were dropped along with the trace backend they fed.
+    </p>
   </section>
+
+  <section id="s13">
+    <div class="section-head">
+      <p class="eyebrow">4.1b &middot; Ports</p>
+      <h2>What listens where</h2>
+      <p>Every port a developer needs on the dev machine, and the one deliberate offset.</p>
+    </div>
+
+    <table class="tbl">
+      <thead><tr><th>Port</th><th>Service</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td class="who">8000</td><td>api</td><td>FastAPI &mdash; <code>/app</code>, <code>/chat</code>, <code>/health</code></td></tr>
+        <tr><td class="who">5432</td><td>postgres</td><td>PostgreSQL 16</td></tr>
+        <tr><td class="who">5433</td><td>postgres (test)</td><td>A throwaway container for the suite. Offset so it cannot collide with a Postgres already installed on the machine</td></tr>
+        <tr><td class="who">5672</td><td>rabbitmq</td><td>AMQP</td></tr>
+        <tr><td class="who">15672</td><td>rabbitmq</td><td>Management UI</td></tr>
+        <tr><td class="who">6379</td><td>redis</td><td>Events, job status, budget</td></tr>
+        <tr><td class="who">6333</td><td>qdrant</td><td>HTTP + dashboard</td></tr>
+        <tr><td class="who">8001</td><td>vllm</td><td>OpenAI-compatible, profile only</td></tr>
+        <tr><td class="who">9090</td><td>prometheus</td><td>Profile only</td></tr>
+        <tr><td class="who">3100</td><td>loki</td><td>Profile only</td></tr>
+        <tr><td class="who">3000</td><td>grafana</td><td>Profile only</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="s14">
+    <div class="section-head">
+      <p class="eyebrow">4.1c &middot; Silent traps</p>
+      <h2>Six things that raise no error when they are wrong</h2>
+      <p>They simply behave wrongly, which is worse: nothing turns red, so nobody looks.</p>
+    </div>
+
+    <table class="tbl">
+      <thead><tr><th>Trap</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td class="who">BaseHTTPMiddleware<br>blocks SSE</td>
+            <td>It buffers the response, so tokens arrive in one lump at the end. Looks like a slow model. The request-id middleware is therefore pure ASGI</td></tr>
+        <tr><td class="who">Traces break at the<br>process boundary</td>
+            <td><code>contextvars</code> do not cross a process. Without <code>inject()</code>/<code>extract()</code> in the message headers you get <b>two</b> unrelated traces, and nothing errors</td></tr>
+        <tr><td class="who"><code>tracing.setup()</code><br>runs too late</td>
+            <td>Called after <code>instrument_app()</code>, spans fall into an empty provider and disappear &mdash; silently</td></tr>
+        <tr><td class="who">Budget counted at<br>the call site</td>
+            <td>Sub-agent usage does not roll up on its own. Only <code>runner.run</code> charges; <code>delegate</code> passes <code>usage=ctx.usage</code>, or a three-agent job is billed four times</td></tr>
+        <tr><td class="who">Pool sized<br>per process</td>
+            <td>The limit is <code>max_connections</code> across <b>all</b> processes, not per one. It only fails under load</td></tr>
+        <tr><td class="who">A hung pod with an<br>open port looks healthy</td>
+            <td>Self-healing is only as correct as the probes. <code>vllm</code> needs a <code>startupProbe</code> &mdash; the model takes minutes to load</td></tr>
+      </tbody>
+    </table>
+  </section>
+
   <section id="s10">
     <div class="section-head">
       <p class="eyebrow">4.2 · From dev machine to cluster</p>
@@ -1866,37 +1982,37 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <!-- push -->
           <rect x="16" y="86" width="124" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="78" y="105" font-family="JetBrains Mono, monospace" font-size="11"
+          <text x="78" y="105" font-family="var(--mono)" font-size="11"
                 fill="var(--ink)" text-anchor="middle">git push</text>
-          <text x="78" y="121" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="78" y="121" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)" text-anchor="middle">pull request</text>
 
           <!-- CI -->
           <rect x="180" y="42" width="216" height="132" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="196" y="64" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="196" y="64" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">CI — every PR</text>
-          <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
+          <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
             <text x="196" y="86">lint · type check</text>
             <text x="196" y="106">migrations apply</text>
             <text x="196" y="126">test</text>
           </g>
           <line x1="196" y1="138" x2="380" y2="138" stroke="var(--line)"/>
-          <text x="196" y="158" font-family="Inter Tight, sans-serif" font-size="10.5"
-                fill="var(--accent)">evals — only when prompts / llm change</text>
+          <text x="196" y="158" font-family="var(--sans)" font-size="10.5"
+                fill="var(--accent)">evals — on prompt / llm change</text>
 
           <!-- build -->
           <rect x="436" y="86" width="180" height="44" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="452" y="105" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="452" y="105" font-family="var(--mono)" font-size="11.5"
                 fill="var(--gold)">build image</text>
-          <text x="452" y="121" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="452" y="121" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">tag = commit SHA</text>
 
           <!-- registry -->
           <rect x="656" y="86" width="124" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="718" y="112" font-family="JetBrains Mono, monospace" font-size="11"
+          <text x="718" y="112" font-family="var(--mono)" font-size="11"
                 fill="var(--ink)" text-anchor="middle">registry</text>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -1905,22 +2021,22 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             <path d="M 396 108 L 432 108"/>
             <path d="M 616 108 L 652 108"/>
           </g>
-          <text x="414" y="100" font-family="JetBrains Mono, monospace" font-size="9"
+          <text x="414" y="100" font-family="var(--mono)" font-size="9"
                 fill="var(--ink-faint)" text-anchor="middle">merge</text>
 
           <!-- staging + prod -->
           <rect x="656" y="182" width="268" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="672" y="201" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="672" y="201" font-family="var(--mono)" font-size="11.5"
                 fill="var(--ink)">staging</text>
-          <text x="672" y="217" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="672" y="217" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">anonymised data · its own rate-limited key</text>
 
           <rect x="656" y="240" width="268" height="44" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="672" y="259" font-family="JetBrains Mono, monospace" font-size="11.5"
+          <text x="672" y="259" font-family="var(--mono)" font-size="11.5"
                 fill="var(--gold)">prod</text>
-          <text x="672" y="275" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="672" y="275" font-family="var(--sans)" font-size="10"
                 fill="var(--ink-soft)">postgres with backups</text>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -1928,35 +2044,35 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             <path d="M 718 130 L 718 178"/>
             <path d="M 790 226 L 790 236"/>
           </g>
-          <text x="800" y="163" font-family="JetBrains Mono, monospace" font-size="9"
+          <text x="800" y="163" font-family="var(--mono)" font-size="9"
                 fill="var(--ink-faint)">the same image</text>
 
           <!-- deploy order -->
           <rect x="16" y="182" width="600" height="102" rx="2"
                 fill="none" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="36" y="204" font-family="JetBrains Mono, monospace" font-size="10"
+          <text x="36" y="204" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.4" fill="var(--accent)">DEPLOY ORDER — NEVER CHANGES</text>
 
-          <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink)">
+          <g font-family="var(--mono)" font-size="10.5" fill="var(--ink)">
             <text x="36" y="230">1 · compose pull</text>
             <text x="36" y="250">2 · alembic upgrade head</text>
             <text x="36" y="270">3 · compose up -d</text>
           </g>
-          <g font-family="Inter Tight, sans-serif" font-size="10.5" fill="var(--ink-soft)">
+          <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
             <text x="230" y="230">pull the image by SHA</text>
             <text x="230" y="250">migrations run before the new code</text>
             <text x="230" y="270">only then swap containers</text>
           </g>
-          <text x="432" y="250" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="432" y="250" font-family="var(--sans)" font-size="10"
                 fill="var(--bronze)">so the schema must be</text>
-          <text x="432" y="266" font-family="Inter Tight, sans-serif" font-size="10"
+          <text x="432" y="266" font-family="var(--sans)" font-size="10"
                 fill="var(--bronze)">backward compatible by one step</text>
 
           <!-- rollback -->
           <path d="M 924 262 L 936 262 L 936 108 L 786 108"
                 stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
                 fill="none" color="var(--ink-faint)" marker-end="url(#sh-ar)"/>
-          <text x="880" y="26" font-family="JetBrains Mono, monospace" font-size="9.5"
+          <text x="880" y="26" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="end">rollback = back to the previous SHA tag</text>
         </svg>
       </div>
@@ -2085,7 +2201,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
     <p>
       <b>Stateful stores run as <code>StatefulSet</code> + PVC</b>, not
-      <code>Deployment</code>: Postgres, RabbitMQ, Qdrant and MinIO need a stable identity and a volume that
+      <code>Deployment</code>: Postgres, RabbitMQ, Redis and Qdrant need a stable identity and a volume that
       reattaches to the same pod. On-prem means providing the storage layer yourself — k3s local-path, or
       Longhorn if volumes should be able to move between machines. This is the most labour-intensive part of leaving the cloud.
     </p>
@@ -2123,7 +2239,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr>
           <td class="who">docker compose · observability</td>
-          <td>Config written: postgres, kafka, qdrant, minio, otel-collector, tempo, prometheus, loki, promtail, grafana</td>
+          <td>Running: postgres, rabbitmq, redis, qdrant. Behind a profile: api, vllm, prometheus, loki, promtail, grafana. Dropped: kafka (JVM), minio (a report is markdown)</td>
         </tr>
         <tr>
           <td class="who">CI · build image</td>

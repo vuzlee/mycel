@@ -112,7 +112,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(projects.router)
     app.include_router(chat.router)
     app.include_router(events.router)
-    app.include_router(events.page_router)
 
     _install_error_handlers(app)
     _mount_web(app)

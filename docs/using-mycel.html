@@ -3,30 +3,163 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Using Mycel — from sign-up to a progress report</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
 <style>
+:root {
+  color-scheme: light;
 
-:root{
-  --paper:#FAF9F7; --card:#FFFFFF; --sunk:#F2F0EC;
-  --ink:#1F1E1D; --dim:#6B6862; --line:#E5E1DA;
-  --brand:#C4633D; --brand-soft:#FBEEE8; --brand-line:#E8C4B2;
-  --cool:#3D6B8C; --cool-soft:#EAF1F6;
-  --serif:"Source Serif 4",Georgia,serif;
-  --sans:Inter,system-ui,-apple-system,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  /* Surfaces, lightest first. */
+  --ground: #faf9fc;
+  --paper: #faf9fc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --surface-alt: #f3f1f8;
+  --sunk: #f3f1f8;
+
+  /* Text, strongest first. */
+  --ink: #17141f;
+  --ink-2: #453e56;
+  --ink-soft: #6f6782;
+  --dim: #6f6782;
+  --ink-faint: #9d96ae;
+
+  --line: #e7e3f0;
+  --line-soft: #f0edf7;
+  --rule-2: #d9d3e6;
+
+  --accent: #6d3fd1;
+  --brand: #6d3fd1;
+  --accent-soft: #efe9fc;
+  --brand-soft: #efe9fc;
+  --brand-line: #d6c8f7;
+
+  /* A second, cooler voice for asides that must not read as the accent. */
+  --cool: #3a5ba8;
+  --cool-soft: #eaeefa;
+
+  /*
+   * The three data layers. They must stay tellable apart at a glance, so they step
+   * around the wheel rather than sitting on the accent — but each is pulled toward the
+   * page's violet so the set still reads as one family.
+   */
+  --bronze: #9c5a3c;
+  --silver: #4f6d9e;
+  --gold: #6d3fd1;
+  --bronze-wash: #9c5a3c18;
+  --silver-wash: #4f6d9e18;
+  --gold-wash: #6d3fd118;
+
+  /* Status: present, provisional, missing, wrong. */
+  --live: #3f7d58;
+  --live-bg: #e6f2ea;
+  --draft: #8a6510;
+  --draft-bg: #f7efd8;
+  --absent: #8f87a3;
+  --absent-bg: #efedf4;
+  --warn: #a63d6b;
+
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --step: clamp(2.5rem, 6vw, 4.5rem);
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
-  --paper:#15140F; --card:#1E1C18; --sunk:#232019;
-  --ink:#EDEAE3; --dim:#9C968B; --line:#302C25;
-  --brand:#E08B67; --brand-soft:#2A1C15; --brand-line:#4A3227;
-  --cool:#7FA9C7; --cool-soft:#16202A;
-}}
-:root[data-theme=dark]{
-  --paper:#15140F; --card:#1E1C18; --sunk:#232019;
-  --ink:#EDEAE3; --dim:#9C968B; --line:#302C25;
-  --brand:#E08B67; --brand-soft:#2A1C15; --brand-line:#4A3227;
-  --cool:#7FA9C7; --cool-soft:#16202A;
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ground: #0b0910;
+    --paper: #0b0910;
+    --surface: #131019;
+    --card: #131019;
+    --surface-alt: #0f0d15;
+    --sunk: #0f0d15;
+
+    --ink: #f0edf7;
+    --ink-2: #c5bed6;
+    --ink-soft: #8f87a3;
+    --dim: #8f87a3;
+    --ink-faint: #6b6380;
+
+    --line: #241f30;
+    --line-soft: #1a1624;
+    --rule-2: #332c42;
+
+    --accent: #b79cff;
+    --brand: #b79cff;
+    --accent-soft: #1d1730;
+    --brand-soft: #1d1730;
+    --brand-line: #3a2f5c;
+
+    --cool: #8aa6e0;
+    --cool-soft: #151a2a;
+
+    --bronze: #d29472;
+    --silver: #92aee0;
+    --gold: #b79cff;
+    --bronze-wash: #d294721f;
+    --silver-wash: #92aee01f;
+    --gold-wash: #b79cff1f;
+
+    --live: #6fc894;
+    --live-bg: #14251b;
+    --draft: #d8ad55;
+    --draft-bg: #2a2110;
+    --absent: #6b6380;
+    --absent-bg: #1a1624;
+    --warn: #f090b4;
+  }
 }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ground: #0b0910;
+  --paper: #0b0910;
+  --surface: #131019;
+  --card: #131019;
+  --surface-alt: #0f0d15;
+  --sunk: #0f0d15;
+
+  --ink: #f0edf7;
+  --ink-2: #c5bed6;
+  --ink-soft: #8f87a3;
+  --dim: #8f87a3;
+  --ink-faint: #6b6380;
+
+  --line: #241f30;
+  --line-soft: #1a1624;
+  --rule-2: #332c42;
+
+  --accent: #b79cff;
+  --brand: #b79cff;
+  --accent-soft: #1d1730;
+  --brand-soft: #1d1730;
+  --brand-line: #3a2f5c;
+
+  --cool: #8aa6e0;
+  --cool-soft: #151a2a;
+
+  --bronze: #d29472;
+  --silver: #92aee0;
+  --gold: #b79cff;
+  --bronze-wash: #d294721f;
+  --silver-wash: #92aee01f;
+  --gold-wash: #b79cff1f;
+
+  --live: #6fc894;
+  --live-bg: #14251b;
+  --draft: #d8ad55;
+  --draft-bg: #2a2110;
+  --absent: #6b6380;
+  --absent-bg: #1a1624;
+  --warn: #f090b4;
+}
+
+
 *{box-sizing:border-box}
 body{margin:0;padding:0 24px 120px;background:var(--paper);color:var(--ink);
   font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
@@ -225,7 +358,7 @@ li{margin:8px 0}
   <span>how to use it</span>
   <a href="architecture.html">architecture</a>
   <a href="database.html">database</a>
-  <a href="stack.html">stack</a>
+  <a href="architecture.html#s09">stack</a>
   <a href="../README.md">readme</a>
 </nav>
 
@@ -655,8 +788,8 @@ scripts/stack.sh sync
 <p class="seq">
   <a href="architecture.html">architecture</a> ·
   <a href="database.html">database</a> ·
-  <a href="stack.html">stack</a> ·
-  <a href="../notes/flow/INDEX.md">notes index</a>
+  <a href="architecture.html#s09">stack</a> ·
+  <a href="../notes/flow/tmp/flow.html">notes</a>
 </p>
 </div>
 </html>

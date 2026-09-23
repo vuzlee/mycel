@@ -4,79 +4,159 @@
 <title>Mycel Database</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
 
 <style>
 :root {
-  /* Light forest floor */
-  --ground:      #FBFAF7;
-  --surface:     #F2F0E9;
-  --surface-alt: #E8E5DB;
-  --line:        #D6D2C4;
-  --line-soft:   #E3E0D4;
-  --ink:         #1C1F19;
-  --ink-soft:    #5A5F52;
-  --ink-faint:   #868B79;
+  color-scheme: light;
 
-  /* Three data layers */
-  --bronze:    #8B6F47;
-  --silver: #5E8159;
-  --gold:   #A8861B;
-  --accent: #A8861B;
+  /* Surfaces, lightest first. */
+  --ground: #faf9fc;
+  --paper: #faf9fc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --surface-alt: #f3f1f8;
+  --sunk: #f3f1f8;
 
-  --bronze-wash:    #8b6f4718;
-  --silver-wash: #5e815918;
-  --gold-wash:   #a8861b18;
+  /* Text, strongest first. */
+  --ink: #17141f;
+  --ink-2: #453e56;
+  --ink-soft: #6f6782;
+  --dim: #6f6782;
+  --ink-faint: #9d96ae;
+
+  --line: #e7e3f0;
+  --line-soft: #f0edf7;
+  --rule-2: #d9d3e6;
+
+  --accent: #6d3fd1;
+  --brand: #6d3fd1;
+  --accent-soft: #efe9fc;
+  --brand-soft: #efe9fc;
+  --brand-line: #d6c8f7;
+
+  /* A second, cooler voice for asides that must not read as the accent. */
+  --cool: #3a5ba8;
+  --cool-soft: #eaeefa;
+
+  /*
+   * The three data layers. They must stay tellable apart at a glance, so they step
+   * around the wheel rather than sitting on the accent — but each is pulled toward the
+   * page's violet so the set still reads as one family.
+   */
+  --bronze: #9c5a3c;
+  --silver: #4f6d9e;
+  --gold: #6d3fd1;
+  --bronze-wash: #9c5a3c18;
+  --silver-wash: #4f6d9e18;
+  --gold-wash: #6d3fd118;
+
+  /* Status: present, provisional, missing, wrong. */
+  --live: #3f7d58;
+  --live-bg: #e6f2ea;
+  --draft: #8a6510;
+  --draft-bg: #f7efd8;
+  --absent: #8f87a3;
+  --absent-bg: #efedf4;
+  --warn: #a63d6b;
+
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --step: clamp(2.5rem, 6vw, 4.5rem);
-}
-
-:root:not([data-theme="light"]) {
-  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground:      #0F1310;
-    --surface:     #171C17;
-    --surface-alt: #1F251E;
-    --line:        #2E362C;
-    --line-soft:   #242B23;
-    --ink:         #E6E9DF;
-    --ink-soft:    #9BA391;
-    --ink-faint:   #6E7666;
 
-    --bronze:    #B8946A;
-    --silver: #8FB588;
-    --gold:   #D9B43C;
-    --accent: #D9B43C;
+    --ground: #0b0910;
+    --paper: #0b0910;
+    --surface: #131019;
+    --card: #131019;
+    --surface-alt: #0f0d15;
+    --sunk: #0f0d15;
 
-    --bronze-wash:    #b8946a1f;
-    --silver-wash: #8fb5881f;
-    --gold-wash:   #d9b43c1f;
+    --ink: #f0edf7;
+    --ink-2: #c5bed6;
+    --ink-soft: #8f87a3;
+    --dim: #8f87a3;
+    --ink-faint: #6b6380;
+
+    --line: #241f30;
+    --line-soft: #1a1624;
+    --rule-2: #332c42;
+
+    --accent: #b79cff;
+    --brand: #b79cff;
+    --accent-soft: #1d1730;
+    --brand-soft: #1d1730;
+    --brand-line: #3a2f5c;
+
+    --cool: #8aa6e0;
+    --cool-soft: #151a2a;
+
+    --bronze: #d29472;
+    --silver: #92aee0;
+    --gold: #b79cff;
+    --bronze-wash: #d294721f;
+    --silver-wash: #92aee01f;
+    --gold-wash: #b79cff1f;
+
+    --live: #6fc894;
+    --live-bg: #14251b;
+    --draft: #d8ad55;
+    --draft-bg: #2a2110;
+    --absent: #6b6380;
+    --absent-bg: #1a1624;
+    --warn: #f090b4;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground:      #0F1310;
-  --surface:     #171C17;
-  --surface-alt: #1F251E;
-  --line:        #2E362C;
-  --line-soft:   #242B23;
-  --ink:         #E6E9DF;
-  --ink-soft:    #9BA391;
-  --ink-faint:   #6E7666;
 
-  --bronze:    #B8946A;
-  --silver: #8FB588;
-  --gold:   #D9B43C;
-  --accent: #D9B43C;
+  --ground: #0b0910;
+  --paper: #0b0910;
+  --surface: #131019;
+  --card: #131019;
+  --surface-alt: #0f0d15;
+  --sunk: #0f0d15;
 
-  --bronze-wash:    #b8946a1f;
-  --silver-wash: #8fb5881f;
-  --gold-wash:   #d9b43c1f;
+  --ink: #f0edf7;
+  --ink-2: #c5bed6;
+  --ink-soft: #8f87a3;
+  --dim: #8f87a3;
+  --ink-faint: #6b6380;
+
+  --line: #241f30;
+  --line-soft: #1a1624;
+  --rule-2: #332c42;
+
+  --accent: #b79cff;
+  --brand: #b79cff;
+  --accent-soft: #1d1730;
+  --brand-soft: #1d1730;
+  --brand-line: #3a2f5c;
+
+  --cool: #8aa6e0;
+  --cool-soft: #151a2a;
+
+  --bronze: #d29472;
+  --silver: #92aee0;
+  --gold: #b79cff;
+  --bronze-wash: #d294721f;
+  --silver-wash: #92aee01f;
+  --gold-wash: #b79cff1f;
+
+  --live: #6fc894;
+  --live-bg: #14251b;
+  --draft: #d8ad55;
+  --draft-bg: #2a2110;
+  --absent: #6b6380;
+  --absent-bg: #1a1624;
+  --warn: #f090b4;
 }
 
 * { box-sizing: border-box; }
@@ -85,7 +165,7 @@ body {
   margin: 0;
   background: var(--ground);
   color: var(--ink);
-  font-family: "Inter Tight", system-ui, -apple-system, sans-serif;
+  font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -104,7 +184,7 @@ body {
 /* ---------- Typography ---------- */
 
 h1, h2, h3 {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-weight: 600;
   text-wrap: balance;
   margin: 0;
@@ -130,7 +210,7 @@ h3 {
 p { margin: 0; max-width: 62ch; }
 
 .eyebrow {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -139,7 +219,7 @@ p { margin: 0; max-width: 62ch; }
 }
 
 code, .mono {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125em;
 }
 
@@ -158,7 +238,7 @@ code, .mono {
 }
 
 .hero-lede em {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-style: italic;
   color: var(--ink);
 }
@@ -169,7 +249,7 @@ code, .mono {
   gap: 0.5rem 1.75rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
 }
@@ -240,7 +320,7 @@ figcaption {
 .layer:nth-child(3) { --tone: var(--gold); }
 
 .layer-name {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--tone);
@@ -255,7 +335,7 @@ figcaption {
   grid-template-columns: auto 1fr;
   gap: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
 }
 
 .layer dt { color: var(--ink-faint); }
@@ -271,7 +351,7 @@ figcaption {
 }
 
 .tree-col {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   line-height: 1.9;
 }
@@ -295,7 +375,7 @@ figcaption {
 .tree-row:first-child { border-top: none; }
 
 .tree-path {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   white-space: pre;
   color: var(--ink);
@@ -340,7 +420,7 @@ figcaption {
 }
 
 .rules li strong {
-  font-family: Fraunces, Georgia, serif;
+  font-family: var(--serif);
   font-weight: 600;
   font-size: 1rem;
 }
@@ -369,7 +449,7 @@ figcaption {
 }
 
 .op-svc {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--accent);
 }
@@ -402,7 +482,7 @@ figcaption {
 .toc a:hover { color: var(--accent); border-top-color: var(--accent); }
 
 .toc a b {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   font-weight: 400;
   letter-spacing: 0.12em;
@@ -424,7 +504,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 }
 
 .part-num {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -461,7 +541,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 
 .tbl th {
   text-align: left;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -485,7 +565,7 @@ section, .part { scroll-margin-top: 1.5rem; }
 .tbl tr:last-child td { border-bottom: none; }
 
 .tbl .who {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--ink);
   white-space: nowrap;
@@ -550,7 +630,7 @@ footer {
 }
 
 .dict-name {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--tone);
@@ -570,14 +650,14 @@ footer {
 .col:last-child { border-bottom: none; }
 
 .col-n {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--ink);
   word-break: break-word;
 }
 
 .col-t {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
   word-break: break-word;
@@ -589,7 +669,7 @@ footer {
 .col-d .ex {
   display: block;
   margin-top: 0.4375rem;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-soft);
   background: var(--surface);
@@ -617,7 +697,7 @@ footer {
 .dict-foot {
   padding: 0.8125rem 1.25rem;
   border-top: 1px solid var(--line);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
   line-height: 1.7;
@@ -642,7 +722,7 @@ footer {
 }
 
 .legend b {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.6875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -679,14 +759,14 @@ footer {
 .flow > div:nth-child(3) { --tone: var(--gold); }
 
 .flow .sch {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--tone);
 }
 
 .flow .tb {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
 }
@@ -710,7 +790,7 @@ footer {
 pre {
   background: var(--surface);
   border: 1px solid var(--line);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   line-height: 1.8;
   padding: 1rem 1.125rem;
@@ -747,7 +827,7 @@ pre .c { color: var(--ink-faint); }
 
     <nav class="toc">
       <a href="architecture.html"><b>Architecture</b><span>How the system runs</span></a>
-      <a href="stack.html"><b>Stack</b><span>What is deployed</span></a>
+      <a href="architecture.html#s09"><b>Stack</b><span>What is deployed</span></a>
     </nav>
   </header>
 
@@ -1431,7 +1511,7 @@ uv run alembic downgrade base <span class="c"># drop everything</span></pre>
   <footer>
     <span>Mycel · database reference</span>
     <span><a href="architecture.html">architecture</a></span>
-    <span><a href="stack.html">stack</a></span>
+    <span><a href="architecture.html#s09">stack</a></span>
   </footer>
 
 </div>

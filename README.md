@@ -170,6 +170,7 @@ deploy/        Infrastructure config: OTel, Grafana, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 migrations/    Alembic migrations
 docs/          Design documentation
+notes/flow/    🇻🇳 plan/ — one batch each, written first; tmp/ — how the system runs
 tests/         Tests
 ```
 
@@ -178,7 +179,7 @@ tests/         Tests
 | | |
 |---|---|
 | **[docs/using-mycel.html](docs/using-mycel.html)** | How to use it: sign up, connect Jira, read the report |
-| [notes/flow/reference/testing.html](notes/flow/reference/testing.html) | 🇻🇳 How to run the tests, and what each one proves |
+| [notes/flow/tmp/dev.html](notes/flow/tmp/dev.html) | 🇻🇳 Sessions and the test suite — what you need before editing |
 | **[docs/architecture.html](docs/architecture.html)** | How the system is put together — read this first |
 | **[docs/database.html](docs/database.html)** | Schemas, tables and every column, with diagrams |
 | [deploy/inference/](deploy/inference/README.md) | Hardware constraints for the local model |

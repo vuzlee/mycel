@@ -1,11 +1,10 @@
 """Follow a running job's events over SSE."""
 
 from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 
 from mycel.api.dependencies import current_user
 from mycel.core.logging import get_logger
@@ -13,11 +12,6 @@ from mycel.infra.redis import streams
 from mycel.services.auth import Principal
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-#: Unprefixed, so `/live` cannot be matched as a job id by `/chat/{job_id}/events`.
-page_router = APIRouter()
-
-PAGE = Path(__file__).parent.parent / "static" / "events.html"
 
 log = get_logger(__name__)
 
@@ -67,12 +61,3 @@ async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[st
         await events.aclose()
         log.debug("event stream closed", extra={"job_id": job_id})
 
-
-@page_router.get("/live", include_in_schema=False)
-async def live_page() -> FileResponse:
-    """A page to watch a run on. One file, no build step.
-
-    The real UI is `web/`, mounted at `/app`. This stays because it needs no toolchain:
-    when the Node build is what is broken, this is still a way to see the stream.
-    """
-    return FileResponse(PAGE)
