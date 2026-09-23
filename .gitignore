@@ -37,3 +37,6 @@ web/dist/
 
 # Hand-run scratch scripts: real models, real money, no CI.
 scripts/try_*.py
+
+# Coverage data, written by `pytest --cov`.
+.coverage

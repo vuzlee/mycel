@@ -17,7 +17,8 @@ import { useAuth } from "../auth";
 import { useThreads } from "../threads";
 import { Modal } from "./Modal";
 import { HelpPanel, ProfilePanel, SettingsPanel } from "./panels";
-import { Chevron, Gear, Person, Question, SignOut } from "./icons";
+import { AccessPanel } from "./AccessPanel";
+import { Chevron, Gear, Key, Person, Question, SignOut } from "./icons";
 
 interface Props {
   /** `rail` is the strip at the foot of the sidebar; `bar` is the pill in a page header. */
@@ -26,7 +27,7 @@ interface Props {
 
 /** Which dialog is up, if any. One at a time: they are all the same size and open from
  *  the same menu, so stacking them would only hide one behind another. */
-type Panel = "profile" | "settings" | "help" | "leaving";
+type Panel = "profile" | "access" | "settings" | "help" | "leaving";
 
 export function Account({ where }: Props) {
   const { user, signOut } = useAuth();
@@ -97,6 +98,10 @@ export function Account({ where }: Props) {
             <Person />
             Profile
           </button>
+          <button role="menuitem" onClick={() => show("access")}>
+            <Key />
+            Project access
+          </button>
           <button role="menuitem" onClick={() => show("settings")}>
             <Gear />
             Settings
@@ -120,6 +125,16 @@ export function Account({ where }: Props) {
       {panel === "profile" && (
         <Modal title="Profile" lede="The account these runs are kept under." onClose={shut}>
           <ProfilePanel threads={threads} />
+        </Modal>
+      )}
+
+      {panel === "access" && (
+        <Modal
+          title="Project access"
+          lede="Who may read each project you can read."
+          onClose={shut}
+        >
+          <AccessPanel />
         </Modal>
       )}
 

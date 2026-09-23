@@ -6,17 +6,19 @@
  * be three files of twenty lines.
  */
 
+import { useState } from "react";
 import type { Thread } from "../api";
+import { changePassword } from "../api";
 import { useAuth } from "../auth";
+import { Spinner } from "./icons";
 import type { Theme } from "../theme";
 import { useTheme } from "../theme";
 
 const REPO = "https://github.com/vuzlee/mycel";
 const CONTACT = "levu040102@gmail.com";
 
-/** The account, as the server knows it. Read-only: `app.user` holds an id, an email and
- *  a password hash, and no route changes any of them — a form that cannot save is worse
- *  than a page that says what is true. */
+/** The account, as the server knows it. The address cannot be changed — it is the
+ *  identity — and the password can, which is why one of the two has a form. */
 export function ProfilePanel({ threads }: { threads: Thread[] }) {
   const { user } = useAuth();
   if (!user) return null;
@@ -46,9 +48,82 @@ export function ProfilePanel({ threads }: { threads: Thread[] }) {
 
       <p className="muted">
         Your runs are kept under this account, so signing in on another machine brings them
-        with you. Changing the address or the password is not built yet.
+        with you. The address is the identity here and cannot be changed.
       </p>
+
+      <PasswordForm />
     </>
+  );
+}
+
+/** Changing the password needs the current one even though a valid cookie is already in
+ *  hand: a borrowed laptop is exactly the case that protects against. Every other session
+ *  ends, and this one does not — you stay in the tab you are typing in. */
+function PasswordForm() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const submit = async (): Promise<void> => {
+    setBusy(true);
+    setFailure(null);
+    setDone(false);
+    try {
+      await changePassword(current, next);
+      setCurrent("");
+      setNext("");
+      setDone(true);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section>
+      <h3 className="label">Change password</h3>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <label>
+          <span className="label">Current password</span>
+          <input
+            type="password"
+            autoComplete="current-password"
+            required
+            value={current}
+            onChange={(event) => setCurrent(event.target.value)}
+          />
+        </label>
+
+        <label>
+          <span className="label">New password</span>
+          <input
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={next}
+            onChange={(event) => setNext(event.target.value)}
+          />
+          <span className="hint">At least 8 characters.</span>
+        </label>
+
+        {failure && <p className="failure">{failure}</p>}
+        {done && <p className="notice">Changed. Every other browser has been signed out.</p>}
+
+        <button className="primary" type="submit" disabled={busy}>
+          {busy && <Spinner className="spin" size={14} />}
+          Change it
+        </button>
+      </form>
+    </section>
   );
 }
 

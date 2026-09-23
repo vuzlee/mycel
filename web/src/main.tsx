@@ -1,5 +1,5 @@
 /**
- * Four routes, and no gate left.
+ * Six routes, and no gate left.
  *
  * `basename="/app"` because that is where the API mounts the build; the dev server uses
  * the same base, so a path written here means the same thing in both.
@@ -23,8 +23,10 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth";
 import { Ask } from "./pages/Ask";
 import { Home } from "./pages/Home";
+import { Forgot } from "./pages/Forgot";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { Reset } from "./pages/Reset";
 import { ThreadsProvider } from "./threads";
 import "./styles.css";
 
@@ -45,6 +47,8 @@ function Root() {
             <Route path="/home" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot" element={<Forgot />} />
+            <Route path="/reset" element={<Reset />} />
             <Route path="/" element={<Front />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>

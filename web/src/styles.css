@@ -2383,6 +2383,47 @@ td[data-status="late"] {
   color: var(--muted);
 }
 
+/* Who may read a project. A row per person, with its own way out — a list where removal
+   lives in a separate menu is a list nobody prunes. */
+.members {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.members li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13.5px;
+}
+
+.members li.muted {
+  justify-content: flex-start;
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.members .quiet {
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.members .quiet:hover:not(:disabled) {
+  color: var(--flag);
+  background: var(--flag-soft);
+}
+
 .steps {
   display: grid;
   gap: 16px;

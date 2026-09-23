@@ -107,9 +107,39 @@ because those are the ones being edited and a container would need rebuilding fo
 change. The worker is not optional: without it both `POST /reports` endpoints return a job
 id for work nobody ever picks up, which looks like a slow model rather than a missing
 process.
-Everything else is a container. `docker-compose.yml` still describes the full prod shape,
-including Grafana, Prometheus and the local-LLM profile, for deployments that have the
-compose CLI.
+Everything else is a container. `docker-compose.yml` describes the full prod shape,
+including Grafana, Prometheus and the local-LLM profile.
+
+The compose CLI ships as a Docker plugin and is not always installed. Without it every
+`docker compose` line here has to become a hand-written `docker run`, so install it once:
+
+```bash
+mkdir -p ~/.docker/cli-plugins
+curl -sSL -o ~/.docker/cli-plugins/docker-compose \
+  https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+chmod +x ~/.docker/cli-plugins/docker-compose
+docker compose version
+```
+
+### Who may read what
+
+A project is readable when a row in `app.membership` says so — no row, no access, so a new
+account starts with nothing rather than with everything. Migration `0007` grants every
+existing account every project the database already knew about, so an upgrade does not lock
+out the people using it; anything synced afterwards is granted deliberately.
+
+There is no admin screen yet. A deployment grants from a shell, through
+`services/permission.grant`.
+
+`migrations/grants.sql` is the other half, and runs by hand as a superuser after
+`alembic upgrade head`. It splits the database into two roles along the schema boundary the
+layers already draw: `mycel_etl` writes bronze, silver and gold; `mycel_app` reads gold and
+owns `app`. It is not a migration because a migration runs as the application's own role,
+and a role cannot take privileges away from itself.
+
+```bash
+psql "$DATABASE_URL" -v app_password=... -v etl_password=... -f migrations/grants.sql
+```
 
 The UI is a separate build. `docker compose` does it for you; outside Docker, either build
 it once (`cd web && npm ci && npm run build`, then it is served at `/app`) or run it in dev
@@ -122,7 +152,7 @@ starts without it, and `/live` is a no-build fallback page for watching a stream
 uv run ruff check .          # lint
 uv run mypy                  # strict, src/ only
 uv run alembic upgrade head  # migrations apply
-uv run pytest                # 454 tests
+uv run pytest --cov          # 564 tests, with a coverage floor
 ```
 
 The same four steps CI runs, in the same order — cheapest first, so a typo is caught in a
@@ -135,19 +165,29 @@ Two guards make the suite safe to run anywhere, both in `tests/conftest.py`:
 | The DSN must end in `_test` | Every Postgres fixture drops its schemas on teardown. `conftest` rewrites `DATABASE_URL` to a sibling database ending `_test` and creates it; `test_postgres.py` asserts it again. A stray DSN can never wipe a real database. |
 | `ALLOW_MODEL_REQUESTS = False` | Any real provider call raises instead of going to the network. A test suite that can spend money is one nobody runs. |
 
-87 of the tests need a reachable Postgres (`test_postgres.py`, `test_auth.py`); without one
-they skip rather than fail. The rest run straight after `uv sync`. SQLite is never used —
-it has no schemas, no `ON CONFLICT ... ON CONSTRAINT`, no JSONB and no advisory locks,
-which is most of what can break here.
+Coverage carries a floor in `pyproject.toml` rather than a target. It exists so a change
+that guts a tested module fails loudly; raise it when the number genuinely climbs, never to
+turn a red run green.
 
-To get a database for them:
+Some tests need a service, and skip without it rather than failing. The rest run straight
+after `uv sync`. SQLite is never used — it has no schemas, no `ON CONFLICT ... ON
+CONSTRAINT`, no JSONB and no advisory locks, which is most of what can break here.
+
+| Needs | Which tests |
+|---|---|
+| Postgres | `test_postgres.py`, `test_auth.py` — what only a database answers: upserts, windows, a unique email under a race |
+| RabbitMQ | `test_queue_live.py` — what only a broker answers: whether a routing key reaches the queue we think it does, and whether a rejected job really lands in `jobs.retry` |
+| all three | `test_end_to_end.py` — one question through HTTP, broker, worker, Redis and back. The model is the only thing stubbed: what it answers is `evals/`, not a join |
 
 ```bash
 docker run -d --name mycel-test-pg -p 5433:5432 \
-  -e POSTGRES_USER=pg -e POSTGRES_PASSWORD=pg -e POSTGRES_DB=mycel \
-  postgres:16-alpine
+  -e POSTGRES_USER=pg -e POSTGRES_PASSWORD=pg -e POSTGRES_DB=mycel postgres:16-alpine
+docker run -d --name mycel-test-rabbit -p 5673:5672 rabbitmq:3-alpine
+docker run -d --name mycel-test-redis -p 6380:6379 redis:7-alpine
 
-DATABASE_URL=postgresql://pg:pg@localhost:5433/mycel uv run pytest
+DATABASE_URL=postgresql://pg:pg@localhost:5433/mycel \
+RABBITMQ_URL=amqp://guest:guest@localhost:5673/ \
+REDIS_URL=redis://localhost:6380/0 uv run pytest --cov
 ```
 
 The frontend is checked separately, because it needs Node and no database:

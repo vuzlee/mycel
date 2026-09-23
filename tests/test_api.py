@@ -505,20 +505,16 @@ class TestTheLists:
     def test_projects_are_filtered_by_permission(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The route lists what this person may read, not what the deployment has.
-
-        Today `can_read_project` says yes to everyone, which is exactly why this test
-        asserts against the filter rather than against its current answer.
-        """
+        """The route lists what this person may read, not what the deployment has."""
 
         async def fake_projects() -> list[str]:
             return ["MYC", "OPS"]
 
-        async def fake_may_read(user: Principal, project: str) -> bool:
-            return project == "MYC"
+        async def fake_allowed(user: Principal) -> frozenset[str]:
+            return frozenset({"MYC"})
 
         monkeypatch.setattr("mycel.api.routes.projects.known_projects", fake_projects)
-        monkeypatch.setattr("mycel.api.routes.projects.can_read_project", fake_may_read)
+        monkeypatch.setattr("mycel.api.routes.projects.readable_projects", fake_allowed)
 
         assert client.get("/projects").json() == ["MYC"]
 

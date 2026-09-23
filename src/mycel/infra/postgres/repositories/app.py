@@ -17,7 +17,14 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.models import Conversation, Session, Turn, User
+from mycel.infra.postgres.models import (
+    Conversation,
+    Membership,
+    PasswordReset,
+    Session,
+    Turn,
+    User,
+)
 
 
 @dataclass(frozen=True)
@@ -43,6 +50,16 @@ class SessionRow:
     created_at: datetime
     expires_at: datetime
     last_seen_at: datetime
+
+
+@dataclass(frozen=True)
+class PasswordResetRow:
+    """One outstanding reset link."""
+
+    id: int
+    user_id: int
+    expires_at: datetime
+    used_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -142,6 +159,83 @@ class AppRepository:
     async def delete_session(self, token: str) -> None:
         """Log out. The row goes, and with it any way to use the cookie again."""
         await self._session.execute(delete(Session).where(Session.id == token))
+
+    async def projects_for(self, user_id: int) -> frozenset[str]:
+        """Which projects this person has been granted. Absent means none, not all."""
+        rows = await self._session.scalars(
+            select(Membership.project).where(Membership.user_id == user_id)
+        )
+        return frozenset(rows)
+
+    async def grant_project(self, user_id: int, project: str) -> None:
+        """Give someone a project. Granting twice is not an error."""
+        await self._session.execute(
+            insert(Membership)
+            .values(user_id=user_id, project=project)
+            .on_conflict_do_nothing(constraint="uq_membership_user_project")
+        )
+
+    async def revoke_project(self, user_id: int, project: str) -> None:
+        """Take it back. Revoking what was never granted is not an error."""
+        await self._session.execute(
+            delete(Membership).where(
+                Membership.user_id == user_id, Membership.project == project
+            )
+        )
+
+    async def members_of(self, project: str) -> list[UserRow]:
+        """Everyone granted one project, by address. One join rather than a list of ids
+        the caller then has to resolve one at a time."""
+        rows = await self._session.scalars(
+            select(User)
+            .join(Membership, Membership.user_id == User.id)
+            .where(Membership.project == project)
+            .order_by(User.email)
+        )
+        return [_user(row) for row in rows]
+
+    async def delete_sessions_for(self, user_id: int, keep: str | None = None) -> int:
+        """Drop one person's sessions, optionally sparing the one asking.
+
+        A password change has to end every other session: the point of changing it is that
+        someone else may know the old one, and a session already open does not care what
+        the password is now.
+        """
+        query = delete(Session).where(Session.user_id == user_id)
+        if keep is not None:
+            query = query.where(Session.id != keep)
+        result = await self._session.execute(query)
+        return int(getattr(result, "rowcount", 0) or 0)
+
+    # -- password resets -----------------------------------------------------
+
+    async def create_password_reset(
+        self, user_id: int, token_hash: str, expires_at: datetime
+    ) -> None:
+        """Record an outstanding reset. The hash arrives already made — hashing is a
+        security decision and lives with the rest of them."""
+        self._session.add(
+            PasswordReset(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+        )
+        await self._session.flush()
+
+    async def password_reset_by_hash(self, token_hash: str) -> PasswordResetRow | None:
+        """The reset a link names, spent or expired or not. The caller decides what counts
+        as usable, for the same reason `session_by_id` does."""
+        row = await self._session.scalar(
+            select(PasswordReset).where(PasswordReset.token_hash == token_hash)
+        )
+        return _reset(row) if row else None
+
+    async def spend_password_reset(self, reset_id: int, at: datetime) -> int:
+        """Mark a reset used, but only if it has not been. Returns how many rows changed,
+        which is how two clicks racing each other end with one winner."""
+        result = await self._session.execute(
+            update(PasswordReset)
+            .where(PasswordReset.id == reset_id, PasswordReset.used_at.is_(None))
+            .values(used_at=at)
+        )
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def delete_expired_sessions(self, now: datetime) -> int:
         """Sweep. Nothing depends on it running — expiry is checked on read."""
@@ -256,6 +350,11 @@ def _session(row: Session) -> SessionRow:
         last_seen_at=row.last_seen_at,
     )
 
+
+def _reset(row: PasswordReset) -> PasswordResetRow:
+    return PasswordResetRow(
+        id=row.id, user_id=row.user_id, expires_at=row.expires_at, used_at=row.used_at
+    )
 
 def _conversation(row: Conversation) -> ConversationRow:
     return ConversationRow(

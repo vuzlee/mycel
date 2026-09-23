@@ -1,7 +1,11 @@
-"""The Jira connector: search issues, and read an issue's worklogs.
+"""The Jira connector: read issues and worklogs, and write comments and transitions back.
 
-Returns payloads exactly as they arrived. Nothing is parsed here and nothing is written —
-`services/fetch.py` puts them in bronze, `etl/` gives them meaning.
+Returns payloads exactly as they arrived. Nothing is parsed here — `services/fetch.py`
+puts them in bronze, `etl/` gives them meaning.
+
+**The write half is off unless `JIRA_WRITE_ENABLED` says otherwise.** Reading someone's
+tracker wrongly is recoverable; commenting on fifty issues, or moving them, is not. It is
+one flag rather than a per-call argument so that a deployment cannot be half-armed.
 
 Basic auth with an API token, not OAuth: one deployment, one Atlassian account, and a
 token needs no redirect URI or refresh loop. The token expires after exactly one year,
@@ -89,6 +93,60 @@ async def issue_worklogs(key: str) -> list[dict[str, Any]]:
     return [w for w in payload.get("worklogs", []) if isinstance(w, dict)]
 
 
+async def add_comment(key: str, text: str) -> dict[str, Any]:
+    """Leave a comment on one issue. Returns the created comment as Jira describes it.
+
+    The body is Atlassian Document Format, not a string: the v3 API rejects plain text, and
+    a plain-text field on v2 would tie this to an endpoint Atlassian is retiring. One
+    paragraph, because what Mycel has to say is a sentence about progress, not a document.
+    """
+    _writable()
+    body = {
+        "body": {
+            "type": "doc",
+            "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": text}]}],
+        }
+    }
+    created = await _call("POST", f"/issue/{key}/comment", body)
+    log.info("commented on jira issue", extra={"key": key, "chars": len(text)})
+    return created
+
+
+async def transitions_for(key: str) -> list[dict[str, Any]]:
+    """The moves this issue can make right now, each with the id `transition` needs.
+
+    Read first, always. Transition ids are per workflow and not stable across projects, so
+    a hardcoded "31 means Done" is right until the day somebody edits the workflow — and
+    then it silently moves issues somewhere else.
+    """
+    payload = await _call("GET", f"/issue/{key}/transitions", None)
+    return [t for t in payload.get("transitions", []) if isinstance(t, dict)]
+
+
+async def transition(key: str, to_status: str) -> None:
+    """Move an issue to the named status, if the workflow allows it from where it is.
+
+    Named by status rather than by id for the reason above. Matched case-insensitively, and
+    a status this issue cannot currently reach raises rather than passing quietly: a
+    transition that did not happen looks exactly like one that did, from the response.
+    """
+    _writable()
+    wanted = to_status.strip().lower()
+    for move in await transitions_for(key):
+        if str(move.get("to", {}).get("name", "")).lower() == wanted:
+            await _call("POST", f"/issue/{key}/transitions", {"transition": {"id": move["id"]}})
+            log.info("transitioned jira issue", extra={"key": key, "to": to_status})
+            return
+    raise SourceError(f"jira: {key} cannot move to {to_status!r} from where it is")
+
+
+def _writable() -> None:
+    """Refuse every write unless the deployment has armed them."""
+    if not get_settings().jira_write_enabled:
+        raise SourceError("jira: writing is off — set JIRA_WRITE_ENABLED to turn it on")
+
+
 async def _call(method: str, path: str, body: dict[str, Any] | None) -> dict[str, Any]:
     """One REST call, retried past rate limiting, with every failure named."""
     settings = get_settings()
@@ -143,6 +201,11 @@ def _checked(path: str, response: "httpx2.Response") -> dict[str, Any]:
         raise SourceError(f"jira: {path} was rate limited {RETRIES} times running")
     if response.status_code == 404:
         raise SourceError(f"jira: {path} does not exist — check JIRA_BASE_URL and the project key")
+
+    if response.status_code == 204 or not response.content:
+        # A successful transition answers 204 with nothing in it. Only the write calls do
+        # this; a read that came back empty still falls through to the JSON error below.
+        return {}
 
     try:
         payload = dict(response.json())

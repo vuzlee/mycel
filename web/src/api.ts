@@ -164,6 +164,64 @@ export async function me(): Promise<User | null> {
   return json<User>(res);
 }
 
+/** 202 whether or not the address has an account, so this call cannot be used to find
+ *  out who is registered. 503 means the deployment has no way to send mail. */
+export async function forgotPassword(email: string): Promise<void> {
+  const res = await fetch("/auth/forgot", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
+/** Spend a reset link. Every session of that account ends, this browser included. */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch("/auth/reset", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
+/** Change it while signed in. Every other session ends; this one survives. */
+export async function changePassword(current: string, next: string): Promise<void> {
+  const res = await fetch("/auth/password", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ current_password: current, new_password: next }),
+  });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
+// -- members ----------------------------------------------------------------
+
+export interface Member {
+  id: number;
+  email: string;
+}
+
+export const fetchMembers = (project: string): Promise<Member[]> =>
+  fetch(`/projects/${encodeURIComponent(project)}/members`).then(json<Member[]>);
+
+/** PUT, because granting twice asks for the same end state. */
+export async function addMember(project: string, email: string): Promise<void> {
+  const res = await fetch(
+    `/projects/${encodeURIComponent(project)}/members/${encodeURIComponent(email)}`,
+    { method: "PUT" },
+  );
+  if (!res.ok) throw new Error(await detail(res));
+}
+
+export async function removeMember(project: string, email: string): Promise<void> {
+  const res = await fetch(
+    `/projects/${encodeURIComponent(project)}/members/${encodeURIComponent(email)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) throw new Error(await detail(res));
+}
+
 // -- work -------------------------------------------------------------------
 
 /** 202, not 200: the server took the work and has not done it.

@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     #: Which project to sync. Empty means every project the account can see, which is
     #: right for a one-project site and wrong for a shared one.
     jira_project_key: str | None = None
+    #: Whether this deployment may write back to Jira. Off by default: reading someone's
+    #: tracker is recoverable and commenting on fifty issues by mistake is not, so a write
+    #: path that exists has to be switched on deliberately.
+    jira_write_enabled: bool = False
 
     # Outputs. One-way and optional: a deployment with nothing configured still works, and
     # `notify/` logs a missing credential rather than failing the job that produced the
@@ -69,6 +73,46 @@ class Settings(BaseSettings):
     #: Seconds between scheduled syncs. Jira keeps its history, so this is a freshness
     #: knob rather than a deadline — nothing is lost by syncing late.
     sync_interval_seconds: int = 900
+    #: The team's own timezone, as an IANA name. A Jira due date is a bare calendar day
+    #: with no zone, and "end of that day" only means anything in a zone: read as UTC, a
+    #: UTC+7 team's overdue work still counts as on time until seven the next morning.
+    timezone: str = "UTC"
+    #: How often expired sessions are swept. Nothing depends on it — expiry is checked on
+    #: read — but without it `app.session` only ever grows.
+    session_sweep_interval_seconds: int = 86400
+
+    # Sending mail. The only channel that reaches a person, and the reason a forgotten
+    # password can be recovered at all: without it `/auth/forgot` answers the same way but
+    # nothing arrives, so the route refuses instead of pretending.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    #: The From address. Set together with the host — a message with no sender is refused
+    #: by every server worth sending through.
+    smtp_from: str | None = None
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    #: STARTTLS on the usual submission port. Off only for a local capture server in a
+    #: test, never for anything that leaves the machine.
+    smtp_starttls: bool = True
+    #: How long a reset link works. Short: it is a password in an inbox, and an inbox is
+    #: read by whoever is sitting at the machine.
+    password_reset_ttl_seconds: int = 3600
+
+    # Who may create an account. Both empty means registration is open, which is right for
+    # one machine on localhost and wrong for anything reachable from outside it.
+    #: Comma-separated email domains that may register, e.g. "acme.com,acme.vn". Set, and
+    #: an address outside them is refused.
+    registration_allowed_domains: str = ""
+    #: A shared code the registration form must carry. Set, and a request without it is
+    #: refused. Coarse — one code for everyone, rotated by changing it — but it is the
+    #: difference between a gate and no gate.
+    registration_invite_code: SecretStr | None = None
+
+    @property
+    def allowed_domains(self) -> frozenset[str]:
+        """The allowlist, lowercased and split. Empty means every domain."""
+        parts = self.registration_allowed_domains.split(",")
+        return frozenset(p.strip().lower().lstrip("@") for p in parts if p.strip())
 
     #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
     #: is a full-access password with no narrower scope available, which is why the

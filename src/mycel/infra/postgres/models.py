@@ -260,6 +260,53 @@ class Session(Base):
     )
 
 
+class Membership(Base):
+    """Which projects one person may read.
+
+    A row is a grant: no row, no access. That way the absent case is the closed one — a
+    table of denials would make a person nobody has recorded anything about an admin.
+
+    `project` is the key as gold spells it, not a foreign key: a project in gold is whatever
+    a synced issue named, and there is no table of projects for a row to point at.
+    """
+
+    __tablename__ = "membership"
+    __table_args__ = (
+        UniqueConstraint("user_id", "project", name="uq_membership_user_project"),
+        Index("ix_membership_user", "user_id"),
+        {"schema": APP},
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
+    project: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PasswordReset(Base):
+    """One outstanding "I forgot my password" link.
+
+    The column holds a *hash* of the token, not the token: the link is a password for as
+    long as it lives, and a database someone can read must not be a list of ways in.
+
+    `used_at` rather than a delete, so a link that arrives twice can be told from one that
+    never existed — the second click is a mistake to answer clearly, not a mystery.
+    """
+
+    __tablename__ = "password_reset"
+    __table_args__ = (
+        Index("ix_password_reset_user", "user_id"),
+        {"schema": APP},
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Conversation(Base):
     """One thread in the sidebar, and the turns under it.
 

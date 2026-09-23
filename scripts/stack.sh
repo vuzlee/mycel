@@ -7,6 +7,7 @@
 #   scripts/stack.sh status    what is running, and on which port
 #   scripts/stack.sh logs api  follow one host process (api | worker | scheduler)
 #   scripts/stack.sh sync      run one Jira sync now, without waiting for the tick
+#   scripts/stack.sh grants    apply migrations/grants.sql, the two least-privilege roles
 #   scripts/stack.sh relocate  move Postgres onto the named volume, keeping the data
 #   scripts/stack.sh restore   load a dump back in, if a relocate was interrupted
 #
@@ -373,6 +374,27 @@ cmd_restore() {
     'select count(*) from gold.work_item') rows in gold.work_item"
 }
 
+# The per-schema roles. Separate from `up` because it needs a superuser and because it is
+# not idempotent in the way `up` is — it revokes, and a deployment decides when to.
+#
+# Passwords come from the environment so they are not in the shell history, and the file
+# does the rest. `alembic upgrade head` first: `GRANT ... ON ALL TABLES` only reaches
+# tables that exist, and `ALTER DEFAULT PRIVILEGES` covers the ones a later migration adds.
+cmd_grants() {
+  local app_pw=${MYCEL_APP_PASSWORD:-} etl_pw=${MYCEL_ETL_PASSWORD:-}
+  [[ -n $app_pw && -n $etl_pw ]] || die "set MYCEL_APP_PASSWORD and MYCEL_ETL_PASSWORD first"
+
+  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
+  log "applying migrations first — grants only reach tables that exist"
+  uv run alembic upgrade head
+
+  docker cp migrations/grants.sql mycel-pg:/tmp/grants.sql >/dev/null
+  docker exec mycel-pg psql -U mycel -d mycel \
+    -v app_password="$app_pw" -v etl_password="$etl_pw" -f /tmp/grants.sql
+  docker exec mycel-pg rm -f /tmp/grants.sql
+  log "mycel_app reads gold and owns app; mycel_etl writes bronze, silver and gold"
+}
+
 cmd_logs() { tail -f "$RUN/${1:?which process: api, worker or scheduler}.log"; }
 
 cmd_sync() {
@@ -389,7 +411,8 @@ case "${1:-up}" in
   status)   cmd_status ;;
   logs)     cmd_logs "${2:-}" ;;
   sync)     cmd_sync ;;
+  grants)   cmd_grants ;;
   relocate) cmd_relocate ;;
   restore)  cmd_restore "${2:-}" ;;
-  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | relocate | restore)" ;;
+  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | grants | relocate | restore)" ;;
 esac

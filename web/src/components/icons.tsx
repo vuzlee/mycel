@@ -218,3 +218,12 @@ export function Question({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+export function Key({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="5.2" cy="10.8" r="2.8" />
+      <path d="M7.2 8.8 13 3m-1.7 1.7 1.4 1.4m-3 .3 1.4 1.4" />
+    </svg>
+  );
+}

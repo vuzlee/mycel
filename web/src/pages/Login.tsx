@@ -57,6 +57,8 @@ export function Login() {
 
         <p className="switch">
           No account yet? <Link to="/register">Create one</Link>
+          {" · "}
+          <Link to="/forgot">Forgot your password?</Link>
         </p>
       </div>
     </div>
