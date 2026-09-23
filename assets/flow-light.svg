@@ -124,7 +124,7 @@
     <path d="M150 444V472" fill="none" stroke="#a87a1c" stroke-width="1.3"/>
     <path d="M144 472 150 484 156 472z" fill="#a87a1c"/>
 
-    <g font-size="11">
+    <g font-size="13">
       <text x="164" y="177" fill="#9c5a3c">pull</text>
       <text x="164" y="273" fill="#9c5a3c">store raw</text>
       <text x="164" y="369" fill="#4f6d9e">normalise</text>
@@ -152,20 +152,20 @@
       <path d="M780 844 786 856 792 844z"/>
       <path d="M996 844 1002 856 1008 844z"/>
     </g>
-    <text x="636" y="496" font-size="11" fill="#6d3fd1" text-anchor="middle">consume</text>
-    <text x="800" y="708" font-size="11" fill="#6d3fd1">delegate</text>
+    <text x="636" y="496" font-size="13" fill="#6d3fd1" text-anchor="middle">consume</text>
+    <text x="800" y="708" font-size="13" fill="#6d3fd1">delegate</text>
 
     <!-- the only way into the data, along the floor below the first two columns -->
     <path d="M210 540V884H684" fill="none" stroke="#a87a1c" stroke-width="1.5"/>
     <path d="M684 878 696 884 684 890z" fill="#a87a1c"/>
-    <text x="440" y="876" font-size="11" fill="#a87a1c" text-anchor="middle">read only</text>
+    <text x="440" y="876" font-size="13" fill="#a87a1c" text-anchor="middle">read only</text>
 
     <!-- the answer goes back the way it was asked -->
     <g fill="none" stroke="#6d3fd1" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
       <path d="M696 656H300V132H336"/>
     </g>
     <path d="M336 126 348 132 336 138z" fill="#6d3fd1" opacity="0.6"/>
-    <text x="498" y="648" font-size="11" fill="#6d3fd1" opacity="0.7" text-anchor="middle">stream</text>
+    <text x="498" y="648" font-size="13" fill="#6d3fd1" opacity="0.7" text-anchor="middle">stream</text>
 
     <text x="600" y="978" font-size="12.5" fill="#948ca8" text-anchor="middle">every component emits a span, on one trace</text>
   </g>
