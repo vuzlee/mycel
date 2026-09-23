@@ -1,70 +1,152 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 300" width="1120" height="300"
-     role="img" aria-label="Jira syncs into bronze then gold; a question goes to Ask, which routes it to whichever agent can answer">
-  <!-- Draws only what has held still for twenty batches. The agents are deliberately one
-       box, not three: naming them here means redrawing this file the day one is added,
-       and docs/architecture.html is where the roster belongs. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560"
+     role="img" aria-label="Mycel end to end: a scheduler syncs Jira into bronze, normalises it to silver and promotes it to gold; a question posted to the API is queued to a worker, where an orchestrator delegates to whichever specialist agent can answer, reading gold over read-only SQL and streaming the answer back over SSE; every step emits a span, and traces, metrics and logs share one trace id.">
+  <!-- Four bands, because the system has four jobs: get the data in, take the question,
+       answer it, and watch the whole thing. Nothing here names an individual agent — see
+       docs/architecture.html for the roster, which changes; this picture should not. -->
   <g font-family="ui-sans-serif, system-ui, -apple-system, sans-serif">
 
+    <!-- ══ band 1 · ingest ══ -->
+    <rect x="24" y="24" width="1152" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
+    <text x="48" y="52" font-size="11" letter-spacing="1.6" fill="#9d96ae">INGEST · ON A SCHEDULE</text>
+
     <g>
-      <rect x="40" y="40" width="150" height="64" rx="12" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="115" y="68" font-size="17" fill="#17141f" text-anchor="middle">Jira</text>
-      <text x="115" y="88" font-size="12" fill="#9d96ae" text-anchor="middle">source of record</text>
-    </g>
-    <g>
-      <rect x="270" y="40" width="150" height="64" rx="12" fill="#f3f1f8" stroke="#d9d3e6"/>
-      <text x="345" y="68" font-size="17" fill="#17141f" text-anchor="middle">bronze</text>
-      <text x="345" y="88" font-size="12" fill="#9d96ae" text-anchor="middle">raw</text>
-    </g>
-    <g>
-      <rect x="500" y="40" width="150" height="64" rx="12" fill="#efe9fc" stroke="#d6c8f7"/>
-      <text x="575" y="68" font-size="17" fill="#17141f" text-anchor="middle">gold</text>
-      <text x="575" y="88" font-size="12" fill="#9d96ae" text-anchor="middle">ready to query</text>
+      <rect x="48" y="66" width="150" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="123" y="100" font-size="16" fill="#17141f" text-anchor="middle">Jira</text>
+      <text x="123" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">source of record</text>
     </g>
 
     <g>
-      <rect x="40" y="196" width="150" height="64" rx="12" fill="#ffffff" stroke="#d9d3e6"/>
-      <text x="115" y="224" font-size="17" fill="#17141f" text-anchor="middle">your question</text>
-      <text x="115" y="244" font-size="12" fill="#9d96ae" text-anchor="middle">plain language</text>
+      <rect x="266" y="66" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="336" y="100" font-size="15" fill="#17141f" text-anchor="middle">bronze</text>
+      <text x="336" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">raw, as it arrived</text>
+    </g>
+    <g>
+      <rect x="440" y="66" width="140" height="76" rx="10" fill="#f3f1f8" stroke="#d9d3e6"/>
+      <text x="510" y="100" font-size="15" fill="#17141f" text-anchor="middle">silver</text>
+      <text x="510" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">envelope unwrapped</text>
+    </g>
+    <g>
+      <rect x="614" y="66" width="140" height="76" rx="10" fill="#efe9fc" stroke="#d6c8f7"/>
+      <text x="684" y="100" font-size="15" fill="#6d3fd1" text-anchor="middle">gold</text>
+      <text x="684" y="120" font-size="11" fill="#9d96ae" text-anchor="middle">ready to query</text>
     </g>
 
     <g>
-      <rect x="500" y="184" width="150" height="88" rx="12" fill="#6d3fd1"/>
-      <text x="575" y="220" font-size="19" fill="#ffffff" text-anchor="middle">Ask</text>
-      <text x="575" y="242" font-size="12" fill="#efe9fc" text-anchor="middle">an orchestrator</text>
-      <text x="575" y="258" font-size="12" fill="#efe9fc" text-anchor="middle">picks who answers</text>
+      <rect x="812" y="66" width="164" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="894" y="98" font-size="14" fill="#17141f" text-anchor="middle">checks</text>
+      <text x="894" y="118" font-size="11" fill="#9d96ae" text-anchor="middle">between every step</text>
+    </g>
+    <text x="1000" y="96" font-size="11" fill="#9d96ae">idempotent —</text>
+    <text x="1000" y="114" font-size="11" fill="#9d96ae">a bad row never rises</text>
+
+    <!-- ══ band 2 · ask ══ -->
+    <rect x="24" y="196" width="560" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
+    <text x="48" y="224" font-size="11" letter-spacing="1.6" fill="#9d96ae">ASK · ONE WAY IN</text>
+
+    <g>
+      <rect x="48" y="238" width="150" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="123" y="270" font-size="15" fill="#17141f" text-anchor="middle">your question</text>
+      <text x="123" y="290" font-size="11" fill="#9d96ae" text-anchor="middle">plain language</text>
+    </g>
+    <g>
+      <rect x="240" y="238" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="310" y="264" font-size="15" fill="#17141f" text-anchor="middle">API</text>
+      <text x="310" y="284" font-size="11" fill="#9d96ae" text-anchor="middle">hands back a</text>
+      <text x="310" y="300" font-size="11" fill="#9d96ae" text-anchor="middle">job id at once</text>
+    </g>
+    <g>
+      <rect x="422" y="238" width="140" height="76" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="492" y="264" font-size="15" fill="#17141f" text-anchor="middle">queue</text>
+      <text x="492" y="284" font-size="11" fill="#9d96ae" text-anchor="middle">a worker pulls it,</text>
+      <text x="492" y="300" font-size="11" fill="#9d96ae" text-anchor="middle">retries, dead-letters</text>
     </g>
 
-    <!-- The agents, as a set rather than a list. The three discs say "several peers"
-         without committing to which, so adding one does not date the picture. -->
+    <!-- ══ band 3 · answer ══ -->
+    <rect x="616" y="196" width="560" height="150" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
+    <text x="640" y="224" font-size="11" letter-spacing="1.6" fill="#9d96ae">ANSWER · IN THE WORKER</text>
+
     <g>
-      <rect x="770" y="176" width="310" height="104" rx="12" fill="#ffffff" stroke="#d6c8f7"/>
+      <rect x="640" y="238" width="150" height="76" rx="10" fill="#6d3fd1"/>
+      <text x="715" y="268" font-size="16" fill="#ffffff" text-anchor="middle">orchestrator</text>
+      <text x="715" y="290" font-size="11" fill="#efe9fc" text-anchor="middle">picks who answers</text>
+    </g>
+
+    <g>
+      <rect x="832" y="238" width="320" height="76" rx="10" fill="#ffffff" stroke="#d6c8f7"/>
       <g fill="#6d3fd1">
-        <circle cx="810" cy="212" r="7"/>
-        <circle cx="834" cy="212" r="7" opacity="0.66"/>
-        <circle cx="858" cy="212" r="7" opacity="0.4"/>
+        <circle cx="866" cy="268" r="7"/>
+        <circle cx="890" cy="268" r="7" opacity="0.66"/>
+        <circle cx="914" cy="268" r="7" opacity="0.4"/>
       </g>
-      <text x="882" y="217" font-size="16" fill="#17141f">specialist agents</text>
-      <text x="794" y="250" font-size="12" fill="#9d96ae">each with its own tools: gold over SQL,</text>
-      <text x="794" y="268" font-size="12" fill="#9d96ae">the web, your mailbox</text>
+      <text x="938" y="273" font-size="15" fill="#17141f">specialist agents</text>
+      <text x="856" y="300" font-size="11" fill="#9d96ae">gold over read-only SQL · the web · your mailbox</text>
     </g>
 
-    <!-- arrows. Explicit triangles rather than <marker>, which a sanitiser drops first
-         and a simple renderer ignores; a headless arrow reads as an unfinished line. -->
+    <!-- ══ band 4 · observability ══ -->
+    <rect x="24" y="368" width="1152" height="106" rx="14" fill="#faf9fc" stroke="#e7e3f0"/>
+    <text x="48" y="396" font-size="11" letter-spacing="1.6" fill="#9d96ae">OBSERVABILITY · EVERY STEP ABOVE IS A SPAN</text>
+
+    <g>
+      <rect x="48" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="68" y="437" font-size="13" fill="#17141f">traces — where it went</text>
+    </g>
+    <g>
+      <rect x="312" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="332" y="437" font-size="13" fill="#17141f">metrics — is it broken</text>
+    </g>
+    <g>
+      <rect x="576" y="410" width="240" height="44" rx="10" fill="#ffffff" stroke="#d9d3e6"/>
+      <text x="596" y="437" font-size="13" fill="#17141f">logs — why</text>
+    </g>
+    <g>
+      <rect x="840" y="410" width="312" height="44" rx="10" fill="#efe9fc" stroke="#d6c8f7"/>
+      <text x="996" y="437" font-size="13" fill="#6d3fd1" text-anchor="middle">joined by one trace id</text>
+    </g>
+
+    <!-- ══ arrows. Explicit triangles rather than <marker>, which a sanitiser drops
+         first and a simple renderer ignores. ══ -->
     <g fill="none" stroke="#6d3fd1" stroke-width="2">
-      <path d="M190 72H256"/>
-      <path d="M420 72H486"/>
-      <path d="M575 104V170"/>
-      <path d="M190 228H486"/>
-      <path d="M650 228H756"/>
+      <path d="M198 104H252"/>
+      <path d="M406 104H426"/>
+      <path d="M580 104H600"/>
+      <path d="M198 276H226"/>
+      <path d="M380 276H408"/>
+      <path d="M562 276H626"/>
+      <path d="M790 276H818"/>
     </g>
     <g fill="#6d3fd1">
-      <path d="M256 66 268 72 256 78z"/>
-      <path d="M486 66 498 72 486 78z"/>
-      <path d="M569 170 575 182 581 170z"/>
-      <path d="M486 222 498 228 486 234z"/>
-      <path d="M756 222 768 228 756 234z"/>
+      <path d="M252 98 264 104 252 110z"/>
+      <path d="M426 98 438 104 426 110z"/>
+      <path d="M600 98 612 104 600 110z"/>
+      <path d="M226 270 238 276 226 282z"/>
+      <path d="M408 270 420 276 408 282z"/>
+      <path d="M626 270 638 276 626 282z"/>
+      <path d="M818 270 830 276 818 282z"/>
     </g>
 
-    <text x="591" y="142" font-size="12" fill="#9d96ae">reads</text>
+    <!-- checks sit between the steps, so they hang off the chain rather than joining it -->
+    <g fill="none" stroke="#d6c8f7" stroke-width="1.5" stroke-dasharray="4 4">
+      <path d="M754 104H812"/>
+    </g>
+
+    <!-- agents read gold -->
+    <g fill="none" stroke="#6d3fd1" stroke-width="2" stroke-dasharray="5 4" opacity="0.6">
+      <path d="M992 238V160"/>
+    </g>
+    <path d="M986 160 992 148 998 160z" fill="#6d3fd1" opacity="0.6"/>
+    <text x="1004" y="196" font-size="11" fill="#9d96ae">reads gold</text>
+
+    <!-- the answer streams back -->
+    <g fill="none" stroke="#6d3fd1" stroke-width="2" stroke-dasharray="5 4" opacity="0.6">
+      <path d="M715 314V344H123V320"/>
+    </g>
+    <path d="M117 320 123 308 129 320z" fill="#6d3fd1" opacity="0.6"/>
+    <text x="360" y="338" font-size="11" fill="#9d96ae">the answer streams back over SSE, written as it arrives</text>
+
+    <!-- observability band spans everything above -->
+    <g fill="none" stroke="#d6c8f7" stroke-width="1.5" stroke-dasharray="3 5">
+      <path d="M600 474V500H600"/>
+    </g>
+    <text x="600" y="520" font-size="11" fill="#9d96ae" text-anchor="middle">a slow or expensive answer is one trace away from an explanation</text>
   </g>
 </svg>

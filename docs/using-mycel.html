@@ -182,7 +182,7 @@ code{font:.86em var(--mono);background:var(--sunk);padding:2px 5px;border-radius
 b{font-weight:600}
 a{color:var(--brand)}
 
-/* ── diagram: flow layout, không toạ độ tay nên không bao giờ chồng chữ ── */
+/* ── diagram: flow layout, no hand-placed coordinates, so nothing overlaps ── */
 .dg{margin:28px 0 8px}
 .lane{border:1px solid var(--line);border-radius:14px;background:var(--card);
   padding:14px;margin:0}
@@ -206,7 +206,7 @@ a{color:var(--brand)}
 .box .f{font:11px/1.4 var(--mono);color:var(--dim);margin-top:7px;padding-top:6px;
   border-top:1px dashed var(--line)}
 
-/* mũi tên: phần tử riêng trong dòng chảy, không đè lên gì */
+/* arrow: its own element in the flow, sitting on top of nothing */
 .ar{display:flex;align-items:center;gap:10px;padding:9px 0;color:var(--dim);
   font:11px/1.4 var(--mono)}
 .ar::before{content:"";flex:none;width:1px;height:18px;background:var(--line);
@@ -222,7 +222,7 @@ a{color:var(--brand)}
 figcaption{font:12px/1.5 var(--mono);color:var(--dim);margin-top:10px;text-align:center}
 figure{margin:0}
 
-/* hai cột đối chiếu */
+/* two columns, side by side */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
 @media(max-width:620px){.two{grid-template-columns:1fr}}
 .two > div{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
@@ -238,8 +238,8 @@ figure{margin:0}
 .note p:first-child{margin-top:0}
 .note p:last-child{margin-bottom:0}
 
-/* ── sơ đồ: trục dọc + khung process. Mọi nhãn nằm trong ô grid riêng,
-      nên không có phần tử nào định vị đè lên phần tử khác. ── */
+/* ── figure: a vertical spine inside process frames. Every label gets its own
+      grid cell, so no element is ever positioned over another. ── */
 .dg{margin:30px 0 10px;
   width:min(880px, calc(100vw - 48px));
   margin-inline:calc(50% - min(440px, (100vw - 48px)/2));}
@@ -263,8 +263,8 @@ figure{margin:0}
 .node .f{margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);
   font:11px/1.45 var(--mono);color:var(--dim)}
 
-/* nối: cột trái là đường kẻ + đầu nhọn, cột phải là nhãn.
-   Nhãn nằm trong ô riêng nên ô tự cao lên theo chữ — không bao giờ đè. */
+/* connector: a rule and an arrowhead on the left, the label on the right.
+   The label has its own cell, which grows with the text, so it never overlaps. */
 .lk{display:grid;grid-template-columns:1fr 1fr;align-items:center;
   position:relative;min-height:46px}
 .lk::before{content:"";position:absolute;left:50%;top:0;bottom:5px;width:1px;
@@ -281,8 +281,8 @@ figure{margin:0}
   border-bottom-color:var(--cool);border-top:0}
 .lk.up > span{color:var(--cool)}
 
-/* nhánh rẽ: trục đi thẳng ở cột trái, đoạn ngang ngắn nối sang hộp bên phải.
-   Có padding dọc riêng nên nhánh không dính vào khối trên/dưới. */
+/* branch: the spine runs straight down the left, a short horizontal joins the box.
+   Its own vertical padding keeps it clear of the blocks above and below. */
 .branch{display:grid;grid-template-columns:1fr 1fr;align-items:center;
   padding:18px 0}
 .branch .drop{position:relative;align-self:stretch}
@@ -290,7 +290,7 @@ figure{margin:0}
   background:var(--line)}
 .branch .side{position:relative;margin-left:34px;border:1px dashed var(--line);
   border-radius:10px;padding:12px 15px;background:var(--paper)}
-/* đoạn ngang: chỉ dài bằng khoảng hở, xuất phát từ trục chứ không từ mép hình */
+/* the horizontal: only as long as the gap, and it leaves the spine, not the edge */
 .branch .side::after{content:"";position:absolute;left:-34px;top:50%;width:26px;
   height:1px;background:var(--line)}
 .branch .side::before{content:"";position:absolute;left:-9px;top:50%;
@@ -299,7 +299,7 @@ figure{margin:0}
 .branch .side h4{margin:0;font:500 12.5px/1.45 var(--mono);color:var(--dim)}
 .branch .side p{margin:5px 0 0;font:11.5px/1.55 var(--sans);color:var(--dim);max-width:none}
 
-/* dòng sự kiện trong Redis */
+/* the event stream in Redis */
 .evs{display:grid;gap:8px;max-width:460px;margin:0 auto}
 .ev{display:grid;grid-template-columns:70px 54px 1fr;gap:12px;align-items:baseline;
   border:1px solid var(--line);border-radius:8px;background:var(--paper);
@@ -310,7 +310,7 @@ figure{margin:0}
   font:11.5px/1.5 var(--sans)}
 @media(max-width:480px){.ev{grid-template-columns:1fr;gap:2px}}
 
-/* hình 00 */
+/* figure 00 */
 .gapfig{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center}
 .gapfig .proc{padding:30px 18px 20px}
 .gapfig .x{text-align:center;font:11.5px/1.7 var(--mono);color:var(--dim)}

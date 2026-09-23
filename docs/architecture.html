@@ -1211,7 +1211,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="The life of a report request: the report domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits tasks across specialist agents, the agents query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
+             aria-label="The life of a report request: the report domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits the work across specialist agents, which query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
           <defs>
             <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1230,17 +1230,17 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="245" y="75" fill="var(--ink)">queue</text>
             <text x="245" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">queue</text>
+                  fill="var(--ink-soft)">a worker pulls it</text>
 
             <rect x="348" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
             <text x="411" y="75" fill="var(--gold)">orchestrator</text>
             <text x="411" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">chia task</text>
+                  fill="var(--ink-soft)">splits the work</text>
 
             <rect x="514" y="56" width="126" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
-            <text x="577" y="75" fill="var(--gold)">agent ×N</text>
+            <text x="577" y="75" fill="var(--gold)">specialists</text>
             <text x="577" y="91" font-family="var(--sans)" font-size="10"
                   fill="var(--ink-soft)">gold + llm</text>
 
@@ -1271,26 +1271,30 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <text x="162" y="34" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)" text-anchor="middle">returns the job id immediately, no waiting</text>
 
-          <!-- retry -->
-          <path d="M 411 100 L 411 124 L 268 124 L 268 104"
+          <!-- failure path: a failed job goes back to the queue, and out of retries to the
+               dead-letter queue. Both lines start at the queue, because that is where both
+               decisions are taken - the earlier version drew the retry leaving the
+               orchestrator and the dead-letter arrow starting in empty space. -->
+          <path d="M 411 100 L 411 130 L 252 130"
                 stroke="var(--bronze)" stroke-width="1.2" fill="none"
                 color="var(--bronze)" marker-end="url(#lc-ar)"/>
-          <text x="348" y="139" font-family="var(--mono)" font-size="9.5"
-                fill="var(--bronze)" text-anchor="middle">failure → retry</text>
+          <text x="420" y="145" font-family="var(--mono)" font-size="9.5"
+                fill="var(--bronze)" text-anchor="start">failure &#8594; jobs.retry (TTL, then back)</text>
 
-          <!-- dead letter -->
+          <path d="M 238 130 L 238 174"
+                stroke="var(--bronze)" stroke-width="1.2" stroke-dasharray="3 3"
+                fill="none" color="var(--bronze)" marker-end="url(#lc-ar)"/>
+
           <rect x="182" y="178" width="126" height="34" rx="2"
                 fill="var(--surface)" stroke="var(--bronze)" stroke-dasharray="3 3"/>
           <text x="245" y="200" font-family="var(--mono)" font-size="10.5"
-                fill="var(--bronze)" text-anchor="middle">dead-letter</text>
-          <path d="M 245 148 L 245 174" stroke="var(--bronze)" stroke-width="1.2"
-                fill="none" color="var(--bronze)" marker-end="url(#lc-ar)"/>
+                fill="var(--bronze)" text-anchor="middle">jobs.dlq</text>
           <text x="320" y="200" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-faint)">out of retries — kept for inspection, not lost</text>
+                fill="var(--ink-faint)">out of retries &#8212; nothing consumes it, so nothing is lost</text>
 
           <!-- the enclosing trace -->
           <text x="16" y="16" font-family="var(--mono)" font-size="9.5"
-                fill="var(--accent)">a single trace — every step is a span</text>
+                fill="var(--accent)">a single trace &#8212; every step is a span</text>
           <path d="M 292 12 L 924 12" stroke="var(--accent)" stroke-width="1"
                 stroke-dasharray="2 4" opacity="0.55" fill="none"/>
         </svg>
