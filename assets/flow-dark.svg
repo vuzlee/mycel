@@ -106,9 +106,9 @@
     <rect x="696" y="772" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
     <text x="786" y="806" font-size="14" fill="#f0edf7" text-anchor="middle">Tools</text>
 
-    <!-- An MCP server is an edge of the system, the same kind of thing as the database.
-         Drawn unfilled, like External Platforms: it is somebody else's process. -->
-    <rect x="912" y="772" width="180" height="56" rx="2" fill="#131019" stroke="#241f30"/>
+    <!-- Same weight as Tools: to an agent both are simply something it calls, and a
+         second meaning on the same row would read as a second tier. -->
+    <rect x="912" y="772" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
     <text x="1002" y="806" font-size="14" fill="#f0edf7" text-anchor="middle">MCP Servers</text>
 
     <!-- ══ arrows ════════════════════════════════════════════════════════════ -->
