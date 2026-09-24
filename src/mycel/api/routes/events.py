@@ -8,6 +8,8 @@ from fastapi.responses import StreamingResponse
 
 from mycel.api.dependencies import current_user
 from mycel.core.logging import get_logger
+from mycel.domains.chat import find_turn
+from mycel.events.event import RUN_FINISHED, SequencedEvent
 from mycel.infra.redis import streams
 from mycel.services.auth import Principal
 
@@ -45,6 +47,20 @@ async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[st
     a listener per type and silently drops any type it was not built for, which is the
     opposite of what the envelope's `type` field is for.
     """
+    # A run that finished before this connection opened has no events left to wait for.
+    # Redis keeps the stream under a TTL and loses it outright on restart, while `app.turn`
+    # keeps the answer — so without this the client subscribes to a key that will never
+    # receive anything, `xread` blocks until it times out, and the composer stays disabled
+    # on a question that was answered days ago. The record is the thing that outlives the
+    # stream, so it is what decides whether there is anything to follow.
+    #
+    # Only when the client is asking from the start. A reconnect carrying `Last-Event-ID`
+    # is resuming a live run, and its remaining events are in the stream.
+    if after == streams.FIRST and await find_turn(job_id) is not None:
+        done = SequencedEvent(agent="system", type=RUN_FINISHED, seq=0)
+        yield f"data: {done.model_dump_json()}\n\n"
+        return
+
     events = streams.read(job_id, after=after)
     try:
         async for item in events:

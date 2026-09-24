@@ -333,14 +333,24 @@ class FakeRequest:
         return self._disconnect_after is not None and self._checks > self._disconnect_after
 
 
-async def _collect(items: list[Any], request: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Drive `_frames` over a canned stream instead of Redis."""
+async def _collect(
+    items: list[Any], request: Any, monkeypatch: pytest.MonkeyPatch, kept: Any = None
+) -> list[str]:
+    """Drive `_frames` over a canned stream instead of Redis.
+
+    `kept` is what `app.turn` holds for the job: `None` means a run still in flight, which
+    is the case every test here is about.
+    """
 
     async def fake_read(job_id: str, after: str = "0") -> Any:
         for item in items:
             yield item
 
+    async def fake_find_turn(job_id: str) -> Any:
+        return kept
+
     monkeypatch.setattr(events.streams, "read", fake_read)
+    monkeypatch.setattr(events, "find_turn", fake_find_turn)
     return [frame async for frame in events._frames(request, "job-1", "0")]
 
 
@@ -380,6 +390,35 @@ class TestSseFrames:
         )
 
         assert len(frames) == 1
+
+
+class TestAFinishedRunDoesNotBlock:
+    """A run whose stream is gone but whose answer is kept (MYC-61).
+
+    Redis holds the stream under a TTL and loses it outright on restart; `app.turn` holds
+    the answer. Without the short circuit the client subscribes to a key nothing will ever
+    write to, `xread` blocks until it times out, and the composer stays disabled on a
+    question that was answered days ago.
+    """
+
+    async def test_a_kept_turn_closes_the_stream_at_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """One run_finished and nothing else — there is nothing left to wait for."""
+        frames = await _collect([], FakeRequest(), monkeypatch, kept=object())
+
+        assert len(frames) == 1
+        assert '"type":"run_finished"' in frames[0]
+
+    async def test_it_does_not_read_the_stream_at_all(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The blocking read is what hangs, so the fix has to be not reaching it."""
+        frames = await _collect([("1-0", SequencedEvent(seq=1, agent="a", type="text"))],
+                                FakeRequest(), monkeypatch, kept=object())
+
+        assert len(frames) == 1
+        assert '"type":"run_finished"' in frames[0]
 
 
 class TestATurnKeepsItsToolCalls:
