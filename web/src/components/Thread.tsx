@@ -9,6 +9,8 @@ import { Steps } from "./Steps";
 import { Working } from "./Working";
 
 interface Props {
+  /** The id the right-hand map scrolls to for this turn. */
+  anchor?: string;
   question: string | null;
   items: Item[];
   gaps: Map<number, number>;
@@ -25,6 +27,7 @@ interface Props {
 }
 
 export function Thread({
+  anchor,
   question,
   items,
   gaps,
@@ -38,7 +41,7 @@ export function Thread({
     <div className="thread">
       {before}
       {question !== null && (
-        <div className="turn user">
+        <div className="turn user" id={anchor}>
           <div className="bubble">{question}</div>
         </div>
       )}

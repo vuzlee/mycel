@@ -1,6 +1,7 @@
 /**
- * The frame every signed-in page sits in: the rail on the left, a header strip, and a
- * scrolling body. The pages differ in what goes in the body, not in this.
+ * The frame every signed-in page sits in: the rail on the left, a header strip, a
+ * scrolling body, and — when a page hands one over — a second rail on the right. The
+ * pages differ in what goes in the body, not in this.
  *
  * The header strip carries nothing but the button that reveals the rail on a narrow
  * screen. A run's id, its clock and its cost were all there; each was a fact about the
@@ -22,13 +23,16 @@ interface Props {
   children: React.ReactNode;
   /** Below the scroll area, outside it: the composer, where a page has one. */
   footer?: React.ReactNode;
+  /** A third column on the right, on a wide screen: the map of a long thread. Nothing
+   *  else has ever wanted one, so it is a slot rather than a component. */
+  aside?: React.ReactNode;
 }
 
-export function Shell({ current = null, scrollRef, jump, children, footer }: Props) {
+export function Shell({ current = null, scrollRef, jump, children, footer, aside }: Props) {
   const [menu, setMenu] = useState(false);
 
   return (
-    <div className="shell">
+    <div className="shell" data-aside={aside ? "true" : "false"}>
       <Sidebar current={current} open={menu} onClose={() => setMenu(false)} />
       <main className="main">
         <header>
@@ -50,6 +54,7 @@ export function Shell({ current = null, scrollRef, jump, children, footer }: Pro
         )}
         {footer}
       </main>
+      {aside}
     </div>
   );
 }

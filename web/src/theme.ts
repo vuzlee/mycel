@@ -20,12 +20,6 @@ export function stored(): Theme {
   return found === "light" || found === "dark" ? found : "system";
 }
 
-/** What is actually on screen, once "system" has been asked what it means. */
-export function resolve(theme: Theme): "light" | "dark" {
-  if (theme !== "system") return theme;
-  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 function apply(theme: Theme): void {
   if (theme === "system") {
     delete document.documentElement.dataset.theme;

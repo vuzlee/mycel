@@ -12,6 +12,7 @@ import type { Turn } from "../api";
 import { buildThread } from "../thread";
 import { Answer } from "./Answer";
 import { Steps } from "./Steps";
+import { anchorFor } from "./Topics";
 
 interface Props {
   turns: Turn[];
@@ -21,7 +22,7 @@ export function PastTurns({ turns }: Props) {
   return (
     <>
       {turns.map((turn) => (
-        <div key={turn.job_id} className="past">
+        <div key={turn.job_id} className="past" id={anchorFor(turn.job_id)}>
           <div className="turn user">
             <div className="bubble">{turn.question}</div>
           </div>

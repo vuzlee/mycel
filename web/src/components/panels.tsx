@@ -10,7 +10,7 @@ import { useState } from "react";
 import type { Thread } from "../api";
 import { changePassword } from "../api";
 import { useAuth } from "../auth";
-import { Spinner } from "./icons";
+import { Moon, Screen, Spinner, Sun } from "./icons";
 import type { Theme } from "../theme";
 import { useTheme } from "../theme";
 
@@ -127,36 +127,36 @@ function PasswordForm() {
   );
 }
 
-const THEMES: { value: Theme; label: string; how: string }[] = [
-  { value: "system", label: "Match my machine", how: "Follows the device's own setting." },
-  { value: "light", label: "Light", how: "Always light, whatever the device says." },
-  { value: "dark", label: "Dark", how: "Always dark, whatever the device says." },
+const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
+  { value: "system", label: "System", icon: <Screen size={17} /> },
+  { value: "light", label: "Light", icon: <Sun size={17} /> },
+  { value: "dark", label: "Dark", icon: <Moon size={17} /> },
 ];
 
-/** One setting, because there is one. "System" is a real third option rather than the
- *  absence of a choice: a boolean cannot say "follow the machine". */
+/** One setting, because there is one. Three tiles rather than three sentences: the sun,
+ *  the moon and the screen say it, and a paragraph explaining what "Light" means is a
+ *  paragraph nobody needed. "System" is a real third option — a boolean cannot say
+ *  "follow the machine". */
 export function SettingsPanel() {
   const [theme, choose] = useTheme();
 
   return (
-    <>
-      <section>
-        <h3 className="label">Appearance</h3>
-        <div className="choice-list">
-          {THEMES.map((option) => (
-            <button
-              key={option.value}
-              aria-pressed={theme === option.value}
-              onClick={() => choose(option.value)}
-            >
-              <b>{option.label}</b>
-              <span className="muted">{option.how}</span>
-            </button>
-          ))}
-        </div>
-        <p className="muted">Kept in this browser — another machine keeps its own.</p>
-      </section>
-    </>
+    <section>
+      <h3 className="label">Appearance</h3>
+      <div className="theme-picker">
+        {THEMES.map((option) => (
+          <button
+            key={option.value}
+            aria-pressed={theme === option.value}
+            onClick={() => choose(option.value)}
+          >
+            {option.icon}
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className="muted">Kept in this browser — another machine keeps its own.</p>
+    </section>
   );
 }
 

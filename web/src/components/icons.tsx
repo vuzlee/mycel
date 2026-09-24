@@ -96,6 +96,17 @@ export function Moon({ size = 15 }: IconProps) {
   );
 }
 
+/** "Follow the machine" — a display, because the setting is about a device, not a time of
+ *  day. A sun and a moon beside it would read as a third weather. */
+export function Screen({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="1.8" y="2.8" width="12.4" height="8.4" rx="1.4" />
+      <path d="M5.6 14h4.8M8 11.2V14" />
+    </svg>
+  );
+}
+
 export function Menu({ size = 16 }: IconProps) {
   return (
     <svg {...base(size)}>

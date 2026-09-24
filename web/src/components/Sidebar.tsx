@@ -4,6 +4,10 @@
  * The history comes from `GET /conversations` now, not `localStorage`: it is the same
  * list on a second machine, which is the whole reason it moved to Postgres.
  *
+ * The theme button that used to sit beside the wordmark is gone: a setting belongs in
+ * the settings, and a rail header holding a wordmark, a theme and a close reads as three
+ * unrelated things at the same rank.
+ *
  * Below 760px the rail slides in over the page instead of taking a column, so the
  * history stays reachable on a phone rather than disappearing with the layout.
  */
@@ -12,9 +16,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import type { Thread } from "../api";
 import { useThreads } from "../threads";
-import { resolve, useTheme } from "../theme";
 import { Account } from "./Account";
-import { Close, Moon, Mycelium, Plus, Sun, Trash } from "./icons";
+import { Close, Mycelium, Plus, Trash } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -24,10 +27,8 @@ interface Props {
 }
 
 export function Sidebar({ current, open, onClose }: Props) {
-  const [theme, choose] = useTheme();
   const { threads, forget } = useThreads();
   const navigate = useNavigate();
-  const dark = resolve(theme) === "dark";
 
   // Every thread reopens at `/`. There is one page and one kind of thread since batch
   // 033, so `kind` is not consulted — the job id is the whole address.
@@ -57,14 +58,6 @@ export function Sidebar({ current, open, onClose }: Props) {
             </span>
             Mycel
           </Link>
-          <button
-            className="icon-button"
-            onClick={() => choose(dark ? "light" : "dark")}
-            title={dark ? "Switch to light" : "Switch to dark"}
-            aria-label="Switch theme"
-          >
-            {dark ? <Sun /> : <Moon />}
-          </button>
           <button className="icon-button shut" onClick={onClose} aria-label="Close menu">
             <Close />
           </button>

@@ -17,7 +17,7 @@
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Turn } from "../api";
 import { askChat, fetchTurns } from "../api";
@@ -27,6 +27,8 @@ import { Composer } from "../components/Composer";
 import { PastTurns } from "../components/PastTurns";
 import { Shell } from "../components/Shell";
 import { Thread } from "../components/Thread";
+import type { Topic } from "../components/Topics";
+import { Topics, anchorFor } from "../components/Topics";
 import { ArrowRight } from "../components/icons";
 import { useRun } from "../run";
 import { useThreads } from "../threads";
@@ -55,6 +57,9 @@ export function Ask() {
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
+  // The scrolling body, as the observer in `Topics` needs it: a root, not a ref, because
+  // it arrives one render after the first paint and the observer has to be rebuilt then.
+  const [body, setBody] = useState<HTMLElement | null>(null);
 
   const run = useRun(jobId);
 
@@ -127,10 +132,29 @@ export function Ask() {
 
   const failure = refused ?? run.failure;
 
+  // One entry per turn, the question as its own label. Trimmed rather than named by a
+  // model: the question is already the name of the turn, and it costs nothing.
+  // Memoised because `Topics` rebuilds its observer whenever the list changes, and a
+  // fresh array every render would rebuild it on every streamed token.
+  const topics: Topic[] = useMemo(
+    () =>
+      jobId === null
+        ? []
+        : [...past, ...(question !== null ? [{ job_id: jobId, question }] : [])].map((turn) => ({
+            id: anchorFor(turn.job_id),
+            label: label(turn.question),
+          })),
+    [jobId, past, question],
+  );
+
   return (
     <Shell
       current={jobId}
-      scrollRef={run.follow.ref}
+      scrollRef={(node) => {
+        run.follow.ref(node);
+        setBody(node);
+      }}
+      aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       footer={
         <Composer
@@ -143,6 +167,7 @@ export function Ask() {
     >
       {jobId ? (
         <Thread
+          anchor={anchorFor(jobId)}
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
           items={run.items}
@@ -178,4 +203,14 @@ export function Ask() {
       )}
     </Shell>
   );
+}
+
+/** A question is a sentence; a rail entry is a line. Cut on a word so the label never
+ *  ends mid-word, and only when there is enough to be worth cutting. */
+function label(question: string): string {
+  const flat = question.replace(/\s+/g, " ").trim();
+  if (flat.length <= 42) return flat;
+  const cut = flat.slice(0, 42);
+  const space = cut.lastIndexOf(" ");
+  return `${space > 20 ? cut.slice(0, space) : cut}…`;
 }
