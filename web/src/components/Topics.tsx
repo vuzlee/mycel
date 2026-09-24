@@ -8,6 +8,10 @@
  * question already is the name, it is free, it is never wrong, and a two-word label
  * written by a model is one more thing to store and to get stale.
  *
+ * It floats in the gutter the centred thread leaves empty — no panel, no border, no
+ * heading over it. A map that takes a column moves the prose the moment it appears, and
+ * a box with a title is a second thing to read.
+ *
  * Which entry is current comes from an observer on the turns, not from scroll position
  * arithmetic: the rows have no fixed height, so there is no offset to compute against.
  */
@@ -66,7 +70,6 @@ export function Topics({ topics, root }: Props) {
 
   return (
     <nav className="topics" aria-label="Turns in this thread">
-      <h2 className="label">This thread</h2>
       <ol>
         {topics.map((topic) => (
           <li key={topic.id}>

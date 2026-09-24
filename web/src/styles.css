@@ -45,7 +45,6 @@
   --display: "Instrument Serif", Georgia, serif;
 
   --rail: 272px;
-  --map: 208px;
   /* Two content widths, because there are two kinds of content. `--thread` is prose and
      stops where a line stops being comfortable to read. `--board` is tables and figures,
      which are compared side by side and lose nothing by being wide — holding them at
@@ -211,11 +210,6 @@ a {
   height: 100%;
 }
 
-/* The map of a long thread takes a column of its own rather than floating over the
-   prose: the thread is centred in what is left, so nothing moves under the text. */
-.shell[data-aside="true"] {
-  grid-template-columns: var(--rail) minmax(0, 1fr) var(--map);
-}
 
 /* ---------------------------------------------------------------- sidebar */
 
@@ -442,6 +436,7 @@ a.brand:hover .mark {
    thread reads as history-then-now rather than as one long answer: the run on screen is
    the one the page is still following, and it should be the one the eye lands on. */
 .past {
+  scroll-margin-top: 24px;
   margin-bottom: 34px;
   padding-bottom: 30px;
   border-bottom: 1px solid var(--rule);
@@ -459,6 +454,9 @@ a.brand:hover .mark {
 }
 
 .turn.user {
+  /* The map and the composer both scroll a turn to the top of the body. Without this it
+     lands flush against the edge, reading as a page cut off rather than a turn begun. */
+  scroll-margin-top: 24px;
   display: flex;
   justify-content: flex-end;
   margin-bottom: 28px;
@@ -1161,21 +1159,17 @@ details[open] > summary .chevron {
   }
 }
 
-/* Below this the thread needs the width more than it needs the map, and the map has no
-   second place to go — it is a column or it is nothing. */
-@media (max-width: 1120px) {
-  .shell[data-aside="true"] {
-    grid-template-columns: var(--rail) minmax(0, 1fr);
-  }
-
+/* The rail is 272px and the thread is 58rem, so below roughly this the gutter left over
+   is a few dozen pixels — too narrow for a label to be anything but an ellipsis. The map
+   floats beside the prose or it does not appear; it has no second place to go. */
+@media (max-width: 1500px) {
   .topics {
     display: none;
   }
 }
 
 @media (max-width: 760px) {
-  .shell,
-  .shell[data-aside="true"] {
+  .shell {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1236,22 +1230,41 @@ details[open] > summary .chevron {
 
 /* ---------------------------------------------------------------- topics */
 
-/* One entry per turn of the thread, on the right, on a wide screen only. It appears at
-   the second question: a contents page over a single heading is furniture.
+/* One entry per turn of the thread, floating in the gutter to the right of the prose.
 
-   Sticky rather than scrolling with the thread — a map that scrolls away is a map you
-   have to find your way back to. */
+   It takes no column. A column would push the thread off centre the moment a second
+   question is asked — the page would rearrange itself as a reward for continuing, which
+   is the opposite of what a map is for. So it is absolutely positioned in the space the
+   centred thread already leaves empty, transparent, and out of the way: no panel, no
+   border, no background. Nothing but the line and the words.
+
+   Pointer events are off on the box and on again for the buttons, so the empty space it
+   spans never swallows a click meant for the page. */
 .topics {
-  padding: 22px 16px;
-  border-left: 1px solid var(--rule);
-  background: var(--sunk);
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  /* Half of what the centred thread leaves over, minus a gutter each side. Written as
+     the measurement rather than a guess, so it stays clear of the prose at every width
+     between 1120px and a very wide monitor. */
+  right: 20px;
+  width: min(168px, calc((100% - var(--thread)) / 2 - 40px));
+  transform: translateY(-50%);
+  max-height: 60vh;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--rule-2) transparent;
+  pointer-events: none;
+  scrollbar-width: none;
+  /* It is a map, not a thing you read. Dim until the cursor comes near. */
+  opacity: 0.5;
+  transition: opacity 0.16s ease;
 }
 
-.topics h2 {
-  margin: 0 0 10px 8px;
+.topics::-webkit-scrollbar {
+  display: none;
+}
+
+.topics:hover {
+  opacity: 1;
 }
 
 .topics ol {
@@ -1271,10 +1284,11 @@ details[open] > summary .chevron {
 .topics button {
   display: block;
   width: 100%;
-  padding: 7px 10px;
+  padding: 5px 9px;
+  pointer-events: auto;
   text-align: left;
-  font-size: 12.5px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--faint);
   overflow: hidden;
   text-overflow: ellipsis;

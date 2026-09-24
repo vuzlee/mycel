@@ -17,7 +17,7 @@
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Turn } from "../api";
 import { askChat, fetchTurns } from "../api";
@@ -131,6 +131,28 @@ export function Ask() {
   };
 
   const failure = refused ?? run.failure;
+
+  // Asking sends the view to the question just asked, and only then. Batch 029 took auto
+  // scroll out on purpose — a page that chases every streamed token cannot be read — and
+  // this does not put it back: it fires once per run, when a new job id arrives, and the
+  // reader keeps the scroll from that moment on.
+  //
+  // The question goes to the top rather than the bottom. The work happens below it, so
+  // the top is where the room is; sending it to the bottom would pin the question to the
+  // last line and push it off screen again at the first tool call.
+  //
+  // Layout effect, and after the earlier turns are in: they are what the new turn's
+  // offset is measured from, and an effect that runs before they render scrolls to a
+  // position that stops existing one frame later.
+  const landed = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (jobId === null || question === null) return;
+    if (landed.current === jobId) return;
+    const node = document.getElementById(anchorFor(jobId));
+    if (!node) return;
+    landed.current = jobId;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [jobId, question, past]);
 
   // One entry per turn, the question as its own label. Trimmed rather than named by a
   // model: the question is already the name of the turn, and it costs nothing.
