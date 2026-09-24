@@ -19,10 +19,21 @@ forest, moving nutrients between trees that never touch. Mycel works the same wa
 in the background, pulls what moved in Jira, digests it through layer after layer, and only
 surfaces when you ask it something. The interesting part was never the fruiting body.
 
+## What it looks like
+
+You ask in a sentence. Mycel picks the agents and tools it needs, runs them, and answers
+with the figures it used — so every number can be traced back to the query that produced it.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/demo-dark.svg">
   <img src="assets/demo-light.svg" alt="Three questions asked in plain language — how a project is going, who logged the most hours, what is worth reading in the mail — each answered after the agents and tools it took, with the figures the answer rests on" width="100%">
 </picture>
+
+## How it is put together
+
+Connectors land external platforms in a bronze, silver and gold lakehouse. A question goes
+over the API onto a broker; a worker picks it up and an orchestrator delegates to agents
+that read gold. Traces, metrics and logs run alongside the whole path.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
