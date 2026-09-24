@@ -156,6 +156,20 @@ export function Ask() {
 
   const failure = refused ?? run.failure;
 
+  // A finished run moves its thread to the top of Recent. The sidebar is ordered by the
+  // last thing written to a thread, and that write happens on the worker, minutes after
+  // the list was fetched — so the order on screen is stale until something asks again.
+  // Keyed on the job so one refetch happens per run, not one per poll.
+  const settled = run.result?.status;
+  const refetched = useRef<string | null>(null);
+  useEffect(() => {
+    if (jobId === null) return;
+    if (settled !== "done" && settled !== "failed") return;
+    if (refetched.current === jobId) return;
+    refetched.current = jobId;
+    reload();
+  }, [jobId, settled, reload]);
+
 
   // Asking sends the view to the question just asked, and only then. One move per run, at
   // the moment there is a reason to move: the question goes to the top, the answer writes

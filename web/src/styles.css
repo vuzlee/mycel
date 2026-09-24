@@ -24,6 +24,9 @@
   --accent-ink: #ffffff;
   --accent-soft: #efe9fc;
   --accent-line: #d6c8f7;
+  /* Its own token, not `--accent-soft`: a selection has to read as marked at a glance,
+     and the soft tone is a background for whole panels — deliberately near-invisible. */
+  --select: #c9b0f2;
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -103,6 +106,7 @@
     --accent-ink: #14101d;
     --accent-soft: #1d1730;
     --accent-line: #3a2f5c;
+    --select: #4c3a84;
 
     --flag: #f090b4;
     --flag-soft: #2a1520;
@@ -144,6 +148,7 @@
   --accent-ink: #14101d;
   --accent-soft: #1d1730;
   --accent-line: #3a2f5c;
+  --select: #4c3a84;
 
   --flag: #f090b4;
   --flag-soft: #2a1520;
@@ -223,7 +228,7 @@ a {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: var(--select);
   color: var(--ink);
 }
 

@@ -1118,10 +1118,42 @@ class TestTheSidebarFollowsTheLastThingSaid:
     """
 
     async def _stamp(self, session: AsyncSession, table: str, key: str, month: int) -> None:
+        # A turn carries both times, and the order reads the later one. Stamped together
+        # unless a test is about them differing.
+        columns = "created_at = :when"
+        if table == "turn":
+            columns += ", updated_at = :when"
         await session.execute(
-            text(f"UPDATE app.{table} SET created_at = :when WHERE {key}"),
+            text(f"UPDATE app.{table} SET {columns} WHERE {key}"),
             {"when": datetime(2026, month, 1, tzinfo=UTC)},
         )
+
+    async def test_a_finished_run_lifts_its_thread(self, session: AsyncSession) -> None:
+        """The second write of a turn moves the thread (MYC-65).
+
+        A turn is written when the question is queued and again when the run ends. Ordering
+        on `created_at` reads the first write only, so a thread whose answer arrives last
+        stays wherever it was.
+        """
+        repo = AppRepository(session)
+        user = await repo.create_user("finished@example.com", "x")
+        early = await repo.create_conversation(user.id, "chat", "asked first")
+        later = await repo.create_conversation(user.id, "chat", "asked second")
+        await repo.upsert_turn(early.id, "job-early", "q", "queued")
+        await repo.upsert_turn(later.id, "job-later", "q", "queued")
+        await session.flush()
+
+        await self._stamp(session, "conversation", f"id = {early.id}", 1)
+        await self._stamp(session, "conversation", f"id = {later.id}", 2)
+        await self._stamp(session, "turn", "job_id = 'job-early'", 1)
+        await self._stamp(session, "turn", "job_id = 'job-later'", 2)
+
+        # The older thread finishes last, which is the whole point.
+        await repo.upsert_turn(early.id, "job-early", "q", "done", answer="here")
+        await session.flush()
+
+        rows = await repo.conversations_for(user.id)
+        assert [row.id for row in rows] == [early.id, later.id]
 
     async def test_a_reopened_thread_comes_back_to_the_top(self, session: AsyncSession) -> None:
         repo = AppRepository(session)

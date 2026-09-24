@@ -265,9 +265,14 @@ class AppRepository:
 
         `COALESCE` because a thread with no turns still has to sort: it was opened and the
         worker never wrote a row, and its own `created_at` is the only time it has.
+
+        `updated_at` rather than `created_at`: a turn row is written when the question is
+        queued and written again when the run ends, and it is the ending people watch for.
+        Ordering on the first write leaves a thread sitting where it was while its answer
+        lands somewhere down the list.
         """
         spoke = (
-            select(Turn.conversation_id, func.max(Turn.created_at).label("at"))
+            select(Turn.conversation_id, func.max(Turn.updated_at).label("at"))
             .group_by(Turn.conversation_id)
             .subquery()
         )
@@ -321,6 +326,10 @@ class AppRepository:
 
         Upsert because a job is written twice — once as `queued` when it is enqueued and
         again when it finishes — and a third time if the broker redelivers it.
+
+        `updated_at` is set by hand. The model declares `onupdate`, but that is an ORM hook
+        and this is a Core `INSERT ... ON CONFLICT`, which never runs it — the column would
+        keep the moment the job was queued, and the sidebar orders on it.
         """
         stmt = insert(Turn).values(
             conversation_id=conversation_id,
@@ -343,6 +352,7 @@ class AppRepository:
                     # Coalesced, not overwritten: a redelivery that ends in failure must
                     # not wipe the steps a successful earlier attempt already wrote.
                     "steps": func.coalesce(stmt.excluded.steps, Turn.steps),
+                    "updated_at": func.now(),
                 },
             )
         )
