@@ -35,14 +35,20 @@
      Chosen against the violet, not against a traffic light. A signal colour only has to
      be *distinct*; nothing makes it have to be the reddest red available, and a page
      built on one low-chroma hue is exactly where a saturated green and a fire-engine red
-     look borrowed from another product. So: teal for done (cool, a neighbour of the
-     violet), gold for in-progress (its complement, and the page's one warm note), rose
-     for late (the same family as `--flag`, alarming without shouting). All held at a
-     chroma near the accent's, which is what makes them read as one set. */
-  --todo: #837b98;
-  --doing: #b5813c;
-  --done: #3f8279;
-  --late: #b14a72;
+     look borrowed from another product.
+
+     Teal and gold were the first attempt and were still two hues the page does not
+     otherwise use — distinct, but distinct the way a sticker is. These are an ANALOGOUS
+     SWEEP THROUGH THE ACCENT'S OWN QUARTER of the wheel instead: indigo for in-progress,
+     the accent's violet for done, magenta-rose for late, and a desaturated lavender-grey
+     for not-started. Nothing on the screen is a hue the brand does not already own, and
+     the three still separate, because they separate by POSITION ALONG ONE ARC rather than
+     by being unrelated colours. Done gets the accent's own hue on purpose: it is the one
+     the page is asking you to want. */
+  --todo: #8b84a3;
+  --doing: #4f5bc7;
+  --done: #8340cf;
+  --late: #c03c78;
 
   /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
      accent: a translucent cell picks up whatever is behind it, and these sit on two
@@ -101,10 +107,10 @@
     --flag: #f090b4;
     --flag-soft: #2a1520;
 
-    --todo: #938ba8;
-    --doing: #dcae63;
-    --done: #63c4b6;
-    --late: #ef8fb2;
+    --todo: #9992b0;
+    --doing: #8b95f0;
+    --done: #b87cf0;
+    --late: #f18ab4;
 
     --heat-0: #17131f;
     --heat-1: #2b2242;
@@ -142,10 +148,10 @@
   --flag: #f090b4;
   --flag-soft: #2a1520;
 
-  --todo: #938ba8;
-  --doing: #dcae63;
-  --done: #63c4b6;
-  --late: #ef8fb2;
+  --todo: #9992b0;
+  --doing: #8b95f0;
+  --done: #b87cf0;
+  --late: #f18ab4;
 
   --heat-0: #17131f;
   --heat-1: #2b2242;

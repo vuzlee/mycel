@@ -8,7 +8,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-mycel}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
       POSTGRES_DB: ${POSTGRES_DB:-mycel}
-    ports: ["5432:5432"]
+    # 5433 on the host, not 5432: a machine that already runs Postgres for something else
+    # keeps the default, and this stack does not fight it for the port. DATABASE_URL in
+    # .env names the same number — the two have to agree or nothing connects.
+    ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres:/docker-entrypoint-initdb.d

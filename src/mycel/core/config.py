@@ -134,7 +134,7 @@ class Settings(BaseSettings):
     # a laptop overrides both from the environment — there is no real password here.
     #: Read by both the engine and alembic. Stored as the plain `postgresql://` form the
     #: rest of the world writes; `postgres/engine.py` swaps in the async driver.
-    database_url: str = "postgresql://mycel:mycel@localhost:5432/mycel"
+    database_url: str = "postgresql://mycel:mycel@localhost:5433/mycel"
     #: Pool size is per process. `api` runs N uvicorn workers and `worker` scales by
     #: consumer count, so the ceiling that matters is this times the process count.
     db_pool_size: int = 5

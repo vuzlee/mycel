@@ -35,14 +35,13 @@ const EVERY_MS = 30_000;
 /** Jira's own working day, the same constant gold converts with. */
 const SECONDS_PER_DAY = 8 * 3600;
 
-/** The status categories Jira reduces every workflow to, in the order work moves. The
- *  lede's progress bar is drawn in this order, because a bar that fills left to right is
- *  describing a journey and the journey ends at done. */
-const CATEGORIES = ["todo", "doing", "done"] as const;
-
-/** The order the overview tiles read in: finished, moving, not started. A dashboard is
- *  opened to find out how it is going, and the answer to that is on the left. */
-const OVERVIEW = ["done", "doing", "todo"] as const;
+/** The status categories Jira reduces every workflow to, finished first.
+ *
+ *  A dashboard is opened to ask how it is going, and the answer to that belongs on the
+ *  left — of the lede's bar, of its legend, and of the overview tiles, which all read in
+ *  this one order so the page never asks the reader to re-learn it halfway down. Done on
+ *  the left also makes the bar fill from the left, which is what a progress bar does. */
+const CATEGORIES = ["done", "doing", "todo"] as const;
 
 const CAPTION: Record<(typeof CATEGORIES)[number], string> = {
   todo: "to do",
@@ -389,7 +388,7 @@ export function Dashboard() {
               <section className="block">
                 <Head label="Status overview" scope={win} />
                 <div className="totals">
-                  {OVERVIEW.map((category) => (
+                  {CATEGORIES.map((category) => (
                     <div
                       className="total"
                       data-status={category}
