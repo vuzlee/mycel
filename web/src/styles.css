@@ -404,28 +404,6 @@ a.brand:hover .mark {
   }
 }
 
-.job-id {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--faint);
-  transition: color 0.14s ease;
-}
-
-.job-id:hover {
-  color: var(--ink-2);
-}
-
-.elapsed {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-
 .scroll {
   flex: 1;
   min-height: 0;
@@ -807,14 +785,6 @@ details[open] > summary .chevron {
 .answer .prose {
   padding-top: 24px;
   border-top: 1px solid var(--rule);
-}
-
-.answer .spend {
-  margin: 10px 0 0;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Offered only while the bottom is off screen. Nothing scrolls the thread on its own
@@ -2422,17 +2392,30 @@ td[data-status="late"] {
    blocks rather than a column of prose. */
 /* `min-height`, not the `height: 100%` the app shell wants: this is the one page taller
    than the viewport, and a fixed height would cut its background off at the fold. */
+/* ==================================================================== the home page
+ *
+ * The only page with a look of its own. Everything else in the app is a tool someone
+ * already decided to use; this one has to make the case, so it is the one place that
+ * spends a full-bleed ground, a serif at display size and motion on arrival.
+ *
+ * Two widths, not one. `--page` holds the bands that are read; the header, the hero
+ * ground and the footer run the full window and hold their contents to it. An earlier
+ * version capped the whole page at 68rem, which on a wide screen left two broad empty
+ * margins and made the page look like a document rather than a product.
+ */
+
 .home {
+  --page: 74rem;
+  --gutter: clamp(20px, 5vw, 56px);
   min-height: 100%;
-  max-width: 68rem;
-  margin: 0 auto;
-  padding: 0 20px 48px;
   background: var(--ground);
+  overflow-x: clip;
 }
 
-/* Sticky, because the page is long enough that the way back out should not need a
-   scroll to the top. Blurred rather than opaque: the picture below keeps showing
-   through, which is what tells you the bar is over the page and not part of it. */
+/* -------------------------------------------------- the bar */
+
+/* Transparent over the hero and only drawing a rule once the page has moved under it,
+   so the first screen is one field of colour with nothing cutting across it. */
 .home > header {
   position: sticky;
   top: 0;
@@ -2440,32 +2423,50 @@ td[data-status="late"] {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 44px;
-  padding: 12px 0;
-  background: color-mix(in oklab, var(--ground) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid transparent;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 14px var(--gutter);
 }
 
-/* The middle nav takes the slack, so the brand sits left and the account sits right. */
+/* The bar itself is held to the column, but its glass and its rule run to the window
+   edge — a blurred strip that stops two thirds of the way across reads as a card that
+   happens to be stuck, not as a bar. */
+.home > header::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: color-mix(in oklab, var(--ground) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--rule);
+}
+
 .home nav.sections {
-  margin-left: 26px;
+  margin-left: 30px;
   margin-right: auto;
 }
 
 .home nav {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 4px;
   font-size: 14px;
 }
 
+.home nav.account {
+  gap: 14px;
+}
+
+/* Padded rather than bare, so a pointer finds a target rather than a word. */
 .home nav a:not(.primary) {
+  padding: 7px 11px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
-  transition: color 0.14s ease;
+  transition: color 0.14s ease, background 0.14s ease;
 }
 
 .home nav a:not(.primary):hover {
+  background: var(--sunk);
   color: var(--ink);
 }
 
@@ -2473,26 +2474,138 @@ td[data-status="late"] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 15px;
+  padding: 9px 16px;
   border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 500;
-  transition: background 0.14s ease;
+  white-space: nowrap;
+  transition: background 0.14s ease, translate 0.14s ease, box-shadow 0.14s ease;
 }
 
 .home a.primary:hover {
   background: var(--accent-hover);
+  translate: 0 -1px;
+  box-shadow: var(--shadow-md);
+}
+
+/* -------------------------------------------------- bands */
+
+.home section {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 88px var(--gutter);
+  scroll-margin-top: 72px;
+}
+
+/* One rule between bands, drawn inside the gutter so it stops where the text does. */
+.home section + section {
+  border-top: 1px solid var(--rule);
+}
+
+/* The sticky bar is positioned, so its full-bleed glass needs a containing block that
+   is the page rather than the nearest scroller. */
+.home {
+  position: relative;
+}
+
+.home section > h2 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.home section > h2 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+/* -------------------------------------------------- the hero */
+
+.home .lead {
+  position: relative;
+  padding-top: 64px;
+  padding-bottom: 96px;
+  text-align: center;
+  border-top: 0;
+}
+
+/* Bled past the column to the window edge. It is the only coloured ground on the page:
+   a second one further down would make this one ordinary. */
+.home .lead::before {
+  content: "";
+  position: absolute;
+  inset: -200px calc(50% - 50vw) 0;
+  z-index: -1;
+  background:
+    radial-gradient(52rem 30rem at 50% 4%, var(--accent-soft), transparent 70%),
+    radial-gradient(34rem 22rem at 84% 0%, color-mix(in oklab, var(--flag) 10%, transparent), transparent 72%),
+    radial-gradient(30rem 20rem at 12% 12%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 72%);
+}
+
+/* A grid, fading out before it reaches the copy. It is what stops the wash reading as a
+   gradient someone applied and starts it reading as a surface. */
+.home .lead::after {
+  content: "";
+  position: absolute;
+  inset: -200px calc(50% - 50vw) 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(46rem 26rem at 50% 8%, #000, transparent 72%);
+  opacity: 0.55;
+}
+
+.home .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 26px;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--surface) 76%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.home .ping {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.home .ping::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  animation: ping 2.6s ease-out infinite;
+}
+
+@keyframes ping {
+  0% { opacity: 0.7; scale: 0.6; }
+  70%, 100% { opacity: 0; scale: 1.7; }
 }
 
 .home .lead h1 {
-  margin: 0 0 16px;
-  max-width: 22ch;
+  margin: 0 auto 20px;
+  max-width: 17ch;
   font-family: var(--display);
-  font-size: 3.4rem;
+  font-size: clamp(2.7rem, 6.4vw, 4.6rem);
   font-weight: 400;
-  line-height: 1.05;
-  letter-spacing: -0.015em;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -2502,245 +2615,809 @@ td[data-status="late"] {
 }
 
 .home .lead > p {
-  margin: 0;
-  max-width: 50ch;
-  font-size: 16.5px;
+  margin: 0 auto;
+  max-width: 46ch;
+  font-size: 17px;
   line-height: 1.6;
   color: var(--ink-2);
+  text-wrap: pretty;
 }
 
-.home section {
-  margin-top: 44px;
-  /* Cleared, so an anchor does not land its heading under the sticky bar. */
-  scroll-margin-top: 84px;
-}
-
-/* -------------------------------------------------- the picture */
-
-/* Three columns on a wide screen, stacked below. The arrow rotates when it stacks, which
-   is the only reason it is an svg rather than a border. */
-.flow {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.home .acts {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.home a.primary.big {
+  padding: 14px 24px;
+  font-size: 15.5px;
+  box-shadow: var(--shadow-md);
+}
+
+.home .ghost {
+  padding: 14px 22px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  font-size: 15.5px;
+  color: var(--ink-2);
+  transition: border-color 0.14s ease, color 0.14s ease, translate 0.14s ease;
+}
+
+.home .ghost:hover {
+  border-color: var(--accent-line);
+  color: var(--accent);
+  translate: 0 -1px;
+}
+
+/* -------------------------------------------------- the demo */
+
+/* A window, not a card: the chrome is what says "this is the product running" without a
+   caption having to say it. */
+.demo {
+  max-width: 42rem;
+  margin: 52px auto 0;
+  border: 1px solid var(--rule-2);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  text-align: left;
+}
+
+.demo .chrome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--sunk);
+}
+
+.demo .dots {
+  display: flex;
+  gap: 6px;
+}
+
+.demo .dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rule-2);
+}
+
+.demo .where {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+/* A live dot, not a label: it says the window is running without spending a word on it. */
+.demo .lamp {
+  width: 6px;
+  height: 6px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ping 2.4s ease-out infinite;
+}
+
+/* Fixed height and bottom-aligned, so the page does not jump as one scene grows and the
+   next starts short. */
+.demo .tape {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 17rem;
+  padding: 22px;
+}
+
+.demo .asked {
+  align-self: flex-end;
+  max-width: 86%;
+  margin: 0;
+  padding: 10px 15px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--accent-soft);
+  font-size: 14.5px;
+  color: var(--ink);
+  animation: rise 0.4s ease both;
+}
+
+.demo .trace {
+  display: grid;
+  gap: 9px;
+}
+
+/* Every step is present from the start and only changes state, so nothing below it
+   moves as the run progresses — the one thing that would make the panel feel cheap. */
+.demo .step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--faint);
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.demo .step[data-state="wait"] {
+  opacity: 0.35;
+}
+
+.demo .step[data-state="live"] {
+  color: var(--accent);
+}
+
+.demo .step[data-state="done"] {
+  color: var(--muted);
+}
+
+.demo .pip {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--rule-2);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.demo .step[data-state="done"] .pip {
+  border-color: var(--accent);
+  background:
+    linear-gradient(var(--accent), var(--accent)) no-repeat center / 6px 6px content-box;
+}
+
+.demo .step[data-state="live"] .pip {
+  border-color: var(--accent);
+}
+
+/* The one spinner: a ring that fills, rather than a dot that pulses. */
+.demo .step[data-state="live"] .pip::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.demo .reply {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 0.45s ease, translate 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* The whole transcript fades out together between scenes, so the loop reads as one run
+   ending and another starting rather than as text being swapped under the reader. */
+.demo .tape {
+  transition: opacity 0.42s ease;
+}
+
+.demo .tape[data-clearing="true"] {
+  opacity: 0;
+}
+
+.demo .reply[data-shown="true"] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.demo .said {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* The caret only while words are still arriving. It is the one thing on the page that
+   says "this is being written", so it leaves the moment it stops being true. */
+.demo .said[data-writing="true"]::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  translate: 0 0.15em;
+  background: var(--accent);
+  animation: caret 1s steps(1) infinite;
+}
+
+@keyframes caret {
+  50% { opacity: 0; }
+}
+
+.demo .said b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* The reply's own small dashboard: one row per figure, the bar drawn only when the
+   answer lands so the numbers arrive with motion rather than sitting there. */
+.demo .figures {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.demo .figures li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.demo .figures .name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.demo .figures .track {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+.demo .figures .fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s;
+}
+
+.demo .figures li[data-step="2"] .fill {
+  background: color-mix(in oklab, var(--accent) 68%, var(--surface));
+}
+
+.demo .figures li[data-step="3"] .fill {
+  background: color-mix(in oklab, var(--accent) 40%, var(--surface));
+}
+
+.demo .figures li[data-step="4"] .fill {
+  background: color-mix(in oklab, var(--accent) 20%, var(--surface));
+}
+
+.demo .figures b {
+  min-width: 2.6rem;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* -------------------------------------------------- what the code guarantees */
+
+/* No rule above it: it belongs to the hero, as the answer to the question the demo
+   leaves behind — what is this allowed to do to my board. */
+/* One line of four, not four blocks of prose. Each is a claim and the three words that
+   make it checkable, which is as much as a strip like this can carry before it stops
+   being read at all. */
+.home .guarantees {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 0;
+  padding-bottom: 80px;
+  border-top: 0;
+}
+
+.home .guarantees > div {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: baseline;
   gap: 8px;
-  margin-top: 40px;
-  padding: 30px 26px;
+  padding: 9px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--surface) 76%, transparent);
+  backdrop-filter: blur(6px);
+  transition: border-color 0.16s ease, translate 0.2s ease;
+}
+
+/* A light passes along the row once, one pill after another, and stops. It is the only
+   motion on a strip of four flat claims, and it is what makes the eye start at the left
+   one rather than wherever it happened to land. */
+.home .guarantees > div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklab, var(--accent) 18%, transparent) 50%,
+    transparent 70%
+  );
+  translate: -130% 0;
+}
+
+.home .guarantees[data-shown="true"] > div::after {
+  animation: sweep 1.1s ease-out forwards;
+}
+
+.home .guarantees[data-shown="true"] > div:nth-child(2)::after { animation-delay: 0.12s; }
+.home .guarantees[data-shown="true"] > div:nth-child(3)::after { animation-delay: 0.24s; }
+.home .guarantees[data-shown="true"] > div:nth-child(4)::after { animation-delay: 0.36s; }
+
+@keyframes sweep {
+  to { translate: 130% 0; }
+}
+
+.home .guarantees > div:hover {
+  border-color: var(--accent-line);
+  translate: 0 -2px;
+}
+
+.home .guarantees b {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home .guarantees span {
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* -------------------------------------------------- three panels */
+
+/* Wider than the reading column. Charts are not read left to right at 74rem — they are
+   scanned, and a scanned thing wants the room the prose does not. */
+.home .band {
+  max-width: 92rem;
+}
+
+.home .band > h2 {
+  margin-bottom: 36px;
+  max-width: 74rem;
+  margin-inline: auto;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--surface);
+  transition: border-color 0.18s ease, translate 0.18s ease, box-shadow 0.18s ease;
 }
 
-.flow .caption {
-  display: block;
-  margin-top: 14px;
+.panel:hover {
+  border-color: var(--accent-line);
+  translate: 0 -3px;
+  box-shadow: var(--shadow-md);
+}
+
+.panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel .kind {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.panel > header b {
   font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.panel .foot {
+  margin: auto 0 0;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.panel .foot b {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* The status colours, once, for every mark that carries one. Each panel then only says
+   which category a thing is, never what colour that is. */
+/* Four steps down the one hue. Green/amber/red would be a second palette on a page that
+   has exactly one, and it would shout "alarm" about a sprint that is fine. */
+.panel [data-step="1"] { --mark: var(--accent); }
+.panel [data-step="2"] { --mark: color-mix(in oklab, var(--accent) 68%, var(--surface)); }
+.panel [data-step="3"] { --mark: color-mix(in oklab, var(--accent) 40%, var(--surface)); }
+.panel [data-step="4"] { --mark: color-mix(in oklab, var(--accent) 20%, var(--surface)); }
+
+/* -------------------------------------------------- the donut */
+
+.panel .donut {
+  position: relative;
+  width: 148px;
+  margin: 0 auto;
+}
+
+.panel .donut svg {
+  width: 100%;
+  rotate: 0deg;
+  overflow: visible;
+}
+
+/* Four arcs on one circle: a dash as long as the slice, a gap as long as the rest, and
+   a rotation to put it where it starts. No path maths, and each arc is one number. */
+.panel .donut circle {
+  fill: none;
+  stroke: var(--mark);
+  stroke-width: 11;
+  stroke-linecap: butt;
+  transform-origin: 50% 50%;
+  transition: stroke-width 0.18s ease;
+}
+
+.panel:hover .donut circle {
+  stroke-width: 13;
+}
+
+.panel .middle {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--faint);
 }
 
-.flow .posted {
+.panel .middle b {
+  font-family: var(--display);
+  font-size: 2.1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.panel .legend {
   display: grid;
-  gap: 8px;
-}
-
-.flow .bubble {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  padding: 9px 12px;
-  border: 1px solid var(--rule);
-  border-radius: 12px 12px 12px 3px;
-  background: var(--ground);
-  font-size: 13px;
-}
-
-.flow .tag {
-  flex: none;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-
-.flow .said {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
   color: var(--muted);
 }
 
-.flow [data-tag="todo"] {
-  color: var(--todo);
-}
-
-.flow [data-tag="doing"] {
-  color: var(--doing);
-}
-
-.flow [data-tag="done"] {
-  color: var(--done);
-}
-
-.flow [data-tag="late"] {
-  color: var(--late);
-}
-
-.flow .link {
-  width: 64px;
-  height: 120px;
-  stroke: var(--accent-line);
-  stroke-width: 1.4;
-}
-
-.flow .link .fan {
-  stroke-dasharray: 3 4;
-}
-
-.flow .link .node {
-  fill: var(--accent);
-  stroke: none;
-}
-
-.flow .produced {
-  display: grid;
-  gap: 8px;
-}
-
-.flow .sheet {
-  display: grid;
-  gap: 7px;
-  padding: 12px 14px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--ground);
-}
-
-/* Prose stood in for by rules: the shape of a written answer reads at a glance, and real
-   sentences here would be three more sentences to keep true. */
-.flow .line {
-  height: 5px;
-  border-radius: 3px;
-  background: var(--rule-2);
-}
-
-.flow .line.faint {
-  background: var(--rule);
-}
-
-.flow .bars {
+.panel .legend li {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 7px;
-  height: 46px;
 }
 
-.flow .bars span {
-  flex: 1;
-  border-radius: 3px 3px 1px 1px;
-  background: currentColor;
+.panel .legend b {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
 }
 
-/* -------------------------------------------------- what you get */
+.panel .swatch {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--mark);
+}
+
+/* -------------------------------------------------- the bars */
+
+.panel .bars {
+  display: grid;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel .bars li {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 2.4rem;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.panel .who {
+  color: var(--ink-2);
+}
+
+.panel .track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+/* Violet, not a status colour: these are hours, and hours have no category. The tint
+   down the length is what stops four flat bars reading as a stylesheet default. */
+.panel .fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 62%, #ff9ecd));
+  animation: grow 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.panel .bars li:nth-child(2) .fill { animation-delay: 0.08s; }
+.panel .bars li:nth-child(3) .fill { animation-delay: 0.16s; }
+.panel .bars li:nth-child(4) .fill { animation-delay: 0.24s; }
+
+@keyframes grow {
+  from { width: 0 !important; }
+}
+
+.panel .amount {
+  justify-self: end;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+/* -------------------------------------------------- the heatmap */
+
+/* Weeks run across, days down — the orientation every contribution graph uses, so it is
+   the one a reader does not have to be taught. */
+.panel .heat {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+}
+
+.panel .week {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+}
+
+/* One hue at five strengths. A second colour here would imply a second meaning, and
+   there is only one: how much was logged. */
+.panel .cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) calc(var(--level) * 1%), var(--sunk));
+  transition: scale 0.16s ease;
+}
+
+.panel .cell[data-level="0"] { --level: 0; }
+.panel .cell[data-level="1"] { --level: 22; }
+.panel .cell[data-level="2"] { --level: 44; }
+.panel .cell[data-level="3"] { --level: 68; }
+.panel .cell[data-level="4"] { --level: 100; }
+
+.panel .cell:hover {
+  scale: 1.18;
+}
+
+/* The key, because five shades of one colour mean nothing until you say which end is
+   which — and saying it costs two words. */
+.panel .scale {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.panel .scale .cell {
+  width: 9px;
+  height: 9px;
+  aspect-ratio: auto;
+}
+
+.panel .scale span:first-child {
+  margin-right: 3px;
+}
+
+.panel .scale span:last-child {
+  margin-left: 3px;
+}
+
+/* -------------------------------------------------- three moments */
+
+.home .uses > h2 {
+  margin-bottom: 36px;
+}
 
 .home .use-list {
   display: grid;
-  gap: 1px;
-  margin: 18px 0 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--rule);
-  overflow: hidden;
+  counter-reset: moment;
 }
 
 .home .use-list li {
   display: grid;
-  grid-template-columns: 11rem 1fr;
-  gap: 4px 20px;
-  padding: 18px 20px;
+  align-content: start;
+  gap: 10px;
+  padding: 24px 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   background: var(--surface);
+  transition: border-color 0.18s ease, translate 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home .use-list li:hover {
+  border-color: var(--accent-line);
+  translate: 0 -3px;
+  box-shadow: var(--shadow-md);
 }
 
 .home .use-list .when {
-  grid-row: span 2;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
 .home .use-list b {
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.15;
   color: var(--ink);
+  text-wrap: balance;
 }
 
-.home .use-list .how {
-  font-size: 13.5px;
-  line-height: 1.6;
+/* Set as something typed, because it is: these are the words that go in the box. */
+.home .use-list .ask {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 7px 13px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.4;
   color: var(--muted);
+  transition: border-color 0.18s ease, color 0.18s ease;
+}
+
+.home .use-list li:hover .ask {
+  border-color: var(--accent-line);
+  color: var(--accent);
 }
 
 /* -------------------------------------------------- the ask, and the name */
 
-.home .note {
-  margin: 14px 0 0;
-  max-width: 56ch;
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--ink-2);
+.home .already {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: contract;
 }
 
-.home .note code {
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--accent-soft);
+.home .already li {
+  display: grid;
+  gap: 4px;
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* Numbered, because three things a team must already have is a checklist, and a
+   checklist that is not counted reads as three unrelated cards. */
+.home .already li::before {
+  counter-increment: contract;
+  content: counter(contract, decimal-leading-zero);
   font-family: var(--mono);
-  font-size: 12.5px;
-  color: var(--ink-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
 }
 
-/* The naming story, set apart: it explains the word on the tab rather than the product,
-   and reads as a footnote because that is what it is. */
-.home .aside {
-  margin: 0;
-  max-width: 58ch;
-  padding-left: 16px;
-  border-left: 2px solid var(--accent-line);
-  font-size: 14px;
-  line-height: 1.7;
+.home .already b {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.home .already span {
+  font-size: 13px;
   color: var(--muted);
 }
 
-.home .aside em {
-  font-style: italic;
+.home .note {
+  margin: 26px 0 0;
+  font-size: 15.5px;
+  line-height: 1.7;
   color: var(--ink-2);
+  text-wrap: pretty;
 }
 
-/* -------------------------------------------------- the call, and the footer */
+/* -------------------------------------------------- the call */
 
 .home .call {
-  padding: 40px 32px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius);
-  background: var(--accent-soft);
+  position: relative;
   text-align: center;
+  border-top: 0;
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+
+.home .call::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: radial-gradient(44rem 24rem at 50% 50%, var(--accent-soft), transparent 70%);
+  border-top: 1px solid var(--rule);
 }
 
 .home .call h2 {
-  margin: 0 0 12px;
+  margin: 0 auto 14px;
+  max-width: 18ch;
   font-family: var(--display);
-  font-size: 2.1rem;
+  font-size: clamp(2.1rem, 4vw, 3rem);
   font-weight: 400;
+  line-height: 1.08;
 }
 
 .home .call p {
-  margin: 0 auto 22px;
-  max-width: 46ch;
-  font-size: 15px;
-  line-height: 1.6;
+  margin: 0 auto 26px;
+  max-width: 44ch;
+  font-size: 15.5px;
+  line-height: 1.65;
   color: var(--ink-2);
+  text-wrap: pretty;
 }
 
 .home .call p b {
@@ -2753,7 +3430,7 @@ td[data-status="late"] {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 20px;
   font-size: 14px;
   color: var(--muted);
 }
@@ -2762,40 +3439,60 @@ td[data-status="late"] {
   color: var(--accent);
 }
 
+/* -------------------------------------------------- the footer */
+
+/* On its own ground, darker than the page. A footer that shares the page's background
+   and is separated by one hairline is a footer nobody can see the edge of. */
 .home > footer {
-  display: grid;
-  gap: 26px;
-  margin-top: 48px;
-  padding-top: 28px;
+  padding: 56px var(--gutter) 34px;
+  background: var(--sunk);
   border-top: 1px solid var(--rule);
   font-size: 13.5px;
   color: var(--muted);
 }
 
+.home > footer > * {
+  max-width: var(--page);
+  margin-inline: auto;
+}
+
+.home > footer .sig {
+  display: grid;
+  gap: 0;
+  margin-bottom: 40px;
+}
+
 .home > footer .sig p {
   margin: 12px 0 0;
-  max-width: 34ch;
-  line-height: 1.6;
+  max-width: 44ch;
+  line-height: 1.7;
   color: var(--faint);
+}
+
+.home > footer .sig em {
+  font-style: italic;
+  color: var(--muted);
 }
 
 .home > footer .columns {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
+  gap: 32px;
 }
 
 .home > footer .columns > div {
   display: grid;
   align-content: start;
-  gap: 9px;
+  gap: 11px;
 }
 
 .home > footer .columns .label {
   margin-bottom: 2px;
+  color: var(--ink-2);
 }
 
 .home > footer a {
+  width: fit-content;
   color: var(--muted);
   transition: color 0.14s ease;
 }
@@ -2814,8 +3511,9 @@ td[data-status="late"] {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 22px;
-  border-top: 1px solid var(--rule);
+  margin-top: 44px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule-2);
   font-size: 12px;
   color: var(--faint);
 }
@@ -2824,9 +3522,82 @@ td[data-status="late"] {
   max-width: 52ch;
 }
 
+/* -------------------------------------------------- arriving */
+
+/* Every revealed band is a removed offset, so the page is complete without the script
+   and the observer only ever takes something away. */
+[data-shown="false"] {
+  opacity: 0;
+  translate: 0 18px;
+}
+
+.home [data-shown] {
+  transition: opacity 0.6s ease, translate 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.home [data-shown="true"] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Inside a revealed band the cards arrive one after another, which reads as a hand
+   dealing them rather than a block appearing. */
+.home [data-shown="true"] .panel,
+.home [data-shown="true"] .use-list li,
+.home [data-shown="true"] .already li,
+.home [data-shown="true"] > div {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.home [data-shown="true"] .panel:nth-child(2),
+.home [data-shown="true"] .use-list li:nth-child(2),
+.home [data-shown="true"] .already li:nth-child(2),
+.home [data-shown="true"] > div:nth-child(2) { animation-delay: 0.08s; }
+
+.home [data-shown="true"] .panel:nth-child(3),
+.home [data-shown="true"] .use-list li:nth-child(3),
+.home [data-shown="true"] .already li:nth-child(3),
+.home [data-shown="true"] > div:nth-child(3) { animation-delay: 0.16s; }
+
+.home [data-shown="true"] > div:nth-child(4) { animation-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home [data-shown],
+  .home [data-shown] * {
+    opacity: 1 !important;
+    translate: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .home .ping::after,
+  .demo .asked,
+  .demo .pip::after {
+    animation: none;
+  }
+
+  .demo .reply {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+/* -------------------------------------------------- narrow */
+
+@media (max-width: 960px) {
+  .panels,
+  .home .use-list,
+  .home .already {
+    grid-template-columns: 1fr;
+  }
+
+
+}
+
 @media (max-width: 760px) {
-  .home .lead h1 {
-    font-size: 2.4rem;
+  .home section {
+    padding-top: 64px;
+    padding-bottom: 64px;
   }
 
   /* The section links go first: on a phone the account controls are what the bar is
@@ -2850,30 +3621,26 @@ td[data-status="late"] {
     padding: 4px;
   }
 
+  .home .acts {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home .acts a {
+    justify-content: center;
+  }
+
+  .demo .tape {
+    min-height: 19rem;
+    padding: 18px;
+  }
+
+  .demo .figures li {
+    grid-template-columns: 3.6rem 1fr auto;
+    gap: 9px;
+  }
+
   .home > footer .columns {
     grid-template-columns: 1fr 1fr;
-  }
-
-
-  /* Stacked, so the arrow between the two halves has to point down instead. */
-  .flow {
-    grid-template-columns: 1fr;
-    gap: 18px;
-  }
-
-  .flow .link {
-    width: 120px;
-    height: 44px;
-    justify-self: center;
-    rotate: 90deg;
-  }
-
-  .home .use-list li {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .home .use-list .when {
-    grid-row: auto;
   }
 }

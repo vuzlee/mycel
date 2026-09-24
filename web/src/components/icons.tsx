@@ -96,23 +96,6 @@ export function Moon({ size = 15 }: IconProps) {
   );
 }
 
-export function Copy({ size = 12 }: IconProps) {
-  return (
-    <svg {...base(size)}>
-      <rect x="5.2" y="5.2" width="8" height="8" rx="1.6" />
-      <path d="M10.8 5.2V4.4a1.6 1.6 0 0 0-1.6-1.6H4.4a1.6 1.6 0 0 0-1.6 1.6v4.8a1.6 1.6 0 0 0 1.6 1.6h.8" />
-    </svg>
-  );
-}
-
-export function Check({ size = 12 }: IconProps) {
-  return (
-    <svg {...base(size)} strokeWidth={1.8}>
-      <path d="M3.2 8.4 6.4 11.6l6.4-7.2" />
-    </svg>
-  );
-}
-
 export function Menu({ size = 16 }: IconProps) {
   return (
     <svg {...base(size)}>

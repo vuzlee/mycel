@@ -8,13 +8,25 @@
  * It says what Mycel gives you and what it costs you to get it. Not how: there are no
  * layers, agents or pipelines on this page, because a reader deciding whether they want
  * this does not yet care how it is built. `docs/architecture.html` is for that.
+ *
+ * The page shows the product before it describes it. `Demo` runs a scripted question at
+ * the top, because the fastest way to answer "what is this" is to let someone watch one
+ * question go in and an answer come out, and every sentence after it is then a caption
+ * on something already seen rather than a claim taken on trust.
+ *
+ * Motion is a reveal on scroll and nothing else. Nothing moves that a reader did not
+ * scroll to, nothing loops except the demo, and every animation is an offset being
+ * removed — so the page is complete and readable with no JavaScript and with reduced
+ * motion on.
  */
 
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth";
 import { Account } from "../components/Account";
+import { Demo } from "../components/Demo";
 import { Flow } from "../components/Flow";
 import { ArrowRight, Mycelium } from "../components/icons";
+import { useReveal } from "../useReveal";
 
 /** Where the source and the written docs live. The API serves `/app` and nothing else,
  *  so a link to `docs/` has to leave for the repository rather than pretend to be a
@@ -24,26 +36,47 @@ const REPO = "https://github.com/vuzlee/mycel";
 /** The maintainer. One address, because there is one person. */
 const CONTACT = "levu040102@gmail.com";
 
+/** Three moments, not three features. Each is one line of prose and one line someone
+ *  would actually type — an earlier version carried a third sentence explaining the
+ *  first, which is how a page ends up with more words than a reader has patience. */
 const USES = [
   {
-    when: "Monday morning",
+    when: "Monday",
     what: "The week, already written up",
-    how: "What shipped, what is still in flight, and what is late — with the issue keys, in the words your team wrote them in.",
+    ask: "How is MYC going this week?",
   },
   {
-    when: "Before a stand-up",
+    when: "Stand-up",
     what: "What is past its due date",
-    how: "The one thing a stand-up exists to surface, on screen before anyone speaks.",
+    ask: "What is late right now, and who is it with?",
   },
   {
-    when: "End of the month",
+    when: "Month end",
     what: "The numbers, no writing",
-    how: "Totals by status, estimated against spent per person, and effort logged per day.",
+    ask: "Compare hours logged with last month.",
   },
+];
+
+/** Four promises the code keeps, not the prompt. An earlier version gave each one a
+ *  sentence, and four sentences in a row is a paragraph nobody reads — so each is now a
+ *  claim and the three words that make it checkable. */
+const GUARANTEES = [
+  { big: "Read-only", small: "enforced by Postgres" },
+  { big: "Self-hosted", small: "your database, your keys" },
+  { big: "No new habits", small: "the board you already keep" },
+  { big: "One command", small: "the whole stack, up" },
 ];
 
 export function Home() {
   const { user } = useAuth();
+  // One ref per band that should arrive rather than simply be there. The hero is not
+  // among them: it is on screen at load, and a first screen that fades in is a first
+  // screen that is briefly blank.
+  const guarantees = useReveal<HTMLElement>();
+  const flow = useReveal<HTMLElement>();
+  const uses = useReveal<HTMLElement>();
+  const cost = useReveal<HTMLElement>();
+  const call = useReveal<HTMLElement>();
 
   return (
     <div className="home">
@@ -87,7 +120,14 @@ export function Home() {
         </nav>
       </header>
 
+      {/* The hero is the only place on the page with a ground of its own. It is one
+          wash of the accent behind the fold, which is what makes the rest read as paper
+          — a second coloured band further down would make this one ordinary. */}
       <section className="lead">
+        <span className="eyebrow">
+          <span className="ping" aria-hidden />
+          Reads your board. Never writes to it.
+        </span>
         <h1>
           Your tracker already knows what happened. <em>Mycel writes it down.</em>
         </h1>
@@ -95,42 +135,83 @@ export function Home() {
           Nobody fills in a form and nobody chases anybody. Your team works the Jira board
           they already keep, and you ask Mycel about it in your own words.
         </p>
+
+        <div className="acts">
+          <Link className="primary big" to={user ? "/" : "/register"}>
+            {user ? "Open Mycel" : "Start with this week"}
+            <ArrowRight />
+          </Link>
+          <a className="ghost" href={`${REPO}#readme`} target="_blank" rel="noreferrer">
+            Read the source
+          </a>
+        </div>
+
+        <Demo />
       </section>
 
-      <Flow />
+      {/* A thin band of what the code guarantees, between the demo and the prose. It is
+          the answer to the question a reader has the moment the demo ends — what is this
+          allowed to do to my board — and it belongs before the features, not after. */}
+      <section className="guarantees" ref={guarantees}>
+        {GUARANTEES.map((item) => (
+          <div key={item.big}>
+            <b>{item.big}</b>
+            <span>{item.small}</span>
+          </div>
+        ))}
+      </section>
 
-      <section className="uses" id="what">
-        <h2 className="label">What you get</h2>
+      <section className="band" id="what" ref={flow}>
+        <h2>
+          Ask in a sentence. <em>Get a dashboard.</em>
+        </h2>
+        <Flow />
+      </section>
+
+      <section className="uses" ref={uses}>
+        <h2>
+          Three moments <em>it earns its keep</em>
+        </h2>
         <ol className="use-list">
           {USES.map((use) => (
             <li key={use.when}>
               <span className="when">{use.when}</span>
               <b>{use.what}</b>
-              <span className="how">{use.how}</span>
+              {/* The words someone would actually type. A feature list says what a
+                  product does; this says what you do. */}
+              <span className="ask">{use.ask}</span>
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="cost" id="ask">
-        <h2 className="label">What it asks of your team</h2>
+      {/* What it costs, as three things a team already has. Prose here was two blocks of
+          grey text saying "nothing changes", which is a claim a list makes faster. */}
+      <section className="cost" id="ask" ref={cost}>
+        <h2>
+          It asks your team <em>for nothing</em>
+        </h2>
+        <ul className="already">
+          <li>
+            <b>A status</b>
+            <span>To do, in progress, done</span>
+          </li>
+          <li>
+            <b>An estimate</b>
+            <span>However rough</span>
+          </li>
+          <li>
+            <b>A due date</b>
+            <span>When it is meant to land</span>
+          </li>
+        </ul>
         <p className="note">
-          Nothing they are not already doing. Keep issues in Jira — a status, an estimate
-          and a due date — and Mycel reads them. It never writes to your board: every
-          answer is read-only, and nothing you ask can change the work data.
-        </p>
-      </section>
-
-      <section className="named">
-        <p className="aside">
-          Named after <em>mycelium</em>, the underground network that connects a whole
-          forest. Mycel works the same way: out of sight, quietly gathering, surfacing only
-          when there is something worth surfacing.
+          That is the whole contract. Mycel reads the board and never writes to it.
         </p>
       </section>
 
       {/* The call to action, which is a different one for someone who is already here. */}
-      <section className="call">
+      <section className="call" ref={call}>
         {user ? (
           <>
             <h2>Your answers are waiting.</h2>
@@ -171,7 +252,12 @@ export function Home() {
             </span>
             Mycel
           </span>
-          <p>A team's own tracked work, answered in a sentence.</p>
+          {/* The naming story lives here rather than in a band of its own: it explains
+              the word on the tab, which is a thing you look up, not a thing you are sold. */}
+          <p>
+            Named after <em>mycelium</em> — the underground network that connects a whole
+            forest. Out of sight, quietly gathering, surfacing only when it is worth it.
+          </p>
         </div>
 
         <div className="columns">

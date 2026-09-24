@@ -1,6 +1,10 @@
 /**
  * The frame every signed-in page sits in: the rail on the left, a header strip, and a
- * scrolling body. The pages differ in what goes in the header and the body, not in this.
+ * scrolling body. The pages differ in what goes in the body, not in this.
+ *
+ * The header strip carries nothing but the button that reveals the rail on a narrow
+ * screen. A run's id, its clock and its cost were all there; each was a fact about the
+ * machine, offered to someone who came to read an answer.
  */
 
 import { useState } from "react";
@@ -10,7 +14,6 @@ import { Sidebar } from "./Sidebar";
 interface Props {
   /** Job id of the run on screen, so the rail can mark its row. */
   current?: string | null;
-  header?: React.ReactNode;
   /** Passed to the scrolling body. Nothing scrolls it on its own — see `useFollow`. */
   scrollRef?: (node: HTMLDivElement | null) => void;
   /** Offered only while the bottom is off screen: with no auto-scroll, work happening
@@ -21,7 +24,7 @@ interface Props {
   footer?: React.ReactNode;
 }
 
-export function Shell({ current = null, header, scrollRef, jump, children, footer }: Props) {
+export function Shell({ current = null, scrollRef, jump, children, footer }: Props) {
   const [menu, setMenu] = useState(false);
 
   return (
@@ -36,7 +39,6 @@ export function Shell({ current = null, header, scrollRef, jump, children, foote
           >
             <Menu />
           </button>
-          {header}
         </header>
         <div className="scroll" ref={scrollRef}>
           {children}

@@ -7,8 +7,10 @@
  * is shown only when the stream carried none: a run reopened from a link, or one whose
  * events expired out of Redis.
  *
- * The spend is shown either way. It is never on the stream; only the result endpoint and
- * the kept row know it.
+ * The cost of the run used to print under it. It is gone: the reader of an answer is not
+ * the payer of it, and a figure in dollars under a paragraph invites a judgement about
+ * whether the paragraph was worth it. The spend is still recorded on the turn, and the
+ * trace is where it belongs.
  */
 
 import type { ChatResult } from "../api";
@@ -21,12 +23,11 @@ interface Props {
 }
 
 export function Answer({ result, streamed }: Props) {
-  if (!result.answer && !result.spent_usd) return null;
+  if (!result.answer || streamed) return null;
 
   return (
     <section className="answer">
-      {result.answer && !streamed && <Markdown body={result.answer} />}
-      {result.spent_usd && <p className="spend">${result.spent_usd}</p>}
+      <Markdown body={result.answer} />
     </section>
   );
 }

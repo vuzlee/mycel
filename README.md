@@ -20,6 +20,11 @@ in the background, pulls what moved in Jira, digests it through layer after laye
 surfaces when you ask it something. The interesting part was never the fruiting body.
 
 <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/demo-dark.svg">
+  <img src="assets/demo-light.svg" alt="Three questions asked in plain language — how a project is going, who logged the most hours, what is worth reading in the mail — each answered after the agents and tools it took, with the figures the answer rests on" width="100%">
+</picture>
+
+<picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
   <img src="assets/flow-light.svg" alt="Four columns: connectors pull external platforms into a bronze, silver and gold lakehouse; a prompt goes through the API gateway and middleware onto a message broker; a worker consumes the job and an orchestrator delegates to agents that read gold; traces, metrics and logs alongside" width="100%">
 </picture>

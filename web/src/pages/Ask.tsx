@@ -25,7 +25,6 @@ import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
 import { PastTurns } from "../components/PastTurns";
-import { CopyJobId, Elapsed } from "../components/RunMeta";
 import { Shell } from "../components/Shell";
 import { Thread } from "../components/Thread";
 import { ArrowRight } from "../components/icons";
@@ -53,10 +52,6 @@ export function Ask() {
 
   const [asked, setAsked] = useState<string | null>(null);
   const [past, setPast] = useState<Turn[]>([]);
-  // Only ever set by asking, never by arriving: a reopened run started before this tab
-  // existed, and a clock counting from mount would report the age of the page as the age
-  // of the run.
-  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
@@ -99,7 +94,6 @@ export function Ask() {
     setParams({}, { replace: false });
     setAsked(null);
     setPast([]);
-    setStartedAt(null);
     setRefused(null);
     composer.current?.focus();
   }, [setParams]);
@@ -124,7 +118,6 @@ export function Ask() {
       // thing that takes a click.
       const { job_id, conversation_id } = await askChat(text, threadId ?? undefined);
       setAsked(text);
-      setStartedAt(Date.now());
       setParams({ job: job_id, thread: String(conversation_id) });
       reload();
     } catch (error) {
@@ -139,12 +132,6 @@ export function Ask() {
       current={jobId}
       scrollRef={run.follow.ref}
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
-      header={
-        <>
-          {startedAt !== null && <Elapsed since={startedAt} running={run.busy} />}
-          {jobId && <CopyJobId jobId={jobId} />}
-        </>
-      }
       footer={
         <Composer
           busy={run.busy}
