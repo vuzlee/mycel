@@ -34,14 +34,18 @@ services:
       postgres: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
-      qdrant: {condition: service_healthy}
 
   # Ticks `domains/sync.py` every SYNC_INTERVAL_SECONDS: Telegram -> bronze -> silver ->
   # gold. Its own process because its failure mode is its own — Telegram drops updates
   # after 24 hours, so a scheduler that stays down loses data nothing can replay.
   # Two replicas are safe: the tick takes a Postgres advisory lock and the loser skips.
+  # Out of the default `up` for the same reason as `api`: these are the application, not
+  # the infrastructure a dev machine wants in the background. The scheduler ticks every
+  # SYNC_INTERVAL_SECONDS and writes gold, which is not something to start by surprise
+  # while the tables are being changed. docker compose --profile app up -d
   scheduler:
     build: .
+    profiles: [app]
     command: python -m mycel.scheduler
     env_file: .env
     depends_on:
@@ -52,13 +56,13 @@ services:
   # consumer, so workers share a queue rather than being capped by a partition count.
   worker:
     build: .
+    profiles: [app]
     command: python -m mycel.queue.consumer
     env_file: .env
     depends_on:
       postgres: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
-      qdrant: {condition: service_healthy}
 
   # --- Job queue ---
   # RabbitMQ rather than Kafka: a few reports an hour do not need a JVM, a partitioned
@@ -100,8 +104,12 @@ services:
 
   # Vector store for knowledge base search. Postgres holds transactional state,
   # Qdrant holds embeddings — two different jobs, do not merge them.
+  # Behind a profile until batch 008 fills it: nothing writes a vector yet, so a default
+  # `up` would start an empty store and the code would find it present instead of absent
+  # — two different things to debug. docker compose --profile vectors up -d
   qdrant:
     image: qdrant/qdrant:latest
+    profiles: [vectors]
     volumes: ["qdrantdata:/qdrant/storage"]
     ports: ["6333:6333"]   # HTTP + dashboard
     healthcheck:
@@ -177,9 +185,16 @@ services:
     ports: ["3000:3000"]
     depends_on: [prometheus, loki]
 
+# pgdata and rabbitdata already exist, filled by containers started by hand before this
+# file was usable. Named `external` so compose adopts them rather than creating
+# `mycel_pgdata` beside `mycel-pgdata` and starting from an empty database.
 volumes:
   pgdata:
+    external: true
+    name: mycel-pgdata
   rabbitdata:
+    external: true
+    name: mycel-rabbitdata
   qdrantdata:
   lokidata:
   promdata:

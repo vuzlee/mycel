@@ -113,9 +113,9 @@
     --late: #f18ab4;
 
     --heat-0: #17131f;
-    --heat-1: #2b2242;
-    --heat-2: #463869;
-    --heat-3: #6e57a8;
+    --heat-1: #3b2f60;
+    --heat-2: #58439c;
+    --heat-3: #7d5bd4;
     --heat-4: #b79cff;
 
     --shadow-sm: none;
@@ -154,9 +154,9 @@
   --late: #f18ab4;
 
   --heat-0: #17131f;
-  --heat-1: #2b2242;
-  --heat-2: #463869;
-  --heat-3: #6e57a8;
+  --heat-1: #3b2f60;
+  --heat-2: #58439c;
+  --heat-3: #7d5bd4;
   --heat-4: #b79cff;
 
   --shadow-sm: none;
@@ -2241,25 +2241,30 @@ td[data-status="late"] {
   background: var(--heat-0);
 }
 
-.board .heatmap [data-step="1"] {
+/* The steps have to out-specify the cell's own base background, which is why they carry
+   the full `.weeks ol li` path rather than the attribute alone: `.board .heatmap
+   [data-step="4"]` is three classes to that rule's three classes and two elements, so the
+   flat version LOSES and every cell draws --heat-0. The grid then renders perfectly and
+   is entirely blank, which is a hard bug to see — it looks like missing data. */
+.board .heatmap .weeks ol li[data-step="1"] {
   background: var(--heat-1);
 }
 
-.board .heatmap [data-step="2"] {
+.board .heatmap .weeks ol li[data-step="2"] {
   background: var(--heat-2);
 }
 
-.board .heatmap [data-step="3"] {
+.board .heatmap .weeks ol li[data-step="3"] {
   background: var(--heat-3);
 }
 
-.board .heatmap [data-step="4"] {
+.board .heatmap .weeks ol li[data-step="4"] {
   background: var(--heat-4);
 }
 
 /* A day that has not happened is not a day with no work. It is drawn as absent rather
    than as the palest step, or the last column reads as a week the team stopped. */
-.board .heatmap [data-future="true"] {
+.board .heatmap .weeks ol li[data-future="true"] {
   background: transparent;
   border: 1px dashed var(--rule);
 }
@@ -2285,6 +2290,23 @@ td[data-status="late"] {
   height: 11px;
   border-radius: 2px;
   background: var(--heat-0);
+}
+
+/* The key has the same fight to win, for the same reason. */
+.board .heatmap .scale i[data-step="1"] {
+  background: var(--heat-1);
+}
+
+.board .heatmap .scale i[data-step="2"] {
+  background: var(--heat-2);
+}
+
+.board .heatmap .scale i[data-step="3"] {
+  background: var(--heat-3);
+}
+
+.board .heatmap .scale i[data-step="4"] {
+  background: var(--heat-4);
 }
 
 /* Recent activity. A list, not a table: the columns are a key, a sentence and three short
