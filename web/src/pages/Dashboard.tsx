@@ -258,6 +258,23 @@ export function Dashboard() {
     return columns;
   }, [board?.calendar]);
 
+  // A month label above the first column that falls in each month. Without them the grid
+  // is twelve unlabelled columns and there is no way to tell which week is which — the
+  // weekday labels say where you are inside a week and nothing about which week it is.
+  const months = useMemo(() => {
+    let previous = -1;
+    // The label goes on the first column of a month, not on every column in it: one
+    // repeated word per column is a row of noise rather than a scale.
+    return weeks.map((week) => {
+      const start = week[0];
+      if (start === undefined) return "";
+      const at = new Date(`${start.day}T12:00:00`);
+      if (at.getMonth() === previous) return "";
+      previous = at.getMonth();
+      return at.toLocaleDateString(undefined, { month: "short" });
+    });
+  }, [weeks]);
+
   const peak = Math.max(
     1,
     ...(board?.effort_by_day ?? []).map((d) => d.seconds),
@@ -481,8 +498,13 @@ export function Dashboard() {
                 />
                 <div className="two-up">
                   <div>
-                    <h3 className="sub">Twelve weeks</h3>
+                    <h3 className="sub">Hours logged · twelve weeks</h3>
                     <div className="heatmap">
+                      <ol className="months" aria-hidden="true">
+                        {months.map((name, index) => (
+                          <li key={index}>{name}</li>
+                        ))}
+                      </ol>
                       <ol className="weekdays">
                         {WEEKDAYS.map((name, index) => (
                           <li key={index}>{name}</li>
@@ -528,7 +550,7 @@ export function Dashboard() {
                     </p>
                   </div>
                   <div>
-                    <h3 className="sub">Last {win}</h3>
+                    <h3 className="sub">Hours logged · last {win}</h3>
                     {board.effort_by_day.length === 0 ? (
                       <p className="empty">no effort logged in this window</p>
                     ) : (

@@ -36,7 +36,7 @@ web/dist/
 .jira/
 
 # Hand-run scratch scripts: real models, real money, no CI.
-scripts/smoke/
+scripts/smoke/try_*.py
 
 # Coverage data, written by `pytest --cov`.
 .coverage

@@ -8,15 +8,15 @@
 #   scripts/stack.sh logs api  follow one host process (api | worker | scheduler)
 #   scripts/stack.sh sync      run one Jira sync now, without waiting for the tick
 #   scripts/stack.sh grants    apply migrations/grants.sql, the two least-privilege roles
-#   scripts/stack.sh relocate  move Postgres onto the named volume, keeping the data
-#   scripts/stack.sh restore   load a dump back in, if a relocate was interrupted
 #
-# Containers use `docker run` with named volumes rather than the compose CLI, which is not
-# installed here. Named volumes are the point: `down` then `up` keeps bronze, so a stack
-# restart never costs a re-fetch of updates Telegram has already dropped.
+# The containers are `docker compose up -d`, not a `docker run` per service. This script
+# used to spell all three out in bash because the compose CLI was not installed here; it
+# is now, and docker-compose.yml already declares the same images, ports and volumes. One
+# definition, and the one that prod reads.
 #
 # The API, the worker and the scheduler run on the host, not in containers: they are what
-# is being edited, and `uv run` picks up a change without a rebuild.
+# is being edited, and `uv run` picks up a change without a rebuild. That is the whole
+# reason this script still exists next to compose — and why `up` starts no app profile.
 #
 # The worker is not optional. Without it `POST /reports` and `POST /reports/summary` both
 # return a job id for work nobody ever picks up — which looks like a slow model rather
@@ -31,92 +31,46 @@ RUN="$ROOT/.run"
 PG_PORT=5433
 API_PORT=8000
 
+# The three compose services that are infrastructure. Named rather than left to a bare
+# `up`, so adding a service to the file does not silently start it here.
+INFRA=(postgres redis rabbitmq)
+
 log()  { printf '\033[36m==\033[0m %s\n' "$*"; }
 die()  { printf '\033[31mxx\033[0m %s\n' "$*" >&2; exit 1; }
 
 # --- containers ------------------------------------------------------------------------
 
-# Created only if absent, started if merely stopped, left alone if already running — so
-# `up` is safe to run again, which is what makes it the single command to remember.
-#
-# `docker inspect` on a container that does not exist writes an empty line to *stdout* and
-# then fails, so `$(... || echo missing)` yields "\nmissing" — which matches neither arm and
-# falls through to `docker start`, on a container there is nothing to start. So existence is
-# asked as its own question, by exit status, before asking what state the thing is in.
-#
-# `-f ''` rather than `-q`: this docker has no `-q` on `inspect`, and a flag the daemon
-# rejects exits non-zero too — which would read as "does not exist" for every container and
-# turn every `up` into a name conflict.
-container() {
-  local name=$1; shift
-  if ! docker inspect -f '' "$name" >/dev/null 2>&1; then
-    log "$name creating"
-    docker run -d --name "$name" "$@" >/dev/null
-    return
-  fi
-  case "$(docker inspect -f '{{.State.Status}}' "$name" 2>/dev/null)" in
-    running) log "$name already up" ;;
-    *)       log "$name starting";  docker start "$name" >/dev/null ;;
-  esac
-}
+# Whatever compose called the container for a service. Every `docker exec` below goes
+# through this rather than hardcoding `mycel-pg`: the name is compose's to choose, and it
+# changes with the project name and the replica number.
+cid() { docker compose ps -q "$1" 2>/dev/null | head -1; }
 
-# A container whose data is not on the named volume this script expects.
-#
-# Worth checking because the mismatch is invisible until it costs something: the container
-# keeps its data across `down`/`up` either way, so nothing looks wrong. What breaks is
-# `docker rm` — an anonymous volume outlives its container as an unnamed heap of bytes that
-# nothing can mount again, and the data is gone in every sense that matters.
-#
-# Older versions of this script created containers without `-v`, so a machine that has been
-# running this stack for a while very likely has one.
-check_volume() {
-  local name=$1 expect=$2 actual
-  docker inspect "$name" >/dev/null 2>&1 || return 0
-  actual=$(docker inspect "$name" -f '{{range .Mounts}}{{.Name}}{{end}}' 2>/dev/null || true)
-  [[ $actual == "$expect" ]] && return 0
-  log "warning: $name stores data on ${actual:-a bind mount}, not $expect"
-  log "         it survives down/up, but a docker rm would strand it."
-  case "$name" in
-    mycel-pg) log "         to move it, keeping the rows:  scripts/stack.sh relocate" ;;
-    # Not worth a dump. What RabbitMQ keeps is queue definitions and whatever is waiting in
-    # them, and `queue/broker.py` declares the queues on connect. Recreating the container
-    # costs the dead-letter queue and nothing else.
-    *)        log "         to move it, losing whatever is queued:  docker rm -f $name" ;;
-  esac
-}
-
-start_containers() {
-  check_volume mycel-pg mycel-pgdata
-  check_volume mycel-rabbit mycel-rabbitdata
-
-  container mycel-pg \
-    -e POSTGRES_USER=mycel -e POSTGRES_PASSWORD=mycel -e POSTGRES_DB=mycel \
-    -p "$PG_PORT:5432" -v mycel-pgdata:/var/lib/postgresql/data \
-    postgres:16-alpine
-
-  # `--tmpfs /data` because the image declares `VOLUME /data`, and docker honours that by
-  # creating an anonymous volume per container — one more orphan on every recreate, for a
-  # server started with `--save ''` that writes nothing to it. tmpfs gives the declaration
-  # somewhere to point that disappears with the container.
-  container mycel-redis \
-    -p 6379:6379 --tmpfs /data redis:7-alpine \
-    redis-server --save '' --appendonly no --maxmemory 256mb --maxmemory-policy noeviction
-
-  container mycel-rabbit \
-    -e RABBITMQ_DEFAULT_USER=mycel -e RABBITMQ_DEFAULT_PASS=mycel \
-    -p 5672:5672 -p 15672:15672 -v mycel-rabbitdata:/var/lib/rabbitmq \
-    rabbitmq:3.13-management-alpine
+# Containers from the era before compose, started by name with `docker run`. They hold the
+# same ports and mount the same volumes, so compose cannot start its own beside them — and
+# the failure reads as a port conflict rather than as two stacks.
+check_legacy() {
+  local found=()
+  for c in mycel-pg mycel-redis mycel-rabbit; do
+    docker inspect -f '' "$c" >/dev/null 2>&1 && found+=("$c")
+  done
+  [[ ${#found[@]} -eq 0 ]] && return 0
+  die "these containers predate compose and hold the same ports: ${found[*]}
+     The data is on the named volumes, which docker-compose.yml adopts, so removing
+     the containers keeps every row:  docker rm -f ${found[*]}
+     Then run this again."
 }
 
 # Ready means "answers a query", not "the container is up". Postgres accepts TCP several
-# seconds before it will serve one, and alembic run in that window fails.
+# seconds before it will serve one, and alembic run in that window fails. Compose's own
+# healthchecks say the same thing, but `up -d` without `--wait` does not block on them and
+# `--wait` gives one opaque timeout for all three instead of naming the one that hung.
 wait_for() {
   local name=$1 probe=$2 tries=${3:-60}
   for _ in $(seq "$tries"); do
     if eval "$probe" >/dev/null 2>&1; then log "$name ready"; return 0; fi
     sleep 1
   done
-  die "$name did not come up in ${tries}s — try: docker logs $name"
+  die "$name did not come up in ${tries}s — try: docker compose logs $name"
 }
 
 # --- host processes ----------------------------------------------------------------------
@@ -153,7 +107,7 @@ spawn() {
   local name=$1; shift
   if alive "$name"; then log "$name already up (pid $(cat "$RUN/$name.pid"))"; return; fi
   mkdir -p "$RUN"
-  rm -f "$RUN/$name.pid"
+  rm -f "${RUN:?}/${name:?}.pid"
   setsid bash -c 'echo $$ >"$1"; shift; exec "$@"' _ \
     "$RUN/$name.pid" "$@" >"$RUN/$name.log" 2>&1 </dev/null &
   disown
@@ -177,13 +131,13 @@ settled() {
   alive "$name" && return 0
   printf '\033[31mxx\033[0m %s died immediately:\n' "$name" >&2
   sed 's/^/     /' "$RUN/$name.log" | tail -15 >&2
-  rm -f "$RUN/$name.pid"
+  rm -f "${RUN:?}/${name:?}.pid"
   return 1
 }
 
 reap() {
   local name=$1 pid
-  alive "$name" || { rm -f "$RUN/$name.pid"; return; }
+  alive "$name" || { rm -f "${RUN:?}/${name:?}.pid"; return; }
   pid=$(cat "$RUN/$name.pid")
   log "$name stopping (pid $pid)"
   # The group, not the process: `uv run` is a parent whose child does the work.
@@ -193,7 +147,7 @@ reap() {
     log "$name ignored TERM, sending KILL"
     kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
   fi
-  rm -f "$RUN/$name.pid"
+  rm -f "${RUN:?}/${name:?}.pid"
 }
 
 # Anything of ours that no pid file points at. Earlier versions of this script wrote the
@@ -225,15 +179,18 @@ sweep() {
 
 cmd_up() {
   [[ -f .env ]] || die ".env is missing — copy .env.example and fill in the tokens"
+  check_legacy
 
-  start_containers
-  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
-  wait_for redis    "docker exec mycel-redis redis-cli ping"
+  log "starting containers: ${INFRA[*]}"
+  docker compose up -d "${INFRA[@]}"
+
+  wait_for postgres "docker exec $(cid postgres) pg_isready -U mycel"
+  wait_for redis    "docker exec $(cid redis) redis-cli ping"
   # `check_port_connectivity`, not `ping`: ping only asks whether the Erlang node is alive,
   # and it answers yes a good few seconds before the AMQP listener accepts a connection.
   # In that window the worker starts, is reset by the broker mid-handshake, and dies —
   # which reads as a broken worker rather than a stack started half a second too early.
-  wait_for rabbitmq "docker exec mycel-rabbit rabbitmq-diagnostics -q check_port_connectivity" 90
+  wait_for rabbitmq "docker exec $(cid rabbitmq) rabbitmq-diagnostics -q check_port_connectivity" 90
 
   log "applying migrations"
   uv run alembic upgrade head
@@ -264,24 +221,27 @@ cmd_up() {
   cmd_status
 }
 
+# `compose stop`, not `compose down`: `down` removes the containers, and this keeps them.
+# The volumes are external either way, so bronze survives both — but a stopped container
+# starts again in a second, where a removed one re-runs the entrypoint from scratch.
 cmd_down() {
   reap api
   reap worker
   reap scheduler
   sweep
-  for c in mycel-pg mycel-redis mycel-rabbit; do
-    docker stop "$c" >/dev/null 2>&1 && log "$c stopped" || true
-  done
+  docker compose stop "${INFRA[@]}"
   log "data kept in volumes mycel-pgdata, mycel-rabbitdata"
 }
 
 cmd_status() {
-  local name port project squatter api_state
+  local name port project squatter api_state pg state
   printf '\033[1m%-12s %-9s %s\033[0m\n' SERVICE STATE WHERE
-  for c in "mycel-pg:$PG_PORT" mycel-redis:6379 mycel-rabbit:5672; do
+  for c in "postgres:$PG_PORT" redis:6379 rabbitmq:5672; do
     name=${c%:*}; port=${c#*:}
-    printf '%-12s %-9s localhost:%s\n' "${name#mycel-}" \
-      "$(docker inspect -f '{{.State.Status}}' "$name" 2>/dev/null || echo missing)" "$port"
+    # `|| echo missing` would never fire: `compose ps` on a service it does not manage
+    # exits 0 with no output, so the empty string has to be caught rather than the status.
+    state=$(docker compose ps --format '{{.State}}' "$name" 2>/dev/null | head -1 || true)
+    printf '%-12s %-9s localhost:%s\n' "$name" "${state:-missing}" "$port"
   done
   api_state=$(alive api && echo running || echo stopped)
   squatter=$(holder "$API_PORT")
@@ -296,7 +256,9 @@ cmd_status() {
   printf '%-12s %-9s every SYNC_INTERVAL_SECONDS\n' scheduler \
     "$(alive scheduler && echo running || echo stopped)"
 
-  project=$(docker exec mycel-pg psql -U mycel -d mycel -tAc \
+  pg=$(cid postgres)
+  project=""
+  [[ -n $pg ]] && project=$(docker exec "$pg" psql -U mycel -d mycel -tAc \
     'select project from gold.work_item limit 1' 2>/dev/null | tr -d '[:space:]' || true)
   echo
   echo "sign in    http://localhost:$API_PORT/app/login"
@@ -314,66 +276,6 @@ cmd_status() {
   fi
 }
 
-# Move Postgres off an anonymous volume and onto `mycel-pgdata`, keeping the data.
-#
-# Through a SQL dump rather than by copying files: a dump is readable, restores into any
-# Postgres, and can be kept. Copying the data directory would be faster and would also
-# carry over whatever is wrong with it.
-#
-# Redis is not moved — it holds a live stream and a cache, both rebuilt. RabbitMQ is not
-# moved either: a queue with nothing in it has nothing to lose, and this runs with the
-# stack down.
-cmd_relocate() {
-  local mount dump="$RUN/relocate-$(date +%Y%m%d-%H%M%S).sql"
-
-  docker inspect mycel-pg >/dev/null 2>&1 || die "mycel-pg does not exist — just run: scripts/stack.sh up"
-  mount=$(docker inspect mycel-pg -f '{{range .Mounts}}{{.Name}}{{end}}')
-  [[ $mount == mycel-pgdata ]] && { log "mycel-pg is already on mycel-pgdata, nothing to do"; return; }
-
-  log "starting mycel-pg to read it"
-  docker start mycel-pg >/dev/null 2>&1 || true
-  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
-
-  mkdir -p "$RUN"
-  log "dumping to ${dump#"$ROOT/"}"
-  docker exec mycel-pg pg_dump -U mycel -d mycel --clean --if-exists >"$dump"
-  [[ -s $dump ]] || die "the dump came out empty — stopping before anything is removed"
-  log "dump is $(wc -l <"$dump") lines"
-
-  log "replacing the container"
-  docker stop mycel-pg >/dev/null
-  docker rm mycel-pg >/dev/null
-  start_containers
-  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
-
-  cmd_restore "$dump"
-
-  log "done — mycel-pg now stores data on mycel-pgdata"
-  log "the dump is kept at ${dump#"$ROOT/"}; the old anonymous volume is still there, unused"
-  log "list what is unused with: docker volume ls -f dangling=true"
-}
-
-# Load a dump back into Postgres. `relocate` calls this as its last step, and you can call
-# it yourself when something interrupted that — the container ends up on the right volume
-# with the schema but no rows, and the dump is still sitting in `.run/`.
-#
-# Defaults to the newest `relocate-*.sql`, because that is the one an interrupted move left
-# behind. The dump is `--clean --if-exists`, so loading it twice is not a problem.
-cmd_restore() {
-  local dump=${1:-}
-  if [[ -z $dump ]]; then
-    dump=$(ls -1t "$RUN"/relocate-*.sql 2>/dev/null | head -1 || true)
-    [[ -n $dump ]] || die "no dump in .run/ — pass one: scripts/stack.sh restore <file.sql>"
-  fi
-  [[ -s $dump ]] || die "$dump is missing or empty"
-
-  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
-  log "restoring ${dump#"$ROOT/"}"
-  docker exec -i mycel-pg psql -U mycel -d mycel -q <"$dump" >/dev/null
-  log "restored — $(docker exec mycel-pg psql -U mycel -d mycel -tAc \
-    'select count(*) from gold.work_item') rows in gold.work_item"
-}
-
 # The per-schema roles. Separate from `up` because it needs a superuser and because it is
 # not idempotent in the way `up` is — it revokes, and a deployment decides when to.
 #
@@ -381,17 +283,19 @@ cmd_restore() {
 # does the rest. `alembic upgrade head` first: `GRANT ... ON ALL TABLES` only reaches
 # tables that exist, and `ALTER DEFAULT PRIVILEGES` covers the ones a later migration adds.
 cmd_grants() {
-  local app_pw=${MYCEL_APP_PASSWORD:-} etl_pw=${MYCEL_ETL_PASSWORD:-}
+  local app_pw=${MYCEL_APP_PASSWORD:-} etl_pw=${MYCEL_ETL_PASSWORD:-} pg
   [[ -n $app_pw && -n $etl_pw ]] || die "set MYCEL_APP_PASSWORD and MYCEL_ETL_PASSWORD first"
 
-  wait_for postgres "docker exec mycel-pg pg_isready -U mycel"
+  pg=$(cid postgres)
+  [[ -n $pg ]] || die "postgres is not running — scripts/stack.sh up"
+  wait_for postgres "docker exec $pg pg_isready -U mycel"
   log "applying migrations first — grants only reach tables that exist"
   uv run alembic upgrade head
 
-  docker cp migrations/grants.sql mycel-pg:/tmp/grants.sql >/dev/null
-  docker exec mycel-pg psql -U mycel -d mycel \
+  docker cp migrations/grants.sql "$pg:/tmp/grants.sql" >/dev/null
+  docker exec "$pg" psql -U mycel -d mycel \
     -v app_password="$app_pw" -v etl_password="$etl_pw" -f /tmp/grants.sql
-  docker exec mycel-pg rm -f /tmp/grants.sql
+  docker exec "$pg" rm -f /tmp/grants.sql
   log "mycel_app reads gold and owns app; mycel_etl writes bronze, silver and gold"
 }
 
@@ -412,7 +316,5 @@ case "${1:-up}" in
   logs)     cmd_logs "${2:-}" ;;
   sync)     cmd_sync ;;
   grants)   cmd_grants ;;
-  relocate) cmd_relocate ;;
-  restore)  cmd_restore "${2:-}" ;;
-  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | grants | relocate | restore)" ;;
+  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | grants)" ;;
 esac

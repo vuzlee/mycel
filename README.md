@@ -53,6 +53,11 @@ scripts/stack.sh up       # containers, migrations, api, worker, scheduler
 One command, idempotent: starts what is down, leaves what is up, applies migrations, and
 waits until each service answers a real query rather than merely accepting TCP.
 
+The containers are `docker compose up -d postgres redis rabbitmq`. The API, the worker and
+the scheduler are not: they run on the host under `uv run`, so an edit is picked up without
+a rebuild. To run them in containers the way prod does, `docker compose --profile app up -d`
+and skip this script.
+
 | | |
 |---|---|
 | UI | http://localhost:8000/app — sign in at `/app/login` |
@@ -70,7 +75,7 @@ scripts/stack.sh down        # stop; named volumes keep the data
 All three host processes matter: no worker means `POST /reports` hands back a job id nobody
 picks up; no scheduler means nothing syncs until you run `sync` by hand.
 
-New Jira project? `scripts/seed_jira.py` fills it with this repo's own history, so the first
+New Jira project? `scripts/tools/seed_jira.py` fills it with this repo's own history, so the first
 sync doesn't read an empty board.
 
 ## Config

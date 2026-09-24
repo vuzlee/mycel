@@ -2210,9 +2210,39 @@ td[data-status="late"] {
   color: var(--faint);
 }
 
+/* Months across the top. The weekday labels say where you are inside a week and nothing
+   about WHICH week, so without these the grid is twelve anonymous columns. It sits in the
+   second column of the heatmap's own grid, so its cells line up with the weeks under it. */
+.board .heatmap .months {
+  grid-area: 1 / 2;
+  display: flex;
+  gap: 3px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.board .heatmap .months li {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* Explicit placement throughout. Auto-placement would put the weekday column in row one
+   beside the months, because the row the months occupy still has its first cell free. */
+.board .heatmap .weekdays {
+  grid-area: 2 / 1;
+}
+
 /* Every other weekday is unlabelled: seven labels beside thirteen-pixel rows is more
    type than grid, and the gaps are readable because the ones that are there are. */
 .board .heatmap .weeks {
+  grid-area: 2 / 2;
   display: flex;
   gap: 3px;
   margin: 0;
@@ -2270,7 +2300,7 @@ td[data-status="late"] {
 }
 
 .board .heatmap .scale {
-  grid-column: 2;
+  grid-area: 3 / 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
