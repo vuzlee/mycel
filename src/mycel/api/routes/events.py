@@ -47,16 +47,23 @@ async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[st
     a listener per type and silently drops any type it was not built for, which is the
     opposite of what the envelope's `type` field is for.
     """
-    # A run that finished before this connection opened has no events left to wait for.
-    # Redis keeps the stream under a TTL and loses it outright on restart, while `app.turn`
-    # keeps the answer — so without this the client subscribes to a key that will never
-    # receive anything, `xread` blocks until it times out, and the composer stays disabled
-    # on a question that was answered days ago. The record is the thing that outlives the
-    # stream, so it is what decides whether there is anything to follow.
+    # A run whose stream is gone has no events left to wait for. Redis keeps the stream
+    # under a TTL and loses it outright on restart, while `app.turn` keeps the answer — so
+    # without this the client subscribes to a key that will never receive anything, `xread`
+    # blocks until it times out, and the composer stays disabled on a question that was
+    # answered days ago.
+    #
+    # Both questions, not just the record. A run that finished a second ago also has a turn
+    # row, and its stream is still there holding every tool call it made — closing on the
+    # record alone would swallow the whole activity list of every run the reader watches.
     #
     # Only when the client is asking from the start. A reconnect carrying `Last-Event-ID`
     # is resuming a live run, and its remaining events are in the stream.
-    if after == streams.FIRST and await find_turn(job_id) is not None:
+    if (
+        after == streams.FIRST
+        and not await streams.exists(job_id)
+        and await find_turn(job_id) is not None
+    ):
         done = SequencedEvent(agent="system", type=RUN_FINISHED, seq=0)
         yield f"data: {done.model_dump_json()}\n\n"
         return

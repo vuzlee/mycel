@@ -334,22 +334,31 @@ class FakeRequest:
 
 
 async def _collect(
-    items: list[Any], request: Any, monkeypatch: pytest.MonkeyPatch, kept: Any = None
+    items: list[Any],
+    request: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    kept: Any = None,
+    stream: bool = True,
 ) -> list[str]:
     """Drive `_frames` over a canned stream instead of Redis.
 
-    `kept` is what `app.turn` holds for the job: `None` means a run still in flight, which
-    is the case every test here is about.
+    `kept` is what `app.turn` holds for the job and `stream` whether Redis still has the
+    key. The default pair — no record, stream present — is a run still in flight, which is
+    what most tests here are about.
     """
 
     async def fake_read(job_id: str, after: str = "0") -> Any:
         for item in items:
             yield item
 
+    async def fake_exists(job_id: str) -> bool:
+        return stream
+
     async def fake_find_turn(job_id: str) -> Any:
         return kept
 
     monkeypatch.setattr(events.streams, "read", fake_read)
+    monkeypatch.setattr(events.streams, "exists", fake_exists)
     monkeypatch.setattr(events, "find_turn", fake_find_turn)
     return [frame async for frame in events._frames(request, "job-1", "0")]
 
@@ -401,11 +410,11 @@ class TestAFinishedRunDoesNotBlock:
     question that was answered days ago.
     """
 
-    async def test_a_kept_turn_closes_the_stream_at_once(
+    async def test_a_kept_turn_with_no_stream_closes_at_once(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """One run_finished and nothing else — there is nothing left to wait for."""
-        frames = await _collect([], FakeRequest(), monkeypatch, kept=object())
+        frames = await _collect([], FakeRequest(), monkeypatch, kept=object(), stream=False)
 
         assert len(frames) == 1
         assert '"type":"run_finished"' in frames[0]
@@ -414,11 +423,33 @@ class TestAFinishedRunDoesNotBlock:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The blocking read is what hangs, so the fix has to be not reaching it."""
-        frames = await _collect([("1-0", SequencedEvent(seq=1, agent="a", type="text"))],
-                                FakeRequest(), monkeypatch, kept=object())
+        frames = await _collect(
+            [("1-0", SequencedEvent(seq=1, agent="a", type="text"))],
+            FakeRequest(),
+            monkeypatch,
+            kept=object(),
+            stream=False,
+        )
 
         assert len(frames) == 1
         assert '"type":"run_finished"' in frames[0]
+
+    async def test_a_run_that_just_finished_still_replays_its_tool_calls(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The record alone is not enough to close on (MYC-63).
+
+        A finished run has a turn row within milliseconds, and its stream is still there. A
+        reader opening the page a moment later has to see the calls the run made — closing
+        on the row would leave every answer with an empty middle.
+        """
+        called = SequencedEvent(seq=1, agent="analyst", type=TOOL_CALLED, payload={"tool": "sql"})
+        frames = await _collect(
+            [("1-0", called)], FakeRequest(), monkeypatch, kept=object(), stream=True
+        )
+
+        assert len(frames) == 1
+        assert '"type":"tool_called"' in frames[0]
 
 
 class TestATurnKeepsItsToolCalls:

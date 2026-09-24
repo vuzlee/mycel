@@ -23,6 +23,16 @@ def _seq_key(job_id: str) -> str:
     return f"mycel:events:{job_id}:seq"
 
 
+async def exists(job_id: str) -> bool:
+    """Whether the job's stream is still there.
+
+    A run whose answer is kept but whose stream is gone has nothing left to send; a run that
+    just finished still has every event in the stream, and replaying them is the only way a
+    reader sees what it called. Telling those apart needs this question, not the record.
+    """
+    client = await get_client()
+    return bool(await client.exists(_key(job_id)))
+
 async def append(job_id: str, event: SequencedEvent) -> None:
     """Add one event and refresh the stream's expiry."""
     settings = get_settings()
