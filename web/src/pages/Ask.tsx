@@ -17,7 +17,7 @@
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Turn } from "../api";
 import { askChat, fetchTurns } from "../api";
@@ -132,6 +132,29 @@ export function Ask() {
 
   const failure = refused ?? run.failure;
 
+
+  // Asking sends the view to the question just asked, and only then. One move per run, at
+  // the moment there is a reason to move: the question goes to the top, the answer writes
+  // itself into the room below it, and from then on the scroll is the reader's. Nothing
+  // follows the text — a view that re-anchored on every token would be taking the page
+  // back from whoever is reading it, dozens of times a run.
+  //
+  // The top rather than the bottom. The work happens below the question, so the top is
+  // where the room is; sending it to the bottom would pin it to the last line and push it
+  // off screen again at the first tool call.
+  //
+  // Layout effect, and after the earlier turns are in: they are what the new turn's offset
+  // is measured from, and an effect that runs before they render scrolls to a position
+  // that stops existing one frame later.
+  const landed = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (jobId === null || question === null) return;
+    if (landed.current === jobId) return;
+    const node = document.getElementById(anchorFor(jobId));
+    if (!node) return;
+    landed.current = jobId;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [jobId, question, past]);
 
   // One entry per turn, the question as its own label. Trimmed rather than named by a
   // model: the question is already the name of the turn, and it costs nothing.

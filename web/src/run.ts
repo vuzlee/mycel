@@ -78,8 +78,8 @@ export function useRun(jobId: string | null): Run {
   }, [jobId, forget]);
 
   const busy = stream.state === "running";
-  // Follows the bottom while the reader is at the bottom, and lets go the moment they
-  // scroll up. See `useFollow` for why that second half is what makes the first bearable.
+  // Only measures the distance to the bottom and offers the jump. Asking scrolls the new
+  // question to the top, once, in `Ask`; nothing follows the text after that.
   const follow = useFollow();
 
   return {

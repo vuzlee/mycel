@@ -14,10 +14,10 @@ import { Sidebar } from "./Sidebar";
 interface Props {
   /** Job id of the run on screen, so the rail can mark its row. */
   current?: string | null;
-  /** Passed to the scrolling body, which follows the run unless the reader scrolls up. */
+  /** Passed to the scrolling body, so the jump button knows how far the bottom is. */
   scrollRef?: (node: HTMLDivElement | null) => void;
-  /** Offered only while the bottom is off screen, which now means the reader scrolled
-   *  up and following stopped. Pressing it resumes following, not just this one jump. */
+  /** Offered only while the bottom is off screen. Nothing scrolls on its own, so this is
+   *  the only thing that offers to. */
   jump?: () => void;
   children: React.ReactNode;
   /** Below the scroll area, outside it: the composer, where a page has one. */
