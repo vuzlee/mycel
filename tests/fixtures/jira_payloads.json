@@ -149,6 +149,12 @@
             "colorName": "green",
             "name": "Done"
           }
+        },
+        "priority": {
+          "self": "https://example.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://example.atlassian.net/images/icons/priorities/high.svg",
+          "name": "High",
+          "id": "2"
         }
       }
     },
@@ -248,6 +254,12 @@
             "colorName": "green",
             "name": "Done"
           }
+        },
+        "priority": {
+          "self": "https://example.atlassian.net/rest/api/3/priority/2",
+          "iconUrl": "https://example.atlassian.net/images/icons/priorities/high.svg",
+          "name": "High",
+          "id": "2"
         }
       }
     }

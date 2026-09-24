@@ -1,6 +1,10 @@
 /**
  * Where you are, and everything you have run.
  *
+ * Two destinations above the history and one list below it: a new chat, the board, and
+ * every thread. The board is not a thread and never appears in that list — it has no
+ * history of its own, it is the same screen every time you open it.
+ *
  * The history comes from `GET /conversations` now, not `localStorage`: it is the same
  * list on a second machine, which is the whole reason it moved to Postgres.
  *
@@ -13,11 +17,11 @@
  */
 
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Thread } from "../api";
 import { useThreads } from "../threads";
 import { Account } from "./Account";
-import { Close, Mycelium, Plus, Trash } from "./icons";
+import { Bars, Close, Mycelium, Plus, Trash } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -29,6 +33,7 @@ interface Props {
 export function Sidebar({ current, open, onClose }: Props) {
   const { threads, forget } = useThreads();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   // Every thread reopens at `/`. There is one page and one kind of thread since batch
   // 033, so `kind` is not consulted — the job id is the whole address.
@@ -71,7 +76,24 @@ export function Sidebar({ current, open, onClose }: Props) {
           }}
         >
           <Plus />
-          New run
+          New chat
+        </button>
+
+        {/* The one screen in the app that is not a conversation, so it sits with the
+            button that starts one rather than among the threads below — a board is not a
+            thing you have a history of. No project in the link: the page picks the first
+            one you may read and writes it into the URL, which is what makes a board a
+            link worth keeping once you have picked. */}
+        <button
+          className="board-link"
+          aria-current={pathname === "/dashboard"}
+          onClick={() => {
+            navigate("/dashboard");
+            onClose();
+          }}
+        >
+          <Bars />
+          Dashboard
         </button>
 
         <h2 className="label">Recent</h2>

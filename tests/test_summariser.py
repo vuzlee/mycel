@@ -57,6 +57,7 @@ def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
         "title": "dựng dashboard",
         "status": "In Progress",
         "status_category": "doing",
+        "priority": "Medium",
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
         "original_estimate_seconds": 2 * SECONDS_PER_DAY,

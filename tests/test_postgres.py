@@ -36,7 +36,7 @@ from mycel.infra.postgres.repositories.gold import (
     WorklogRow,
 )
 from mycel.infra.postgres.repositories.silver import SilverRepository
-from mycel.services.dashboard import build_dashboard
+from mycel.services.dashboard import RECENT_LIMIT, build_dashboard
 from mycel.services.gather import gather_progress
 from mycel.services.transform import TransformResult, transform
 
@@ -116,6 +116,7 @@ def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
         "title": "Postgres schemas and alembic migrations",
         "status": "In Progress",
         "status_category": "doing",
+        "priority": "Medium",
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
         "original_estimate_seconds": 2 * SECONDS_PER_DAY,
@@ -815,6 +816,169 @@ class TestTheDashboard:
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
         assert board.totals == {"todo": 0, "doing": 0, "done": 0}
         assert (board.assignees, board.epics, board.overdue) == ([], [], [])
+
+
+@needs_postgres
+class TestTheThreeBlocksBatch040Added:
+    """Priority, kind and the activity feed. All three are whole-project on purpose."""
+
+    async def test_priorities_count_only_unfinished_work(self, session: AsyncSession) -> None:
+        """A shipped Highest is not backlog pressure.
+
+        The block answers "what should be picked up next", and a finished ticket has no
+        next. Counting done work here would make a team that cleared its urgent tickets
+        look like it is drowning in them.
+        """
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", priority="Highest"),
+                _item("MYC-8", priority="Highest", status_category="done"),
+                _item("MYC-9", priority="Low"),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert board.priorities["Highest"] == 1
+        assert board.priorities["Low"] == 1
+
+    async def test_every_jira_priority_gets_a_row_zeroes_included(
+        self, session: AsyncSession
+    ) -> None:
+        """A fixed set of keys, so the page renders a fixed set of bars."""
+        await GoldRepository(session).upsert_items([_item("MYC-7", priority="High")])
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert list(board.priorities)[:5] == ["Highest", "High", "Medium", "Low", "Lowest"]
+        assert board.priorities["Lowest"] == 0
+
+    async def test_an_item_with_no_priority_is_counted_not_dropped(
+        self, session: AsyncSession
+    ) -> None:
+        """A site that hides the field is an ordinary configuration, not missing data."""
+        await GoldRepository(session).upsert_items([_item("MYC-7", priority=None)])
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert board.priorities["None"] == 1
+
+    async def test_a_site_renaming_its_scheme_still_shows(self, session: AsyncSession) -> None:
+        """Kept and appended, rather than dropped to fit Jira's five."""
+        await GoldRepository(session).upsert_items([_item("MYC-7", priority="Blocker")])
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert board.priorities["Blocker"] == 1
+
+    async def test_kinds_are_the_whole_project_largest_first(
+        self, session: AsyncSession
+    ) -> None:
+        """What a team's work is made of does not change because a week was quiet."""
+        await GoldRepository(session).upsert_items(
+            [
+                _epic(),
+                _item("MYC-7", kind="task", updated_at=_at(2)),
+                _item("MYC-8", kind="task", status_category="done"),
+                _item("MYC-9", kind="story"),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert [(k.kind, k.items, k.done) for k in board.kinds] == [
+            ("task", 2, 1),
+            ("epic", 1, 0),
+            ("story", 1, 0),
+        ]
+
+    async def test_the_feed_is_newest_first_and_ignores_the_window(
+        self, session: AsyncSession
+    ) -> None:
+        """The one block where an empty window would be a lie.
+
+        "Nothing happened" is what a reader concludes from an empty feed, when the truth
+        is that the last thing to happen was a fortnight ago and is worth naming.
+        """
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", updated_at=_at(2)),
+                _item("MYC-8", updated_at=_at(19)),
+                _item("MYC-9", updated_at=_at(11)),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert [r.issue_key for r in board.recent] == ["MYC-8", "MYC-9", "MYC-7"]
+
+    async def test_the_feed_is_capped(self, session: AsyncSession) -> None:
+        """A glance, not a table to scroll."""
+        await GoldRepository(session).upsert_items(
+            [_item(f"MYC-{n}", updated_at=_at(2, n)) for n in range(1, RECENT_LIMIT + 4)]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert len(board.recent) == RECENT_LIMIT
+
+
+@needs_postgres
+class TestTheHeatmap:
+    """`activity_by_day`: twelve weeks of whether anything happened at all.
+
+    The only block on the board that is not a snapshot. Every other one answers "how does
+    it stand now"; this answers "was anyone working", which a count of open tickets cannot
+    tell you either way.
+    """
+
+    async def test_a_day_is_counted_by_when_it_was_touched(
+        self, session: AsyncSession
+    ) -> None:
+        """Two items updated the same day are one cell worth two, not two cells."""
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", updated_at=_at(18, 9)),
+                _item("MYC-8", updated_at=_at(18, 17)),
+                _item("MYC-9", updated_at=_at(19)),
+            ]
+        )
+
+        counted = await GoldRepository(session).activity_by_day(PROJECT, _at(1))
+        assert [(d.day.isoformat(), d.items) for d in counted] == [
+            ("2026-09-18", 2),
+            ("2026-09-19", 1),
+        ]
+
+    async def test_a_quiet_day_gets_no_row_at_all(self, session: AsyncSession) -> None:
+        """Absent, not zero.
+
+        The grid draws its own calendar and has to fill the gaps regardless, so sending
+        three months of zeroes to say nothing happened is the wrong shape for the wire.
+        """
+        await GoldRepository(session).upsert_items([_item("MYC-7", updated_at=_at(18))])
+
+        counted = await GoldRepository(session).activity_by_day(PROJECT, _at(1))
+        assert [d.day.isoformat() for d in counted] == ["2026-09-18"]
+
+    async def test_it_reaches_further_back_than_the_window(
+        self, session: AsyncSession
+    ) -> None:
+        """Its own span, or a heatmap of seven cells is a bar chart wearing a grid."""
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", updated_at=_at(2)),
+                _item("MYC-8", updated_at=_at(20)),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert {d.day.isoformat() for d in board.activity} == {"2026-09-02", "2026-09-20"}
+
+    async def test_it_counts_items_not_logged_effort(self, session: AsyncSession) -> None:
+        """A team that ships without filling in worklogs still shows as working.
+
+        `effort_by_day` reads worklogs and answers a different question: not whether the
+        project moved, but how many hours went into it.
+        """
+        await GoldRepository(session).upsert_items([_item("MYC-7", updated_at=_at(18))])
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert board.effort_by_day == []
+        assert [(d.day.isoformat(), d.items) for d in board.activity] == [("2026-09-18", 1)]
 
 
 @needs_postgres

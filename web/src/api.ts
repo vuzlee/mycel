@@ -69,10 +69,20 @@ export interface Item {
   title: string;
   status: string;
   status_category: string;
+  /** The site's own word for it, or null where Jira hides the field. Never a rank. */
+  priority: string | null;
   assignee_name: string | null;
   original_estimate_seconds: number | null;
   time_spent_seconds: number | null;
   due_at: string | null;
+  updated_at: string | null;
+}
+
+/** One kind of work in the project, and how much of it is finished. */
+export interface Kind {
+  kind: string;
+  items: number;
+  done: number;
 }
 
 /** One person's load. `gap_seconds` is spent minus estimated: positive means over. */
@@ -99,6 +109,12 @@ export interface Epic {
   moved_done: number;
 }
 
+/** One day of the heatmap: how many items were touched. */
+export interface DayActivity {
+  day: string;
+  items: number;
+}
+
 export interface Dashboard {
   project: string;
   since: string;
@@ -107,6 +123,13 @@ export interface Dashboard {
   percent: number;
   all_totals: Record<string, number>;
   totals: Record<string, number>;
+  /** Unfinished items by priority name, whole project. Done work is left out. */
+  priorities: Record<string, number>;
+  kinds: Kind[];
+  /** The last items to move, newest first. Whole project, not the window. */
+  recent: Item[];
+  /** Items touched per day over the last twelve weeks. Days with none are absent. */
+  activity: DayActivity[];
   overdue: Item[];
   assignees: Assignee[];
   epics: Epic[];

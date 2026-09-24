@@ -43,6 +43,7 @@ FIELDS = (
     "summary",
     "issuetype",
     "status",
+    "priority",
     "parent",
     "assignee",
     "duedate",

@@ -68,6 +68,7 @@ def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None
         status_category=CATEGORIES.get(
             str((status.get("statusCategory") or {}).get("key", "")).lower(), "todo"
         ),
+        priority=_priority(fields.get("priority")),
         assignee_account_id=assignee.get("accountId"),
         assignee_name=assignee.get("displayName"),
         original_estimate_seconds=_seconds(
@@ -106,6 +107,16 @@ def from_jira_worklog(payload: dict[str, Any], project: str) -> WorklogRow | Non
         comment=_text(payload.get("comment")),
     )
 
+
+def _priority(value: Any) -> str | None:
+    """Jira's priority object, reduced to its name.
+
+    The site's own word, not a rank: one team's "Blocker" is another's "Highest", and a
+    number here would have to invent a mapping that only the UI could undo. None when the
+    field is hidden on the site, which is a normal configuration rather than missing data.
+    """
+    name = (value or {}).get("name") if isinstance(value, dict) else None
+    return str(name) if name else None
 
 def _stamp(value: Any) -> datetime | None:
     """Jira's timestamps: ISO 8601 with a `+0000` offset Python needs a colon in."""

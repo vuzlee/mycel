@@ -11,7 +11,7 @@ survives a broker is `test_queue.py`'s.
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -28,9 +28,17 @@ from mycel.core.config import Settings
 from mycel.core.exceptions import ConfigError
 from mycel.domains.threads import Thread
 from mycel.infra.postgres.repositories.app import ConversationRow, TurnRow
+from mycel.infra.postgres.repositories.gold import (
+    AssigneeLoad,
+    DayCount,
+    DayEffort,
+    KindTally,
+    WorkItemRow,
+)
 from mycel.infra.redis.results import JobResult
 from mycel.llm.budget import BudgetExceeded
 from mycel.services.auth import Principal
+from mycel.services.dashboard import Dashboard, EpicProgress
 
 #: Who every request in this file is made by. Signing in for real would need a database,
 #: which is `test_auth.py`'s subject — here the shell is under test, not the login.
@@ -498,6 +506,200 @@ class TestTheThingsThatFailSilently:
         assert publish_span.context.trace_id == http_span.context.trace_id
 
         trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+
+
+class TestTheBoard:
+    """`GET /dashboard/{project}`: counting queries, answered inside the request.
+
+    Nothing here reaches a database — `build_dashboard` is `test_postgres.py`'s subject.
+    What is under test is the route: that permission is checked before anything is read,
+    that seconds stay seconds, and that a window is a parameter with a ceiling.
+    """
+
+    def _answers(self, monkeypatch: pytest.MonkeyPatch, board: Dashboard) -> None:
+        async def fake_get(project: str, days: int = 7) -> Dashboard:
+            return board
+
+        async def allowed(user: Principal, project: str) -> bool:
+            return True
+
+        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
+        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", allowed)
+
+    def _late(self) -> WorkItemRow:
+        """One story, past its due date and still in progress — the row the screen is for."""
+        return WorkItemRow(
+            source="jira",
+            project="MYC",
+            issue_id="7",
+            issue_key="MYC-7",
+            kind="story",
+            parent_key="MYC-6",
+            title="dựng dashboard",
+            status="In Progress",
+            status_category="doing",
+            priority="Highest",
+            assignee_account_id="acct-1",
+            assignee_name="Dev One",
+            original_estimate_seconds=2 * 8 * 3600,
+            time_spent_seconds=3 * 8 * 3600,
+            due_at=datetime(2026, 9, 16, tzinfo=UTC),
+            created_at=datetime(2026, 9, 14, tzinfo=UTC),
+            resolved_at=None,
+            labels=[],
+            updated_at=datetime(2026, 9, 20, tzinfo=UTC),
+        )
+
+    def _board(self, **kw: object) -> Dashboard:
+        until = datetime(2026, 9, 21, tzinfo=UTC)
+        fields: dict[str, object] = {
+            "project": "MYC",
+            "since": until - timedelta(days=7),
+            "until": until,
+            "totals": {"todo": 1, "doing": 1, "done": 2},
+            "all_totals": {"todo": 2, "doing": 1, "done": 5},
+            "priorities": {"Highest": 1, "High": 0, "Medium": 2, "Low": 0, "Lowest": 0},
+            "kinds": [KindTally(kind="story", items=5, done=3)],
+            "recent": [self._late()],
+            "overdue": [self._late()],
+            "assignees": [
+                AssigneeLoad(
+                    account_id="acct-1",
+                    name="Dev One",
+                    items=3,
+                    done=2,
+                    estimated_seconds=2 * 8 * 3600,
+                    spent_seconds=3 * 8 * 3600,
+                )
+            ],
+            "epics": [
+                EpicProgress(
+                    issue_key="MYC-6",
+                    title="Pipeline and storage",
+                    status_category="doing",
+                    items=4,
+                    done=3,
+                    moved=3,
+                    moved_done=2,
+                )
+            ],
+            "effort_by_day": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
+            "activity": [DayCount(day=date(2026, 9, 18), items=4)],
+        }
+        return Dashboard(**{**fields, **kw})  # type: ignore[arg-type]
+
+    def test_the_numbers_come_back(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["totals"] == {"todo": 1, "doing": 1, "done": 2}
+        assert body["assignees"][0]["name"] == "Dev One"
+        assert body["epics"][0]["issue_key"] == "MYC-6"
+
+    def test_a_late_ticket_is_visible_without_hunting(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Overdue is its own list, not a flag somebody has to go looking for."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert [item["issue_key"] for item in body["overdue"]] == ["MYC-7"]
+        assert body["overdue"][0]["title"] == "dựng dashboard"
+
+    def test_the_gap_is_reported_in_seconds(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Spent minus estimated, and gold's own unit. Days are the page's decision."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["assignees"][0]["gap_seconds"] == 8 * 3600
+
+    def test_effort_is_a_curve_over_days(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """From worklogs, so a back-filled project still has an honest time series."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["effort_by_day"] == [{"day": "2026-09-18", "seconds": 5 * 3600}]
+
+    def test_the_three_blocks_batch_040_added_reach_the_page(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Priority, kind and the feed. The feed carries `updated_at`, which is what makes
+        it a feed rather than a second list of tickets."""
+        self._answers(monkeypatch, self._board())
+        body = client.get("/dashboard/MYC").json()
+
+        assert body["priorities"]["Highest"] == 1
+        assert body["kinds"] == [{"kind": "story", "items": 5, "done": 3}]
+        assert body["recent"][0]["updated_at"].startswith("2026-09-20")
+        assert body["recent"][0]["priority"] == "Highest"
+
+    def test_a_project_with_no_data_is_empty_not_missing(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A project set up but not yet synced is a normal state, not a 404."""
+        self._answers(
+            monkeypatch,
+            self._board(
+                totals={"todo": 0, "doing": 0, "done": 0},
+                priorities={},
+                kinds=[],
+                recent=[],
+                overdue=[],
+                assignees=[],
+                epics=[],
+                effort_by_day=[],
+            ),
+        )
+        response = client.get("/dashboard/MYC")
+
+        assert response.status_code == 200
+        assert response.json()["assignees"] == []
+
+    def test_the_window_is_a_parameter(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: dict[str, int] = {}
+
+        async def fake_get(project: str, days: int = 7) -> Dashboard:
+            seen["days"] = days
+            return self._board()
+
+        async def allowed(user: Principal, project: str) -> bool:
+            return True
+
+        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
+        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", allowed)
+        client.get("/dashboard/MYC?days=30")
+        assert seen["days"] == 30
+
+    def test_an_absurd_window_is_refused(self, client: TestClient) -> None:
+        """A year on one screen is an export, not a dashboard."""
+        assert client.get("/dashboard/MYC?days=4000").status_code == 422
+
+    def test_someone_elses_project_is_refused_before_it_is_read(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Permission is checked first, so a 403 costs no query."""
+        read: list[str] = []
+
+        async def fake_get(project: str, days: int = 7) -> Dashboard:
+            read.append(project)
+            return self._board()
+
+        async def refused(user: Principal, project: str) -> bool:
+            return False
+
+        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
+        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", refused)
+
+        assert client.get("/dashboard/MYC").status_code == 403
+        assert read == []
 
 
 class TestTheLists:

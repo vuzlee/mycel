@@ -9,17 +9,29 @@ same question is how they start to.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.repositories.gold import (
     AssigneeLoad,
+    DayCount,
     DayEffort,
     GoldRepository,
+    KindTally,
     WorkItemRow,
 )
 from mycel.services.gather import gather_progress
+
+#: Rows in the activity feed. Enough that a reader sees a shape rather than a headline,
+#: short enough to stay a glance rather than a table to scroll.
+RECENT_LIMIT = 12
+
+#: How far back the heatmap reaches, regardless of the chosen window. Twelve weeks is the
+#: shortest span in which a rhythm is visible — a quiet fortnight reads as a quiet
+#: fortnight rather than as a stopped project — and it is a fixed grid, so it must not
+#: change shape when the window buttons are pressed.
+HEATMAP_DAYS = 84
 
 
 @dataclass(frozen=True)
@@ -70,6 +82,17 @@ class Dashboard:
     assignees: list[AssigneeLoad]
     epics: list[EpicProgress]
     effort_by_day: list[DayEffort]
+    #: Unfinished items by priority, whole project. Done work is excluded on purpose —
+    #: see `GoldRepository.count_by_priority`.
+    priorities: dict[str, int]
+    #: What the project's work is made of, largest kind first. Whole project.
+    kinds: list[KindTally]
+    #: The last things to move, newest first. Whole project rather than the window: a
+    #: window with nothing in it reads as a dead project instead of a quiet fortnight.
+    recent: list[WorkItemRow]
+    #: Items touched per day over `HEATMAP_DAYS`, oldest first, days with nothing left
+    #: out. Its own span, not the window: a heatmap of seven cells is a bar chart.
+    activity: list[DayCount]
 
     @property
     def percent(self) -> int:
@@ -121,6 +144,10 @@ async def build_dashboard(
             for epic in epics
         ],
         effort_by_day=window.effort_by_day,
+        priorities=await gold.count_by_priority(project),
+        kinds=await gold.count_by_kind(project),
+        recent=await gold.recently_updated(project, RECENT_LIMIT),
+        activity=await gold.activity_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
     )
 
 

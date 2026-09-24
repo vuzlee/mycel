@@ -23,6 +23,15 @@ from mycel.infra.postgres.models import WorkItem, Worklog
 #: a missing key means.
 CATEGORIES = ("todo", "doing", "done")
 
+#: Jira's default priority scheme, most urgent first. A site that renamed or added one
+#: still counts: an unrecognised name is kept and sorted after these, and an issue with no
+#: priority is counted under `UNPRIORITISED` rather than dropped.
+PRIORITIES = ("Highest", "High", "Medium", "Low", "Lowest")
+
+#: What an item with no priority set is counted as. A name rather than None, because the
+#: caller is a chart and a bar needs a label.
+UNPRIORITISED = "None"
+
 #: What one work item is worth in a day, for turning seconds into man-days. Jira's own
 #: default working day, and the unit a plan is actually discussed in.
 SECONDS_PER_DAY = 8 * 3600
@@ -41,6 +50,7 @@ class WorkItemRow:
     title: str
     status: str
     status_category: str
+    priority: str | None
     assignee_account_id: str | None
     assignee_name: str | None
     original_estimate_seconds: int | None
@@ -94,6 +104,22 @@ class AssigneeLoad:
         """Spent minus estimated. Positive means over, which is the number nobody has."""
         return self.spent_seconds - self.estimated_seconds
 
+
+@dataclass(frozen=True)
+class KindTally:
+    """How much work of one kind there is, and how much of it is finished."""
+
+    kind: str
+    items: int
+    done: int
+
+
+@dataclass(frozen=True)
+class DayCount:
+    """How many items were touched on one day. The heatmap's cell."""
+
+    day: date
+    items: int
 
 @dataclass(frozen=True)
 class DayEffort:
@@ -280,6 +306,93 @@ class GoldRepository:
             for d, seconds in (await self._session.execute(query)).all()
         ]
 
+    async def activity_by_day(self, project: str, since: datetime) -> list[DayCount]:
+        """Items touched per day, oldest first. Days with nothing get no row.
+
+        Counted from `updated_at` rather than from worklogs, because this answers a
+        different question than `effort_by_day` does: not how many hours went in, but
+        whether the project was moving at all. A team that logs no time still ships.
+
+        Absent days are left out rather than returned as zeroes — a heatmap draws its own
+        calendar and has to fill the gaps anyway, and sending three months of zeroes to
+        say nothing happened is the wrong shape for the wire.
+        """
+        day = func.date(WorkItem.updated_at).label("day")
+        query = (
+            select(day, func.count())
+            .where(WorkItem.project == project, WorkItem.updated_at >= since)
+            .group_by(day)
+            .order_by(day)
+        )
+        return [
+            DayCount(day=d, items=int(n))
+            for d, n in (await self._session.execute(query)).all()
+        ]
+
+    async def count_by_priority(self, project: str) -> dict[str, int]:
+        """Unfinished items by priority, whole project. Every known priority, zeroes included.
+
+        Unfinished rather than all: the question a priority answers is "what should be
+        picked up next", and a finished item has no next. Counting done work here would
+        make a project that shipped its urgent tickets look like it is drowning in them.
+
+        Whole project rather than a window, for the same reason `overdue` is: a Highest
+        nobody has touched in a month is exactly the one worth seeing.
+        """
+        query = (
+            select(WorkItem.priority, func.count())
+            .where(WorkItem.project == project, WorkItem.status_category != "done")
+            .group_by(WorkItem.priority)
+        )
+        # Grouped on the raw column and renamed here, not `coalesce`d in SQL: Postgres
+        # compares a GROUP BY expression to the selected one textually, and SQLAlchemy
+        # gives the two `coalesce` calls separate bind parameters, so they do not match.
+        counted = {
+            (UNPRIORITISED if p is None else str(p)): int(n)
+            for p, n in (await self._session.execute(query)).all()
+        }
+        # Jira's own order first, then whatever the site added, so a renamed scheme still
+        # shows rather than being silently dropped to fit a fixed list.
+        known = {name: counted.pop(name, 0) for name in PRIORITIES}
+        return {**known, **counted}
+
+    async def count_by_kind(self, project: str) -> list[KindTally]:
+        """Every kind of work in the project, largest first, with how much is finished.
+
+        Whole project: a breakdown of what this team's work is *made of* does not change
+        because a week was quiet, and reading it through a window says it does.
+        """
+        query = (
+            select(
+                WorkItem.kind,
+                func.count(),
+                func.count().filter(WorkItem.status_category == "done"),
+            )
+            .where(WorkItem.project == project)
+            .group_by(WorkItem.kind)
+        )
+        rows = [
+            KindTally(kind=str(kind), items=int(items), done=int(done))
+            for kind, items, done in (await self._session.execute(query)).all()
+        ]
+        return sorted(rows, key=lambda r: (-r.items, r.kind))
+
+    async def recently_updated(self, project: str, limit: int) -> list[WorkItemRow]:
+        """The last things to move, newest first, whole project.
+
+        Not windowed, unlike everything else that reads `updated_at`. A window that turns
+        up empty is an answer for a count and a wrong one here: "nothing happened" is what
+        a reader concludes about the project, when the truth is that the last thing to
+        happen was eight days ago and is worth naming.
+        """
+        query = (
+            select(WorkItem)
+            .where(WorkItem.project == project)
+            .order_by(WorkItem.updated_at.desc())
+            .limit(limit)
+        )
+        return [_item(row) for row in await self._session.scalars(query)]
+
     async def totals_all_time(self, project: str) -> dict[str, int]:
         """Every item in the project by category, no window. Every category, zeroes included.
 
@@ -336,6 +449,7 @@ def _item(row: WorkItem) -> WorkItemRow:
         title=row.title,
         status=row.status,
         status_category=row.status_category,
+        priority=row.priority,
         assignee_account_id=row.assignee_account_id,
         assignee_name=row.assignee_name,
         original_estimate_seconds=row.original_estimate_seconds,

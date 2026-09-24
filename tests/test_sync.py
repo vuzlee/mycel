@@ -83,6 +83,7 @@ def _item(**kw: Any) -> WorkItemRow:
         "title": "Postgres schemas and alembic migrations",
         "status": "Done",
         "status_category": "done",
+        "priority": "Medium",
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
         "original_estimate_seconds": 57600,
@@ -366,6 +367,19 @@ class TestNormalisingAnIssue:
         row = from_jira_issue({**payload, "fields": fields}, PROJECT)
         assert row is not None
         assert row.original_estimate_seconds == 3600
+
+    def test_the_priority_is_kept_as_the_sites_own_name(self) -> None:
+        """A name, not a rank: one site's "Blocker" is another's "Highest"."""
+        row = from_jira_issue(_issue("MYC-7"), PROJECT)
+        assert row is not None
+        assert row.priority == "High"
+
+    def test_a_hidden_priority_field_is_none_not_a_guess(self) -> None:
+        """An ordinary configuration. Inventing a Medium here would put work in a bar
+        nobody put it in."""
+        row = from_jira_issue(_issue("MYC-6"), PROJECT)
+        assert row is not None
+        assert row.priority is None
 
     def test_an_unknown_issue_type_becomes_a_task(self) -> None:
         payload = _issue("MYC-7")

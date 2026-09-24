@@ -30,11 +30,28 @@
 
   /* Jira's status categories, as colours, plus the one state it has no category for.
      Tokens rather than literals because the dashboard they came from hardcoded a green
-     and a red that were invisible in dark mode. */
-  --todo: #6b6380;
-  --doing: #a8762a;
-  --done: #3f7d58;
-  --late: #b2453c;
+     and a red that were invisible in dark mode.
+
+     Chosen against the violet, not against a traffic light. A signal colour only has to
+     be *distinct*; nothing makes it have to be the reddest red available, and a page
+     built on one low-chroma hue is exactly where a saturated green and a fire-engine red
+     look borrowed from another product. So: teal for done (cool, a neighbour of the
+     violet), gold for in-progress (its complement, and the page's one warm note), rose
+     for late (the same family as `--flag`, alarming without shouting). All held at a
+     chroma near the accent's, which is what makes them read as one set. */
+  --todo: #837b98;
+  --doing: #b5813c;
+  --done: #3f8279;
+  --late: #b14a72;
+
+  /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
+     accent: a translucent cell picks up whatever is behind it, and these sit on two
+     different surfaces. */
+  --heat-0: #f1eef7;
+  --heat-1: #ded4f4;
+  --heat-2: #bda6ea;
+  --heat-3: #9570dc;
+  --heat-4: #6d3fd1;
 
   --shadow-sm: 0 1px 2px rgb(23 20 31 / 0.05);
   --shadow-md: 0 4px 16px -4px rgb(23 20 31 / 0.1), 0 1px 3px rgb(23 20 31 / 0.05);
@@ -84,10 +101,16 @@
     --flag: #f090b4;
     --flag-soft: #2a1520;
 
-    --todo: #8f87a3;
-    --doing: #e0b05c;
-    --done: #6fc894;
-    --late: #f4867c;
+    --todo: #938ba8;
+    --doing: #dcae63;
+    --done: #63c4b6;
+    --late: #ef8fb2;
+
+    --heat-0: #17131f;
+    --heat-1: #2b2242;
+    --heat-2: #463869;
+    --heat-3: #6e57a8;
+    --heat-4: #b79cff;
 
     --shadow-sm: none;
     --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -119,10 +142,16 @@
   --flag: #f090b4;
   --flag-soft: #2a1520;
 
-  --todo: #8f87a3;
-  --doing: #e0b05c;
-  --done: #6fc894;
-  --late: #f4867c;
+  --todo: #938ba8;
+  --doing: #dcae63;
+  --done: #63c4b6;
+  --late: #ef8fb2;
+
+  --heat-0: #17131f;
+  --heat-1: #2b2242;
+  --heat-2: #463869;
+  --heat-3: #6e57a8;
+  --heat-4: #b79cff;
 
   --shadow-sm: none;
   --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -277,7 +306,7 @@ a.brand:hover .mark {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 12px 20px;
+  margin: 0 12px 6px;
   padding: 9px 12px;
   border-radius: var(--radius);
   border: 1px solid var(--rule-2);
@@ -302,6 +331,31 @@ a.brand:hover .mark {
   font-family: var(--mono);
   font-size: 10.5px;
   color: var(--faint);
+}
+
+/* The board link is a destination, not an action, so it is quieter than the button above
+   it: no border, no surface, no shadow. Lit only when you are on it. */
+.board-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 24px);
+  margin: 0 12px 20px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.board-link:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.board-link[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .rail h2 {
@@ -1715,7 +1769,7 @@ button.primary:disabled {
    screen with room for two abreast. */
 .board .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   align-items: start;
 }
@@ -1741,7 +1795,15 @@ button.primary:disabled {
   margin-bottom: 0;
 }
 
-@media (max-width: 900px) {
+/* Three abreast needs the width for three; below that two, then one. A bar chart in a
+   quarter-width column is a set of stubs. */
+@media (max-width: 1180px) {
+  .board .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
   .board .grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1804,12 +1866,26 @@ button.primary:disabled {
   gap: 10px;
 }
 
+/* No border and no second background: these already sit inside a bordered block, and a
+   card inside a card is the thing that makes a dashboard look busy. A tinted left rule
+   carries the status instead, which is one mark rather than a whole frame. */
 .board .total {
   flex: 1;
-  padding: 14px 16px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
+  min-width: 0;
+  padding: 10px 0 10px 12px;
+  border-left: 2px solid var(--rule-2);
+}
+
+.board .total[data-status="done"] {
+  border-left-color: var(--done);
+}
+
+.board .total[data-status="doing"] {
+  border-left-color: var(--doing);
+}
+
+.board .total[data-status="todo"] {
+  border-left-color: var(--todo);
 }
 
 .board .total b {
@@ -1990,6 +2066,310 @@ td[data-status="late"] {
   white-space: nowrap;
 }
 
+/* A labelled bar per row: priorities, and what the work is made of. One grid rather than
+   a flex row per line, so every label column and every figure lines up down the block —
+   bars that each start where their own label ended are a set of bars you cannot compare.
+
+   The bar is a share of the largest row, not of the total: a breakdown whose biggest
+   slice is 40% would leave most of the block empty and read as less work than there is. */
+.board .breakdown {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) 1fr auto auto;
+  align-items: center;
+  gap: 7px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .breakdown li {
+  display: contents;
+}
+
+.board .breakdown .what {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-transform: capitalize;
+}
+
+.board .breakdown .track {
+  height: 9px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .breakdown .fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.board .breakdown li[data-status="late"] .fill {
+  background: var(--late);
+}
+
+.board .breakdown li[data-status="doing"] .fill {
+  background: var(--doing);
+}
+
+.board .breakdown li[data-status="todo"] .fill {
+  background: var(--todo);
+}
+
+.board .breakdown li[data-status="done"] .fill {
+  background: var(--done);
+}
+
+/* A row at zero keeps its place in the ladder and stops competing for attention: the
+   useful fact is that it is empty, not what it is called. */
+.board .breakdown li[data-empty="true"] .what,
+.board .breakdown li[data-empty="true"] .n,
+.board .breakdown li[data-empty="true"] .note {
+  color: var(--faint);
+}
+
+.board .breakdown .n {
+  min-width: 2ch;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.board .breakdown .note {
+  min-width: 4ch;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* Twelve weeks as a grid of days: the one block that shows a rhythm rather than a
+   snapshot. Columns are weeks and rows are weekdays, so a team that never works Fridays
+   draws an empty row and says so without a caption. */
+.board .heatmap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 8px;
+  align-items: start;
+}
+
+.board .heatmap .weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .heatmap .weekdays li {
+  display: flex;
+  align-items: center;
+  height: 13px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+/* Every other weekday is unlabelled: seven labels beside thirteen-pixel rows is more
+   type than grid, and the gaps are readable because the ones that are there are. */
+.board .heatmap .weeks {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.board .heatmap .weeks > li {
+  flex: 1;
+  min-width: 0;
+}
+
+.board .heatmap .weeks ol {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .heatmap .weeks ol li {
+  height: 13px;
+  border-radius: 3px;
+  background: var(--heat-0);
+}
+
+.board .heatmap [data-step="1"] {
+  background: var(--heat-1);
+}
+
+.board .heatmap [data-step="2"] {
+  background: var(--heat-2);
+}
+
+.board .heatmap [data-step="3"] {
+  background: var(--heat-3);
+}
+
+.board .heatmap [data-step="4"] {
+  background: var(--heat-4);
+}
+
+/* A day that has not happened is not a day with no work. It is drawn as absent rather
+   than as the palest step, or the last column reads as a week the team stopped. */
+.board .heatmap [data-future="true"] {
+  background: transparent;
+  border: 1px dashed var(--rule);
+}
+
+.board .heatmap .scale {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.board .heatmap .scale span {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.board .heatmap .scale i {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--heat-0);
+}
+
+/* Recent activity. A list, not a table: the columns are a key, a sentence and three short
+   facts, and a table would give the sentence the same width as the rest. */
+.board .feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .feed li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.board .feed li:last-child {
+  border-bottom: 0;
+}
+
+/* The same row shape as the data, so the names sit exactly over what they name — a
+   separate header element would have to be kept in step with the row by hand. Styled
+   like a table's `th`, because that is what it is. */
+.board .feed li.heading {
+  padding: 0 0 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board .feed li.heading .key,
+.board .feed li.heading .title,
+.board .feed li.heading .who,
+.board .feed li.heading .when {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* The status column's header is a word, not a pill: a pill here would read as a status
+   that every row happens to share. */
+.board .feed li.heading .state {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  text-align: center;
+}
+
+.board .feed .key {
+  width: 5.5rem;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.board .feed .title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The site's own word for the status, not the category: a team that renamed "In Progress"
+   to "Cooking" is told "Cooking", and the category is what gives it its colour. */
+.board .feed .state {
+  /* A width, so the heading above it and every pill below line up in one column. Without
+     it each pill is as wide as its own word and the column zig-zags. */
+  width: 7.5rem;
+  flex: none;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.board .feed .state[data-status="doing"] {
+  color: var(--doing);
+}
+
+.board .feed .state[data-status="done"] {
+  color: var(--done);
+}
+
+.board .feed .who {
+  width: 8rem;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board .feed .when {
+  width: 5rem;
+  flex: none;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
 /* Effort per day. A bar per row rather than a chart library: one series, one axis, and
    the width is the whole message. */
 .board .effort {
@@ -2053,8 +2433,13 @@ td[data-status="late"] {
   /* Who goes first when there is no room: the key opens the ticket and the title
      says what it is. */
   .board td.who,
-  .board th.who {
+  .board th.who,
+  .board .feed .who {
     display: none;
+  }
+
+  .board .breakdown {
+    grid-template-columns: minmax(4rem, auto) 1fr auto auto;
   }
 }
 
