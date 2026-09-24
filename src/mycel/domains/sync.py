@@ -32,6 +32,37 @@ class SyncResult:
     worklogs: int
 
 
+async def refetch_jira() -> SyncResult:
+    """Read the whole project again, ignoring the watermark, then transform it.
+
+    Needed whenever a FIELD is added rather than a row: the watermark is the newest
+    `fetched_at` in bronze, so adding to the fields a sync asks for moves nothing — no
+    issue is re-read, and bronze cannot replay a field it was never given. Priority hit
+    this in batch 041 and sprint hit it in the same batch, which is twice too often for a
+    hand-written one-off script.
+
+    Not on a schedule and not the ordinary path: this reads every issue in the project on
+    every call. It is a migration step for the data, run once after a field is added.
+    """
+    async with session_scope() as session:
+        fetched = await fetch_jira(session, since=None)
+
+    async with session_scope() as session:
+        result = await transform(session, keys=fetched.keys)
+
+    log.warning(
+        "refetched whole project",
+        extra={"fetched": fetched.issues, "items": result.items},
+    )
+    return SyncResult(
+        fetched=fetched.issues,
+        silver_items=result.silver_items,
+        silver_worklogs=result.silver_worklogs,
+        items=result.items,
+        worklogs=result.worklogs,
+    )
+
+
 async def sync_jira() -> SyncResult:
     """Fetch, then transform what the fetch brought in.
 

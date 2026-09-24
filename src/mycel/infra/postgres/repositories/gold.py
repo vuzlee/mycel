@@ -51,6 +51,11 @@ class WorkItemRow:
     status: str
     status_category: str
     priority: str | None
+    #: The sprint the item is in *now*, not every sprint it has ever been in — see
+    #: migration 0011 for why the rollover history is dropped. None is the backlog.
+    sprint_id: int | None
+    sprint_name: str | None
+    sprint_state: str | None
     assignee_account_id: str | None
     assignee_name: str | None
     original_estimate_seconds: int | None
@@ -112,6 +117,29 @@ class KindTally:
     kind: str
     items: int
     done: int
+
+
+@dataclass(frozen=True)
+class SprintTally:
+    """One sprint and how much of it is finished.
+
+    `spent_seconds` is the effort logged against its issues over their whole life, not
+    inside the sprint's dates. The sprint chooses the issues; Jira's running total on each
+    issue is what it carries. Stated here because a sprint that adopts a half-finished
+    ticket inherits the hours already burnt on it, and a reader owed that sentence will
+    otherwise read the figure as this sprint's cost.
+    """
+
+    sprint_id: int
+    name: str
+    state: str
+    items: int
+    done: int
+
+    @property
+    def percent(self) -> int:
+        """How far along, 0-100. An empty sprint reads as 0, not as finished."""
+        return round(100 * self.done / self.items) if self.items else 0
 
 
 @dataclass(frozen=True)
@@ -351,6 +379,40 @@ class GoldRepository:
         ]
         return sorted(rows, key=lambda r: (-r.items, r.kind))
 
+    async def count_by_sprint(self, project: str) -> list[SprintTally]:
+        """Every sprint with work in it, newest first, with how much of it is done.
+
+        The backlog is excluded rather than given a row: `sprint_id IS NULL` means "not
+        planned into anything", and a bar for it would sit beside real sprints claiming to
+        be one. How big the backlog is belongs to a block about the backlog.
+
+        Ordered by `sprint_id` descending, which is creation order and the closest thing
+        Jira gives to sprint sequence without reading the Agile API — a sprint's dates are
+        nowhere on the issue, and its name sorts "Sprint 10" before "Sprint 2".
+        """
+        query = (
+            select(
+                WorkItem.sprint_id,
+                func.max(WorkItem.sprint_name),
+                func.max(WorkItem.sprint_state),
+                func.count(),
+                func.count().filter(WorkItem.status_category == "done"),
+            )
+            .where(WorkItem.project == project, WorkItem.sprint_id.is_not(None))
+            .group_by(WorkItem.sprint_id)
+            .order_by(WorkItem.sprint_id.desc())
+        )
+        return [
+            SprintTally(
+                sprint_id=int(sprint_id),
+                name=str(name or f"Sprint {sprint_id}"),
+                state=str(state or "unknown"),
+                items=int(items),
+                done=int(done),
+            )
+            for sprint_id, name, state, items, done in (await self._session.execute(query)).all()
+        ]
+
     async def recently_updated(self, project: str, limit: int) -> list[WorkItemRow]:
         """The last things to move, newest first, whole project.
 
@@ -424,6 +486,9 @@ def _item(row: WorkItem) -> WorkItemRow:
         status=row.status,
         status_category=row.status_category,
         priority=row.priority,
+        sprint_id=row.sprint_id,
+        sprint_name=row.sprint_name,
+        sprint_state=row.sprint_state,
         assignee_account_id=row.assignee_account_id,
         assignee_name=row.assignee_name,
         original_estimate_seconds=row.original_estimate_seconds,

@@ -85,6 +85,17 @@ class KindResponse(BaseModel):
     done: int
 
 
+class SprintResponse(BaseModel):
+    """One sprint and how much of it is finished."""
+
+    sprint_id: int
+    name: str
+    state: str
+    items: int
+    done: int
+    percent: int
+
+
 class DayResponse(BaseModel):
     """Seconds logged on one day, across everybody."""
 
@@ -137,6 +148,14 @@ class DashboardResponse(BaseModel):
             "The last items to move, newest first, whole project rather than the window — "
             "an empty feed would read as a dead project when the truth is that the last "
             "thing to happen was a fortnight ago and is worth naming."
+        )
+    )
+    sprints: list[SprintResponse] = Field(
+        description=(
+            "Every sprint with work in it, newest first, whole project. The backlog is "
+            "not among them: an item with no sprint is not planned into one, and a row "
+            "for it would sit beside real sprints claiming to be one. Empty on a site "
+            "that does not use sprints, which is a configuration rather than a failure."
         )
     )
     calendar: list[DayResponse] = Field(
@@ -204,6 +223,17 @@ async def read_dashboard(
             KindResponse(kind=k.kind, items=k.items, done=k.done) for k in board.kinds
         ],
         recent=[_item(row) for row in board.recent],
+        sprints=[
+            SprintResponse(
+                sprint_id=s.sprint_id,
+                name=s.name,
+                state=s.state,
+                items=s.items,
+                done=s.done,
+                percent=s.percent,
+            )
+            for s in board.sprints
+        ],
         calendar=[
             DayResponse(day=d.day.isoformat(), seconds=d.seconds) for d in board.calendar
         ],

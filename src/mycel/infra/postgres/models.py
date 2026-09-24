@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -106,6 +107,9 @@ class SilverWorkItem(Base):
     status: Mapped[str] = mapped_column(String(64))
     status_category: Mapped[str] = mapped_column(String(16))
     priority: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    sprint_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sprint_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sprint_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
     assignee_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     assignee_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     original_estimate_seconds: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
@@ -165,6 +169,7 @@ class WorkItem(Base):
         UniqueConstraint("source", "issue_key", name="uq_work_item_natural_key"),
         Index("ix_work_item_project_updated", "project", "updated_at"),
         Index("ix_work_item_due_at", "due_at"),
+        Index("ix_work_item_project_sprint", "project", "sprint_id"),
         {"schema": GOLD},
     )
 
@@ -179,6 +184,9 @@ class WorkItem(Base):
     status: Mapped[str] = mapped_column(String(64))
     status_category: Mapped[str] = mapped_column(String(16))
     priority: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    sprint_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sprint_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sprint_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
     assignee_account_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     assignee_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     original_estimate_seconds: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

@@ -107,6 +107,18 @@ export interface Epic {
   moved_done: number;
 }
 
+/** One sprint and how much of it is finished. Newest first; the backlog is not here,
+ *  because an item with no sprint was never planned into one. */
+export interface Sprint {
+  sprint_id: number;
+  name: string;
+  /** Jira's own word: `"active"`, `"future"` or `"closed"`. */
+  state: string;
+  items: number;
+  done: number;
+  percent: number;
+}
+
 /** One day of logged effort. The heatmap and the window chart share this shape. */
 export interface DayEffort {
   day: string;
@@ -124,6 +136,8 @@ export interface Dashboard {
   /** Unfinished items by priority name, whole project. Done work is left out. */
   priorities: Record<string, number>;
   kinds: Kind[];
+  /** Every sprint with work in it, newest first. Empty where the site uses none. */
+  sprints: Sprint[];
   /** The last items to move, newest first. Whole project, not the window. */
   recent: Item[];
   /** Effort logged per day over the last twelve weeks. Days with none are absent. */

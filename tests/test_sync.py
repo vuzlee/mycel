@@ -84,6 +84,9 @@ def _item(**kw: Any) -> WorkItemRow:
         "status": "Done",
         "status_category": "done",
         "priority": "Medium",
+        "sprint_id": None,
+        "sprint_name": None,
+        "sprint_state": None,
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
         "original_estimate_seconds": 57600,
@@ -380,6 +383,34 @@ class TestNormalisingAnIssue:
         row = from_jira_issue(_issue("MYC-6"), PROJECT)
         assert row is not None
         assert row.priority is None
+
+    def test_the_sprint_is_read_from_the_sites_custom_field(self) -> None:
+        payload = _issue("MYC-7")
+        fields = {
+            **payload["fields"],
+            "customfield_10020": [{"id": 2, "name": "Sprint 0", "state": "ACTIVE"}],
+        }
+        row = from_jira_issue({**payload, "fields": fields}, PROJECT)
+        assert row is not None
+        assert (row.sprint_id, row.sprint_name, row.sprint_state) == (2, "Sprint 0", "active")
+
+    def test_only_the_last_sprint_of_a_rollover_is_kept(self) -> None:
+        """Jira sends every sprint the item has ever been in. Counting them all would put
+        one item in three sprints and make each of them look bigger than it was."""
+        payload = _issue("MYC-7")
+        fields = {
+            **payload["fields"],
+            "customfield_10020": [
+                {"id": 1, "name": "Sprint 0", "state": "closed"},
+                {"id": 2, "name": "Sprint 1", "state": "active"},
+            ],
+        }
+        row = from_jira_issue({**payload, "fields": fields}, PROJECT)
+        assert row is not None and row.sprint_id == 2
+
+    def test_an_item_in_no_sprint_is_the_backlog_not_an_error(self) -> None:
+        row = from_jira_issue(_issue("MYC-7"), PROJECT)
+        assert row is not None and row.sprint_id is None
 
     def test_an_unknown_issue_type_becomes_a_task(self) -> None:
         payload = _issue("MYC-7")

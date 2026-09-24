@@ -16,6 +16,10 @@ from mycel.infra.postgres.models import JiraIssue
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.sources import jira
 
+#: Distinguishes "no argument" from an explicit None, which means read everything. A
+#: default of None would make the whole-project refetch unreachable.
+_UNSET: datetime = datetime.min
+
 log = get_logger(__name__)
 
 #: JQL date format. Minutes, because Jira's own grammar has no seconds and a window that
@@ -36,7 +40,7 @@ class FetchResult:
     keys: list[str]
 
 
-async def fetch_jira(session: AsyncSession) -> FetchResult:
+async def fetch_jira(session: AsyncSession, since: datetime | None = _UNSET) -> FetchResult:
     """Pull every issue that moved since the last sync, and its logged effort.
 
     The watermark is the newest `fetched_at` in bronze rather than a cursor kept
@@ -45,9 +49,15 @@ async def fetch_jira(session: AsyncSession) -> FetchResult:
 
     Worklogs cost one request per issue, which is why they are fetched only for the issues
     this pass brought back and not for the project each tick.
+
+    `since` overrides the watermark, and passing None explicitly means "read everything" —
+    which is why it defaults to a sentinel rather than to None. `refetch_jira` uses it
+    after a new field is added, because the watermark cannot know that the question
+    changed rather than the data.
     """
     bronze = BronzeRepository(session)
-    since = await _watermark(session)
+    if since is _UNSET:
+        since = await _watermark(session)
 
     issues = await jira.search_issues(_jql(since))
     stored = await bronze.save_issues(issues)

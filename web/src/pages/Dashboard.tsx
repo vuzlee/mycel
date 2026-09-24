@@ -64,6 +64,15 @@ const URGENCY: Record<string, string> = {
   Lowest: "done",
 };
 
+/** A sprint's state borrows the status palette, so "active" reads the same shade as work
+ *  in progress everywhere else on the page. A state the site invented falls through to the
+ *  neutral tone. */
+const TONE: Record<string, string> = {
+  closed: "done",
+  active: "doing",
+  future: "todo",
+};
+
 /** Weeks in the heatmap, and the fixed number of rows under them. Twelve weeks is the
  *  shortest span a rhythm shows in; seven rows because a week is how people talk about
  *  their own time, and a grid that does not line up on weekdays cannot be read for one. */
@@ -669,6 +678,49 @@ export function Dashboard() {
                   totals for each ticket's whole life.{" "}
                   <b>Gap is spent minus estimated</b> — positive is over.
                 </p>
+              </section>
+
+              {/* Sprint progress. Above epics because a sprint is the unit the team
+                  commits to: an epic says where the work is going, a sprint says what was
+                  promised for this fortnight. Reuses the epic list's markup — same
+                  question, same shape. The backlog is not a row here; see
+                  `GoldRepository.count_by_sprint`. */}
+              <section className="block wide">
+                <Head
+                  label="Sprint progress"
+                  count={board.sprints.length}
+                  scope="whole project"
+                />
+                {board.sprints.length === 0 ? (
+                  <p className="empty">
+                    nothing is planned into a sprint on this board
+                  </p>
+                ) : (
+                  <ol className="epics">
+                    {board.sprints.map((sprint) => (
+                      <li key={sprint.sprint_id} data-status={TONE[sprint.state] ?? "todo"}>
+                        <div className="row">
+                          <span className="key">{sprint.state}</span>
+                          <span className="title">{sprint.name}</span>
+                          <span className="tally">
+                            {sprint.done}/{sprint.items}
+                          </span>
+                          <span className="pct">{sprint.percent}%</span>
+                        </div>
+                        <div
+                          className="track"
+                          role="img"
+                          aria-label={`${sprint.percent}% of ${sprint.items} done`}
+                        >
+                          <span
+                            className="fill"
+                            style={{ width: `${sprint.percent}%` }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </section>
 
               {/* The level a plan is discussed at, which a flat list of tickets never is.

@@ -69,6 +69,7 @@ def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None
             str((status.get("statusCategory") or {}).get("key", "")).lower(), "todo"
         ),
         priority=_priority(fields.get("priority")),
+        **_sprint(fields.get(get_settings().jira_sprint_field)),
         assignee_account_id=assignee.get("accountId"),
         assignee_name=assignee.get("displayName"),
         original_estimate_seconds=_seconds(
@@ -106,6 +107,29 @@ def from_jira_worklog(payload: dict[str, Any], project: str) -> WorklogRow | Non
         started_at=started,
         comment=_text(payload.get("comment")),
     )
+
+
+def _sprint(value: Any) -> dict[str, Any]:
+    """Jira's sprint array, reduced to the sprint the item is in now.
+
+    The field is a list because an issue rolled over from one sprint to the next lists
+    both, oldest first. The last is the one it is in, and the only one a board should
+    count — an issue present in three sprints at once makes every total larger than the
+    board it describes.
+
+    An empty list and a missing field are the same answer: this item is in the backlog.
+    """
+    entries = [entry for entry in value or [] if isinstance(entry, dict)]
+    if not entries:
+        return {"sprint_id": None, "sprint_name": None, "sprint_state": None}
+
+    current = entries[-1]
+    raw = current.get("id")
+    return {
+        "sprint_id": int(raw) if isinstance(raw, int | str) and str(raw).isdigit() else None,
+        "sprint_name": str(current["name"]) if current.get("name") else None,
+        "sprint_state": str(current["state"]).lower() if current.get("state") else None,
+    }
 
 
 def _priority(value: Any) -> str | None:

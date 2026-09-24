@@ -117,6 +117,9 @@ def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
         "status": "In Progress",
         "status_category": "doing",
         "priority": "Medium",
+        "sprint_id": None,
+        "sprint_name": None,
+        "sprint_state": None,
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
         "original_estimate_seconds": 2 * SECONDS_PER_DAY,
@@ -914,6 +917,62 @@ class TestTheThreeBlocksBatch040Added:
 
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
         assert len(board.recent) == RECENT_LIMIT
+
+
+@needs_postgres
+class TestSprintProgress:
+    """The unit a team commits to, which the calendar heatmap is not."""
+
+    async def test_a_sprint_counts_its_items_and_its_done(self, session: AsyncSession) -> None:
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", sprint_id=2, sprint_name="Sprint 0", sprint_state="active"),
+                _item(
+                    "MYC-8",
+                    sprint_id=2,
+                    sprint_name="Sprint 0",
+                    sprint_state="active",
+                    status_category="done",
+                ),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert [(s.sprint_id, s.items, s.done, s.percent) for s in board.sprints] == [(2, 2, 1, 50)]
+
+    async def test_the_backlog_is_not_a_sprint(self, session: AsyncSession) -> None:
+        """An item nobody planned into a sprint would otherwise claim to be one."""
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", sprint_id=2, sprint_name="Sprint 0", sprint_state="active"),
+                _item("MYC-8"),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert [s.sprint_id for s in board.sprints] == [2]
+        assert board.sprints[0].items == 1
+
+    async def test_sprints_come_back_newest_first(self, session: AsyncSession) -> None:
+        """By id, not by name: "Sprint 10" sorts before "Sprint 2" and dates are not here."""
+        await GoldRepository(session).upsert_items(
+            [
+                _item("MYC-7", sprint_id=2, sprint_name="Sprint 0", sprint_state="closed"),
+                _item("MYC-8", sprint_id=3, sprint_name="Sprint 1", sprint_state="active"),
+            ]
+        )
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert [s.sprint_id for s in board.sprints] == [3, 2]
+
+    async def test_a_project_with_no_sprints_gets_an_empty_list(
+        self, session: AsyncSession
+    ) -> None:
+        """A configuration, not a failure — the block says so rather than breaking."""
+        await GoldRepository(session).upsert_items([_item("MYC-7")])
+
+        board = await build_dashboard(session, PROJECT, _at(15), _at(21))
+        assert board.sprints == []
 
 
 @needs_postgres

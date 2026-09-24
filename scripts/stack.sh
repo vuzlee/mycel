@@ -7,6 +7,7 @@
 #   scripts/stack.sh status    what is running, and on which port
 #   scripts/stack.sh logs api  follow one host process (api | worker | scheduler)
 #   scripts/stack.sh sync      run one Jira sync now, without waiting for the tick
+#   scripts/stack.sh refetch   re-read the whole project, after adding a synced field
 #   scripts/stack.sh grants    apply migrations/grants.sql, the two least-privilege roles
 #
 # The containers are `docker compose up -d`, not a `docker run` per service. This script
@@ -301,6 +302,15 @@ cmd_grants() {
 
 cmd_logs() { tail -f "$RUN/${1:?which process: api, worker or scheduler}.log"; }
 
+# Whole-project re-read, for after a FIELD is added to the sync. The watermark cannot see
+# that the question changed rather than the data, so an ordinary sync would fetch nothing.
+cmd_refetch() {
+  uv run python -c "
+import asyncio
+from mycel.domains.sync import refetch_jira
+print(asyncio.run(refetch_jira()))"
+}
+
 cmd_sync() {
   uv run python -c "
 import asyncio
@@ -315,6 +325,7 @@ case "${1:-up}" in
   status)   cmd_status ;;
   logs)     cmd_logs "${2:-}" ;;
   sync)     cmd_sync ;;
+  refetch)  cmd_refetch ;;
   grants)   cmd_grants ;;
-  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | grants)" ;;
+  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | refetch | grants)" ;;
 esac

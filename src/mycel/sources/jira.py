@@ -69,7 +69,11 @@ async def search_issues(jql: str) -> list[dict[str, Any]]:
     token: str | None = None
 
     while True:
-        body: dict[str, Any] = {"jql": jql, "fields": list(FIELDS), "maxResults": PAGE}
+        # The sprint field is a custom field and its id differs per site, so it is
+        # appended from settings rather than living in FIELDS. Jira ignores an id the
+        # site does not have, which is what makes asking for it unconditionally safe.
+        fields = [*FIELDS, get_settings().jira_sprint_field]
+        body: dict[str, Any] = {"jql": jql, "fields": fields, "maxResults": PAGE}
         if token:
             body["nextPageToken"] = token
 

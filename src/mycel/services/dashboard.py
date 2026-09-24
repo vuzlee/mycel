@@ -18,6 +18,7 @@ from mycel.infra.postgres.repositories.gold import (
     DayEffort,
     GoldRepository,
     KindTally,
+    SprintTally,
     WorkItemRow,
 )
 from mycel.services.gather import gather_progress
@@ -89,6 +90,10 @@ class Dashboard:
     #: The last things to move, newest first. Whole project rather than the window: a
     #: window with nothing in it reads as a dead project instead of a quiet fortnight.
     recent: list[WorkItemRow]
+    #: Every sprint with work in it, newest first. Whole project, and the backlog is not
+    #: one of them — see `GoldRepository.count_by_sprint`. Empty on a site that does not
+    #: use sprints, which is an ordinary configuration and not a failure.
+    sprints: list[SprintTally]
     #: Effort logged per day over `HEATMAP_DAYS`, oldest first, days with nothing left
     #: out. Its own span, not the window: a heatmap of seven cells is a bar chart. Same
     #: worklog source as `effort_by_day`, which is the window's slice of this.
@@ -147,6 +152,7 @@ async def build_dashboard(
         priorities=await gold.count_by_priority(project),
         kinds=await gold.count_by_kind(project),
         recent=await gold.recently_updated(project, RECENT_LIMIT),
+        sprints=await gold.count_by_sprint(project),
         calendar=await gold.effort_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
     )
 

@@ -32,6 +32,7 @@ from mycel.infra.postgres.repositories.gold import (
     AssigneeLoad,
     DayEffort,
     KindTally,
+    SprintTally,
     WorkItemRow,
 )
 from mycel.infra.redis.results import JobResult
@@ -538,6 +539,9 @@ class TestTheBoard:
             status="In Progress",
             status_category="doing",
             priority="Highest",
+            sprint_id=2,
+            sprint_name="Sprint 0",
+            sprint_state="active",
             assignee_account_id="acct-1",
             assignee_name="Dev One",
             original_estimate_seconds=2 * 8 * 3600,
@@ -581,6 +585,9 @@ class TestTheBoard:
                     moved=3,
                     moved_done=2,
                 )
+            ],
+            "sprints": [
+                SprintTally(sprint_id=2, name="Sprint 0", state="active", items=6, done=4)
             ],
             "effort_by_day": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
             "calendar": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
