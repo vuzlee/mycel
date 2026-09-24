@@ -206,9 +206,7 @@ class TestWritingBack:
         text = seen["body"]["content"][0]["content"][0]["text"]
         assert text == "two stories shipped"
 
-    async def test_a_transition_is_looked_up_by_name(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    async def test_a_transition_is_looked_up_by_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Ids are per workflow: a hardcoded one is right until somebody edits the workflow,
         and then it silently moves issues somewhere else."""
         self._armed(monkeypatch)

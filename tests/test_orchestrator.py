@@ -45,6 +45,7 @@ async def _null_session() -> AsyncIterator[None]:
     does with the session is `gather_progress`'s business, faked separately."""
     yield None
 
+
 #: The specialists are delegated to on every step, which is the pattern guards.py stops.
 #: These tests drive the delegation deliberately, so the guard is out of the way.
 UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000)

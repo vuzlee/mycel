@@ -288,9 +288,7 @@ class TestChangingPassword:
         with pytest.raises(auth.AuthError):
             await auth.authenticate(session, "pw@example.com", PASSWORD)
 
-    async def test_a_wrong_current_password_changes_nothing(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_a_wrong_current_password_changes_nothing(self, session: AsyncSession) -> None:
         user = await auth.register(session, "pw2@example.com", PASSWORD)
 
         with pytest.raises(auth.AuthError):

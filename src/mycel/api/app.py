@@ -124,9 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # needed when tracing is on, and importing it patches things process-wide.
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        FastAPIInstrumentor.instrument_app(
-            app, tracer_provider=provider, excluded_urls=UNTRACED
-        )
+        FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls=UNTRACED)
 
     # Added last so it sits outermost — Starlette runs middleware in reverse order of
     # `add_middleware`. Outermost is where request_id must be: everything inside it,
@@ -161,6 +159,7 @@ UNTRACED = ",".join(
         r"app",  # the single-page mount and its assets
     ]
 )
+
 
 class _SinglePage(StaticFiles):
     """Static files, with every unknown path answering `index.html`.

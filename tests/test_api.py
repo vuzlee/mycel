@@ -239,9 +239,7 @@ class TestQueueingAQuestion:
             return "job-2", conversation_id or 99
 
         monkeypatch.setattr("mycel.api.routes.chat.request_chat", fake_request)
-        response = client.post(
-            "/chat", json={"question": "and last week?", "conversation_id": 7}
-        )
+        response = client.post("/chat", json={"question": "and last week?", "conversation_id": 7})
 
         assert response.status_code == 202
         assert seen == [7]
@@ -254,9 +252,7 @@ class TestQueueingAQuestion:
         from mycel.domains.chat import ThreadNotFound
 
         _queues(monkeypatch, ThreadNotFound(7))
-        response = client.post(
-            "/chat", json={"question": "and last week?", "conversation_id": 7}
-        )
+        response = client.post("/chat", json={"question": "and last week?", "conversation_id": 7})
 
         assert response.status_code == 404
 
@@ -445,9 +441,7 @@ class TestTheThingsThatFailSilently:
 
         slow: list[int] = []
         thread = threading.Thread(
-            target=lambda: slow.append(
-                client.post("/chat", json={"question": "slow"}).status_code
-            )
+            target=lambda: slow.append(client.post("/chat", json={"question": "slow"}).status_code)
         )
         thread.start()
         assert started.wait(5), "the first request never reached the queue layer"
@@ -586,9 +580,7 @@ class TestTheBoard:
                     moved_done=2,
                 )
             ],
-            "sprints": [
-                SprintTally(sprint_id=2, name="Sprint 0", state="active", items=6, done=4)
-            ],
+            "sprints": [SprintTally(sprint_id=2, name="Sprint 0", state="active", items=6, done=4)],
             "effort_by_day": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
             "calendar": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
         }
@@ -780,7 +772,6 @@ class TestTheLists:
 
         assert len(body) == 1 and body[0]["job_id"] is None
 
-
     def test_forgetting_a_thread_scopes_itself_to_the_caller(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -808,6 +799,7 @@ class TestTheLists:
         monkeypatch.setattr("mycel.api.routes.projects.forget_thread", fake_forget)
 
         assert client.delete("/conversations/7").status_code == 404
+
 
 class TestTheSinglePageApp:
     """A reload at a deep route must serve the page, not a 404.

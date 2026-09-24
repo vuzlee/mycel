@@ -182,9 +182,7 @@ class AppRepository:
     async def revoke_project(self, user_id: int, project: str) -> None:
         """Take it back. Revoking what was never granted is not an error."""
         await self._session.execute(
-            delete(Membership).where(
-                Membership.user_id == user_id, Membership.project == project
-            )
+            delete(Membership).where(Membership.user_id == user_id, Membership.project == project)
         )
 
     async def members_of(self, project: str) -> list[UserRow]:
@@ -382,6 +380,7 @@ def _reset(row: PasswordReset) -> PasswordResetRow:
     return PasswordResetRow(
         id=row.id, user_id=row.user_id, expires_at=row.expires_at, used_at=row.used_at
     )
+
 
 def _conversation(row: Conversation) -> ConversationRow:
     return ConversationRow(

@@ -33,6 +33,7 @@ async def exists(job_id: str) -> bool:
     client = await get_client()
     return bool(await client.exists(_key(job_id)))
 
+
 async def append(job_id: str, event: SequencedEvent) -> None:
     """Add one event and refresh the stream's expiry."""
     settings = get_settings()

@@ -56,6 +56,7 @@ class PasswordChange(BaseModel):
     current_password: str = Field(min_length=1, max_length=1024)
     new_password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
 
+
 class ForgotRequest(BaseModel):
     """An address to send a reset link to, if it has an account."""
 
@@ -138,6 +139,7 @@ async def change_password(
     )
     log.info("password changed", extra={"user_id": user.id, "sessions_ended": ended})
 
+
 @router.post("/forgot", status_code=status.HTTP_202_ACCEPTED)
 async def forgot_password(
     body: ForgotRequest,
@@ -151,9 +153,7 @@ async def forgot_password(
     it is off.
     """
     if not mail.configured():
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail"
-        )
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
     await auth.begin_password_reset(session, body.email)
 
 

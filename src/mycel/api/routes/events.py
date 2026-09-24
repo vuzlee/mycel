@@ -83,4 +83,3 @@ async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[st
         # the loop next gets round to it, and the connection count climbs.
         await events.aclose()
         log.debug("event stream closed", extra={"job_id": job_id})
-

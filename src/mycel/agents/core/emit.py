@@ -122,6 +122,7 @@ def _delta(event: object) -> str:
         return event.delta.content_delta
     return ""
 
+
 def _preview(value: object) -> str:
     text = value if isinstance(value, str) else str(value)
     return text[:PREVIEW_CHARS]

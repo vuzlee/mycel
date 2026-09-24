@@ -136,14 +136,10 @@ async def build_dashboard(
                 title=epic.title,
                 status_category=epic.status_category,
                 items=len(by_parent[epic.issue_key]),
-                done=sum(
-                    1 for c in by_parent[epic.issue_key] if c.status_category == "done"
-                ),
+                done=sum(1 for c in by_parent[epic.issue_key] if c.status_category == "done"),
                 moved=len(window.by_epic.get(epic.issue_key, [])),
                 moved_done=sum(
-                    1
-                    for c in window.by_epic.get(epic.issue_key, [])
-                    if c.status_category == "done"
+                    1 for c in window.by_epic.get(epic.issue_key, []) if c.status_category == "done"
                 ),
             )
             for epic in epics

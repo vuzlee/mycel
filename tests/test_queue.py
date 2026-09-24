@@ -122,6 +122,7 @@ def _runs(monkeypatch: pytest.MonkeyPatch, outcome: str | Exception) -> None:
 
 _ANSWER = "42, and here is why."
 
+
 @asynccontextmanager
 async def _no_session() -> AsyncIterator[None]:
     """Stands in for `session_scope`, so no test here opens a database connection."""
@@ -136,6 +137,7 @@ class _GoneThread:
 
     async def upsert_turn(self, *args: Any, **kwargs: Any) -> None:
         raise IntegrityError("INSERT INTO app.turn", {}, Exception("foreign key"))
+
 
 class TestIdempotencyKey:
     """The one thing at-least-once delivery makes mandatory."""

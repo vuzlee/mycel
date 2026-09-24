@@ -48,6 +48,7 @@ async def _events(*events: Any) -> Any:
     for event in events:
         yield event
 
+
 def _chunks(*pieces: str) -> Any:
     """A model stream: the part starts with the first piece and grows by deltas."""
     first, rest = pieces[0], pieces[1:]
@@ -58,6 +59,7 @@ def _chunks(*pieces: str) -> Any:
             for p in rest
         ),
     )
+
 
 class Node:
     """A node of the agent loop, with only the attribute the emitter reads."""
@@ -75,9 +77,7 @@ class TestEmitter:
             ("analyst", "text", "hello")
         ]
 
-    async def test_thinking_becomes_an_event(
-        self, deps: MycelDeps, channel: Collector
-    ) -> None:
+    async def test_thinking_becomes_an_event(self, deps: MycelDeps, channel: Collector) -> None:
         """Reasoning is the agent's own prose, so it streams like text does."""
         emitter = RunEmitter(deps, "analyst", None)
         await emitter.node(
@@ -91,9 +91,7 @@ class TestEmitter:
         event = channel.published[0]
         assert (event.type, event.payload) == ("thinking", {"text": "1.41 / 1.2"})
 
-    async def test_a_tool_call_carries_its_id(
-        self, deps: MycelDeps, channel: Collector
-    ) -> None:
+    async def test_a_tool_call_carries_its_id(self, deps: MycelDeps, channel: Collector) -> None:
         """The id is what a nested run points back at."""
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.node(
@@ -115,9 +113,7 @@ class TestEmitter:
 
         assert channel.published[0].parent_tool_call_id == "c1"
 
-    async def test_an_unknown_node_is_skipped(
-        self, deps: MycelDeps, channel: Collector
-    ) -> None:
+    async def test_an_unknown_node_is_skipped(self, deps: MycelDeps, channel: Collector) -> None:
         """A new node kind must not crash a run, only go unshown."""
         await RunEmitter(deps, "analyst", None).node(Node(something_else=1))
         assert channel.published == []
@@ -150,9 +146,7 @@ class TestProseArrivesAsItIsWritten:
     whole, and a reader cannot tell which happened.
     """
 
-    async def test_each_piece_is_its_own_event(
-        self, deps: MycelDeps, channel: Collector
-    ) -> None:
+    async def test_each_piece_is_its_own_event(self, deps: MycelDeps, channel: Collector) -> None:
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.stream(_chunks("Hello", " there"))
 
@@ -176,13 +170,9 @@ class TestProseArrivesAsItIsWritten:
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.node(Node(model_response=_response(messages.TextPart(content="Hello there"))))
 
-        assert [(e.type, e.payload["text"]) for e in channel.published] == [
-            ("text", "Hello there")
-        ]
+        assert [(e.type, e.payload["text"]) for e in channel.published] == [("text", "Hello there")]
 
-    async def test_the_next_turn_starts_over(
-        self, deps: MycelDeps, channel: Collector
-    ) -> None:
+    async def test_the_next_turn_starts_over(self, deps: MycelDeps, channel: Collector) -> None:
         """The flag is per turn: a streamed turn must not silence the one after it."""
         emitter = RunEmitter(deps, "orchestrator", None)
         await emitter.stream(_chunks("first"))
@@ -208,6 +198,7 @@ class TestProseArrivesAsItIsWritten:
         )
 
         assert channel.published == []
+
 
 class TestNullChannelIsTheDefault:
     async def test_a_run_without_a_listener_publishes_nowhere(self) -> None:
@@ -289,10 +280,7 @@ class TestNestingThroughARealRun:
 
         assert {e.parent_tool_call_id for e in channel.published} == {None}
 
-
-    async def test_a_streaming_model_reaches_the_client_in_pieces(
-        self, channel: Collector
-    ) -> None:
+    async def test_a_streaming_model_reaches_the_client_in_pieces(self, channel: Collector) -> None:
         """The whole point, through `runner.run`: one answer, several events.
 
         `FunctionModel` streams only when given a `stream_function`, which is also how the
@@ -320,6 +308,7 @@ class TestNestingThroughARealRun:
             ("text_delta", "answer "),
             ("text_delta", "is 42."),
         ], "the answer must arrive in pieces, and not a fourth time whole"
+
 
 class FakeRequest:
     """A request that is connected until a test says otherwise."""

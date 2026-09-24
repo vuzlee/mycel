@@ -142,6 +142,7 @@ def _priority(value: Any) -> str | None:
     name = (value or {}).get("name") if isinstance(value, dict) else None
     return str(name) if name else None
 
+
 def _stamp(value: Any) -> datetime | None:
     """Jira's timestamps: ISO 8601 with a `+0000` offset Python needs a colon in."""
     if not isinstance(value, str) or not value:
@@ -168,6 +169,7 @@ def _due(value: Any) -> datetime | None:
     except ValueError:
         return None
     return datetime.combine(day, time.max, tzinfo=_zone()).astimezone(UTC)
+
 
 def _zone() -> ZoneInfo:
     """The team's zone, falling back to UTC if the name is not one the system knows."""

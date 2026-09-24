@@ -219,9 +219,7 @@ async def read_dashboard(
         all_totals=board.all_totals,
         totals=board.totals,
         priorities=board.priorities,
-        kinds=[
-            KindResponse(kind=k.kind, items=k.items, done=k.done) for k in board.kinds
-        ],
+        kinds=[KindResponse(kind=k.kind, items=k.items, done=k.done) for k in board.kinds],
         recent=[_item(row) for row in board.recent],
         sprints=[
             SprintResponse(
@@ -234,9 +232,7 @@ async def read_dashboard(
             )
             for s in board.sprints
         ],
-        calendar=[
-            DayResponse(day=d.day.isoformat(), seconds=d.seconds) for d in board.calendar
-        ],
+        calendar=[DayResponse(day=d.day.isoformat(), seconds=d.seconds) for d in board.calendar],
         overdue=[_item(row) for row in board.overdue],
         assignees=[
             AssigneeResponse(

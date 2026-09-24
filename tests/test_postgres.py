@@ -715,9 +715,7 @@ class TestTheDashboard:
         assert (epic.items, epic.done, epic.percent) == (4, 2, 50)
         assert (epic.moved, epic.moved_done) == (3, 1)
 
-    async def test_an_epic_nobody_has_touched_is_still_a_row(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_an_epic_nobody_has_touched_is_still_a_row(self, session: AsyncSession) -> None:
         """A plan that hides its untouched parts is a plan that looks shorter than it is."""
         await GoldRepository(session).upsert_items([_epic(), _item("MYC-7")])
 
@@ -870,9 +868,7 @@ class TestTheThreeBlocksBatch040Added:
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
         assert board.priorities["Blocker"] == 1
 
-    async def test_kinds_are_the_whole_project_largest_first(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_kinds_are_the_whole_project_largest_first(self, session: AsyncSession) -> None:
         """What a team's work is made of does not change because a week was quiet."""
         await GoldRepository(session).upsert_items(
             [
@@ -1014,9 +1010,7 @@ class TestTheHeatmap:
         counted = await GoldRepository(session).effort_by_day(PROJECT, _at(1))
         assert [d.day.isoformat() for d in counted] == ["2026-09-18"]
 
-    async def test_it_reaches_further_back_than_the_window(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_it_reaches_further_back_than_the_window(self, session: AsyncSession) -> None:
         """Its own span, or a heatmap of seven cells is a bar chart wearing a grid."""
         await GoldRepository(session).upsert_worklogs(
             [
@@ -1049,15 +1043,12 @@ class TestTheHeatmap:
         assert len(board.calendar) == 2
 
 
-
 @needs_postgres
 class TestATurnKeepsItsToolCalls:
     """`app.turn.steps`, so a thread reopened after the stream expired is not an empty
     middle (MYC-41)."""
 
-    async def test_the_steps_come_back_as_they_were_written(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_the_steps_come_back_as_they_were_written(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
         user = await repo.create_user("steps@example.com", "x")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")

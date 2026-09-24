@@ -260,9 +260,7 @@ class TestTheAgent:
                             "period": "15-21 September 2026",
                             "headline": "One shipped, one late.",
                             "health": "at_risk",
-                            "shipped": [
-                                {"key": "MYC-7", "title": "Dashboard", "who": "Dev One"}
-                            ],
+                            "shipped": [{"key": "MYC-7", "title": "Dashboard", "who": "Dev One"}],
                             "in_flight": [],
                             "at_risk": [
                                 {
@@ -336,9 +334,7 @@ class TestTheAgent:
         assert (first.estimated, first.spent, first.due) == ("2.0d", "3.0d", "2026-09-20")
         assert (second.estimated, second.spent, second.due) == ("", "", "")
 
-    async def test_a_model_that_omits_the_verdict_still_parses(
-        self, deps: MycelDeps
-    ) -> None:
+    async def test_a_model_that_omits_the_verdict_still_parses(self, deps: MycelDeps) -> None:
         """`headline` and `health` carry defaults on purpose.
 
         A model that returns neither is giving a worse answer, not a broken one, and

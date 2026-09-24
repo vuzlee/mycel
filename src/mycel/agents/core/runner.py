@@ -122,6 +122,7 @@ async def _drive(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter)
                 await emitter.stream(chunks)
         await emitter.node(node)
 
+
 def _can_stream(model: "Model") -> bool:
     """Whether opening this model as a stream is safe to try.
 
@@ -133,6 +134,7 @@ def _can_stream(model: "Model") -> bool:
     if type(model).request_stream is Model.request_stream:
         return False
     return getattr(model, "stream_function", False) is not None
+
 
 def _name_of(agent: "Agent[MycelDeps, OutputT]") -> str:
     """The agent's registry name, which is what a client groups events by."""

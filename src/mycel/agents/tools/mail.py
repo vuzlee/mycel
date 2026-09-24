@@ -85,8 +85,7 @@ def _render(mailbox: gmail.Mailbox, asked: int, capped: int) -> str:
         return "\n".join(lines)
 
     lines.append(
-        f"Showing {len(mailbox.headers)}, newest first. "
-        "Columns: date | from | subject | link"
+        f"Showing {len(mailbox.headers)}, newest first. Columns: date | from | subject | link"
     )
     for header in mailbox.headers:
         sent = header.sent_at.strftime("%Y-%m-%d %H:%M") if header.sent_at else "(no date)"

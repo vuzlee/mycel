@@ -182,6 +182,7 @@ async def change_password(
     await repo.set_password_hash(user_id, _hasher.hash(new_password))
     return await repo.delete_sessions_for(user_id, keep=keep_token)
 
+
 async def begin_password_reset(session: AsyncSession, email: str) -> None:
     """Send a reset link, if that address has an account.
 
@@ -269,6 +270,7 @@ async def sweep_expired_sessions(session: AsyncSession) -> int:
     forever, which is the only way `app.session` grows without bound.
     """
     return await AppRepository(session).delete_expired_sessions(datetime.now(UTC))
+
 
 def _normalise(email: str) -> str:
     """One address, one spelling. Case and surrounding space are not identity."""
