@@ -37,8 +37,14 @@ export function Sidebar({ current, open, onClose }: Props) {
 
   // Every thread reopens at `/`. There is one page and one kind of thread since batch
   // 033, so `kind` is not consulted — the job id is the whole address.
+  //
+  // `thread` travels with `job`, though the page could derive it. Deriving it costs a poll:
+  // the page reads the conversation off the run, the run has to be fetched, and until it
+  // comes back the thread id is null — which reads as a thread with no history, so the
+  // earlier turns blank out and reappear a second later. The row already knows its own id,
+  // so it says it.
   const open_ = (thread: Thread): void => {
-    navigate(thread.job_id ? `/?job=${thread.job_id}` : "/");
+    navigate(thread.job_id ? `/?job=${thread.job_id}&thread=${thread.id}` : "/");
     onClose();
   };
 

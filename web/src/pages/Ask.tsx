@@ -33,6 +33,12 @@ import { ArrowRight } from "../components/icons";
 import { useRun } from "../run";
 import { useThreads } from "../threads";
 
+//: How far below the top of the body the question is parked. Flush against the edge reads
+//: as a page cut off rather than a turn begun. Same number as `.turn.user`'s
+//: `scroll-margin-top`, which still serves the map's `scrollIntoView` in `Topics`; this
+//: scroll does the arithmetic itself, and a margin has no say in a `scrollTop` we compute.
+const TOP_GAP = 24;
+
 // One per capability, because these buttons are the capability documentation people
 // actually read — nobody opens the docs before typing a first question. Every screen the
 // app still has its own page for is reachable from here too: progress is the summariser,
@@ -54,6 +60,10 @@ export function Ask() {
 
   const [asked, setAsked] = useState<string | null>(null);
   const [past, setPast] = useState<Turn[]>([]);
+  //: The job id `past` was loaded for. What the one scroll waits on: the earlier turns sit
+  //: ABOVE the question, so until they are in, the question's position is not yet the one it
+  //: will keep.
+  const [pastFor, setPastFor] = useState<string | null>(null);
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
@@ -77,18 +87,32 @@ export function Ask() {
 
   // Everything this thread said before the run on screen. Turns are read from the kept
   // rows, not the stream: those runs are over, and a stream belongs to one run.
+  //
+  // A null thread id is NOT an empty thread. It is the one moment before the page knows
+  // which thread it is on — a link carrying only `?job=` has to read the conversation off
+  // the run, and the run has to be fetched first. Clearing on null makes that moment
+  // visible: the earlier turns vanish and come back when the poll lands. So nothing is
+  // cleared until there is an answer to replace it with, and `startNew` does the clearing
+  // for the case that really is empty, where it is a deliberate act rather than a gap.
   useEffect(() => {
+    // No thread means no history to wait for — the first question of a new one.
     if (threadId === null) {
-      setPast([]);
+      if (jobId !== null) setPastFor(jobId);
       return;
     }
     let live = true;
     void fetchTurns(threadId)
       .then((turns) => {
-        if (live) setPast(turns.filter((turn) => turn.job_id !== jobId));
+        if (!live) return;
+        setPast(turns.filter((turn) => turn.job_id !== jobId));
+        setPastFor(jobId);
       })
       .catch(() => {
-        if (live) setPast([]);
+        // Left as it was. A failed fetch says the network is unhappy, not that the thread
+        // has no history, and blanking on it would throw away rows that are still correct.
+        // Marked settled all the same, or the scroll below waits for something that is not
+        // coming and never happens at all.
+        if (live) setPastFor(jobId);
       });
     return () => {
       live = false;
@@ -148,13 +172,31 @@ export function Ask() {
   // that stops existing one frame later.
   const landed = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (jobId === null || question === null) return;
+    if (jobId === null || question === null || body === null) return;
+    // Waits for the history. The earlier turns sit above the question, so scrolling before
+    // they arrive aims at a position that stops existing the moment they do — the question
+    // gets carried down the page by however tall they turn out to be. This is why the fix
+    // is to wait rather than to chase: there is one thing above the question that changes
+    // height, it announces when it is done, and after that nothing moves the question again.
+    if (pastFor !== jobId) return;
     if (landed.current === jobId) return;
     const node = document.getElementById(anchorFor(jobId));
     if (!node) return;
     landed.current = jobId;
-    node.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [jobId, question, past]);
+
+    // Computed against the body rather than `scrollIntoView`: that helper scrolls the least
+    // it can to bring an element into view, which is right for a link and wrong here. From
+    // a few lines above the question it moves a few lines and stops, instead of putting the
+    // question at the top of the body, where the answer then has the whole screen to fill.
+    body.scrollTo({
+      top:
+        body.scrollTop +
+        node.getBoundingClientRect().top -
+        body.getBoundingClientRect().top -
+        TOP_GAP,
+      behavior: "smooth",
+    });
+  }, [jobId, question, pastFor, body]);
 
   // One entry per turn, the question as its own label. Trimmed rather than named by a
   // model: the question is already the name of the turn, and it costs nothing.

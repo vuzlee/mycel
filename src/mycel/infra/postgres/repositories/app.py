@@ -258,12 +258,30 @@ class AppRepository:
     async def conversations_for(
         self, user_id: int, kind: str | None = None, limit: int = 50
     ) -> list[ConversationRow]:
-        """One person's sidebar, newest first."""
-        query = select(Conversation).where(Conversation.user_id == user_id)
+        """One person's sidebar, most recently spoken to first.
+
+        Ordered by the newest turn, not by when the thread was opened. A thread you went
+        back to this morning is the one you are working in, and ordering by `created_at`
+        buries it under every thread opened since — which is the opposite of what a
+        history is for.
+
+        `COALESCE` because a thread with no turns still has to sort: it was opened and the
+        worker never wrote a row, and its own `created_at` is the only time it has.
+        """
+        spoke = (
+            select(Turn.conversation_id, func.max(Turn.created_at).label("at"))
+            .group_by(Turn.conversation_id)
+            .subquery()
+        )
+        query = (
+            select(Conversation)
+            .outerjoin(spoke, spoke.c.conversation_id == Conversation.id)
+            .where(Conversation.user_id == user_id)
+        )
         if kind is not None:
             query = query.where(Conversation.kind == kind)
         rows = await self._session.scalars(
-            query.order_by(Conversation.created_at.desc()).limit(limit)
+            query.order_by(func.coalesce(spoke.c.at, Conversation.created_at).desc()).limit(limit)
         )
         return [_conversation(row) for row in rows]
 

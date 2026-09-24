@@ -1111,3 +1111,55 @@ class TestForgettingAThread:
 
         assert await repo.delete_conversation(thread.id, mine.id) is False
         assert await repo.conversation_by_id(thread.id) is not None
+
+
+@needs_postgres
+class TestTheSidebarFollowsTheLastThingSaid:
+    """Order by the newest turn, not by when the thread was opened (MYC-67).
+
+    The thread you went back to is the one you are working in. Ordering by `created_at`
+    buries it under every thread opened since, which is the opposite of what a history is
+    for.
+
+    Every row here is stamped by hand. `func.now()` is frozen for the whole transaction in
+    Postgres, so rows written by one test all share a timestamp and the order between them
+    is whatever the planner feels like — which proves nothing either way.
+    """
+
+    async def _stamp(self, session: AsyncSession, table: str, key: str, month: int) -> None:
+        await session.execute(
+            text(f"UPDATE app.{table} SET created_at = :when WHERE {key}"),
+            {"when": datetime(2026, month, 1, tzinfo=UTC)},
+        )
+
+    async def test_a_reopened_thread_comes_back_to_the_top(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("sidebar@example.com", "x")
+        old = await repo.create_conversation(user.id, "chat", "opened first")
+        new = await repo.create_conversation(user.id, "chat", "opened second")
+        await repo.upsert_turn(old.id, "job-old", "q", "done")
+        await session.flush()
+
+        await self._stamp(session, "conversation", f"id = {old.id}", 1)
+        await self._stamp(session, "conversation", f"id = {new.id}", 2)
+        await self._stamp(session, "turn", "job_id = 'job-old'", 3)
+
+        rows = await repo.conversations_for(user.id)
+        assert [row.id for row in rows] == [old.id, new.id]
+
+    async def test_a_thread_with_no_turns_still_sorts(self, session: AsyncSession) -> None:
+        """`COALESCE` back to its own `created_at` — a thread opened and never answered
+        still has to appear somewhere rather than fall out of the list."""
+        repo = AppRepository(session)
+        user = await repo.create_user("empty@example.com", "x")
+        spoken = await repo.create_conversation(user.id, "chat", "answered")
+        silent = await repo.create_conversation(user.id, "chat", "never answered")
+        await repo.upsert_turn(spoken.id, "job-spoken", "q", "done")
+        await session.flush()
+
+        await self._stamp(session, "conversation", f"id = {spoken.id}", 1)
+        await self._stamp(session, "conversation", f"id = {silent.id}", 3)
+        await self._stamp(session, "turn", "job_id = 'job-spoken'", 2)
+
+        rows = await repo.conversations_for(user.id)
+        assert [row.id for row in rows] == [silent.id, spoken.id]
