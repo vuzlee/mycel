@@ -78,8 +78,8 @@ export function useRun(jobId: string | null): Run {
   }, [jobId, forget]);
 
   const busy = stream.state === "running";
-  // Nothing here moves the view, not even the answer: it arrives while the reader is
-  // looking at the step that produced it. The jump button is the whole mechanism.
+  // Follows the bottom while the reader is at the bottom, and lets go the moment they
+  // scroll up. See `useFollow` for why that second half is what makes the first bearable.
   const follow = useFollow();
 
   return {

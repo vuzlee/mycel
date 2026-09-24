@@ -92,39 +92,94 @@ export interface Follow {
 }
 
 /**
- * Nothing moves the view but the reader.
+ * The view follows the run, until the reader takes it back.
  *
- * A run emits dozens of events — reasoning, tool calls, a sub-agent's own loop — and
- * scrolling on any of them takes the page away from whatever is being read. The answer
- * is no different: it lands while the reader is halfway up the thread looking at the
- * step that produced it, and yanking them down is the same interruption.
+ * A run emits dozens of events over minutes, and text arrives a token at a time. Left
+ * alone the page sits where it was while the answer writes itself off the bottom of the
+ * screen, and reading means dragging the scrollbar after every paragraph.
  *
- * So there is no automatic scroll at all. `adrift` says the bottom is off screen, and
- * the button it lights is the whole mechanism: work below the fold announces itself,
- * and going there is a decision.
+ * So the bottom is followed while the reader is at the bottom. Scroll up — by any amount,
+ * for any reason — and following stops at once: the step someone went back to read stays
+ * where they put it, and nothing yanks them away from it. Come back to within `NEAR` of
+ * the bottom and it resumes, because arriving at the end is how you say you want the end.
  *
- * Watched with a `ResizeObserver` rather than on scroll alone, because with nothing
- * following the run the content is what moves, not the viewport.
+ * That last part is what makes automatic scrolling bearable rather than hostile, and it
+ * is why `stuck` is a ref and not state: it is read inside a scroll handler that fires
+ * every frame, and re-rendering the thread on each one would cost more than the scroll.
+ *
+ * Telling the reader's scrolling apart from our own is the whole difficulty. `scrollTo`
+ * fires the same `scroll` event a finger does, so without `pinning` the hook would read
+ * its own correction as the reader leaving and switch itself off on the first token.
+ *
+ * Watched with a `ResizeObserver` as well as on scroll: while following, the content is
+ * what changes, not the viewport, and a growing child fires no scroll event at all.
  */
+
+//: How close to the bottom still counts as being at it. A line of text is ~24px, so this
+//: is a couple of lines of slack — enough that a trackpad's momentum does not unstick a
+//: reader who meant to stay, and small enough that stopping to read does.
+const NEAR = 60;
+
+//: What `adrift` lights the jump button for. Larger than NEAR on purpose: between the two
+//: the view is not following, but the bottom is close enough that a button pointing at it
+//: would be pointing at what is already on screen.
+const ADRIFT = 120;
+
 export function useFollow(): Follow {
   const node = useRef<HTMLDivElement | null>(null);
   const [adrift, setAdrift] = useState(false);
+  //: Whether the view is currently following the bottom. Starts true: a thread opens at
+  //: its newest turn, and a run started from the composer should be followed from its
+  //: first token without anyone having to ask.
+  const stuck = useRef(true);
+  //: Set while we are scrolling the element ourselves, so the resulting `scroll` event is
+  //: not mistaken for the reader moving away.
+  const pinning = useRef(false);
 
   const ref = useCallback((element: HTMLDivElement | null) => {
     node.current = element;
     if (!element) return;
+
+    const slack = (): number =>
+      element.scrollHeight - element.scrollTop - element.clientHeight;
+
     const read = (): void => {
-      const slack = element.scrollHeight - element.scrollTop - element.clientHeight;
-      setAdrift(slack > 120);
+      const left = slack();
+      setAdrift(left > ADRIFT);
+      if (pinning.current) return;
+      // Both directions in one line: scrolling up unsticks, arriving at the bottom
+      // sticks again. The reader never has to find a control for either.
+      stuck.current = left <= NEAR;
     };
+
+    // `auto`, not `smooth`: this runs on every token, and a smooth scroll that has not
+    // finished before the next one starts leaves the view permanently a few lines behind
+    // the text it is following.
+    const keep = (): void => {
+      if (!stuck.current) return;
+      pinning.current = true;
+      element.scrollTop = element.scrollHeight;
+      // Cleared after the browser has dispatched the scroll event this caused, which it
+      // does before the next frame.
+      requestAnimationFrame(() => {
+        pinning.current = false;
+        setAdrift(slack() > ADRIFT);
+      });
+    };
+
     element.addEventListener("scroll", read, { passive: true });
-    const grows = new ResizeObserver(read);
+    const grows = new ResizeObserver(() => {
+      keep();
+      read();
+    });
     for (const child of Array.from(element.children)) grows.observe(child);
     grows.observe(element);
     read();
   }, []);
 
+  // The button says "take me to the end", which means the end from now on, not once.
   const toBottom = useCallback(() => {
+    stuck.current = true;
     node.current?.scrollTo({ top: node.current.scrollHeight, behavior: "smooth" });
   }, []);
 
