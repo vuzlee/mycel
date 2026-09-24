@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.repositories.gold import (
     AssigneeLoad,
-    DayCount,
     DayEffort,
     GoldRepository,
     KindTally,
@@ -90,9 +89,10 @@ class Dashboard:
     #: The last things to move, newest first. Whole project rather than the window: a
     #: window with nothing in it reads as a dead project instead of a quiet fortnight.
     recent: list[WorkItemRow]
-    #: Items touched per day over `HEATMAP_DAYS`, oldest first, days with nothing left
-    #: out. Its own span, not the window: a heatmap of seven cells is a bar chart.
-    activity: list[DayCount]
+    #: Effort logged per day over `HEATMAP_DAYS`, oldest first, days with nothing left
+    #: out. Its own span, not the window: a heatmap of seven cells is a bar chart. Same
+    #: worklog source as `effort_by_day`, which is the window's slice of this.
+    calendar: list[DayEffort]
 
     @property
     def percent(self) -> int:
@@ -147,7 +147,7 @@ async def build_dashboard(
         priorities=await gold.count_by_priority(project),
         kinds=await gold.count_by_kind(project),
         recent=await gold.recently_updated(project, RECENT_LIMIT),
-        activity=await gold.activity_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
+        calendar=await gold.effort_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
     )
 
 

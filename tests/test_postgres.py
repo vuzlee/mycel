@@ -918,29 +918,30 @@ class TestTheThreeBlocksBatch040Added:
 
 @needs_postgres
 class TestTheHeatmap:
-    """`activity_by_day`: twelve weeks of whether anything happened at all.
+    """`effort_by_day` over twelve weeks: whether anyone was working at all.
 
     The only block on the board that is not a snapshot. Every other one answers "how does
     it stand now"; this answers "was anyone working", which a count of open tickets cannot
     tell you either way.
+
+    From worklogs, not from `updated_at`. A sync touches every issue it refetches, so a
+    calendar of touches draws the shape of the sync schedule rather than of the work.
     """
 
-    async def test_a_day_is_counted_by_when_it_was_touched(
-        self, session: AsyncSession
-    ) -> None:
-        """Two items updated the same day are one cell worth two, not two cells."""
-        await GoldRepository(session).upsert_items(
+    async def test_a_day_sums_every_worklog_on_it(self, session: AsyncSession) -> None:
+        """Two logs on the same day are one cell worth both, not two cells."""
+        await GoldRepository(session).upsert_worklogs(
             [
-                _item("MYC-7", updated_at=_at(18, 9)),
-                _item("MYC-8", updated_at=_at(18, 17)),
-                _item("MYC-9", updated_at=_at(19)),
+                _worklog("1", started_at=_at(18, 9), time_spent_seconds=3600),
+                _worklog("2", started_at=_at(18, 17), time_spent_seconds=1800),
+                _worklog("3", started_at=_at(19), time_spent_seconds=7200),
             ]
         )
 
-        counted = await GoldRepository(session).activity_by_day(PROJECT, _at(1))
-        assert [(d.day.isoformat(), d.items) for d in counted] == [
-            ("2026-09-18", 2),
-            ("2026-09-19", 1),
+        counted = await GoldRepository(session).effort_by_day(PROJECT, _at(1))
+        assert [(d.day.isoformat(), d.seconds) for d in counted] == [
+            ("2026-09-18", 5400),
+            ("2026-09-19", 7200),
         ]
 
     async def test_a_quiet_day_gets_no_row_at_all(self, session: AsyncSession) -> None:
@@ -949,36 +950,45 @@ class TestTheHeatmap:
         The grid draws its own calendar and has to fill the gaps regardless, so sending
         three months of zeroes to say nothing happened is the wrong shape for the wire.
         """
-        await GoldRepository(session).upsert_items([_item("MYC-7", updated_at=_at(18))])
+        await GoldRepository(session).upsert_worklogs([_worklog("1", started_at=_at(18))])
 
-        counted = await GoldRepository(session).activity_by_day(PROJECT, _at(1))
+        counted = await GoldRepository(session).effort_by_day(PROJECT, _at(1))
         assert [d.day.isoformat() for d in counted] == ["2026-09-18"]
 
     async def test_it_reaches_further_back_than_the_window(
         self, session: AsyncSession
     ) -> None:
         """Its own span, or a heatmap of seven cells is a bar chart wearing a grid."""
-        await GoldRepository(session).upsert_items(
+        await GoldRepository(session).upsert_worklogs(
             [
-                _item("MYC-7", updated_at=_at(2)),
-                _item("MYC-8", updated_at=_at(20)),
+                _worklog("1", started_at=_at(2)),
+                _worklog("2", started_at=_at(20)),
             ]
         )
 
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
-        assert {d.day.isoformat() for d in board.activity} == {"2026-09-02", "2026-09-20"}
+        assert {d.day.isoformat() for d in board.calendar} == {"2026-09-02", "2026-09-20"}
 
-    async def test_it_counts_items_not_logged_effort(self, session: AsyncSession) -> None:
-        """A team that ships without filling in worklogs still shows as working.
+    async def test_the_window_chart_is_a_slice_of_the_same_worklogs(
+        self, session: AsyncSession
+    ) -> None:
+        """Both halves of the block read one source, at two zooms.
 
-        `effort_by_day` reads worklogs and answers a different question: not whether the
-        project moved, but how many hours went into it.
+        The calendar keeps the old log the window has already left behind, which is the
+        whole reason the pair exists: the window alone cannot say the project was busy
+        a fortnight ago.
         """
-        await GoldRepository(session).upsert_items([_item("MYC-7", updated_at=_at(18))])
+        await GoldRepository(session).upsert_worklogs(
+            [
+                _worklog("1", started_at=_at(2)),
+                _worklog("2", started_at=_at(20)),
+            ]
+        )
 
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
-        assert board.effort_by_day == []
-        assert [(d.day.isoformat(), d.items) for d in board.activity] == [("2026-09-18", 1)]
+        assert [d.day.isoformat() for d in board.effort_by_day] == ["2026-09-20"]
+        assert len(board.calendar) == 2
+
 
 
 @needs_postgres

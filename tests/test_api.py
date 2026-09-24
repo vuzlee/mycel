@@ -30,7 +30,6 @@ from mycel.domains.threads import Thread
 from mycel.infra.postgres.repositories.app import ConversationRow, TurnRow
 from mycel.infra.postgres.repositories.gold import (
     AssigneeLoad,
-    DayCount,
     DayEffort,
     KindTally,
     WorkItemRow,
@@ -584,7 +583,7 @@ class TestTheBoard:
                 )
             ],
             "effort_by_day": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
-            "activity": [DayCount(day=date(2026, 9, 18), items=4)],
+            "calendar": [DayEffort(day=date(2026, 9, 18), seconds=5 * 3600)],
         }
         return Dashboard(**{**fields, **kw})  # type: ignore[arg-type]
 

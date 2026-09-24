@@ -85,12 +85,6 @@ class KindResponse(BaseModel):
     done: int
 
 
-class ActivityResponse(BaseModel):
-    """How many items were touched on one day."""
-
-    day: str
-    items: int
-
 class DayResponse(BaseModel):
     """Seconds logged on one day, across everybody."""
 
@@ -145,12 +139,13 @@ class DashboardResponse(BaseModel):
             "thing to happen was a fortnight ago and is worth naming."
         )
     )
-    activity: list[ActivityResponse] = Field(
+    calendar: list[DayResponse] = Field(
         description=(
-            "Items touched per day over the last twelve weeks, oldest first, dated by "
-            "`updated_at`. Its own fixed span rather than the window, because it is a "
-            "calendar grid and must not change shape when the window does. Days with no "
-            "activity are omitted; a caller drawing the grid fills its own gaps."
+            "Effort logged per day over the last twelve weeks, oldest first, from the "
+            "same worklogs as `effort_by_day`. Its own fixed span rather than the window, "
+            "because it is a calendar grid and must not change shape when the window "
+            "does. Days with nothing logged are omitted; a caller drawing the grid fills "
+            "its own gaps."
         )
     )
     overdue: list[ItemResponse] = Field(
@@ -209,8 +204,8 @@ async def read_dashboard(
             KindResponse(kind=k.kind, items=k.items, done=k.done) for k in board.kinds
         ],
         recent=[_item(row) for row in board.recent],
-        activity=[
-            ActivityResponse(day=d.day.isoformat(), items=d.items) for d in board.activity
+        calendar=[
+            DayResponse(day=d.day.isoformat(), seconds=d.seconds) for d in board.calendar
         ],
         overdue=[_item(row) for row in board.overdue],
         assignees=[

@@ -15,6 +15,11 @@
  * **Blocks tile, they do not stack.** The small ones sit three abreast and the tables take
  * the width; eight blocks in one column means scrolling past seven to reach the last, on a
  * screen with room for three.
+ *
+ * **The page reads downward as one report.** Where the project stands, then what is open
+ * and what it is made of, then effort over time, then what is late, who is carrying it,
+ * how the plan is going, and last the log of what moved. Each block answers the question
+ * the one above it raises, so a reader who stops halfway has stopped somewhere sensible.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -86,14 +91,17 @@ function ago(stamp: string | null): string {
   return `${Math.round(seconds / 86_400)}d ago`;
 }
 
-/** Which of the five steps a day's count sits on.
+/** Which of the five steps a day's logged effort sits on.
  *
- *  Against the busiest day in the grid rather than against a fixed count: one team's busy
- *  Tuesday is forty items and another's is four, and a scale that does not know which it
- *  is looking at draws one of them entirely blank. */
-function step(items: number, busiest: number): number {
-  if (items === 0) return 0;
-  return Math.min(4, 1 + Math.floor((3 * (items - 1)) / Math.max(1, busiest)));
+ *  Against the busiest day in the grid rather than against a fixed number of hours: one
+ *  team's busy Tuesday is three days of logged work and another's is two hours, and a
+ *  scale that does not know which it is looking at draws one of them entirely blank. */
+function step(seconds: number, busiest: number): number {
+  if (seconds === 0) return 0;
+  return Math.min(
+    4,
+    1 + Math.floor((3 * (seconds - 1)) / Math.max(1, busiest)),
+  );
 }
 
 /** A block heading with its count and its scope. One line, so the scope is impossible to
@@ -141,7 +149,10 @@ function Bar({
     <li data-status={tone} data-empty={value === 0}>
       <span className="what">{label}</span>
       <span className="track">
-        <span className="fill" style={{ width: `${(value / Math.max(1, peak)) * 100}%` }} />
+        <span
+          className="fill"
+          style={{ width: `${(value / Math.max(1, peak)) * 100}%` }}
+        />
       </span>
       <span className="n">{value}</span>
       {note !== undefined && <span className="note">{note}</span>}
@@ -169,7 +180,10 @@ export function Dashboard() {
         setProjects(found);
         // The project lives in the URL so a board is a link someone can keep.
         if (project === null && found[0]) {
-          setParams({ project: found[0], days: String(window_) }, { replace: true });
+          setParams(
+            { project: found[0], days: String(window_) },
+            { replace: true },
+          );
         }
       })
       .catch((error: unknown) => {
@@ -194,7 +208,8 @@ export function Dashboard() {
         .catch((error: unknown) => {
           if (!live) return;
           if (error instanceof Unauthorized) forget();
-          else setFailure(error instanceof Error ? error.message : String(error));
+          else
+            setFailure(error instanceof Error ? error.message : String(error));
         });
     };
 
@@ -213,17 +228,19 @@ export function Dashboard() {
     });
 
   // The heatmap's calendar, built here rather than on the server: the API sends the days
-  // that had activity and this decides what a week looks like, which is a display
+  // that were logged against and this decides what a week looks like, which is a display
   // question. Memoised — a poll every thirty seconds would otherwise rebuild 84 cells.
   const weeks = useMemo(() => {
-    const counted = new Map((board?.activity ?? []).map((d) => [d.day, d.items]));
+    const logged = new Map(
+      (board?.calendar ?? []).map((d) => [d.day, d.seconds]),
+    );
     const end = new Date();
     end.setHours(12, 0, 0, 0);
     // Wind forward to the end of the current week, so the last column is this week with
     // its remaining days blank rather than a column that stops in the middle.
     end.setDate(end.getDate() + ((7 - end.getDay()) % 7));
 
-    const columns: { day: string; items: number; future: boolean }[][] = [];
+    const columns: { day: string; seconds: number; future: boolean }[][] = [];
     const today = new Date().setHours(23, 59, 59, 999);
     for (let w = WEEKS - 1; w >= 0; w -= 1) {
       const column = [];
@@ -231,15 +248,24 @@ export function Dashboard() {
         const at = new Date(end);
         at.setDate(end.getDate() - (w * DAYS_IN_WEEK + (DAYS_IN_WEEK - 1 - d)));
         const key = at.toISOString().slice(0, 10);
-        column.push({ day: key, items: counted.get(key) ?? 0, future: at.getTime() > today });
+        column.push({
+          day: key,
+          seconds: logged.get(key) ?? 0,
+          future: at.getTime() > today,
+        });
       }
       columns.push(column);
     }
     return columns;
-  }, [board?.activity]);
+  }, [board?.calendar]);
 
-  const peak = Math.max(1, ...(board?.effort_by_day ?? []).map((d) => d.seconds));
-  const all = board ? CATEGORIES.reduce((n, c) => n + (board.all_totals[c] ?? 0), 0) : 0;
+  const peak = Math.max(
+    1,
+    ...(board?.effort_by_day ?? []).map((d) => d.seconds),
+  );
+  const all = board
+    ? CATEGORIES.reduce((n, c) => n + (board.all_totals[c] ?? 0), 0)
+    : 0;
   const win = `${window_} days`;
 
   // Every priority Jira knows, in its own order, zeroes included. A ladder missing its
@@ -247,15 +273,16 @@ export function Dashboard() {
   // can say, and dropping the row says it by saying nothing.
   const priorities = Object.entries(board?.priorities ?? {}).sort(
     ([a], [b]) =>
-      (PRIORITY_ORDER.indexOf(a) + 1 || 99) - (PRIORITY_ORDER.indexOf(b) + 1 || 99),
+      (PRIORITY_ORDER.indexOf(a) + 1 || 99) -
+      (PRIORITY_ORDER.indexOf(b) + 1 || 99),
   );
   const openWork = priorities.reduce((n, [, count]) => n + count, 0);
   const worst = Math.max(1, ...priorities.map(([, n]) => n));
 
   const kindPeak = Math.max(1, ...(board?.kinds ?? []).map((k) => k.items));
   const kindTotal = (board?.kinds ?? []).reduce((n, k) => n + k.items, 0);
-  const busiest = Math.max(1, ...(board?.activity ?? []).map((d) => d.items));
-  const touched = (board?.activity ?? []).reduce((n, d) => n + d.items, 0);
+  const busiest = Math.max(1, ...(board?.calendar ?? []).map((d) => d.seconds));
+  const logged = (board?.calendar ?? []).reduce((n, d) => n + d.seconds, 0);
 
   return (
     <Shell>
@@ -269,7 +296,9 @@ export function Dashboard() {
               onChange={(event) => pick({ project: event.target.value })}
             >
               {projects === null && <option>loading…</option>}
-              {projects?.length === 0 && <option value="">no projects yet</option>}
+              {projects?.length === 0 && (
+                <option value="">no projects yet</option>
+              )}
               {projects?.map((key) => (
                 <option key={key} value={key}>
                   {key}
@@ -299,8 +328,8 @@ export function Dashboard() {
 
         {projects?.length === 0 && (
           <p className="note">
-            Nothing has synced yet. Fill the Jira variables in <code>.env</code>, then run{" "}
-            <code>scripts/stack.sh sync</code>.
+            Nothing has synced yet. Fill the Jira variables in <code>.env</code>
+            , then run <code>scripts/stack.sh sync</code>.
           </p>
         )}
 
@@ -315,7 +344,9 @@ export function Dashboard() {
                   <span className="big">
                     {board.all_totals.done ?? 0} <i>of</i> {all} done
                   </span>
-                  <span className="sub">whole project · refreshes every 30s</span>
+                  <span className="sub">
+                    whole project · refreshes every 30s
+                  </span>
                 </div>
                 {board.overdue.length > 0 && (
                   <div className="flag">
@@ -324,7 +355,11 @@ export function Dashboard() {
                   </div>
                 )}
               </div>
-              <div className="track" role="img" aria-label={`${board.percent}% done`}>
+              <div
+                className="track"
+                role="img"
+                aria-label={`${board.percent}% done`}
+              >
                 {CATEGORIES.map((category) => {
                   const n = board.all_totals[category] ?? 0;
                   return n === 0 ? null : (
@@ -355,15 +390,19 @@ export function Dashboard() {
                 <Head label="Status overview" scope={win} />
                 <div className="totals">
                   {OVERVIEW.map((category) => (
-                    <div className="total" data-status={category} key={category}>
+                    <div
+                      className="total"
+                      data-status={category}
+                      key={category}
+                    >
                       <b>{board.totals[category] ?? 0}</b>
                       <span>{CAPTION[category]}</span>
                     </div>
                   ))}
                 </div>
                 <p className="caption">
-                  Counted by the status they are in <b>now</b>, not by how many moved into
-                  it — Jira dates a transition from the API call.
+                  Counted by the status they are in <b>now</b>, not by how many
+                  moved into it — Jira dates a transition from the API call.
                 </p>
               </section>
 
@@ -371,9 +410,15 @@ export function Dashboard() {
                   than in the caption: a breakdown of everything would be read as backlog
                   pressure when half of it shipped last month. */}
               <section className="block">
-                <Head label="Priority breakdown" count={openWork} scope="open work" />
+                <Head
+                  label="Priority breakdown"
+                  count={openWork}
+                  scope="open work"
+                />
                 {priorities.length === 0 ? (
-                  <p className="empty">nothing open, or this site hides priorities</p>
+                  <p className="empty">
+                    nothing open, or this site hides priorities
+                  </p>
                 ) : (
                   <ol className="breakdown">
                     {priorities.map(([name, count]) => (
@@ -389,15 +434,20 @@ export function Dashboard() {
                   </ol>
                 )}
                 <p className="caption">
-                  Everything <b>not done</b>, whole project. <b>None</b> is an item with no
-                  priority set, which is a configuration rather than an omission.
+                  Everything <b>not done</b>, whole project. <b>None</b> is an
+                  item with no priority set, which is a configuration rather
+                  than an omission.
                 </p>
               </section>
 
               {/* Types of work. Whole project: what a team's work is made of does not
                   change because a week was quiet. */}
               <section className="block">
-                <Head label="Types of work" count={kindTotal} scope="whole project" />
+                <Head
+                  label="Types of work"
+                  count={kindTotal}
+                  scope="whole project"
+                />
                 {board.kinds.length === 0 ? (
                   <p className="empty">nothing has synced for this project</p>
                 ) : (
@@ -414,116 +464,97 @@ export function Dashboard() {
                   </ol>
                 )}
                 <p className="caption">
-                  Share of every item in the project. The percentages are the distribution,
-                  and the bars are each type against the largest.
+                  Share of every item in the project. The percentages are the
+                  distribution, and the bars are each type against the largest.
                 </p>
               </section>
 
-              {/* Twelve weeks of whether anything happened at all, which no other block
-                  answers: every one of them is a snapshot, and a snapshot cannot show a
-                  team that went quiet for a fortnight and came back. */}
-              <section className="block wide">
-                <Head label="Work heatmap" count={touched} scope="12 weeks" />
-                <div className="heatmap">
-                  <ol className="weekdays">
-                    {WEEKDAYS.map((name, index) => (
-                      <li key={index}>{name}</li>
-                    ))}
-                  </ol>
-                  <ol className="weeks">
-                    {weeks.map((week, index) => (
-                      <li key={index}>
-                        <ol>
-                          {week.map((cell) => (
-                            <li
-                              key={cell.day}
-                              data-step={cell.future ? undefined : step(cell.items, busiest)}
-                              data-future={cell.future}
-                              title={
-                                cell.future
-                                  ? cell.day
-                                  : `${cell.day} · ${cell.items} item${cell.items === 1 ? "" : "s"}`
-                              }
+              {/* Effort, at two zooms in one frame. The calendar answers "is this
+                  project moving at all", which no other block can: every one of them is a
+                  photograph, and a photograph cannot show a fortnight of silence. The bars
+                  beside it answer "how much went in this window". One worklog source, one
+                  subject — and a narrow block for it alone left a half-empty row. */}
+              <section className="block wide effort-pair">
+                <Head
+                  label="Effort logged"
+                  count={Math.round(logged / 3600)}
+                  scope="hours, 12 weeks"
+                />
+                <div className="two-up">
+                  <div>
+                    <h3 className="sub">Twelve weeks</h3>
+                    <div className="heatmap">
+                      <ol className="weekdays">
+                        {WEEKDAYS.map((name, index) => (
+                          <li key={index}>{name}</li>
+                        ))}
+                      </ol>
+                      <ol className="weeks">
+                        {weeks.map((week, index) => (
+                          <li key={index}>
+                            <ol>
+                              {week.map((cell) => (
+                                <li
+                                  key={cell.day}
+                                  data-step={
+                                    cell.future
+                                      ? undefined
+                                      : step(cell.seconds, busiest)
+                                  }
+                                  data-future={cell.future}
+                                  title={
+                                    cell.future
+                                      ? cell.day
+                                      : `${cell.day} · ${cell.seconds === 0 ? "nothing logged" : hours(cell.seconds)}`
+                                  }
+                                />
+                              ))}
+                            </ol>
+                          </li>
+                        ))}
+                      </ol>
+                      <div className="scale">
+                        <span>less</span>
+                        {[0, 1, 2, 3, 4].map((n) => (
+                          <i key={n} data-step={n} />
+                        ))}
+                        <span>more</span>
+                      </div>
+                    </div>
+                    <p className="caption">
+                      One cell per day, by the day the work was logged{" "}
+                      <b>for</b> — so a project filled in retroactively still
+                      lands on the right days. Shaded against this grid's
+                      busiest day.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="sub">Last {win}</h3>
+                    {board.effort_by_day.length === 0 ? (
+                      <p className="empty">no effort logged in this window</p>
+                    ) : (
+                      <ol className="effort">
+                        {board.effort_by_day.map((day) => (
+                          <li key={day.day}>
+                            <span className="when">{day.day.slice(5)}</span>
+                            <span
+                              className="bar"
+                              style={{
+                                width: `${(day.seconds / peak) * 100}%`,
+                              }}
                             />
-                          ))}
-                        </ol>
-                      </li>
-                    ))}
-                  </ol>
-                  <div className="scale">
-                    <span>less</span>
-                    {[0, 1, 2, 3, 4].map((n) => (
-                      <i key={n} data-step={n} />
-                    ))}
-                    <span>more</span>
+                            <span className="n">{hours(day.seconds)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                    <p className="caption">
+                      The window's slice of the same worklogs. It measures
+                      effort <b>inside</b> the window, so it will not match the
+                      lifetime totals in Team workload.
+                    </p>
                   </div>
                 </div>
-                <p className="caption">
-                  One cell per day, by the day an item was last <b>touched</b> — not by
-                  effort logged, so a team that ships without filling in worklogs still
-                  shows. Shaded against this grid's busiest day.
-                </p>
-              </section>
-
-              {/* From worklogs, not from resolution dates: Jira stamps a resolution with
-                  the moment of the API call, so a back-filled project draws a false
-                  curve. */}
-              <section className="block">
-                <Head label="Effort logged" scope={win} />
-                {board.effort_by_day.length === 0 ? (
-                  <p className="empty">no effort logged in this window</p>
-                ) : (
-                  <ol className="effort">
-                    {board.effort_by_day.map((day) => (
-                      <li key={day.day}>
-                        <span className="when">{day.day.slice(5)}</span>
-                        <span
-                          className="bar"
-                          style={{ width: `${(day.seconds / peak) * 100}%` }}
-                        />
-                        <span className="n">{hours(day.seconds)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                <p className="caption">
-                  Dated by the day they were logged <b>for</b>. The only block measuring
-                  effort <b>inside</b> the window, so it will not match spent below.
-                </p>
-              </section>
-
-              {/* Recent activity. Not windowed, and the block says so: a feed that comes
-                  back empty reads as a dead project, when the truth is that the last thing
-                  to happen was eight days ago and is worth naming. */}
-              <section className="block wide">
-                <Head label="Recent activity" scope="latest, any date" />
-                {board.recent.length === 0 ? (
-                  <p className="empty">nothing has moved in this project yet</p>
-                ) : (
-                  <ol className="feed">
-                    {/* The columns are named. Four short facts in a row is exactly where a
-                        reader starts guessing which is which, and the guess is free to be
-                        wrong — "Unassigned" and a status both read as a state. */}
-                    <li className="heading" aria-hidden="true">
-                      <span className="key">issue</span>
-                      <span className="title">summary</span>
-                      <span className="state">status</span>
-                      <span className="who">assignee</span>
-                      <span className="when">updated</span>
-                    </li>
-                    {board.recent.map((item) => (
-                      <li key={item.issue_key}>
-                        <span className="key">{item.issue_key}</span>
-                        <span className="title">{item.title}</span>
-                        <span className="state" data-status={item.status_category}>
-                          {item.status}
-                        </span>
-                        <span className="who">{item.assignee_name ?? "Unassigned"}</span>
-                        <span className="when">{ago(item.updated_at)}</span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
               </section>
 
               {/* First among the tables, because a late ticket you have to go looking for
@@ -554,9 +585,13 @@ export function Dashboard() {
                             {item.issue_key}
                           </td>
                           <td>{item.title}</td>
-                          <td className="who">{item.assignee_name ?? "Unassigned"}</td>
+                          <td className="who">
+                            {item.assignee_name ?? "Unassigned"}
+                          </td>
                           <td className="when">
-                            {item.due_at ? new Date(item.due_at).toLocaleDateString() : "—"}
+                            {item.due_at
+                              ? new Date(item.due_at).toLocaleDateString()
+                              : "—"}
                           </td>
                         </tr>
                       ))}
@@ -591,11 +626,15 @@ export function Dashboard() {
                           <td className="n" data-status="done">
                             {person.done}
                           </td>
-                          <td className="n">{days(person.estimated_seconds)}</td>
+                          <td className="n">
+                            {days(person.estimated_seconds)}
+                          </td>
                           <td className="n">{days(person.spent_seconds)}</td>
                           <td
                             className="n"
-                            data-status={person.gap_seconds > 0 ? "late" : "done"}
+                            data-status={
+                              person.gap_seconds > 0 ? "late" : "done"
+                            }
                           >
                             {days(person.gap_seconds)}
                           </td>
@@ -605,9 +644,9 @@ export function Dashboard() {
                   </table>
                 )}
                 <p className="caption">
-                  The window picks <b>which tickets</b>; the figures are Jira's totals for
-                  each ticket's whole life. <b>Gap is spent minus estimated</b> — positive
-                  is over.
+                  The window picks <b>which tickets</b>; the figures are Jira's
+                  totals for each ticket's whole life.{" "}
+                  <b>Gap is spent minus estimated</b> — positive is over.
                 </p>
               </section>
 
@@ -616,13 +655,20 @@ export function Dashboard() {
                   do on every row, and doing it five times is how a table stops being
                   read. */}
               <section className="block wide">
-                <Head label="Epic progress" count={board.epics.length} scope="whole project" />
+                <Head
+                  label="Epic progress"
+                  count={board.epics.length}
+                  scope="whole project"
+                />
                 {board.epics.length === 0 ? (
                   <p className="empty">this project has no epics</p>
                 ) : (
                   <ol className="epics">
                     {board.epics.map((epic) => (
-                      <li key={epic.issue_key} data-status={epic.status_category}>
+                      <li
+                        key={epic.issue_key}
+                        data-status={epic.status_category}
+                      >
                         <div className="row">
                           <span className="key">{epic.issue_key}</span>
                           <span className="title">{epic.title}</span>
@@ -636,13 +682,54 @@ export function Dashboard() {
                           role="img"
                           aria-label={`${epic.percent}% of ${epic.items} done`}
                         >
-                          <span className="fill" style={{ width: `${epic.percent}%` }} />
+                          <span
+                            className="fill"
+                            style={{ width: `${epic.percent}%` }}
+                          />
                         </div>
                         <p className="moved">
                           {epic.moved === 0
                             ? `untouched in these ${window_} days`
                             : `${epic.moved} moved · ${epic.moved_done} of them done`}
                         </p>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </section>
+              {/* Recent activity. Not windowed, and the block says so: a feed that comes
+                  back empty reads as a dead project, when the truth is that the last thing
+                  to happen was eight days ago and is worth naming. */}
+              <section className="block wide">
+                <Head label="Recent activity" scope="latest, any date" />
+                {board.recent.length === 0 ? (
+                  <p className="empty">nothing has moved in this project yet</p>
+                ) : (
+                  <ol className="feed">
+                    {/* The columns are named. Four short facts in a row is exactly where a
+                        reader starts guessing which is which, and the guess is free to be
+                        wrong — "Unassigned" and a status both read as a state. */}
+                    <li className="heading" aria-hidden="true">
+                      <span className="key">issue</span>
+                      <span className="title">summary</span>
+                      <span className="state">status</span>
+                      <span className="who">assignee</span>
+                      <span className="when">updated</span>
+                    </li>
+                    {board.recent.map((item) => (
+                      <li key={item.issue_key}>
+                        <span className="key">{item.issue_key}</span>
+                        <span className="title">{item.title}</span>
+                        <span
+                          className="state"
+                          data-status={item.status_category}
+                        >
+                          {item.status}
+                        </span>
+                        <span className="who">
+                          {item.assignee_name ?? "Unassigned"}
+                        </span>
+                        <span className="when">{ago(item.updated_at)}</span>
                       </li>
                     ))}
                   </ol>

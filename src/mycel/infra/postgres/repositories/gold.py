@@ -115,13 +115,6 @@ class KindTally:
 
 
 @dataclass(frozen=True)
-class DayCount:
-    """How many items were touched on one day. The heatmap's cell."""
-
-    day: date
-    items: int
-
-@dataclass(frozen=True)
 class DayEffort:
     """Hours logged on one day, across everybody."""
 
@@ -291,6 +284,10 @@ class GoldRepository:
         From worklogs rather than from resolution dates. A worklog's `started` is whatever
         it was told, so it survives a project filled in retroactively; `resolved_at` is
         stamped by Jira and would put a month of work on the day it was entered.
+
+        Days with nothing logged get no row. The heatmap calls this over its own longer
+        span and draws its own calendar, so it has to fill the gaps anyway, and sending
+        three months of zeroes to say nothing happened is the wrong shape for the wire.
         """
         day = func.date(Worklog.started_at).label("day")
         query = (
@@ -304,29 +301,6 @@ class GoldRepository:
         return [
             DayEffort(day=d, seconds=int(seconds))
             for d, seconds in (await self._session.execute(query)).all()
-        ]
-
-    async def activity_by_day(self, project: str, since: datetime) -> list[DayCount]:
-        """Items touched per day, oldest first. Days with nothing get no row.
-
-        Counted from `updated_at` rather than from worklogs, because this answers a
-        different question than `effort_by_day` does: not how many hours went in, but
-        whether the project was moving at all. A team that logs no time still ships.
-
-        Absent days are left out rather than returned as zeroes — a heatmap draws its own
-        calendar and has to fill the gaps anyway, and sending three months of zeroes to
-        say nothing happened is the wrong shape for the wire.
-        """
-        day = func.date(WorkItem.updated_at).label("day")
-        query = (
-            select(day, func.count())
-            .where(WorkItem.project == project, WorkItem.updated_at >= since)
-            .group_by(day)
-            .order_by(day)
-        )
-        return [
-            DayCount(day=d, items=int(n))
-            for d, n in (await self._session.execute(query)).all()
         ]
 
     async def count_by_priority(self, project: str) -> dict[str, int]:

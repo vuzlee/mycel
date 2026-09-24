@@ -2148,8 +2148,35 @@ td[data-status="late"] {
   color: var(--faint);
 }
 
+/* Two views of one subject, side by side. A heatmap and a bar chart of the same
+   worklogs answer different questions — the rhythm and the amount — and each is too
+   short to hold a row alone, which is how a dashboard grows half-empty rows. */
+.board .effort-pair .two-up {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .board .effort-pair .two-up {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A sub-heading, not a second block heading: smaller and quieter than `.label`, so the
+   pair still reads as one block that happens to have two halves. */
+.board .sub {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
 /* Twelve weeks as a grid of days: the one block that shows a rhythm rather than a
-   snapshot. Columns are weeks and rows are weekdays, so a team that never works Fridays
+   snapshot. Columns are weeks and rows are weekdays, so a team that never logs on Fridays
    draws an empty row and says so without a caption. */
 .board .heatmap {
   display: grid;

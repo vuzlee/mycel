@@ -28,8 +28,6 @@ export interface User {
   email: string;
 }
 
-
-
 export interface Thread {
   id: number;
   /** `"chat"` for every thread since batch 033. A string rather than that one literal
@@ -109,10 +107,10 @@ export interface Epic {
   moved_done: number;
 }
 
-/** One day of the heatmap: how many items were touched. */
-export interface DayActivity {
+/** One day of logged effort. The heatmap and the window chart share this shape. */
+export interface DayEffort {
   day: string;
-  items: number;
+  seconds: number;
 }
 
 export interface Dashboard {
@@ -128,12 +126,12 @@ export interface Dashboard {
   kinds: Kind[];
   /** The last items to move, newest first. Whole project, not the window. */
   recent: Item[];
-  /** Items touched per day over the last twelve weeks. Days with none are absent. */
-  activity: DayActivity[];
+  /** Effort logged per day over the last twelve weeks. Days with none are absent. */
+  calendar: DayEffort[];
   overdue: Item[];
   assignees: Assignee[];
   epics: Epic[];
-  effort_by_day: { day: string; seconds: number }[];
+  effort_by_day: DayEffort[];
 }
 
 /** A 401 from any call means the session is gone, and every page reacts the same way. */
@@ -205,7 +203,10 @@ export async function forgotPassword(email: string): Promise<void> {
 }
 
 /** Spend a reset link. Every session of that account ends, this browser included. */
-export async function resetPassword(token: string, newPassword: string): Promise<void> {
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<void> {
   const res = await fetch("/auth/reset", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -215,7 +216,10 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 /** Change it while signed in. Every other session ends; this one survives. */
-export async function changePassword(current: string, next: string): Promise<void> {
+export async function changePassword(
+  current: string,
+  next: string,
+): Promise<void> {
   const res = await fetch("/auth/password", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -232,7 +236,9 @@ export interface Member {
 }
 
 export const fetchMembers = (project: string): Promise<Member[]> =>
-  fetch(`/projects/${encodeURIComponent(project)}/members`).then(json<Member[]>);
+  fetch(`/projects/${encodeURIComponent(project)}/members`).then(
+    json<Member[]>,
+  );
 
 /** PUT, because granting twice asks for the same end state. */
 export async function addMember(project: string, email: string): Promise<void> {
@@ -243,7 +249,10 @@ export async function addMember(project: string, email: string): Promise<void> {
   if (!res.ok) throw new Error(await detail(res));
 }
 
-export async function removeMember(project: string, email: string): Promise<void> {
+export async function removeMember(
+  project: string,
+  email: string,
+): Promise<void> {
   const res = await fetch(
     `/projects/${encodeURIComponent(project)}/members/${encodeURIComponent(email)}`,
     { method: "DELETE" },
@@ -257,8 +266,14 @@ export async function removeMember(project: string, email: string): Promise<void
  *
  *  Without a conversation this opens a thread; with one the question joins that thread
  *  and the server sends its earlier turns to the agent along with it. */
-export const askChat = (question: string, conversationId?: number): Promise<Accepted> =>
-  post<Accepted>("/chat", { question, conversation_id: conversationId ?? null });
+export const askChat = (
+  question: string,
+  conversationId?: number,
+): Promise<Accepted> =>
+  post<Accepted>("/chat", {
+    question,
+    conversation_id: conversationId ?? null,
+  });
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
 export async function fetchChat(jobId: string): Promise<ChatResult | null> {
@@ -285,5 +300,8 @@ export async function forgetThread(id: number): Promise<void> {
   if (!res.ok) throw new Error(await detail(res));
 }
 
-export const fetchDashboard = (project: string, days: number): Promise<Dashboard> =>
+export const fetchDashboard = (
+  project: string,
+  days: number,
+): Promise<Dashboard> =>
   fetch(`/dashboard/${project}?days=${days}`).then(json<Dashboard>);
