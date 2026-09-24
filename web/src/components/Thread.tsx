@@ -40,17 +40,24 @@ export function Thread({
   return (
     <div className="thread">
       {before}
-      {question !== null && (
-        <div className="turn user" id={anchor}>
-          <div className="bubble">{question}</div>
+      {/* The turn on screen, as one block. It is one element rather than siblings so CSS can
+          give it a floor of a viewport's height — without that floor there is nothing below
+          a question just asked, the browser has no room to scroll it up with, and it lands
+          a few lines short of the top instead of at it. Once the answer outgrows the screen
+          the floor stops applying and the block is just its content. */}
+      <div className="live">
+        {question !== null && (
+          <div className="turn user" id={anchor}>
+            <div className="bubble">{question}</div>
+          </div>
+        )}
+        <div className="turn items">
+          <Steps items={items} gaps={gaps} liveSeq={liveSeq} />
         </div>
-      )}
-      <div className="turn items">
-        <Steps items={items} gaps={gaps} liveSeq={liveSeq} />
+        {pending && <Working items={items} />}
+        {children}
+        {failure && <p className="failure">{failure}</p>}
       </div>
-      {pending && <Working items={items} />}
-      {children}
-      {failure && <p className="failure">{failure}</p>}
     </div>
   );
 }

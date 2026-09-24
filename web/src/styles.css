@@ -469,6 +469,10 @@ a.brand:hover .mark {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Named so `.live` can size itself against this box. A percentage cannot: it resolves
+     against `.thread`, whose own height is `auto`, and an auto height gives a percentage
+     nothing to resolve against. `cqh` resolves against the container, which is this. */
+  container: body / size;
   scrollbar-width: thin;
   scrollbar-color: var(--rule-2) transparent;
 }
@@ -488,6 +492,12 @@ a.brand:hover .mark {
   margin: 0 auto;
   padding: 36px 28px 48px;
   font-size: 15.5px;
+  /* Column so `.live` can be given a floor measured against the scroll box rather than
+     against the window: the body sits under a header and above the composer, so a `vh`
+     figure would overshoot by however tall those are. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 /* ---------------------------------------------------------------- messages */
@@ -511,6 +521,31 @@ a.brand:hover .mark {
   margin-top: 20px;
   padding-top: 0;
   border-top: none;
+}
+
+/* The turn being watched, with a floor of one viewport.
+
+   Asking scrolls the question to the top of the body, and a scroll needs somewhere to go:
+   at the moment the question is sent there is nothing under it yet, so the browser scrolls
+   as far as the content allows — a couple of lines — and the question stops short of the
+   top. The floor is the room that scroll uses. `min-height`, not `height`, so it stops
+   mattering the moment the answer is taller than the screen.
+
+   Measured against the scroll box, not the window: the body sits under a header and above
+   the composer, so a `vh` figure would overshoot by however tall those are. `cqh` asks the
+   container named on `.scroll`, so nothing here has to be kept in step with a change to
+   either of them.
+
+   `min-height`, not `flex: 1`. Grow only divides what is left over, and when the turns
+   above are taller than the screen there is nothing left over — which is the ordinary case,
+   reopening a thread and asking. A floor holds whether or not anything is above it: the
+   thread then overflows by the height of the history, which is exactly what should scroll.
+
+   The thread's own bottom padding is subtracted, or the floor and that padding would stack
+   into a screen that scrolls past the end of the answer by 48px of nothing. */
+.live {
+  min-height: calc(100cqh - 48px);
+  flex-shrink: 0;
 }
 
 .turn.user {
