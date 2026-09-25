@@ -1,8 +1,13 @@
-# Prometheus scrapes the app directly. There is no collector in between: traces go to
-# Langfuse over OTLP, and metrics are the only thing left for this stack to gather.
+# Prometheus scrapes the three processes directly. There is no collector in between:
+# traces go to Langfuse over OTLP, and metrics are the only thing left for this stack to
+# gather.
 #
-# Nothing is exposing /metrics yet, so a fresh `--profile monitoring` comes up with this
-# target down. That is honest: the dashboard is empty because the data does not exist.
+# Three targets, not one. The api is where requests arrive, but the worker is where jobs
+# run and the scheduler is where syncs run — scrape only the api and the graph stays
+# healthy while every job dies.
+#
+# The api serves /metrics on the port it already has. The other two open a small port of
+# their own for nothing else; see `observability/metrics_server.py`.
 
 global:
   scrape_interval: 15s
@@ -11,3 +16,11 @@ scrape_configs:
   - job_name: mycel-api
     static_configs:
       - targets: ["api:8000"]
+
+  - job_name: mycel-worker
+    static_configs:
+      - targets: ["worker:9100"]
+
+  - job_name: mycel-scheduler
+    static_configs:
+      - targets: ["scheduler:9101"]

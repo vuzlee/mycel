@@ -39,6 +39,7 @@ from mycel.domains import chat as chat_domain
 from mycel.infra.redis import results
 from mycel.infra.redis.client import close_clients
 from mycel.llm.budget import BudgetExceeded
+from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel, close_connection
@@ -149,9 +150,13 @@ def main() -> int:
             # handler between bytecodes, which cannot set an asyncio event safely.
             loop.add_signal_handler(sig, stop.set)
 
+        # The worker is where jobs actually run, so it is the process whose numbers matter
+        # most — and the only reason it has a port at all.
+        metrics = await serve_metrics(settings.metrics_port, settings.metrics_host)
         try:
             await run_worker(stop)
         finally:
+            metrics.close()
             await close_connection()
             await close_clients()
 

@@ -15,7 +15,7 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +33,12 @@ class Settings(BaseSettings):
 
     # LLM. Every key is optional: a run needs the one its model spec asks for and no
     # other, so a Gemini-only machine is a valid deployment.
+    #
+    # Plural, because several keys for one provider are several accounts and so several
+    # quotas — see `llm/keyring.py`. The singular names below still work and count as a
+    # list of one, so no deployment has to change to keep running.
+    anthropic_api_keys: str = ""
+    gemini_api_keys: str = ""
     anthropic_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
     local_llm_base_url: str = "http://localhost:8001/v1"
@@ -119,6 +125,39 @@ class Settings(BaseSettings):
         parts = self.registration_allowed_domains.split(",")
         return frozenset(p.strip().lower().lstrip("@") for p in parts if p.strip())
 
+    def llm_keys(self, provider: str) -> list[str]:
+        """Every key configured for one provider, in the order they were written.
+
+        The plural variable wins when both are set, because one place to declare a thing is
+        the point of adding it; the singular is read only when the plural is empty.
+        """
+        plural = {"google": self.gemini_api_keys, "anthropic": self.anthropic_api_keys}[provider]
+        keys = [part.strip() for part in plural.split(",") if part.strip()]
+        if keys:
+            return keys
+        single = {"google": self.gemini_api_key, "anthropic": self.anthropic_api_key}[provider]
+        return [single.get_secret_value()] if single is not None else []
+
+    @model_validator(mode="after")
+    def _warn_on_both_key_forms(self) -> "Settings":
+        """Say so when a provider has keys under both names.
+
+        Silently picking one of two declarations is where somebody loses an afternoon, and
+        `frozen=True` means this is the last moment anything can say anything about it.
+        """
+        from mycel.core.logging import get_logger
+
+        for provider, plural, single in (
+            ("GEMINI", self.gemini_api_keys, self.gemini_api_key),
+            ("ANTHROPIC", self.anthropic_api_keys, self.anthropic_api_key),
+        ):
+            if plural.strip() and single is not None:
+                get_logger(__name__).warning(
+                    "both key forms are set; the plural one is used",
+                    extra={"used": f"{provider}_API_KEYS", "ignored": f"{provider}_API_KEY"},
+                )
+        return self
+
     #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
     #: is a full-access password with no narrower scope available, which is why the
     #: headers-only discipline is enforced in the IMAP fetch string rather than here.
@@ -133,6 +172,17 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str = "https://jp.cloud.langfuse.com"
+    #: Whether a span carries the prompt sent and the text returned, as well as the model,
+    #: tokens and cost it always carries. Off by default because turning it on sends real
+    #: user data to a third party: the question somebody typed, and the internal figures
+    #: that came back. On in development, where reading the SQL an agent wrote is the
+    #: whole point of having a trace; off in production unless somebody has decided.
+    otel_capture_content: bool = False
+    #: Where `/metrics` listens in the worker and the scheduler. The api serves it on the
+    #: port it already has. Loopback by default: the endpoint has no authentication, so
+    #: the interface it binds to is the only thing making it private.
+    metrics_host: str = "127.0.0.1"
+    metrics_port: int = 9100
 
     # Infrastructure. The defaults are the throwaway local ones `docker-compose.yml`
     # brings up, so a dev machine needs neither variable set. Any deployment that is not

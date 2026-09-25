@@ -48,6 +48,11 @@ services:
     profiles: [app]
     command: python -m mycel.scheduler
     env_file: .env
+    # /metrics has no authentication, so what it binds to is what keeps it private.
+    # Inside a container all interfaces means "the compose network"; the port is not
+    # published, so nothing outside that network can reach it.
+    environment:
+      METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
 
@@ -59,6 +64,8 @@ services:
     profiles: [app]
     command: python -m mycel.queue.consumer
     env_file: .env
+    environment:
+      METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
@@ -144,14 +151,22 @@ services:
   # backend to forward them to.
   #
   # What remains answers different questions — metrics over time, logs across several
-  # machines — and nothing produces that data on a single dev box yet, so it sits behind
-  # a profile: docker compose --profile monitoring up -d
+  # machines — so it sits behind a profile: docker compose --profile monitoring up -d
+  #
+  # Every container here has a mem_limit. None of the application services do, and that is
+  # deliberate: a leak in one of these is a leak in something watching, and without a
+  # ceiling the OOM killer picks a victim by size, which is postgres rather than whatever
+  # actually leaked.
   prometheus:
     image: prom/prometheus:latest
     profiles: [monitoring]
-    command: ["--config.file=/etc/prometheus/prometheus.yaml"]
+    # Fifteen days of samples is the default and more than a dev box has questions for.
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+      - "--storage.tsdb.retention.time=7d"
     volumes: ["./deploy/otel:/etc/prometheus", "promdata:/prometheus"]
     ports: ["9090:9090"]
+    mem_limit: 1g
 
   # Prometheus answers "is something broken" and Loki "why". "Where" is Langfuse's
   # question now, and it is not part of this stack.
@@ -161,6 +176,7 @@ services:
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes: ["./deploy/otel:/etc/loki", "lokidata:/loki"]
     ports: ["3100:3100"]
+    mem_limit: 512m
 
   # Collects container stdout and ships it to Loki. The app only prints JSON logs to
   # stdout and sends them nowhere itself.
@@ -174,6 +190,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on: [loki]
+    mem_limit: 128m
 
   grafana:
     image: grafana/grafana:latest
@@ -184,6 +201,9 @@ services:
     volumes: ["./deploy/grafana:/etc/grafana/provisioning"]
     ports: ["3000:3000"]
     depends_on: [prometheus, loki]
+    # 512m, not 256m: measured at 196 MiB idle with one dashboard, which leaves no room
+    # for a second browser tab. Grafana is the one here that holds rendered state.
+    mem_limit: 512m
 
 # pgdata and rabbitdata already exist, filled by containers started by hand before this
 # file was usable. Named `external` so compose adopts them rather than creating

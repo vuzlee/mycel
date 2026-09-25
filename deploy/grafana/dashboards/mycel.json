@@ -1,0 +1,90 @@
+{
+  "uid": "mycel-health",
+  "title": "Mycel — is something broken",
+  "description": "One board, four panels, one question. A second board gets made when somebody asks something this one cannot answer; until then it would be a file to keep in step for nothing.",
+  "tags": ["mycel"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Job failure rate",
+      "description": "The share of finished jobs that failed. One counter split by status rather than two counters, so this is a ratio of a metric to itself and cannot drift.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(mycel_jobs_total{status=\"failed\"}[15m])) / clamp_min(sum(rate(mycel_jobs_total[15m])), 1e-9)",
+          "legendFormat": "failed"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Sync duration",
+      "description": "p50 and p95 of one full Jira sync. The question is whether it is getting slower, which needs the distribution and not the last value.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.5, sum by (le, domain) (rate(mycel_sync_duration_seconds_bucket[1h])))",
+          "legendFormat": "p50 {{domain}}"
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le, domain) (rate(mycel_sync_duration_seconds_bucket[1h])))",
+          "legendFormat": "p95 {{domain}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Rows written per layer",
+      "description": "Bronze, silver, gold from the last sync. They do not have to match — gold is aggregated — but gold falling to zero while bronze does not is a transform that stopped.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "mycel_records_written",
+          "legendFormat": "{{domain}} / {{layer}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Tokens per minute",
+      "description": "The bill, before it is a bill. Split by direction because input and output are priced apart, and by model because that is the other half of the multiplication.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (model, direction) (rate(mycel_tokens_spent_total[5m])) * 60",
+          "legendFormat": "{{model}} {{direction}}"
+        }
+      ]
+    }
+  ]
+}

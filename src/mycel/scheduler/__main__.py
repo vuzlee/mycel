@@ -10,16 +10,22 @@ import asyncio
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
 from mycel.infra.postgres.engine import dispose_engine
+from mycel.observability.metrics_server import serve_metrics
 from mycel.scheduler.runner import run_forever
 
 log = get_logger(__name__)
 
 
 async def _main() -> None:
-    setup_logging(get_settings().log_level)
+    settings = get_settings()
+    setup_logging(settings.log_level)
+    # One port above the worker's: the two never share a machine in compose, but they do
+    # on a laptop running both by hand.
+    metrics = await serve_metrics(settings.metrics_port + 1, settings.metrics_host)
     try:
         await run_forever()
     finally:
+        metrics.close()
         await dispose_engine()
 
 

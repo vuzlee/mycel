@@ -2,6 +2,8 @@
 name = "mycel"
 version = "0.1.0"
 description = "Multi-agent system that builds reports and dashboards from multiple data sources"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   # pydantic-ai-slim, not the full package: full pulls in every provider plus Logfire.
@@ -35,6 +37,9 @@ dependencies = [
   # silent truncation at 72 bytes is a footgun nobody notices until a long passphrase
   # turns out to have been only its first 72 bytes all along.
   "argon2-cffi>=23.1",
+  # Metrics. The client library only, not an exporter sidecar: it holds the registry in
+  # process and renders the text format, which is all Prometheus asks for.
+  "prometheus-client>=0.20",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.

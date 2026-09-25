@@ -10,6 +10,7 @@ knows which routers the system has:
     include_router(dashboard.router)
     include_router(chat.router)
     include_router(events.router)
+    include_router(metrics.router)
 
 Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
 here. Existing domains stay untouched.
@@ -52,7 +53,7 @@ from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import dependencies, health
 from mycel.api.middleware import RequestIdMiddleware
-from mycel.api.routes import auth, chat, dashboard, events, members, projects
+from mycel.api.routes import auth, chat, dashboard, events, members, metrics, projects
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
@@ -115,6 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(dashboard.router)
     app.include_router(chat.router)
     app.include_router(events.router)
+    app.include_router(metrics.router)
 
     _install_error_handlers(app)
     _mount_web(app)
