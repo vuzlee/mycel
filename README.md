@@ -24,12 +24,11 @@ surfaces when you ask it something. The interesting part was never the fruiting 
 You ask in a sentence. Mycel picks the agents and tools it needs, runs them, and answers
 with the figures it used — so every number can be traced back to the query that produced it.
 
-<a href="https://github.com/vuzlee/mycel/raw/main/assets/demo.webm">
-  <img src="assets/demo-poster.png" alt="Two questions asked in plain language — who logged the most hours this month, and what is late right now — each answered after the agents and tools it took, with an opened tool call showing the SQL the figures came from" width="100%">
-</a>
+https://github.com/user-attachments/assets/0ef30c9f-1984-4a55-90ff-536d8fd14096
 
-<sup>A real session, 78 seconds, nothing staged —
-<a href="https://github.com/vuzlee/mycel/raw/main/assets/demo.webm">play it</a>.</sup>
+<sup>A real session, 78 seconds, nothing staged. The player is GitHub's and the file sits on
+its CDN, so a clone has <a href="assets/demo-poster.png">a still</a> and
+<a href="assets/demo.webm">the take itself</a> instead.</sup>
 
 ## How it is put together
 
