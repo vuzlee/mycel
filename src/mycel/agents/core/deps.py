@@ -19,6 +19,7 @@ from dataclasses import dataclass, field, replace
 from mycel.agents.core.config import AgentSettings
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
+from mycel.services.auth import Principal
 
 
 @dataclass
@@ -32,6 +33,12 @@ class MycelDeps:
     budget: JobBudget
     settings: AgentSettings = field(default_factory=AgentSettings)
     events: EventChannel = field(default_factory=NullChannel)
+
+    #: Who asked. `None` is valid and means nobody — a smoke script, a test, a job whose
+    #: payload predates this field. It is **not** a skeleton key: every tool that reads a
+    #: team's data treats `None` as "granted nothing", so a path that forgets to pass a
+    #: principal fails closed rather than opening the whole of gold.
+    principal: Principal | None = None
 
     # session: AsyncSession — added when infra/ lands. Deliberately absent from this
     # slice, which computes rather than queries.

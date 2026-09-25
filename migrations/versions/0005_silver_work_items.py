@@ -120,7 +120,5 @@ def downgrade() -> None:
     op.drop_index("ix_silver_worklog_project_started", table_name="worklog", schema="silver")
     op.drop_table("worklog", schema="silver")
     op.drop_index("ix_silver_work_item_due_at", table_name="work_item", schema="silver")
-    op.drop_index(
-        "ix_silver_work_item_project_updated", table_name="work_item", schema="silver"
-    )
+    op.drop_index("ix_silver_work_item_project_updated", table_name="work_item", schema="silver")
     op.drop_table("work_item", schema="silver")

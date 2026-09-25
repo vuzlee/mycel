@@ -13,7 +13,9 @@ from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
 
 
-async def enqueue_chat(question: str, conversation_id: int, history: str = "") -> str:
+async def enqueue_chat(
+    question: str, conversation_id: int, history: str = "", user_id: int | None = None
+) -> str:
     """Queue a question and return the job id to poll with.
 
     `history` is the earlier turns of this thread, already trimmed by the domain. It rides
@@ -23,6 +25,11 @@ async def enqueue_chat(question: str, conversation_id: int, history: str = "") -
 
     `conversation_id` is in the payload rather than derived by the worker: the thread
     exists before the job does, so a run that dies still has somewhere to be recorded.
+
+    `user_id` rides along so the worker can rebuild who asked. It is in the payload, so it
+    is in the idempotency key — which means two people asking the same words no longer
+    share a job. That is the point: they are granted different projects, and one shared
+    answer is a leak. It also costs a cache hit that used to be free.
     """
     job = Job(
         kind=JobKind.CHAT,
@@ -30,6 +37,7 @@ async def enqueue_chat(question: str, conversation_id: int, history: str = "") -
             "question": question,
             "conversation_id": conversation_id,
             "history": history,
+            "user_id": user_id,
         },
     )
     return await publish(job)

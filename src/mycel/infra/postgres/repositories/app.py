@@ -120,6 +120,12 @@ class AppRepository:
         row = await self._session.scalar(select(User).where(User.email == email))
         return _user(row) if row else None
 
+    async def all_users(self) -> list[UserRow]:
+        """Every account, by address. For the shell that grants the first project — a
+        deployment with nobody granted anything has no other way to see who is there."""
+        rows = await self._session.scalars(select(User).order_by(User.email))
+        return [_user(row) for row in rows]
+
     async def user_by_id(self, user_id: int) -> UserRow | None:
         """Find someone by id."""
         row = await self._session.scalar(select(User).where(User.id == user_id))

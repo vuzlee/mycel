@@ -15,6 +15,7 @@ import pytest
 from mycel.domains.chat import HISTORY_CHARS, HISTORY_TURNS, _recall, run
 from mycel.infra.postgres.repositories.app import TurnRow
 from mycel.queue.job import Job, JobKind
+from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 
@@ -90,6 +91,8 @@ class TestTheWorkerUsesIt:
         monkeypatch.setattr(domain.runner, "run", fake_run)
         monkeypatch.setattr(domain.budgets, "load", lambda *a, **k: _noop())
         monkeypatch.setattr(domain.budgets, "save", lambda *a, **k: _noop())
+        # Who asked is read back out of `app.user`, which this test has no database for.
+        monkeypatch.setattr(domain, "_who_asked", lambda job: _somebody())
 
         job = Job(
             kind=JobKind.CHAT,
@@ -97,6 +100,7 @@ class TestTheWorkerUsesIt:
                 "question": "and last week?",
                 "conversation_id": 1,
                 "history": "Earlier in this conversation:\n\nQ: how is MYC?\nA: Fine.",
+                "user_id": 1,
             },
         )
         try:
@@ -110,3 +114,7 @@ class TestTheWorkerUsesIt:
 
 async def _noop() -> Any:
     return None
+
+
+async def _somebody() -> Principal:
+    return Principal(id=1, email="someone@example.com")

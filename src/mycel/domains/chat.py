@@ -35,7 +35,9 @@ from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import budgets, results
 from mycel.infra.redis.streams import RedisEventChannel
+from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
+from mycel.services.auth import Principal
 from mycel.services.enqueue import enqueue_chat
 
 log = get_logger(__name__)
@@ -86,7 +88,7 @@ async def request_chat(
             thread = await _thread_of(repo, user_id, conversation_id)
             history = _recall(await repo.turns_for_conversation(thread.id))
 
-        job_id = await enqueue_chat(question, thread.id, history)
+        job_id = await enqueue_chat(question, thread.id, history, user_id=user_id)
         await repo.upsert_turn(thread.id, job_id, question, status="queued")
     return job_id, thread.id
 
@@ -158,7 +160,7 @@ async def run(job: Job) -> None:
 
     settings = AgentSettings.from_config(Orchestrator.name)
     recorder = RecordingChannel(RedisEventChannel(job.job_id))
-    deps = await _deps(job, settings, recorder)
+    deps = await _deps(job, settings, recorder, await _who_asked(job))
     _log_start(job, settings, deps)
     try:
         answer = await runner.run(Orchestrator.build(settings), prompt, deps)
@@ -187,7 +189,28 @@ async def record_failure(job: Job, error: str) -> None:
     await _record(job, status="failed", error=error[:500])
 
 
-async def _deps(job: Job, settings: AgentSettings, events: EventChannel) -> MycelDeps:
+async def _who_asked(job: Job) -> Principal:
+    """The person this job belongs to, read back out of the payload.
+
+    Raises rather than falling back to `None`. A job with no `user_id` is one queued before
+    batch 055 — still in flight or sitting in the DLQ at deploy time — and running it would
+    run it as nobody. `None` means "granted nothing" everywhere else, so it would not leak;
+    it would produce an answer that says it could see no data, which reads as the data
+    being gone. Failing is the honest outcome and the queue can retry it after a requeue.
+    """
+    user_id = job.payload.get("user_id")
+    if not isinstance(user_id, int):
+        raise ValueError("chat job has no user_id; it predates batch 055 and cannot be run")
+    async with session_scope() as session:
+        user = await AppRepository(session).user_by_id(user_id)
+    if user is None:
+        raise ValueError(f"chat job belongs to user {user_id}, who no longer exists")
+    return Principal(id=user.id, email=user.email)
+
+
+async def _deps(
+    job: Job, settings: AgentSettings, events: EventChannel, principal: Principal
+) -> MycelDeps:
     """What one attempt runs with.
 
     The budget is seeded from Redis rather than from zero: this runs once per *attempt*,
@@ -200,6 +223,7 @@ async def _deps(job: Job, settings: AgentSettings, events: EventChannel) -> Myce
         settings=settings,
         budget=await budgets.load(job.job_id, ceiling),
         events=events,
+        principal=principal,
     )
 
 
@@ -249,6 +273,11 @@ async def _record(
     thread leaves a job unacked until the broker's `consumer_timeout` redelivers it to fail
     the same way again.
     """
+    # Counted here rather than at each call site: this is the one function both the done
+    # and the failed path go through, and it already has the word for which one it was.
+    # Before the early return, because a job with no thread still ended.
+    jobs_total.labels(kind=str(job.kind), status=status).inc()
+
     conversation_id = int(str(job.payload.get("conversation_id", 0)))
     if not conversation_id:
         log.warning("job has no conversation to record against", extra={"job_id": job.job_id})

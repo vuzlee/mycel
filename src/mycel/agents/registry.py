@@ -36,6 +36,7 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.core.exceptions import ConfigError
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
+from mycel.services.auth import Principal
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
@@ -67,6 +68,7 @@ def build_deps(
     settings: AgentSettings | None = None,
     budget: JobBudget | None = None,
     events: EventChannel | None = None,
+    principal: Principal | None = None,
 ) -> MycelDeps:
     """Make the deps one job's runs share.
 
@@ -81,10 +83,15 @@ def build_deps(
     which reads the running total out of Redis so a redelivered job does not start again
     from zero. Left out, the job starts at its full ceiling, which is right for a script
     or a test and wrong for anything that can be retried.
+
+    `principal` left out means nobody asked, which every tool that reads a team's data
+    reads as "granted nothing". A script that needs real data builds a `Principal` and says
+    so; the default is closed, because a forgotten argument must not be an open door.
     """
     return MycelDeps(
         job_id=job_id,
         budget=budget or JobBudget(job_id, Decimal(ceiling_usd)),
         settings=settings or AgentSettings(),
         events=events or NullChannel(),
+        principal=principal,
     )

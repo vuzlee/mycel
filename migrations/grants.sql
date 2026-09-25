@@ -55,3 +55,28 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA gold GRANT SELECT ON TABLES TO mycel_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA app
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO mycel_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA app GRANT USAGE, SELECT ON SEQUENCES TO mycel_app;
+
+-- Batch 055 put gold behind row-level security so `run_sql` can be scoped to the asker's
+-- granted projects. RLS is bypassed by a table's *owner* and by nobody else — and in a
+-- deployment that ran this file, `mycel_app` is not the owner. Without the two statements
+-- below it would read zero rows from gold, and `gather_progress`, the dashboard and the
+-- board would all go empty with no error anywhere.
+--
+-- So `mycel_app` gets an unconditional read, and steps down into `mycel_reader` for the
+-- length of one model-written query. The narrow role is the one with the policy; the
+-- application role is deliberately unrestricted, because every other reader checks
+-- permission a layer up in `services/permission.py`.
+GRANT mycel_reader TO mycel_app;
+
+DO $$
+DECLARE t text;
+BEGIN
+    FOREACH t IN ARRAY ARRAY['work_item', 'worklog'] LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON gold.%I', t || '_app_reads_all', t);
+        EXECUTE format(
+            'CREATE POLICY %I ON gold.%I FOR SELECT TO mycel_app USING (true)',
+            t || '_app_reads_all', t
+        );
+    END LOOP;
+END
+$$;

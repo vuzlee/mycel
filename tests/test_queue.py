@@ -28,6 +28,7 @@ from mycel.infra.redis import budgets, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, retry, topology
 from mycel.queue.job import Job, JobKind
+from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 
@@ -62,8 +63,25 @@ class FakeMessage:
 
 
 def _message(question: str = "how many?", **headers: Any) -> FakeMessage:
-    job = Job(kind=JobKind.CHAT, payload={"question": question}, job_id="job-1")
+    job = Job(kind=JobKind.CHAT, payload={"question": question, "user_id": 1}, job_id="job-1")
     return FakeMessage(job.model_dump_json().encode(), dict(headers))
+
+
+@pytest.fixture(autouse=True)
+def asker(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Who the job belongs to, without the `app.user` lookup behind it.
+
+    The lookup is real work in production — a job whose account was deleted must not run —
+    but it is a round trip to Postgres, and every test in this file is about the queue.
+    """
+
+    async def _who(job: Job) -> Principal:
+        user_id = job.payload.get("user_id")
+        if not isinstance(user_id, int):
+            raise ValueError("chat job has no user_id")
+        return Principal(id=user_id, email="someone@example.com")
+
+    monkeypatch.setattr(chat_domain, "_who_asked", _who)
 
 
 @pytest.fixture
@@ -284,7 +302,7 @@ class TestFailures:
 
         job = Job(
             kind=JobKind.CHAT,
-            payload={"question": "how many?", "conversation_id": 22},
+            payload={"question": "how many?", "conversation_id": 22, "user_id": 1},
             job_id="job-1",
         )
         message = FakeMessage(job.model_dump_json().encode())
@@ -365,7 +383,8 @@ class TestWhatTravelsWithAFailedJob:
         await retry.reject(message, dlx, reason="down")  # type: ignore[arg-type]
 
         published, _ = dlx.published[0]
-        assert Job.model_validate_json(published.body).payload == {"question": "how many tickets?"}
+        payload = Job.model_validate_json(published.body).payload
+        assert payload == {"question": "how many tickets?", "user_id": 1}
 
     async def test_the_reason_is_attached(self) -> None:
         dlx = FakeExchange()

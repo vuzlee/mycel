@@ -1,5 +1,17 @@
 """One tool: read gold with SQL the model wrote.
 
+**Who is asking is enforced by Postgres, not by reading the query.** The model writes its
+own SQL, and there is no reading of that SQL that tells you which rows it will touch — a
+project can be named in a join, a subquery, a CTE, or not named at all by `SELECT *`. So
+the transaction becomes `mycel_reader`, a role gold's row-level security applies to, and
+scopes itself to the asker's granted projects with `SET LOCAL`. See
+`infra/postgres/acl.py`. A query that asks for a project by name gets no rows rather than
+an error, which is also the refusal that gives nothing away.
+
+**No principal means no rows.** A run with `deps.principal` unset is scoped to the empty
+list and reads nothing. That is the deliberate direction: a forgotten principal produces an
+empty answer, never an open one.
+
 **Four layers stop a write, and only one of them is real.** The prompt asks for SELECT,
 `_reject` refuses anything that does not look like one, and `LIMIT` caps what comes back —
 but a model that finds a phrasing none of those expect is stopped by `SET TRANSACTION READ
@@ -23,7 +35,9 @@ from sqlalchemy import text
 
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.guards import guard_repeat
+from mycel.infra.postgres.acl import READER_ROLE, SCOPE_SETTING
 from mycel.infra.postgres.session import session_scope
+from mycel.services.permission import readable_projects
 
 MAX_ROWS = 200
 TIMEOUT_MS = 5_000
@@ -63,6 +77,18 @@ def _table(columns: list[str], rows: Sequence[Sequence[Any]]) -> str:
     return f"{' | '.join(columns)}\n{body}"
 
 
+async def _scope(deps: MycelDeps) -> str:
+    """The asker's granted projects, as the comma-separated list the policy splits.
+
+    Empty for a run with no principal, which the policy reads as no rows. Read fresh each
+    call rather than carried on the deps: a grant revoked mid-run should take effect on the
+    next query, not at the end of the job.
+    """
+    if deps.principal is None:
+        return ""
+    return ",".join(sorted(await readable_projects(deps.principal)))
+
+
 def build_toolset() -> FunctionToolset[MycelDeps]:
     """The gold-layer read, as a tool an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
@@ -79,11 +105,24 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         guard_repeat(ctx, "run_sql", threshold=ctx.deps.settings.repeat_threshold, query=query)
         if refusal := _reject(query):
             raise ModelRetry(refusal)
+        scope = await _scope(ctx.deps)
         async with session_scope() as session:
             # The one layer Postgres enforces. Inside the same transaction as the query,
             # because a read-only setting on any other transaction protects nothing.
             await session.execute(text("SET TRANSACTION READ ONLY"))
             await session.execute(text(f"SET LOCAL statement_timeout = {TIMEOUT_MS}"))
+            # Scope first, role second. `SET ROLE` is the point of no return — after it
+            # the connection can no longer set anything it is not allowed to — and a scope
+            # set after the role would be a scope the policy never saw.
+            #
+            # `set_config(..., true)` rather than `SET LOCAL`: both are transaction-local,
+            # but only the function form takes a bind parameter, and a project list pasted
+            # into SQL is the injection this whole layer exists to avoid.
+            await session.execute(
+                text("SELECT set_config(:name, :scope, true)"),
+                {"name": SCOPE_SETTING, "scope": scope},
+            )
+            await session.execute(text(f"SET LOCAL ROLE {READER_ROLE}"))
             try:
                 result = await session.execute(text(_limited(query)))
             except Exception as exc:

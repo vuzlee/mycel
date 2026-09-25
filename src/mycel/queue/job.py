@@ -50,7 +50,7 @@ class Job(BaseModel):
         default_factory=dict,
         description=(
             "Arguments for this kind of work. For `chat`: `{'question', "
-            "'conversation_id', 'history'}`."
+            "'conversation_id', 'history', 'user_id'}`."
         ),
     )
     job_id: str = Field(

@@ -11,6 +11,7 @@ error, not the defence, and mixing the two would suggest otherwise.
 
 import os
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -24,9 +25,11 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools import query as query_tool
 from mycel.agents.tools.query import MAX_ROWS, _limited, _reject, _table, build_toolset
+from mycel.infra.postgres import acl
 from mycel.infra.postgres.engine import async_dsn, dispose_engine, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.llm.budget import JobBudget
+from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 
@@ -105,9 +108,12 @@ class TestTheTable:
         assert _table(["a"], [(None,)]) == "a\n"
 
 
-@needs_postgres
-class TestAgainstTheDatabase:
-    """The half that only a real Postgres can answer."""
+class _AgainstTheDatabase:
+    """Schema, seeding and fixtures for everything only a real Postgres can answer.
+
+    A base rather than a parent test class: inheriting one test class from another reruns
+    every test in it, and these are the slowest in the file.
+    """
 
     @pytest.fixture(autouse=True)
     async def schema(self, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[None]:
@@ -124,6 +130,10 @@ class TestAgainstTheDatabase:
             for schema in SCHEMAS:
                 await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
             await conn.run_sync(Base.metadata.create_all)
+            # The same statements migration 0012 runs. The suite never runs alembic, so
+            # without this the tool would step into a role the policies do not exist for —
+            # and every row-filtering test below would pass by reading everything.
+            await acl.apply(conn)
         await engine.dispose()
         try:
             yield
@@ -140,7 +150,22 @@ class TestAgainstTheDatabase:
         return build_toolset().tools["run_sql"].function
 
     @pytest.fixture
-    def ctx(self) -> Any:
+    def granted(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        """What the asker may read, without an `app.membership` behind it.
+
+        A list the test mutates: the scope is read per call, so a revoke mid-run takes
+        effect on the next query rather than at the end of the job.
+        """
+        projects: list[str] = ["MYC"]
+
+        async def _readable(user: Any) -> frozenset[str]:
+            return frozenset(projects)
+
+        monkeypatch.setattr(query_tool, "readable_projects", _readable)
+        return projects
+
+    @pytest.fixture
+    def ctx(self, granted: list[str]) -> Any:
         """Enough of a `RunContext` for `guard_repeat`: deps, and an empty history."""
 
         class _Ctx:
@@ -148,22 +173,33 @@ class TestAgainstTheDatabase:
                 job_id="job-1",
                 budget=JobBudget("job-1", Decimal("1.00")),
                 settings=AgentSettings(model_spec="local:qwen3-4b"),
+                principal=Principal(id=1, email="someone@example.com"),
             )
             messages: list[Any] = []
 
         return _Ctx()
 
-    async def _seed(self) -> None:
+    async def _seed(self, project: str = "MYC", issue: str = "MYC-7") -> None:
         async with get_engine().begin() as conn:
             await conn.execute(
                 text(
                     "INSERT INTO gold.work_item (source, project, issue_id, issue_key, kind,"
                     " title, status, status_category, labels, created_at, updated_at)"
-                    " VALUES ('jira', 'MYC', '7', 'MYC-7', 'story', 'dashboard', 'Done',"
+                    " VALUES ('jira', :project, :id, :key, 'story', 'dashboard', 'Done',"
                     " 'done', '[]'::jsonb, :now, :now)"
                 ),
-                {"now": datetime(2026, 9, 20, tzinfo=UTC)},
+                {
+                    "project": project,
+                    "id": issue.rsplit("-", 1)[-1],
+                    "key": issue,
+                    "now": datetime(2026, 9, 20, tzinfo=UTC),
+                },
             )
+
+
+@needs_postgres
+class TestAgainstTheDatabase(_AgainstTheDatabase):
+    """What the tool does against a real Postgres, for an asker granted MYC."""
 
     async def test_a_select_returns_a_table(self, run_sql: Any, ctx: Any) -> None:
         await self._seed()
@@ -225,3 +261,70 @@ class TestAgainstTheDatabase:
         async with get_engine().connect() as conn:
             left = await conn.scalar(text("SELECT count(*) FROM gold.work_item"))
         assert left == 1
+
+
+@needs_postgres
+class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
+    """The fault batch 055 closed, and the reason the filter is not in Python."""
+
+    async def _two_projects(self) -> None:
+        await self._seed("MYC", "MYC-7")
+        await self._seed("ACME", "ACME-1")
+
+    async def test_a_plain_select_only_returns_the_granted_project(
+        self, run_sql: Any, ctx: Any
+    ) -> None:
+        """The query names no project and no user. Postgres filters it anyway, which is
+        the whole reason the rule is a policy rather than something read off the SQL."""
+        await self._two_projects()
+        out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
+        assert "MYC-7" in out
+        assert "ACME-1" not in out
+
+    async def test_naming_another_project_outright_still_returns_nothing(
+        self, run_sql: Any, ctx: Any
+    ) -> None:
+        """No rows rather than an error: a refusal that said "not allowed" would be a way
+        of learning that ACME exists."""
+        await self._two_projects()
+        out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE project = 'ACME'")
+        assert out == "issue_key\n(no rows)"
+
+    async def test_a_subquery_cannot_reach_around_it(self, run_sql: Any, ctx: Any) -> None:
+        """A policy applies per table scan, so it applies inside a CTE too — which a
+        filter bolted onto the outer query would not."""
+        await self._two_projects()
+        out = await run_sql(
+            ctx,
+            "WITH everything AS (SELECT issue_key, project FROM gold.work_item)"
+            " SELECT issue_key FROM everything",
+        )
+        assert "MYC-7" in out and "ACME-1" not in out
+
+    async def test_an_aggregate_cannot_count_what_it_cannot_read(
+        self, run_sql: Any, ctx: Any
+    ) -> None:
+        """A count is a leak of exactly one number, and it leaks through the same scan."""
+        await self._two_projects()
+        out = await run_sql(ctx, "SELECT count(*) AS n FROM gold.work_item")
+        assert out.endswith("\n1")
+
+    async def test_a_run_with_nobody_attached_reads_nothing(self, run_sql: Any, ctx: Any) -> None:
+        """`None` is closed. A path that forgot the principal gets an empty answer, never
+        the whole of gold."""
+        await self._two_projects()
+        ctx.deps = replace(ctx.deps, principal=None)
+        out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
+        assert out == "issue_key\n(no rows)"
+
+    async def test_a_grant_taken_back_applies_to_the_next_query(
+        self, run_sql: Any, ctx: Any, granted: list[str]
+    ) -> None:
+        """The scope is read per call, not carried on the deps: a revoke lands on the next
+        query rather than at the end of a job that may run for minutes."""
+        await self._two_projects()
+        assert "MYC-7" in await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
+
+        granted.clear()
+        out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE issue_key <> 'x'")
+        assert out == "issue_key\n(no rows)"

@@ -78,19 +78,27 @@ class AgentSettings:
     # raises at build time — see `mcp/clients.py`.
     mcp_servers: tuple[str, ...] = ()
 
-    def __post_init__(self) -> None:
-        """Freeze `mcp_servers` into a tuple however it arrived.
+    # Models to try, in order, when `model_spec` is unreachable — a provider outage, not a
+    # spent quota. Empty means one model and no second chance, which is what every agent
+    # had before batch 056. See `model_builder.py` for which failures move down the list:
+    # a 5xx does, a 429 does not, because rotating the key is the answer to a 429 and
+    # falling to another model would spend a second quota while the ring still has keys.
+    fallback_specs: tuple[str, ...] = ()
 
-        YAML has no tuples, so this field reaches `from_config` as a list — mutable, and
+    def __post_init__(self) -> None:
+        """Freeze the list-valued fields into tuples however they arrived.
+
+        YAML has no tuples, so these fields reach `from_config` as lists — mutable, and
         therefore able to change under an agent that has already been built. The dataclass
-        is frozen for exactly that reason, so the field has to be too.
+        is frozen for exactly that reason, so the fields have to be too.
         """
-        if not isinstance(self.mcp_servers, tuple):
-            if isinstance(self.mcp_servers, str) or not isinstance(self.mcp_servers, Iterable):
-                raise ConfigError(
-                    f"mcp_servers must be a list of server names, got {self.mcp_servers!r}"
-                )
-            object.__setattr__(self, "mcp_servers", tuple(self.mcp_servers))
+        for name in ("mcp_servers", "fallback_specs"):
+            value = getattr(self, name)
+            if isinstance(value, tuple):
+                continue
+            if isinstance(value, str) or not isinstance(value, Iterable):
+                raise ConfigError(f"{name} must be a list, got {value!r}")
+            object.__setattr__(self, name, tuple(value))
 
     @classmethod
     def from_config(
