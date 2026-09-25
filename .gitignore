@@ -40,3 +40,7 @@ scripts/smoke/try_*.py
 
 # Coverage data, written by `pytest --cov`.
 .coverage
+
+# Every still and take from a demo recording. The one video the README shows is
+# promoted to assets/demo.webm by hand and is committed; the rest is working material.
+assets/demo/

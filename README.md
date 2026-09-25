@@ -24,10 +24,11 @@ surfaces when you ask it something. The interesting part was never the fruiting 
 You ask in a sentence. Mycel picks the agents and tools it needs, runs them, and answers
 with the figures it used — so every number can be traced back to the query that produced it.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/demo-dark.svg">
-  <img src="assets/demo-light.svg" alt="Three questions asked in plain language — how a project is going, who logged the most hours, what is worth reading in the mail — each answered after the agents and tools it took, with the figures the answer rests on" width="100%">
-</picture>
+<a href="assets/demo.webm">
+  <img src="assets/demo-poster.png" alt="Two questions asked in plain language — who logged the most hours this month, and what is late right now — each answered after the agents and tools it took, with an opened tool call showing the SQL the figures came from" width="100%">
+</a>
+
+<sup>A real session, recorded. <a href="assets/demo.webm">Play it</a> — 78 seconds.</sup>
 
 ## How it is put together
 
@@ -143,7 +144,7 @@ migrations/    Alembic migrations, plus the grants split
 deploy/        OTel, Grafana, Helm, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 docs/          Design documentation
-assets/        Banner and diagram, hand-written SVG
+assets/        Banner and diagram as hand-written SVG; the demo as a recording
 ```
 
 | | |

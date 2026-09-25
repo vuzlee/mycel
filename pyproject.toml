@@ -40,13 +40,18 @@ dependencies = [
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
 [dependency-groups]
 dev = [
-  "ruff>=0.6", "mypy>=1.11", "pytest>=8.0", "anyio>=4.4", "types-pyyaml>=6.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "pytest>=8.0",
+  "anyio>=4.4",
+  "types-pyyaml>=6.0",
   # Drives the app in tests without a running server.
   "httpx>=0.27",
   # Type stubs for the async driver, which ships none.
   "asyncpg-stubs>=0.29",
   # Coverage, so "is this tested" has an answer instead of an opinion.
   "pytest-cov>=5.0",
+  "playwright>=1.48",
 ]
 
 [build-system]
