@@ -13,9 +13,11 @@ signs in, asks the questions, waits for real agents to answer them, opens a tool
 show the SQL underneath, and scrolls the real dashboard. It is slower, it needs the stack
 up, and it can be wrong in the way the product is wrong — which is the point.
 
-WHAT THE README SHOWS. A take lands in `assets/demo/<theme>/`, which is ignored. Promoting
-one is a decision, not an outcome of running this: copy the WebM to `assets/demo.webm` and
-a still to `assets/demo-poster.png`. A recording nobody looked at is not a demo.
+WHAT THE README SHOWS. A take lands in `assets/demo/<theme>/`, which is ignored, and nothing
+here publishes it. GitHub gives a player only to a `user-attachments` URL, and one of those
+exists only for a file dropped into a comment box — so promoting a take is done by hand:
+watch it, drop it into a new issue, and put the URL it returns in the README. A recording
+nobody looked at is not a demo, and the upload is the step that guarantees someone did.
 
 IT IS PACED FOR A WATCHER, NOT FOR A TEST. A test clicks the moment an element exists; a
 person moves the pointer there, pauses, and reads what happened. So every click travels,

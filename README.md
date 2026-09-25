@@ -26,9 +26,7 @@ with the figures it used — so every number can be traced back to the query tha
 
 https://github.com/user-attachments/assets/0ef30c9f-1984-4a55-90ff-536d8fd14096
 
-<sup>A real session, 78 seconds, nothing staged. The player is GitHub's and the file sits on
-its CDN, so a clone has <a href="assets/demo-poster.png">a still</a> and
-<a href="assets/demo.webm">the take itself</a> instead.</sup>
+<sup>A real session, 78 seconds, nothing staged.</sup>
 
 ## How it is put together
 
@@ -144,7 +142,7 @@ migrations/    Alembic migrations, plus the grants split
 deploy/        OTel, Grafana, Helm, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 docs/          Design documentation
-assets/        Banner and diagram as hand-written SVG; the demo as a recording
+assets/        Banner and diagram, hand-written SVG
 ```
 
 | | |
