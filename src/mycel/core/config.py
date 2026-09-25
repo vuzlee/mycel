@@ -34,10 +34,12 @@ class Settings(BaseSettings):
     # LLM. Every key is optional: a run needs the one its model spec asks for and no
     # other, so a Gemini-only machine is a valid deployment.
     #
-    # Plural, because several keys for one provider are several accounts and so several
-    # quotas — see `llm/keyring.py`. The singular names below still work and count as a
-    # list of one, so no deployment has to change to keep running.
-    anthropic_api_keys: str = ""
+    # Plural for Gemini only, because several keys for one provider are several accounts
+    # and so several free tiers — see `llm/keyring.py`, and Gemini's is the quota this
+    # project actually runs into. The singular names below still work and count as a list
+    # of one, so no deployment has to change to keep running. Anthropic has no plural form:
+    # no agent asks for that provider, and an environment variable for something nothing
+    # reads is a promise the code does not keep.
     gemini_api_keys: str = ""
     anthropic_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
@@ -128,34 +130,31 @@ class Settings(BaseSettings):
     def llm_keys(self, provider: str) -> list[str]:
         """Every key configured for one provider, in the order they were written.
 
-        The plural variable wins when both are set, because one place to declare a thing is
-        the point of adding it; the singular is read only when the plural is empty.
+        Only Gemini has a plural form, and it wins when both are set, because one place to
+        declare a thing is the point of adding it; the singular is read only when the plural
+        is empty.
         """
-        plural = {"google": self.gemini_api_keys, "anthropic": self.anthropic_api_keys}[provider]
-        keys = [part.strip() for part in plural.split(",") if part.strip()]
-        if keys:
-            return keys
+        if provider == "google":
+            keys = [part.strip() for part in self.gemini_api_keys.split(",") if part.strip()]
+            if keys:
+                return keys
         single = {"google": self.gemini_api_key, "anthropic": self.anthropic_api_key}[provider]
         return [single.get_secret_value()] if single is not None else []
 
     @model_validator(mode="after")
     def _warn_on_both_key_forms(self) -> "Settings":
-        """Say so when a provider has keys under both names.
+        """Say so when Gemini has keys under both names.
 
         Silently picking one of two declarations is where somebody loses an afternoon, and
         `frozen=True` means this is the last moment anything can say anything about it.
         """
         from mycel.core.logging import get_logger
 
-        for provider, plural, single in (
-            ("GEMINI", self.gemini_api_keys, self.gemini_api_key),
-            ("ANTHROPIC", self.anthropic_api_keys, self.anthropic_api_key),
-        ):
-            if plural.strip() and single is not None:
-                get_logger(__name__).warning(
-                    "both key forms are set; the plural one is used",
-                    extra={"used": f"{provider}_API_KEYS", "ignored": f"{provider}_API_KEY"},
-                )
+        if self.gemini_api_keys.strip() and self.gemini_api_key is not None:
+            get_logger(__name__).warning(
+                "both key forms are set; the plural one is used",
+                extra={"used": "GEMINI_API_KEYS", "ignored": "GEMINI_API_KEY"},
+            )
         return self
 
     #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
