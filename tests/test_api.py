@@ -24,7 +24,7 @@ from mycel.api import dependencies
 from mycel.api.app import WEB_DIST, create_app
 from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
-from mycel.core.config import Settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.domains.threads import Thread
 from mycel.infra.postgres.repositories.app import ConversationRow, TurnRow
@@ -104,11 +104,14 @@ def _stored(
 KEPT_ANSWER = "Nothing was asked, so nothing happened."
 
 
-def _kept(job_id: str, *, status: str = "done") -> TurnRow:
+def _kept(job_id: str, *, status: str = "done", age_s: float = 0.0) -> TurnRow:
     """A row as `app.turn` keeps it, for the fallback half of the result endpoint.
 
     A row that never ran has no answer, which is how a `queued` one is told apart from a
     finished one without a second argument nobody reads.
+
+    `age_s` is how long ago it was written, which only a `queued` row cares about: young
+    means the worker has not reached it, old means Redis lost it.
     """
     return TurnRow(
         id=1,
@@ -120,7 +123,7 @@ def _kept(job_id: str, *, status: str = "done") -> TurnRow:
         error=None,
         spent_usd=Decimal("0.0216"),
         steps=None,
-        created_at=datetime.now(UTC),
+        created_at=datetime.now(UTC) - timedelta(seconds=age_s),
     )
 
 
@@ -320,10 +323,26 @@ class TestCollectingAnAnswer:
     ) -> None:
         """A job still `queued` when Redis forgot it is failed, not in flight.
 
-        Telling a caller `running` sends them polling a job nobody will ever finish.
+        Telling a caller `running` sends them polling a job nobody will ever finish. Old
+        enough that Redis could have forgotten it: below the TTL the same row means the
+        opposite, which is the test below.
         """
-        _stored(monkeypatch, None, kept=_kept("job-abc", status="queued"))
+        stale = get_settings().result_ttl_seconds + 60
+        _stored(monkeypatch, None, kept=_kept("job-abc", status="queued", age_s=stale))
         assert client.get("/chat/job-abc").json()["status"] == "failed"
+
+    def test_a_run_still_on_its_way_to_a_worker_is_running(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The window every run passes through, and the one the page polls in.
+
+        The turn is written `queued` in the same transaction as the publish, and the
+        worker's `mark_running` is a broker hop later — so for a moment there is a row and
+        no Redis key, and the page starts polling the instant the POST returns. Read as
+        `failed`, that moment puts "The run failed." over a run that is about to answer.
+        """
+        _stored(monkeypatch, None, kept=_kept("job-abc", status="queued", age_s=0.5))
+        assert client.get("/chat/job-abc").json()["status"] == "running"
 
     def test_a_running_run_still_names_its_thread_and_its_question(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

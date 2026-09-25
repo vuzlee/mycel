@@ -21,6 +21,10 @@ log = get_logger(__name__)
 #: a dead connection.
 KEEPALIVE = ": keepalive\n\n"
 
+#: The turn statuses that mean the run is over and will emit nothing more. `queued` is
+#: deliberately not among them: it is written before the worker ever sees the job.
+FINISHED = frozenset({"done", "failed"})
+
 
 @router.get("/{job_id}/events")
 async def stream_events(
@@ -57,12 +61,25 @@ async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[st
     # row, and its stream is still there holding every tool call it made — closing on the
     # record alone would swallow the whole activity list of every run the reader watches.
     #
+    # And the row has to be a FINISHED one. A turn is written twice, and the first write is
+    # `queued`, at the moment the question is enqueued — so a run that has not started yet
+    # answers both of the questions above: its stream does not exist, because the key is
+    # created by the first `xadd` and the worker is still a broker hop away, and its row is
+    # already there. The page opens this stream immediately after POST /chat, which put it
+    # squarely in that window: it was told the run had finished before the run began, shut
+    # the EventSource, and every event the run went on to produce arrived in a Redis stream
+    # nobody was reading. On screen that is a question stuck on "Working through it" while
+    # the composer frees up — the answer is in the poll, and the whole activity list is
+    # lost.
+    #
     # Only when the client is asking from the start. A reconnect carrying `Last-Event-ID`
     # is resuming a live run, and its remaining events are in the stream.
+    kept = await find_turn(job_id) if after == streams.FIRST else None
     if (
         after == streams.FIRST
         and not await streams.exists(job_id)
-        and await find_turn(job_id) is not None
+        and kept is not None
+        and kept.status in FINISHED
     ):
         done = SequencedEvent(agent="system", type=RUN_FINISHED, seq=0)
         yield f"data: {done.model_dump_json()}\n\n"

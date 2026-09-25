@@ -23,14 +23,17 @@ TTL that used to make a job id good for an hour stopped mattering in batch 012: 
 written to both, so the fallback is a row, not a 404.
 """
 
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import current_user
+from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains.chat import ThreadNotFound, find_turn, request_chat
+from mycel.infra.postgres.repositories.app import TurnRow
 from mycel.infra.redis import results
 from mycel.services.auth import Principal
 
@@ -114,6 +117,21 @@ async def create_chat(
     return AcceptedResponse(job_id=job_id, conversation_id=thread_id)
 
 
+def _state_of(kept: TurnRow) -> Literal["running", "done", "failed"]:
+    """What a kept row means when Redis has nothing to say about the job.
+
+    `done` is itself. Everything else is a failure, unless the row is younger than the TTL
+    Redis would have had to outlive to lose the job — in which case the job has not been
+    picked up yet rather than lost.
+    """
+    if kept.status == "done":
+        return "done"
+    if kept.status != "queued":
+        return "failed"
+    age = datetime.now(UTC) - kept.created_at
+    return "running" if age.total_seconds() < get_settings().result_ttl_seconds else "failed"
+
+
 @router.get("/{job_id}", response_model=ChatResponse)
 async def get_chat(
     job_id: str,
@@ -127,6 +145,15 @@ async def get_chat(
 
     A run still queued when Redis dropped it reads as `failed` rather than `running`: the
     row says `queued`, and a caller told `running` would poll a job nobody will finish.
+
+    Except while it is too young for Redis to have dropped anything. A turn is written
+    `queued` at enqueue time, in the same transaction as the publish, and the worker's
+    `mark_running` is a broker hop later — so every run passes through a moment with a
+    `queued` row and no Redis key, and the page polls inside it, because it starts polling
+    the instant the POST returns. Read as `failed`, that moment puts "The run failed." on
+    screen over a run that is about to answer perfectly well. The row's age is what tells
+    the two apart: below the result TTL nothing can have expired yet, so a `queued` row
+    that young is a run still on its way to a worker.
 
     The row is read either way, because `conversation_id` and `question` are only there.
     `request_chat` writes it at queue time in the same transaction as the enqueue, so it
@@ -145,7 +172,7 @@ async def get_chat(
         }
     elif kept is not None:
         state = {
-            "status": "done" if kept.status == "done" else "failed",
+            "status": _state_of(kept),
             "answer": kept.answer,
             "spent_usd": str(kept.spent_usd) if kept.spent_usd is not None else None,
             "error": kept.error,

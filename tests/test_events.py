@@ -310,6 +310,17 @@ class TestNestingThroughARealRun:
         ], "the answer must arrive in pieces, and not a fourth time whole"
 
 
+class Kept:
+    """What `app.turn` holds for a job, as far as the frames care: a status.
+
+    A real `TurnRow` carries the answer and the spend too, and none of that reaches this
+    code — the row is consulted to tell a run that is over from one that has not started.
+    """
+
+    def __init__(self, status: str) -> None:
+        self.status = status
+
+
 class FakeRequest:
     """A request that is connected until a test says otherwise."""
 
@@ -403,7 +414,7 @@ class TestAFinishedRunDoesNotBlock:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """One run_finished and nothing else — there is nothing left to wait for."""
-        frames = await _collect([], FakeRequest(), monkeypatch, kept=object(), stream=False)
+        frames = await _collect([], FakeRequest(), monkeypatch, kept=Kept("done"), stream=False)
 
         assert len(frames) == 1
         assert '"type":"run_finished"' in frames[0]
@@ -416,7 +427,7 @@ class TestAFinishedRunDoesNotBlock:
             [("1-0", SequencedEvent(seq=1, agent="a", type="text"))],
             FakeRequest(),
             monkeypatch,
-            kept=object(),
+            kept=Kept("done"),
             stream=False,
         )
 
@@ -434,11 +445,46 @@ class TestAFinishedRunDoesNotBlock:
         """
         called = SequencedEvent(seq=1, agent="analyst", type=TOOL_CALLED, payload={"tool": "sql"})
         frames = await _collect(
-            [("1-0", called)], FakeRequest(), monkeypatch, kept=object(), stream=True
+            [("1-0", called)], FakeRequest(), monkeypatch, kept=Kept("done"), stream=True
         )
 
         assert len(frames) == 1
         assert '"type":"tool_called"' in frames[0]
+
+
+class TestAQueuedRunIsNotMistakenForAFinishedOne:
+    """The window between POST /chat and the worker picking the job up.
+
+    A turn is written twice and the first write is `queued`, at the moment the question is
+    enqueued. In that window a run answers both halves of the short circuit above: its
+    stream does not exist yet, because the key is created by the first `xadd` and the
+    worker is still a broker hop away, and its row is already in `app.turn`.
+
+    The page opens the stream immediately after the POST, so this was every run, not an
+    edge: the client was told the run had finished before it began, closed its EventSource,
+    and the sixty-odd events that followed went into a stream nobody was reading. What the
+    reader saw was a question stuck on "Working through it" while the composer freed up —
+    the answer arrived by poll, and the whole activity list was gone.
+    """
+
+    async def test_it_waits_on_the_stream_instead_of_closing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A queued row with no stream yet is a run about to start, not one long over."""
+        called = SequencedEvent(seq=1, agent="analyst", type=TOOL_CALLED, payload={"tool": "sql"})
+        frames = await _collect(
+            [("1-0", called)], FakeRequest(), monkeypatch, kept=Kept("queued"), stream=False
+        )
+
+        assert len(frames) == 1
+        assert '"type":"tool_called"' in frames[0]
+
+    async def test_a_failed_run_still_closes_at_once(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Failed is as over as done, and has no events left to send either."""
+        frames = await _collect([], FakeRequest(), monkeypatch, kept=Kept("failed"), stream=False)
+
+        assert len(frames) == 1
+        assert '"type":"run_finished"' in frames[0]
 
 
 class TestATurnKeepsItsToolCalls:
