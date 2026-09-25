@@ -17,10 +17,20 @@ delegated agent's tokens into the caller's — so the single `record()` at the e
 calling run already bills every delegated token. That is also why nothing here calls
 `budget.record()`: doing so would charge the same tokens twice. See `core/runner.py`.
 
-**A failing delegation is reported, not a dead run.** Each tool catches `AgentError` and
-returns the failure as text the model can read. Letting it propagate would kill a whole run
-over one unavailable source. `BudgetExceeded` is deliberately *not* caught: out of money is
-the end of the job, and continuing would spend money the job does not have.
+**A failing delegation is reported, not a dead run — unless nothing was reached.** The line
+is not "did it raise", it is "is this an answer". A tool with no data, a schema the model
+could not fill, a loop making no progress: poor answers, but answers, and the caller
+narrates them. A `TransportError` is not an answer. The request never reached a model, and
+the only thing that changes the outcome is trying again later, so it propagates and the job
+fails — which is the retry path `queue/retry.py` exists to run.
+
+Catching it too was a real outage: on 2026-09-24 a 503 inside the analyst came back as
+"the work data analysis service encountered a 503 error", the job was marked done, billed,
+written into the thread, and never retried. A crash is visible; that paragraph has to be
+*read* to notice it says nothing.
+
+`BudgetExceeded` is deliberately not caught either: out of money is the end of the job, and
+continuing would spend money the job does not have.
 
 This is the one tool module that imports from `agents/agent/`, which is what makes it the
 only place the dependency exists — every other module gets delegation by asking for this
@@ -40,11 +50,12 @@ from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.core.exceptions import AgentError
+from mycel.agents.core.exceptions import AgentError, ToolFailed, TransportError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.session import session_scope
 from mycel.services.analyze import render
 from mycel.services.gather import gather_progress
+from mycel.services.permission import can_read_project
 
 log = get_logger(__name__)
 
@@ -93,6 +104,7 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
             project: The project key, e.g. "MYC".
             days: How far back the window reaches. Defaults to a week.
         """
+        await _must_read(ctx, project)
         until = datetime.now(UTC)
         async with session_scope() as session:
             window = await gather_progress(session, project, until - timedelta(days=days), until)
@@ -101,13 +113,38 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
     return toolset
 
 
+#: Said for a project that does not exist and for one the asker was never granted, on
+#: purpose. Two different sentences would turn this tool into a way of finding out which
+#: projects exist by asking about them one at a time.
+_NO_SUCH_PROJECT = "project {project} does not exist or you do not have access to it"
+
+
+async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
+    """Stop before reading, or raise `ToolFailed`.
+
+    `ToolFailed` rather than `ModelRetry`: not being granted a project is not a wrong
+    argument the model can fix, and a retry is an invitation to try project names until one
+    lands.
+
+    No principal is no access. A run with nobody attached reads nothing here, the same as
+    `run_sql` — see `agents/core/deps.py` for why `None` is closed rather than open.
+    """
+    user = ctx.deps.principal
+    if user is None or not await can_read_project(user, project):
+        log.info("project read refused", extra={"project": project, "job_id": ctx.deps.job_id})
+        raise ToolFailed("summariser", _NO_SUCH_PROJECT.format(project=project))
+
+
 async def _delegate(
     ctx: RunContext[MycelDeps],
     agent_cls: type[BaseAgent[Any]],
     name: str,
     prompt: str,
 ) -> str:
-    """Run one delegated agent on the caller's budget, returning failure rather than raising.
+    """Run one delegated agent on the caller's budget.
+
+    A failure that is an answer comes back as text. A `TransportError` is re-raised, so the
+    job fails and the queue can retry it.
 
     The output is serialised to JSON because a tool result goes back to the model as text:
     the delegated agent's schema is what keeps statements attached to their sources across
@@ -116,6 +153,11 @@ async def _delegate(
     cfg = AgentSettings.from_config(name)
     try:
         output = await runner.delegate(agent_cls.build(cfg), prompt, ctx, cfg)
+    except TransportError:
+        # Raised before the clause below can swallow it: nothing was reached, so there is
+        # nothing to narrate, and a retry is the only thing that changes the outcome.
+        log.warning("delegated agent could not reach its model", extra={"agent": name})
+        raise
     except AgentError as exc:
         # Returned, not raised: see the module docstring. `BudgetExceeded` is not an
         # `AgentError` and so passes through, ending the job as it should.

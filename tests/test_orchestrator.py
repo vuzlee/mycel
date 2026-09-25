@@ -7,9 +7,12 @@ The first is **money**: a delegated run must be billed once, by the caller. `run
 forwards `usage=ctx.usage` and deliberately skips `budget.record()`, so a regression there
 double-charges silently and only shows up on an invoice.
 
-The second is **what a failing specialist does to a run**. It must come back as text the
-model can write around, not as an exception that kills the run — except for
-`BudgetExceeded`, which is the one failure that must end the job.
+The second is **what a failing specialist does to a run**, and the line is not "did it
+raise", it is "is this an answer". A tool with no data or a schema the model could not fill
+comes back as text the orchestrator writes around. A `TransportError` — nothing was reached
+— must kill the run, so the queue retries it; so must `BudgetExceeded`, because continuing
+spends money the job does not have. Both sides are pinned here, in one class, because the
+bug they guard against is the boundary moving.
 
 Since batch 033 the output is a plain `str`, so a model's turn ends with a `TextPart`
 rather than a `final_result` tool call. That is the point of the change and not an
@@ -18,6 +21,7 @@ incidental one: prose arrives on the stream as it is written, and a tool call do
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from decimal import Decimal
 from typing import Any
 
@@ -29,10 +33,11 @@ from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.core.exceptions import ModelTimeout
+from mycel.agents.core.exceptions import ModelTimeout, ToolFailed
 from mycel.agents.tools import delegate
 from mycel.agents.tools.delegate import build_toolset
 from mycel.llm.budget import BudgetExceeded, JobBudget
+from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 
@@ -53,7 +58,12 @@ UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_00
 
 @pytest.fixture
 def deps() -> MycelDeps:
-    return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED)
+    return MycelDeps(
+        job_id="job-1",
+        budget=JobBudget("job-1", Decimal("1.00")),
+        settings=UNGUARDED,
+        principal=Principal(id=1, email="someone@example.com"),
+    )
 
 
 def _answer(text: str = "Done.") -> ModelResponse:
@@ -147,10 +157,14 @@ class TestAFailingSpecialist:
     async def test_becomes_text_the_model_can_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """One unavailable source must not cost the whole run."""
+        """One unavailable source must not cost the whole run.
+
+        `ToolFailed` and not a transport error: the specialist ran and its world was wrong,
+        which is a poor answer rather than no answer. See the test below for the other side.
+        """
 
         async def _fails(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
-            raise ModelTimeout("researcher timed out")
+            raise ToolFailed("web_search", "the search host is unreachable")
 
         monkeypatch.setattr(runner, "delegate", _fails)
 
@@ -175,6 +189,26 @@ class TestAFailingSpecialist:
         assert returned, "the failure must arrive as a tool result, not as an exception"
         assert "researcher" in returned[0]
         assert "unavailable" in result.output, "the model must be free to say so in the answer"
+
+    async def test_a_transport_failure_kills_the_run_instead(
+        self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The other side of the line, and the one that was wrong.
+
+        On 2026-09-24 a 503 inside the analyst was narrated as prose and the job was marked
+        done: billed, written into the thread, never retried. Nothing was reached, so there
+        is nothing to narrate — it has to reach the queue, which knows how to try again.
+        """
+
+        async def _unreachable(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
+            raise ModelTimeout("cloud:gemini-3.5-flash-lite did not respond in time")
+
+        monkeypatch.setattr(runner, "delegate", _unreachable)
+
+        agent = Orchestrator.build(LOCAL)
+        with agent.override(model=FunctionModel(_asks_then_answers("analyst", "q"))):
+            with pytest.raises(ModelTimeout):
+                await agent.run("Who logged the most hours?", deps=deps)
 
     async def test_running_out_of_money_still_ends_the_job(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -213,6 +247,7 @@ class TestTheSummariserTool:
         monkeypatch.setattr(delegate, "gather_progress", _fake_gather)
         monkeypatch.setattr(delegate, "render", lambda window: "rendered progress")
         monkeypatch.setattr(delegate, "session_scope", _null_session)
+        _granted(monkeypatch, "MYC")
 
         prompts: list[str] = []
 
@@ -240,3 +275,63 @@ class TestTheSummariserTool:
 
         assert windows == [("MYC", 14)], "the window must be the one the model asked for"
         assert prompts == ["rendered progress"], "the summariser gets the rendered window"
+
+    async def test_a_project_the_asker_was_not_granted_is_never_read(
+        self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The fault batch 055 closed: the tool took a project name from the model and
+        read it. `gather_progress` must not be reached at all — a refusal produced after
+        the read is a refusal that already loaded the data."""
+        reached = []
+        monkeypatch.setattr(delegate, "gather_progress", lambda *a, **k: reached.append(a))
+        _granted(monkeypatch, "OTHER")
+
+        with pytest.raises(ToolFailed) as raised:
+            await _call_summariser(deps, "MYC")
+
+        assert reached == []
+        assert "MYC" in str(raised.value)
+
+    async def test_the_refusal_does_not_say_whether_the_project_exists(
+        self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """One sentence for both cases. Two would turn this tool into a way of learning
+        which projects exist by naming them one at a time."""
+        _granted(monkeypatch, "OTHER")
+
+        with pytest.raises(ToolFailed) as raised:
+            await _call_summariser(deps, "MYC")
+
+        assert "does not exist or you do not have access" in str(raised.value)
+
+    async def test_a_run_with_nobody_attached_reads_nothing(
+        self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`None` is closed, not open. A code path that forgets the principal has to fail
+        the same way an ungranted one does."""
+        _granted(monkeypatch, "MYC")
+
+        with pytest.raises(ToolFailed):
+            await _call_summariser(replace(deps, principal=None), "MYC")
+
+
+def _granted(monkeypatch: pytest.MonkeyPatch, *projects: str) -> None:
+    """What this person may read, without a database behind it."""
+
+    async def _can_read(user: Principal, project: str) -> bool:
+        return project in projects
+
+    monkeypatch.setattr(delegate, "can_read_project", _can_read)
+
+
+async def _call_summariser(deps: MycelDeps, project: str) -> str:
+    """The tool body, called straight rather than through a model."""
+
+    class _Ctx:
+        pass
+
+    ctx = _Ctx()
+    ctx.deps = deps  # type: ignore[attr-defined]
+    ctx.messages = []  # type: ignore[attr-defined]
+    tool = delegate.build_toolset().tools["summariser"].function
+    return await tool(ctx, project)

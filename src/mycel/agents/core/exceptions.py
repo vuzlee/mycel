@@ -26,7 +26,25 @@ class AgentError(MycelError):
     """Base for everything the agent runtime raises."""
 
 
-class ModelTimeout(AgentError):
+class TransportError(AgentError):
+    """The provider could not be reached, or would not answer. Not a result.
+
+    The distinction this draws is the one `tools/delegate.py` splits on. Every other
+    `AgentError` is something that happened *during* a run and will happen again the same
+    way: a tool with no data, a schema the model could not fill, a loop making no progress.
+    Those are answers, poor ones, and an agent narrating them is right.
+
+    This is not an answer. The request never reached a model, or the model never replied,
+    and the only thing that changes the outcome is trying again later — which is exactly
+    what `queue/retry.py` exists to do. Narrating it produces a job marked done whose text
+    has to be *read* to discover it says nothing.
+
+    A parent class rather than a tuple of names at each `except`, so a third kind of
+    transport failure lands on the right side of the line without an edit anywhere.
+    """
+
+
+class ModelTimeout(TransportError):
     """The model did not answer in time.
 
     Names the tier, because the answer differs: a cloud timeout is usually transient, a
@@ -77,12 +95,30 @@ class ToolFailed(AgentError):
         self.reason = reason
 
 
-class ModelCallFailed(AgentError):
+class ModelCallFailed(TransportError):
     """The provider rejected the request or was unreachable."""
 
 
-def _caused_by_timeout(exc: BaseException) -> bool:
+def _all_models_failed(model_spec: str, group: BaseException) -> TransportError:
+    """One Mycel error for a whole failed chain, naming what each model said.
+
+    A timeout only if *every* model timed out: one model that answered with a 503 makes
+    "did not respond in time" a wrong sentence, and the difference decides where the
+    reader goes looking.
+    """
+    causes = list(getattr(group, "exceptions", ()))
+    said = "; ".join(str(cause) for cause in causes) or str(group)
+    detail = f"{model_spec} and its fallbacks all failed: {said}"
+    if causes and all(caused_by_timeout(cause) for cause in causes):
+        return ModelTimeout(detail)
+    return ModelCallFailed(detail)
+
+
+def caused_by_timeout(exc: BaseException) -> bool:
     """Whether a timeout is anywhere under `exc`.
+
+    Public because `model_builder.py` asks the same question for a different reason: here
+    it decides which Mycel error to raise, there whether to try the next model.
 
     Provider SDKs do not share a base class and none of them inherit from the HTTP
     library's timeout, so this matches on the chain by name as well as by type.
@@ -103,6 +139,7 @@ def _caused_by_timeout(exc: BaseException) -> bool:
 def translate_agent_errors(model_spec: str) -> Iterator[None]:
     """Turn pydantic-ai's exceptions into Mycel's, naming which backend was at fault."""
     from pydantic_ai.exceptions import (
+        FallbackExceptionGroup,
         ModelAPIError,
         UnexpectedModelBehavior,
         UsageLimitExceeded,
@@ -110,6 +147,12 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
 
     try:
         yield
+    except FallbackExceptionGroup as exc:
+        # Every model in the chain failed. This arrives as a group rather than as a
+        # `ModelAPIError`, so without this clause it would sail past the one below and
+        # reach `tools/delegate.py` as an ordinary exception — the exact shape batch 054
+        # closed, where nothing was reached and the job was written up as an answer.
+        raise _all_models_failed(model_spec, exc) from exc
     except UsageLimitExceeded as exc:
         raise RunawayStopped(f"{model_spec}: {exc}") from exc
     except UnexpectedModelBehavior as exc:
@@ -117,6 +160,6 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
     except ModelAPIError as exc:
         # Which side failed decides where to look: a local timeout means the vLLM
         # container is down, a cloud one is usually transient.
-        if _caused_by_timeout(exc):
+        if caused_by_timeout(exc):
             raise ModelTimeout(f"{model_spec} did not respond in time: {exc}") from exc
         raise ModelCallFailed(f"{model_spec}: {exc}") from exc
