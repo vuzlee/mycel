@@ -9,9 +9,9 @@ numbered PNG at each step so a still can be picked without scrubbing the video.
 
 WHY A RECORDING AND NOT A DRAWING. The README used to show `demo-*.svg`, drawn by a script
 from values typed into it: sharp, diffable, and a screen that had never existed. This one
-signs in, asks the questions, waits for real agents to answer them, opens a tool call to
-show the SQL underneath, and scrolls the real dashboard. It is slower, it needs the stack
-up, and it can be wrong in the way the product is wrong — which is the point.
+signs in, asks a question, waits for real agents to answer it, rereads the run step by
+step with every tool call opened, and scrolls the real dashboard. It is slower, it
+needs the stack up, and it can be wrong in the way the product is wrong — which is the point.
 
 WHAT THE README SHOWS. A take lands in `assets/demo/<theme>/`, which is ignored, and nothing
 here publishes it. GitHub gives a player only to a `user-attachments` URL, and one of those
@@ -63,13 +63,40 @@ APP = f"{BASE}/app"
 #: tool call is readable rather than implied.
 VIEWPORT = {"width": 1280, "height": 800}
 
-#: Two, and both of them reach for the work data. The weekly-summary question used to open
-#: the set and it is gone: it reads as a greeting, it costs a full multi-agent run, and a
-#: viewer learns from it exactly what the next two show properly.
-QUESTIONS = [
-    "Who logged the most hours this month, and on what?",
-    "What is late right now, and who is it with?",
-]
+#: How long the title card is held. GitHub strips a `<video>` tag out of a README, so
+#: `poster=` never reaches the page and the thumbnail is whatever the FIRST FRAME is — the
+#: only place a thumbnail can be authored is inside the recording itself. Long enough to
+#: read the line under the name, and it is also what the still is cut from.
+CARD_MS = 2600
+
+#: The two palettes the card is drawn in, taken from the app's own tokens rather than
+#: chosen here: a thumbnail in colours the product does not use is a thumbnail for a
+#: different product.
+PALETTE = {
+    "light": {
+        "bg": "#ffffff",
+        "mark": "#6d3fd1",
+        "glyph": "#ffffff",
+        "ink": "#17141f",
+        "dim": "#6b6478",
+        "edge": "#e8e4f0",
+    },
+    "dark": {
+        "bg": "#0b0910",
+        "mark": "#b79cff",
+        "glyph": "#14101d",
+        "ink": "#f0edf7",
+        "dim": "#8f87a3",
+        "edge": "#241f30",
+    },
+}
+
+#: One question, and it reaches for the work data. Two others were tried and cut: a
+#: weekly-summary opener that read as a greeting, and an overdue question whose honest
+#: answer here is "none", because this project sets a due date on almost nothing — an
+#: answer of zero teaches a viewer that the product found nothing rather than that the
+#: field is empty. This one names a person, a figure and the rows behind both.
+QUESTION = "Who logged the most hours this month, and on what?"
 
 #: A run is a queue hop plus a model call plus tools. Two minutes is not generous.
 ANSWER_MS = 120_000
@@ -138,6 +165,64 @@ class Shot:
         await self._page.screenshot(path=self._out / f"{self._n:02d}-{name}.png")
 
 
+async def title_card(page: Page, shot: Shot, theme: str) -> None:
+    """Open on the app's mark and its name, so the still the video is represented by says
+    what it is.
+
+    Not a poster file. GitHub removes the `<video>` element from a README outright, which
+    takes `poster=` with it, and the player it puts in place of a bare attachment URL uses
+    the first frame — so the thumbnail is a recording decision, not a markup one. Drawn
+    here rather than committed as a PNG for the same reason a take is not committed: it is
+    derived from the recording and would go stale the moment either changes.
+
+    `set_content` rather than a page of the app. The card is not a screen the product has,
+    and dressing up a real screen to look like one would be the staging this whole tool
+    exists to avoid.
+    """
+    skin = PALETTE[theme]
+    await page.set_content(
+        f"""<!doctype html><meta charset=utf-8>
+<link rel=preconnect href=https://fonts.gstatic.com crossorigin>
+<link rel=stylesheet href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500\
+&family=Instrument+Serif&display=swap">
+<style>
+  html,body {{ height:100%; margin:0 }}
+  body {{ background:{skin["bg"]}; color:{skin["ink"]};
+         display:flex; align-items:center; justify-content:center;
+         font-family:Geist,ui-sans-serif,system-ui,sans-serif }}
+  .card {{ display:flex; align-items:center; gap:28px }}
+  .rule {{ width:1px; height:104px; background:{skin["edge"]} }}
+  h1 {{ font-family:"Instrument Serif",Georgia,serif; font-size:76px;
+        font-weight:400; margin:0 0 6px; letter-spacing:-.01em; line-height:1 }}
+  p {{ margin:0; font-size:19px; color:{skin["dim"]} }}
+  .foot {{ margin-top:14px; font-size:14px; color:{skin["dim"]}; letter-spacing:.02em }}
+</style>
+<div class=card>
+  <svg width=112 height=112 viewBox="0 0 32 32" aria-label=Mycel>
+    <rect width=32 height=32 rx=9 fill="{skin["mark"]}"/>
+    <g transform="translate(4 4) scale(1.5)" fill=none stroke="{skin["glyph"]}"
+       stroke-width=1.3 stroke-linecap=round stroke-linejoin=round>
+      <path d="M8 8.6V13"/>
+      <path d="M8 8.6 4.1 5.4M4.1 5.4V2.9M4.1 5.4H1.9"/>
+      <path d="M8 8.6 12.1 5.9M12.1 5.9l1.9-1.6M12.1 5.9l.5 2.3"/>
+      <circle cx=8 cy=8.6 r=1.25 fill="{skin["glyph"]}" stroke=none/>
+    </g>
+  </svg>
+  <div class=rule></div>
+  <div>
+    <h1>Mycel</h1>
+    <p>Ask your issue tracker a question in plain language.</p>
+    <div class=foot>A real session. Nothing staged.</div>
+  </div>
+</div>"""
+    )
+    # The webfonts land a frame or two late, and a card screenshotted before they do is a
+    # card in the fallback serif — which is the one frame everybody sees.
+    await page.evaluate("() => document.fonts.ready")
+    await page.wait_for_timeout(CARD_MS)
+    await shot("card")
+
+
 async def sign_in(page: Page, shot: Shot) -> None:
     await page.goto(f"{APP}/login")
     await settle(page, 1.4)
@@ -189,8 +274,8 @@ async def ask(
     Both edges are waited on, in order, and the first one is the whole point. The label is
     "Ask" before the run starts too — the job has to be created and its stream opened
     before anything is `running` — so waiting only for "Ask" is a condition that is already
-    true the instant Enter is pressed. That is what sent the next question on top of a
-    question still being answered.
+    true the instant Enter is pressed, and everything after it would run on a page still
+    being written into.
     """
     box = page.get_by_label("Your question")
     await click(page, box, after=0.3)
@@ -204,7 +289,15 @@ async def ask(
     await page.locator(".turn.user").last.wait_for(timeout=15_000)
     # The run has actually started once the button says so. A few seconds is generous: it
     # is one POST and the stream opening, not the model.
-    await page.get_by_role("button", name="Running").wait_for(timeout=30_000)
+    #
+    # Tolerated, because "Running" is a label this can miss rather than a state it needs:
+    # a run that fails at the first provider call — a rate limit is the usual one — is
+    # open for less than a poll, and the far edge below is then already true. Losing the
+    # recording at that point throws away every minute before it, which is the worse end.
+    try:
+        await page.get_by_role("button", name="Running").wait_for(timeout=30_000)
+    except PlaywrightTimeout:
+        print(f"  {tag}: never saw Running — the run ended as fast as it started")
     await settle(page, 1.8)
     await shot(f"{tag}-running")
 
@@ -221,18 +314,18 @@ async def ask(
         # Best-effort. The reveal is a flourish, and losing the whole recording minutes in
         # because one panel would not open is a bad trade — the run costs real money.
         try:
-            await reveal_tool(page, shot, tag)
+            await review_steps(page, shot, tag)
         except PlaywrightTimeout as exc:
-            print(f"  tool reveal skipped: {exc}")
+            print(f"  step review skipped: {exc}")
 
 
 async def watch_live(page: Page, shot: Shot, tag: str) -> None:
     """Follow the run while it is still running, instead of waiting for it in silence.
 
-    The other question is watched from the top, which shows the product as a box that goes
-    quiet and then returns a paragraph. This one follows the page down as the stream writes
-    into it: each tool call arrives as its own row, with a spinner on the one that is out,
-    and that is the thing a finished answer can no longer show.
+    Waited out from the top, the product is a box that goes quiet and then returns a
+    paragraph. Followed down as the stream writes into it, each tool call arrives as its
+    own row with a spinner on the one that is out — and that is the thing a finished
+    answer can no longer show.
 
     Stops as soon as the run does, so a fast run is not padded with scrolling after it.
     """
@@ -246,29 +339,72 @@ async def watch_live(page: Page, shot: Shot, tag: str) -> None:
             return
 
 
-async def reveal_tool(page: Page, shot: Shot, tag: str) -> None:
-    """Open the last tool call, so the video shows the SQL the answer rests on.
+async def review_steps(page: Page, shot: Shot, tag: str) -> None:
+    """Walk back up the finished run and read what it actually did.
 
-    This is the claim the product makes that a screenshot of prose cannot: the figures are
-    not the model's recollection, and here is the query that produced them. Skipped without
-    complaint when a run answered from memory and called nothing.
+    The answer is the least interesting part of a multi-agent run, because it is the part
+    every one of these products has. What is above it is the claim: an orchestrator that
+    thought, delegated to named agents, and called tools whose arguments and results are
+    on the page. A viewer who only sees the paragraph has to take that on faith.
+
+    So this goes back to the question and comes down through the steps in order, opening
+    every tool call on the way. That is the reverse of how the run was watched live — up
+    to the top, then down slowly — and it is the motion of rereading rather than waiting.
+
+    Best-effort throughout. A run that answered from memory called nothing, and there is
+    then simply less to walk through; that is not a failure worth losing a recording to.
     """
-    # `:visible` matters: a tool call can nest, and a nested row lives inside a parent
-    # `<details>` that is still shut. Taking the last row without that filter picks a row
-    # that is in the DOM and not on the screen, and the click waits out its timeout.
-    rows = page.locator("details.tool > summary:visible")
-    if await rows.count() == 0:
-        return
-    row = rows.last
-    await click(page, row, after=1.0)
-    # The panel expands into space below it; scroll only if it opened off screen.
-    await row.scroll_into_view_if_needed()
+    # Back to the question first. The steps are between it and the answer, and starting
+    # from the bottom would show them in the order they were not produced in.
+    await glide(page, -2200, steps=22)
     await settle(page, 1.4)
-    await shot(f"{tag}-tool-open")
-    await glide(page, 260, steps=10)
-    await settle(page, 1.6)
-    await shot(f"{tag}-tool-read")
-    await click(page, row, after=1.0)
+    await shot(f"{tag}-steps-top")
+
+    # `:visible` matters: a tool call can nest, and a nested row lives inside a parent
+    # `<details>` that is still shut. A row that is in the DOM and not on the screen
+    # cannot be clicked, and the click waits out its whole timeout instead of failing.
+    #
+    # Re-read on each pass rather than taken once: opening a parent row puts its children
+    # on screen, and those are rows this loop should walk into as well.
+    seen = 0
+    for index in range(1, 7):
+        rows = page.locator("details.tool > summary:visible")
+        count = await rows.count()
+        if seen >= count:
+            # Nothing new came into view, so the glide below is what moves this along.
+            await glide(page, 300, steps=12)
+            await settle(page, 1.2)
+            if await at_bottom(page):
+                break
+            continue
+        row = rows.nth(seen)
+        seen += 1
+        await click(page, row, after=1.2)
+        # The panel expands downward. Reading it is a short glide, not a jump: the
+        # arguments are at the top of it and the result is below them.
+        await glide(page, 240, steps=10)
+        await settle(page, 1.6)
+        await shot(f"{tag}-step-{index}")
+
+    await settle(page, 1.2)
+    await shot(f"{tag}-steps-read")
+
+
+async def at_bottom(page: Page) -> bool:
+    """Whether the scroller has nothing left below it.
+
+    The thread scrolls inside `.scroll`, not in the document: the app is a full-height
+    flex column and the window itself never scrolls. Asking the document here would
+    answer "at the bottom" on the first pass and cut the review short.
+
+    A few pixels of slack, because a fractional scroll height never lands exactly.
+    """
+    return bool(
+        await page.evaluate(
+            "() => { const el = document.querySelector('.scroll');"
+            "  return el === null || el.scrollTop + el.clientHeight >= el.scrollHeight - 4; }"
+        )
+    )
 
 
 async def show_dashboard(page: Page, shot: Shot) -> None:
@@ -323,13 +459,16 @@ async def record(theme: str, headed: bool) -> int:
             # Before the first question: an account with no grant signs in fine and then
             # answers every question with nothing.
             await grant_project()
+            # First, and before anything the app draws: this frame is the thumbnail.
+            await title_card(page, shot, theme)
             await sign_in(page, shot)
-            # The two questions are shown differently on purpose. The first is watched the
-            # way a user waits — from the top — and its tool call is opened afterwards, at
-            # rest, where the SQL can be read. The second is followed down while it runs,
-            # so the video also carries what the stream looks like in flight.
-            await ask(page, QUESTIONS[0], shot, "q1", open_tool=True)
-            await ask(page, QUESTIONS[1], shot, "q2", watch=True)
+            # One question, carrying both halves of what a run looks like: followed down
+            # while it streams, so the video has the tool calls arriving one at a time,
+            # and then reread from the top with every call opened, which is where the
+            # product's actual claim sits. A second question was cut — it asked different
+            # data and the same product, so it bought a viewer nothing and cost a minute,
+            # a full multi-agent run, and a wait for the free tier's per-minute window.
+            await ask(page, QUESTION, shot, "q1", open_tool=True, watch=True)
             await show_dashboard(page, shot)
         finally:
             # Closing the context is what flushes the video. It has to happen even on a

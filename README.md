@@ -10,6 +10,7 @@
   <a href="https://github.com/vuzlee/mycel/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/vuzlee/mycel/ci.yml?branch=main&style=flat-square&label=ci&labelColor=2b2536&color=6d3fd1"></a>
   <img alt="Ruff" src="https://img.shields.io/badge/lint-ruff-6d3fd1?style=flat-square&labelColor=2b2536">
   <img alt="mypy strict" src="https://img.shields.io/badge/mypy-strict-6d3fd1?style=flat-square&labelColor=2b2536">
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-6d3fd1?style=flat-square&labelColor=2b2536"></a>
 </p>
 
 </div>
@@ -24,9 +25,9 @@ surfaces when you ask it something. The interesting part was never the fruiting 
 You ask in a sentence. Mycel picks the agents and tools it needs, runs them, and answers
 with the figures it used — so every number can be traced back to the query that produced it.
 
-https://github.com/user-attachments/assets/0ef30c9f-1984-4a55-90ff-536d8fd14096
+https://github.com/user-attachments/assets/c8546f73-e6a8-4aca-abb1-08c07a849eb0
 
-<sup>A real session, 78 seconds, nothing staged.</sup>
+<sup>A real session, 95 seconds, nothing staged.</sup>
 
 ## How it is put together
 
@@ -92,6 +93,19 @@ environments, agents, sources — is YAML under `config/`.
 Access is a row in `app.membership`: no row, no project, so a new account starts with
 nothing rather than with everything. Grant it from the account menu in the app — anyone who
 may read a project may share it.
+
+**A fresh deployment has to grant the first one from a shell.** Sharing needs somebody who
+can already read the project, and on a new database nobody can read anything:
+
+```bash
+uv run python scripts/tools/grant_project.py              # who has what
+uv run python scripts/tools/grant_project.py you@example.com PROJ
+```
+
+That rule reaches the model too. `analyst` writes its own SQL, and gold is behind a
+row-level security policy scoped to whoever asked — a query that names a project they were
+not granted returns no rows rather than an error, which is also the refusal that gives away
+nothing about what exists.
 
 `scripts/stack.sh grants` splits the database into two roles once, after the migrations:
 `mycel_etl` writes bronze, silver and gold; `mycel_app` reads gold and owns `app`. It is a
