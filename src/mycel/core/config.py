@@ -16,11 +16,28 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+
+from mycel.core.settings_source import EnvironmentFileSource
 
 
 class Settings(BaseSettings):
-    """Every environment variable the system reads, with its default."""
+    """Every setting the system reads, wherever it comes from.
+
+    Four sources, and later wins:
+
+        class default  <  config/environments/*.yaml  <  .env  <  environment
+
+    The split between the last two and the rest is one rule: **what must never reach git
+    lives in `.env`, everything else lives in `config/`.** Keys, passwords and the four
+    store URLs stay; intervals, hosts, log levels and feature switches move.
+
+    The store URLs look like the exception and are not: `postgresql://user:pw@host/db` is a
+    password with an address attached, and a committed one is a committed password.
+
+    **The environment wins, always.** `docker run -e LOG_LEVEL=DEBUG` has to work, or
+    environment variables stop meaning anything — see `settings_source.py`.
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -28,6 +45,30 @@ class Settings(BaseSettings):
         extra="ignore",
         frozen=True,
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """The four sources, highest priority first.
+
+        pydantic-settings reads this tuple in order and the FIRST source to supply a name
+        wins, which is the reverse of how the docstring above reads it. Written
+        highest-first here because that is the order pydantic wants; read it as "init beats
+        environment beats .env beats YAML beats the class default".
+        """
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            EnvironmentFileSource(settings_cls),
+            file_secret_settings,
+        )
 
     mycel_env: Literal["dev", "staging", "prod"] = "dev"
 

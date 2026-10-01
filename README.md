@@ -44,12 +44,52 @@ Today the source is Jira; the source layer is pluggable. Mycel never writes to y
 It does read and write your own Google Calendar, on consent you give per account and can
 revoke — and only after reading a booking back to you for a yes.
 
+## What it is, and what it is not
+
+**An internal tool you host yourself.** One team, one Jira board, one machine — a laptop, a
+spare box, a VM nobody else reaches.
+
+| | |
+|---|---|
+| One person, alone? | yes |
+| A team? | yes — `app.membership` scopes every read by project |
+| Facing the internet? | **no** |
+
+The third answer is the one worth reading twice, because several deliberate choices only
+make sense behind a wall: registration is open until you set an invite code, Grafana has no
+login, and one Jira token serves the whole deployment. Each is right for a team that
+already trusts each other and wrong in front of a public URL.
+
+**It is not a SaaS and is not becoming one.** There is no tenant id, no isolation between
+organisations, no per-customer accounting — adding them is not a feature, it is a different
+data layer. Said here because the alternative is somebody finding out by deploying it.
+
 ## Quickstart
 
 ```bash
-cp .env.example .env      # fill in DB and API keys
+cp .env.example .env      # four lines to fill in; the rest already works
+scripts/stack.sh doctor   # says what is missing and what each absence costs
 scripts/stack.sh dev up   # containers, migrations, api, worker, scheduler
 ```
+
+`doctor` runs before anything is configured, which is the point of it: it tells a **broken**
+thing apart from one that is **off on purpose**, and from outside those look identical.
+
+```
+STORES
+  ok    postgres       connected, 13 tables
+SOURCES
+  FAIL  jira           JIRA_API_TOKEN is not set — the dashboard will be empty
+SEARCH
+  off   qdrant         not configured — rag_search is not offered to the model
+REGISTRATION
+  FAIL  who may sign up  ANYONE who can reach the URL — set REGISTRATION_INVITE_CODE
+```
+
+**Configuration is split by one rule**: what must never reach git lives in `.env`, and
+everything else lives in `config/environments/`, which *is* committed. Changing an interval
+becomes a commit with a history rather than a silent edit on one machine. An environment
+variable always wins over both.
 
 One command, idempotent: starts what is down, leaves what is up, applies migrations, and
 waits until each service answers a real query rather than merely accepting TCP.

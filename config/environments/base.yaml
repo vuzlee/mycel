@@ -26,3 +26,82 @@ agents:
     request_limit: 12
     tool_calls_limit: 20
     repeat_threshold: 2
+
+# Everything a deployment configures that is NOT a key. The rule in one line: what must
+# never reach git lives in `.env`, everything else lives here — and here is better,
+# because a change becomes a commit with a history and a reviewer rather than a silent
+# edit on one machine.
+#
+# These names match `Settings` field for field, in lower case. An environment variable of
+# the same name OVERRIDES any of them: `docker run -e LOG_LEVEL=DEBUG` has to work.
+settings:
+  log_level: INFO
+  # The team's own zone, as an IANA name. A Jira due date is a bare calendar day, and
+  # "end of that day" only means something in a zone.
+  timezone: UTC
+
+  # --- Postgres pool, and the two sweeps ---
+  db_pool_size: 5
+  # How long a finished answer stays readable: long enough for a caller to come back,
+  # short enough that Redis is never asked to be a database.
+  result_ttl_seconds: 3600
+  # Capped so a chatty run cannot fill Redis; a client that falls behind sees a gap in
+  # `seq` and knows it.
+  event_stream_max_events: 1000
+  # Nothing depends on this — expiry is checked on read — but without it `app.session`
+  # only ever grows.
+  session_sweep_interval_seconds: 86400
+  password_reset_ttl_seconds: 3600
+
+  # --- Where the app is, and what it syncs ---
+  # Google redirects the consent round back here, so it must match the registered URI.
+  public_base_url: http://localhost:8000
+  sync_interval_seconds: 900
+  jira_base_url: ""
+  jira_project_key: ""
+  # The custom field holding the sprint. There is no id right everywhere; this is
+  # Atlassian's usual one for a cloud site, and a site that differs sets it rather than
+  # losing the feature. The sync asks for it by id and skips it silently when absent.
+  jira_sprint_field: customfield_10020
+  # Writing to Jira is off until a deployment arms it. Batch 060 is what reaches these.
+  jira_write_enabled: false
+
+  # --- Models ---
+  # vLLM on this machine. The local-llm profile is off, so nothing reaches it today.
+  local_llm_base_url: http://localhost:8001/v1
+  # Most one queued job may spend.
+  job_ceiling_usd: 0.50
+
+  # --- Search over gold ---
+  # EMPTY DISABLES SEARCH, and that is the switch: `rag_search` is not offered to the
+  # model at all without it, because a tool the model can see is a tool it will call.
+  qdrant_url: ""
+  # The name is part of the collection name: the dimension belongs to the model, so
+  # changing it means a new collection and a full reindex.
+  embedding_model: BAAI/bge-small-en-v1.5
+  embedding_cache_dir: .cache/fastembed
+
+  # --- Mail out ---
+  # Without a host, `/auth/forgot` refuses rather than pretending to send.
+  smtp_host: ""
+  smtp_port: 587
+  smtp_from: ""
+  smtp_starttls: true
+
+  # --- Who may register ---
+  # EMPTY MEANS ANYONE CAN REGISTER. Right for a laptop on localhost, wrong the moment
+  # the app is reachable from a company network. The invite code lives in `.env` beside
+  # this, because a code in git is not a code.
+  registration_allowed_domains: ""
+
+  # --- Observability ---
+  otel_enabled: false
+  otel_service_name: mycel
+  # Empty means Langfuse, derived from langfuse_base_url. Set it only to divert spans.
+  otel_exporter_otlp_endpoint: ""
+  # Prompts and answers into the span. REAL USER DATA LEAVES THE MACHINE — dev only.
+  otel_capture_content: false
+  langfuse_base_url: https://jp.cloud.langfuse.com
+  # /metrics has no authentication, so what it binds to is what keeps it private.
+  metrics_host: 127.0.0.1
+  metrics_port: 9100

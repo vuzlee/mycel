@@ -6,6 +6,7 @@
 #   scripts/stack.sh compose up [monitoring] [vectors] | down | status
 #   scripts/stack.sh k8s build | up [monitoring] | down [--all] | status | secret
 #
+#   scripts/stack.sh doctor               what is configured, broken, or off on purpose
 #   scripts/stack.sh sync [--refetch]     one Jira sync now
 #   scripts/stack.sh grants               the two least-privilege roles
 #   scripts/stack.sh grafana-sync [--check]
@@ -30,7 +31,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-  sed -n '3,27p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
+  sed -n '3,28p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
   exit "${1:-1}"
 }
 
@@ -51,6 +52,7 @@ case "$mode" in
     run "$HERE/$mode/$action.sh" "$@"
     ;;
 
+  doctor)       run "$HERE/data/doctor.sh" "$@" ;;
   sync)         run "$HERE/data/sync.sh" "$@" ;;
   grants)       run "$HERE/data/grants.sh" "$@" ;;
   grafana-sync) run "$HERE/data/grafana-sync.sh" "$@" ;;

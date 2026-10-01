@@ -30,8 +30,17 @@ class TestDisabled:
         """Development runs without standing up a collector; that must cost nothing."""
         assert tracing.setup_tracing(_settings(otel_enabled=False)) is None
 
-    def test_off_is_the_default(self) -> None:
-        assert Settings().otel_enabled is False
+    def test_off_is_the_default_where_nothing_overrides_it(self) -> None:
+        """base.yaml leaves it off, which is what a fresh checkout gets.
+
+        Read without the overlay on purpose: dev.yaml turns it on, because the point of a
+        dev machine is being able to see what happened. Asserting the merged value would
+        be asserting which environment the test is running in.
+        """
+        from mycel.core.config_files import load_config
+        from mycel.core.settings_source import SETTINGS_KEY
+
+        assert load_config(env="base")[SETTINGS_KEY]["otel_enabled"] is False
 
 
 class TestEnabled:

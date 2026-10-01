@@ -7,3 +7,18 @@ agents:
   defaults:
     request_limit: 8
     tool_calls_limit: 12
+
+settings:
+  log_level: DEBUG
+  # Three host processes share this machine's Postgres, and a dev box runs the test suite
+  # against it at the same time.
+  db_pool_size: 10
+  # This machine's own Jira. Not a secret — the site is public, the token beside it in
+  # `.env` is what is not.
+  jira_base_url: https://mycel-app.atlassian.net
+  jira_project_key: MYC
+  # Traces on, because the whole point of a dev machine is being able to see what happened.
+  otel_enabled: true
+  # Spans carry the prompt and the answer on a dev machine, and nowhere else: the content
+  # is real user data, and Langfuse is a third party.
+  otel_capture_content: true

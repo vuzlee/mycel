@@ -59,8 +59,17 @@ wait.
 
 ## data/
 
-`sync`, `grants` and `grafana-sync` take no mode. They talk to the database or to the repo,
+`doctor`, `sync`, `grants` and `grafana-sync` take no mode. They talk to the database or to the repo,
 and both are the same whichever way the app happens to be running.
+
+`doctor` is the first command somebody runs after cloning, so it has to work with **no
+`.env` at all** — every setting has a default, and a bare checkout produces a report rather
+than a traceback. It writes nothing: no table, no file, no edit to `.env`. That is also why
+there is no setup screen; a screen has to store what it collects, and storing means
+configuration lives in two places that can disagree.
+
+It exits 1 on BROKEN and 0 when everything is either running or deliberately **off**, so it
+can gate a deploy without failing a build for a feature nobody wanted.
 
 `grafana-sync --check` runs in CI. The three Grafana files exist twice because Helm's
 `.Files.Get` does not follow symlinks — it reads the link target as a string, so a
