@@ -40,8 +40,9 @@ that read gold. Traces, metrics and logs run alongside the whole path.
   <img src="assets/flow-light.svg" alt="Four columns: connectors pull external platforms into a bronze, silver and gold lakehouse; a prompt goes through the API gateway and middleware onto a message broker; a worker consumes the job and an orchestrator delegates to agents that read gold; traces, metrics and logs alongside" width="100%">
 </picture>
 
-Today the source is Jira; the source layer is pluggable. Reports go out over Telegram and
-Google Calendar — both optional, both one-way. Mycel never writes to your board.
+Today the source is Jira; the source layer is pluggable. Mycel never writes to your board.
+It does read and write your own Google Calendar, on consent you give per account and can
+revoke — and only after reading a booking back to you for a yes.
 
 ## Quickstart
 
@@ -88,7 +89,7 @@ environments, agents, sources — is YAML under `config/`.
 | `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` | the three services |
 | `ANTHROPIC_API_KEY` · `GEMINI_API_KEY` | a run needs the key its model spec asks for, and no other |
 | `JOB_CEILING_USD` | spend ceiling for one queued job |
-| `TELEGRAM_*` · Google Calendar creds | outputs; leave blank and they're simply off |
+| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `GOOGLE_TOKEN_KEY` | the calendar; leave blank and it's simply off |
 
 Access is a row in `app.membership`: no row, no project, so a new account starts with
 nothing rather than with everything. Grant it from the account menu in the app — anyone who
@@ -120,8 +121,10 @@ separate step rather than a migration because a role cannot take privileges from
   gold and returns each figure with the query that produced it.
 - **"Any release notes from our vendor about this?"** — `researcher` searches the web and
   reads the mailbox over IMAP, headers only.
-- **A report every Monday morning** — `POST /reports/summary` has no page in front of it; it
-  is what a cron calls, and what sends Telegram and Calendar.
+- **"What have I got this afternoon?"** — `researcher` reads your own calendar and answers
+  with each event's link.
+- **"Book the review, 3pm tomorrow, half an hour"** — it reads the time back in words and
+  books nothing until you agree.
 
 Two things are true by construction, not by prompt: `run_sql` runs inside
 `SET TRANSACTION READ ONLY`, so a question that would change work data is refused by

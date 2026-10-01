@@ -1,26 +1,32 @@
-"""The one-way output: a calendar entry.
+"""The calendar transport: reading one person's week, and writing one event to it.
 
-It exists to be ignorable. A deployment with nothing configured runs unchanged, and a
-failure here must never take down the job whose result it was carrying — so most of what
-is pinned is what happens when it does *not* work.
+Batch 051 turned this file inside out. It used to test a one-way sync that mirrored Jira due
+dates onto a calendar the deployment owned, on a timer, with a service account — and nothing
+ever called it. Eight tests about idempotent event ids went with it.
 
-Telegram was the other half until batch 033, and went with the endpoint that was its only
-caller.
+What is worth pinning now is narrower and sharper:
 
-No request leaves the machine: `httpx2.MockTransport` answers for the API, and the Google
-credential is never constructed because nothing here has a key file.
+**`timeZone` on every `dateTime`.** Drop it and Google falls back to the calendar's default,
+so a UTC host books every meeting seven hours off — silently, in the right format, at the
+wrong time. That is the one bug here a person would only find by missing a meeting, so it is
+asserted in both directions.
+
+**`singleEvents`.** Without it a weekly standup comes back once, as the rule that makes it,
+and "what have I got tomorrow" quietly omits it.
+
+No request leaves the machine: `httpx2.MockTransport` answers for the API, and the token is
+patched because `services/google_oauth.py` owns that half.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx2
 import pytest
 
-from mycel.core.config import Settings
-from mycel.etl.normalise import JIRA
-from mycel.infra.postgres.repositories.gold import SECONDS_PER_DAY, WorkItemRow
+from mycel.core.config import get_settings
 from mycel.notify import calendar
+from mycel.services.google_oauth import GoogleError
 
 pytestmark = pytest.mark.anyio
 
@@ -37,148 +43,151 @@ def _mock(handler: Any) -> Any:
     return _client
 
 
-def _sent(sink: list[httpx2.Request], status: int = 200) -> Any:
+def _sent(sink: list[httpx2.Request], payload: dict[str, Any], status: int = 200) -> Any:
     """Record every request and answer it, so a test can read what went out."""
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         sink.append(request)
-        return httpx2.Response(status, json={"ok": status == 200})
+        return httpx2.Response(status, json=payload)
 
     return _mock(handler)
 
 
-def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
-    fields: dict[str, Any] = {
-        "source": JIRA,
-        "project": "MYC",
-        "issue_id": key.split("-")[-1],
-        "issue_key": key,
-        "kind": "story",
-        "parent_key": "MYC-6",
-        "title": "dựng dashboard",
-        "status": "In Progress",
-        "status_category": "doing",
-        "sprint_id": None,
-        "sprint_name": None,
-        "sprint_state": None,
-        "priority": "Medium",
-        "assignee_account_id": "acct-1",
-        "assignee_name": "Dev One",
-        "original_estimate_seconds": 2 * SECONDS_PER_DAY,
-        "time_spent_seconds": SECONDS_PER_DAY,
-        "due_at": datetime(2026, 9, 16, tzinfo=UTC),
-        "created_at": datetime(2026, 9, 14, tzinfo=UTC),
-        "resolved_at": None,
-        "labels": [],
-        "updated_at": datetime(2026, 9, 20, tzinfo=UTC),
-    }
-    return WorkItemRow(**{**fields, **kw})
+def _item(summary: str = "standup", hour: int = 9, all_day: bool = False) -> dict[str, Any]:
+    """One of Google's event objects, in the shape the API actually returns."""
+    if all_day:
+        edge: dict[str, Any] = {"start": {"date": "2026-10-02"}, "end": {"date": "2026-10-03"}}
+    else:
+        edge = {
+            "start": {"dateTime": f"2026-10-02T{hour:02d}:00:00+07:00"},
+            "end": {"dateTime": f"2026-10-02T{hour:02d}:30:00+07:00"},
+        }
+    return {"summary": summary, "htmlLink": "https://calendar.google.com/event?eid=abc", **edge}
 
 
-class TestNotBeingConfigured:
-    """A deployment with no calendar is a supported deployment, not a broken one."""
+@pytest.fixture(autouse=True)
+def bangkok(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A zone that is not UTC, because a UTC-only suite cannot catch a missing `timeZone`."""
+    monkeypatch.setenv("TIMEZONE", "Asia/Bangkok")
+    get_settings.cache_clear()
 
-    async def test_no_calendar_means_no_events(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(calendar, "get_settings", lambda: Settings())
 
-        assert await calendar.publish_due_dates([_item()]) == 0
+@pytest.fixture(autouse=True)
+def token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The grant is `services/google_oauth.py`'s; here it is a string in a header."""
 
-    async def test_a_calendar_without_a_key_file_writes_nothing(
+    async def _token(user_id: int) -> str:
+        return "access-token"
+
+    monkeypatch.setattr(calendar, "token_for", _token)
+
+
+class TestReadingAWeek:
+    async def test_the_window_asked_for_is_the_window_requested(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Half-configured is the state a deployment actually reaches, and it is not a
-        crash: the id was set and the key never mounted."""
-        monkeypatch.setattr(
-            calendar, "get_settings", lambda: Settings(google_calendar_id="work@group.calendar")
-        )
-
-        assert await calendar.publish_due_dates([_item()]) == 0
-
-
-class TestTheCalendarEvents:
-    @pytest.fixture(autouse=True)
-    def _configured(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        def settings() -> Settings:
-            return Settings(
-                google_calendar_id="work@group.calendar",
-                google_service_account_json="/nowhere/key.json",
-            )
-
-        monkeypatch.setattr(calendar, "get_settings", settings)
-        monkeypatch.setattr(calendar, "_token", lambda path: "access-token")
-
-    def test_an_event_id_is_the_same_every_time(self) -> None:
-        """The whole of idempotence: a re-sync updates the event already in someone's
-        week rather than adding a second one beside it."""
-        assert calendar.event_id("MYC-7") == calendar.event_id("MYC-7")
-        assert calendar.event_id("MYC-7") != calendar.event_id("MYC-8")
-
-    def test_an_event_id_is_legal_for_google(self) -> None:
-        """Lowercase base32hex, 5 to 1024 characters — which `MYC-7` is not, so the key is
-        encoded rather than tidied up."""
-        made = calendar.event_id("MYC-7")
-
-        assert 5 <= len(made) <= 1024
-        assert set(made) <= set("0123456789abcdefghijklmnopqrstuv")
-
-    async def test_a_due_date_is_written_as_an_all_day_event(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A date, not an hour: Jira's due date has no time of day, and inventing 9am puts
-        a false precision on a phone's lock screen."""
+        """Someone asked about this afternoon, and `timeMax` is what makes it this afternoon."""
         sink: list[httpx2.Request] = []
-        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink))
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
 
-        assert await calendar.publish_due_dates([_item()]) == 1
+        await calendar.list_events(1, hours=12)
+        asked = datetime.fromisoformat(sink[0].url.params["timeMax"])
+        assert timedelta(hours=11) < asked - datetime.now(UTC) <= timedelta(hours=12)
+
+    async def test_a_repeating_event_is_expanded(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """`singleEvents` is one parameter and the whole of whether a standup appears."""
+        sink: list[httpx2.Request] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
+
+        await calendar.list_events(1, hours=24)
+        assert sink[0].url.params["singleEvents"] == "true"
+        assert sink[0].url.params["orderBy"] == "startTime"
+
+    async def test_the_zone_is_sent_when_reading(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        sink: list[httpx2.Request] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
+
+        await calendar.list_events(1, hours=24)
+        assert sink[0].url.params["timeZone"] == "Asia/Bangkok"
+
+    async def test_an_event_is_read_in_the_teams_zone(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Nine in Bangkok must read as nine, not as two in the morning on a UTC host."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [_item(hour=9)]}))
+
+        events = await calendar.list_events(1, hours=24)
+        assert events[0].starts_at.hour == 9
+        assert events[0].summary == "standup"
+        assert events[0].link.startswith("https://calendar.google.com/")
+
+    async def test_an_all_day_entry_is_marked_as_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Google's `date` against its `dateTime` is how "Tuesday" differs from "Tuesday at
+        three", and printing midnight for the first would invent a precision."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [_item(all_day=True)]}))
+
+        events = await calendar.list_events(1, hours=48)
+        assert events[0].all_day is True
+        assert events[0].starts_at.day == 2
+
+    async def test_an_untitled_event_still_has_a_name(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A blank summary is legal in Google and would otherwise render an empty column."""
+        item = _item()
+        del item["summary"]
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [item]}))
+
+        assert (await calendar.list_events(1, hours=24))[0].summary == "(no title)"
+
+    async def test_an_empty_calendar_is_an_empty_list(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {}))
+
+        assert await calendar.list_events(1, hours=24) == []
+
+
+class TestWritingOne:
+    async def test_the_zone_is_sent_with_both_edges(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The bug this whole module carries `timeZone` around to avoid: without it the event
+        lands at the calendar's default offset, which on a UTC host is seven hours out."""
+        sink: list[httpx2.Request] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, _item(hour=15)))
+        starts = datetime.fromisoformat("2026-10-02T15:00:00+07:00")
+
+        await calendar.create_event(1, "review", starts, starts + timedelta(minutes=30))
         body = str(sink[0].read(), "utf-8")
 
-        assert sink[0].method == "PUT"
-        assert '"date":"2026-09-16"' in body
-        assert "MYC-7" in body and "dựng dashboard" in body
+        assert sink[0].method == "POST"
+        assert body.count('"timeZone":"Asia/Bangkok"') == 2
+        assert '"summary":"review"' in body
 
-    async def test_the_id_is_in_the_url_so_a_second_run_updates(
+    async def test_the_event_comes_back_with_its_link(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """PUT with an id we chose: an insert and an update are the same call, and there
-        is no window in which a duplicate can appear."""
-        sink: list[httpx2.Request] = []
-        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink))
+        """The link is the whole of the follow-up: nothing here can edit or cancel."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], _item("review", hour=15)))
+        starts = datetime.fromisoformat("2026-10-02T15:00:00+07:00")
 
-        await calendar.publish_due_dates([_item(), _item()])
+        event = await calendar.create_event(1, "review", starts, starts + timedelta(minutes=30))
+        assert event.link == "https://calendar.google.com/event?eid=abc"
+        assert event.starts_at.hour == 15
 
-        assert str(sink[0].url) == str(sink[1].url)
-        assert calendar.event_id("MYC-7") in str(sink[0].url)
 
-    async def test_a_removed_due_date_removes_the_event(
+class TestWhenGoogleWillNotAnswer:
+    async def test_a_refusal_raises_rather_than_returning_nothing(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A deadline that no longer exists is worse on a calendar than one that never
-        appeared, because somebody is still planning around it."""
-        sink: list[httpx2.Request] = []
-        monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, status=204))
+        """Unlike the sync this replaced, there is a person waiting: "no events" would be a
+        lie where "the calendar could not be reached" is the answer."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {}, status=500))
 
-        assert await calendar.publish_due_dates([_item(due_at=None)]) == 1
-        assert sink[0].method == "DELETE"
+        with pytest.raises(GoogleError):
+            await calendar.list_events(1, hours=24)
 
-    async def test_deleting_something_already_gone_is_a_success(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """404 means the calendar is in the state we wanted it in."""
-        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], status=404))
+    async def test_an_event_with_no_start_is_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [{"summary": "odd"}]}))
 
-        assert await calendar.publish_due_dates([_item(due_at=None)]) == 1
-
-    async def test_one_refused_event_does_not_stop_the_rest(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A sync writes a week at a time, and one bad row must not cost the other six."""
-        seen: list[str] = []
-
-        def handler(request: httpx2.Request) -> httpx2.Response:
-            seen.append(str(request.url))
-            return httpx2.Response(500 if len(seen) == 1 else 200, json={})
-
-        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-
-        assert await calendar.publish_due_dates([_item("MYC-7"), _item("MYC-8")]) == 1
-        assert len(seen) == 2
+        with pytest.raises(GoogleError):
+            await calendar.list_events(1, hours=24)

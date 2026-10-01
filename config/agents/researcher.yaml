@@ -8,8 +8,11 @@
 model_spec: cloud:gemini-3.5-flash-lite
 
 # Searching is one call per angle on the question, and cross-checking a contested claim
-# costs another. Lower than the analyst's, where every figure is its own call.
+# costs another. `request_limit` is declared alongside it and one higher, so this file
+# decides where the run stops rather than the environment's `agents.defaults` — see
+# `config/agents/analyst.yaml`.
 tool_calls_limit: 12
+request_limit: 13
 
 # When Google is overloaded the whole family is not down at once: on 2026-09-24 a probe
 # found 3.5-lite on 504 and 3.8 on 503 while 3.6 answered, and five minutes later 3.6 was

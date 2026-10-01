@@ -274,6 +274,34 @@ export async function removeMember(
   if (!res.ok) throw new Error(await detail(res));
 }
 
+// -- google -----------------------------------------------------------------
+
+/** Whether a Google account is attached, and which one.
+ *
+ *  `configured` is about the deployment, not the person: a machine with no OAuth client
+ *  cannot connect anything, and the panel says so rather than offering a button that
+ *  leads to an error. */
+export interface GoogleStatus {
+  configured: boolean;
+  email: string | null;
+  connected_at: string | null;
+}
+
+export const fetchGoogle = (): Promise<GoogleStatus> =>
+  fetch("/auth/google").then(json<GoogleStatus>);
+
+/** Connecting is a navigation, not a call: consent happens on Google's own screen, so the
+ *  browser has to actually go there. The server answers `/auth/google/start` with a
+ *  redirect, and comes back to `/app/home` with the outcome in the query string. */
+export function connectGoogle(): void {
+  window.location.href = "/auth/google/start";
+}
+
+export async function disconnectGoogle(): Promise<void> {
+  const res = await fetch("/auth/google", { method: "DELETE" });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
 // -- work -------------------------------------------------------------------
 
 /** 202, not 200: the server took the work and has not done it.

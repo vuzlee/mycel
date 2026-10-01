@@ -635,6 +635,79 @@ class TestProjectAccessOverHttp:
 
 
 @needs_postgres
+class TestTheGoogleRoutesOverHttp:
+    """Four routes, and what matters about them is where they send a browser.
+
+    The two `GET`s are address-bar traffic rather than calls from the page — consent happens
+    on Google's own screen — so the thing to pin is that neither ever answers with an error
+    body a person would be left staring at.
+    """
+
+    @staticmethod
+    def _sign_in(client: TestClient, email: str = "cal@example.com") -> None:
+        client.post("/auth/register", json={"email": email, "password": PASSWORD})
+        entered = client.post("/auth/login", json={"email": email, "password": PASSWORD})
+        assert entered.status_code == 200, entered.text
+
+    def test_an_unconfigured_deployment_says_so_rather_than_offering_a_button(
+        self, client: TestClient
+    ) -> None:
+        """`configured` is about the machine, not the person: with no OAuth client there is
+        nothing to connect, and the panel has to say that instead of linking to an error."""
+        self._sign_in(client)
+
+        body = client.get("/auth/google").json()
+
+        assert body == {"configured": False, "email": None, "connected_at": None}
+
+    def test_starting_a_round_it_cannot_finish_is_refused(self, client: TestClient) -> None:
+        self._sign_in(client)
+
+        assert client.get("/auth/google/start", follow_redirects=False).status_code == 503
+
+    def test_a_cancelled_consent_comes_back_to_the_app(self, client: TestClient) -> None:
+        """Somebody pressed Cancel on Google's screen. That is an answer, not an error page —
+        this url is in an address bar, so the outcome rides back in the query string."""
+        response = client.get(
+            "/auth/google/callback", params={"error": "access_denied"}, follow_redirects=False
+        )
+
+        assert response.status_code == 307
+        assert "google_error=access_denied" in response.headers["location"]
+
+    def test_a_callback_with_nothing_in_it_still_redirects(self, client: TestClient) -> None:
+        response = client.get("/auth/google/callback", follow_redirects=False)
+
+        assert response.status_code == 307
+        assert "google_error=cancelled" in response.headers["location"]
+
+    def test_the_callback_needs_no_cookie(self, client: TestClient) -> None:
+        """Deliberately not behind `current_user`: the request is a redirect from Google and
+        `state` is what says whose round it is. Requiring a cookie as well would break a
+        consent that finished in a window whose session had since been replaced."""
+        response = client.get(
+            "/auth/google/callback",
+            params={"code": "c", "state": "never-issued"},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert "google_error=failed" in response.headers["location"]
+
+    def test_disconnecting_what_was_never_connected_is_not_an_error(
+        self, client: TestClient
+    ) -> None:
+        """The end state is what was asked for, which is the whole of what DELETE promises."""
+        self._sign_in(client)
+
+        assert client.delete("/auth/google").status_code == 204
+
+    def test_signed_out_learns_nothing(self, client: TestClient) -> None:
+        assert client.get("/auth/google").status_code == 401
+        assert client.delete("/auth/google").status_code == 401
+
+
+@needs_postgres
 class TestForgottenPasswordOverHttp:
     def test_it_refuses_when_the_deployment_cannot_send_mail(self, client: TestClient) -> None:
         """A link that is never sent is worse than a feature that says it is off."""

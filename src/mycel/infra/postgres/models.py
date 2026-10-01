@@ -317,6 +317,36 @@ class PasswordReset(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class GoogleAccount(Base):
+    """One person's standing permission to reach their own Google calendar.
+
+    Keyed by `user_id` rather than by an id of its own: a second consent replaces the first,
+    because two live grants for one person is two answers to "whose calendar".
+
+    The token column's name says what is in it. A refresh token opens a calendar for as
+    long as nobody revokes it, so a database dump must not be a list of calendars — it is
+    encrypted by `services/google_oauth.py` before it arrives here.
+
+    No access token: it lives under an hour, which makes a stored one stale more often than
+    it is useful.
+    """
+
+    __tablename__ = "google_account"
+    __table_args__ = ({"schema": APP},)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(f"{APP}.user.id", ondelete="CASCADE"), primary_key=True
+    )
+    email: Mapped[str] = mapped_column(String(254))
+    refresh_token_encrypted: Mapped[str] = mapped_column(Text)
+    #: As granted, not as asked for: Google may hand back less, and a tool that assumes
+    #: otherwise fails at the write rather than at the connect.
+    scope: Mapped[str] = mapped_column(Text)
+    connected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class Conversation(Base):
     """One thread in the sidebar, and the turns under it.
 

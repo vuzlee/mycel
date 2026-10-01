@@ -40,6 +40,10 @@ dependencies = [
   # Metrics. The client library only, not an exporter sidecar: it holds the registry in
   # process and renders the text format, which is all Prometheus asks for.
   "prometheus-client>=0.20",
+  # Encrypting one stored secret: the Google refresh token in `app.google_account`. Fernet
+  # only — declared because `services/google_oauth.py` imports it directly, and it arrives
+  # transitively today, which is a fact about this lockfile rather than a promise.
+  "cryptography>=43.0",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.

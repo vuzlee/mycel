@@ -372,8 +372,8 @@ not do what it should.</p>
 
 <p>Nobody fills in a form and nobody learns a convention. People work their board as they
 already do. A scheduled sync pulls in what moved, an ETL normalises it, and two things read
-the result: a dashboard that counts, and an agent that writes a summary in words. A finished
-report goes out to Telegram, and due dates go out to a calendar.</p>
+the result: a dashboard that counts, and an agent that writes a summary in words. Due dates
+go out to a calendar.</p>
 
 <div class="dg">
 <figure>
@@ -401,11 +401,10 @@ report goes out to Telegram, and due dates go out to a calendar.</p>
 </div>
 
 <div class="note">
-  <p><b>Mycel never writes to your board.</b> Jira is read, and only read. The two things
-  it writes to — Telegram and Google Calendar — are outputs: a finished report goes to a
-  chat, due dates go to a calendar, and nothing is ever read back out of either. A
-  deployment with neither configured still works; you simply get the dashboard and the
-  report and nothing arrives on your phone.</p>
+  <p><b>Mycel never writes to your board.</b> Jira is read, and only read. The one thing
+  it writes to — Google Calendar — is an output: due dates go to a calendar, and nothing is
+  ever read back out of it. A deployment with it unconfigured still works; you simply get
+  the dashboard and the report and nothing lands on your calendar.</p>
 </div>
 
 <h2 data-n="01">Before anything: is the stack up?</h2>
@@ -668,36 +667,50 @@ stop.</p>
   record. Reopening a report from the rail next week reads the second one.</p>
 </div>
 
-<h2 data-n="08">Get it on your phone</h2>
+<h2 data-n="08">Your calendar, in the same box</h2>
 
-<p>Two optional outputs. Neither is required, and a failure in either is logged and never
-fails the report that produced it — a notification that breaks the job it is announcing is
-worse than no notification.</p>
+<p>Optional, and per person. Nobody's calendar is touched until they have been through
+Google's own consent screen, and a deployment with no OAuth client says so rather than
+offering a button that leads to an error.</p>
 
 <div class="step">
-  <h3 data-n="01">Telegram, for the finished report</h3>
-  <pre>TELEGRAM_BOT_TOKEN=8123456789:AAG…
-TELEGRAM_NOTIFY_CHAT_ID=-1002145887701
-PUBLIC_BASE_URL=https://mycel.example.com</pre>
-  <p>Make the bot with <a href="https://t.me/BotFather">@BotFather</a>, add it to the chat,
-  and get the chat id from <a href="https://t.me/userinfobot">@userinfobot</a>. What arrives
-  is the headline and a link back to the full report — a whole report in a chat bubble is a
-  report nobody scrolls. <code>PUBLIC_BASE_URL</code> is what that link is built from, so on
-  a real deployment it must not be left at localhost.</p>
-  <p>The bot only sends. <code>/setprivacy</code> does not matter any more.</p>
+  <h3 data-n="01">Set up the client, once</h3>
+  <pre>GOOGLE_CLIENT_ID=…apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=…
+GOOGLE_TOKEN_KEY=…</pre>
+  <p>In the Google Cloud console: <b>Credentials → Create credentials → OAuth client ID →
+  Web application</b>, and under authorised redirect URIs add exactly your
+  <code>PUBLIC_BASE_URL</code> followed by <code>/auth/google/callback</code>. Google
+  matches that string character for character, and a mismatch is the one error everybody
+  hits first. Enable the Google Calendar API for the same project.</p>
+  <p>The token key is Fernet, and it is what keeps the stored consent secret:</p>
+  <pre>python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"</pre>
+  <p>A refresh token opens one person's calendar until they revoke it, so it is encrypted
+  before it reaches the database and never appears in a log line or a prompt. A deployment
+  with a client and no key counts as not configured — refusing is better than storing one
+  readably. Rotating the key disconnects everybody, who fix it by connecting again.</p>
 </div>
 
 <div class="step">
-  <h3 data-n="02">Google Calendar, for due dates</h3>
-  <pre>GOOGLE_CALENDAR_ID=…@group.calendar.google.com
-GOOGLE_SERVICE_ACCOUNT_JSON=/path/to/key.json</pre>
-  <p>Make a service account, download its key, and share the calendar with the service
-  account's email — that sharing step is the one people miss, and without it every write is
-  a <code>404</code>. Each work item with a due date becomes an all-day event; re-syncing
-  updates it rather than creating a second one, and clearing a due date deletes it.</p>
-  <p>One-way, by design. A calendar event has a start and an end and nothing else — no
-  status, no parent, no estimate — so anything read back would be a worse copy of what the
-  database already holds.</p>
+  <h3 data-n="02">Connect an account</h3>
+  <p>Account menu → <b>Settings</b> → <b>Connect Google Calendar</b>. The consent screen is
+  Google's; what comes back is permission to read that one calendar and add events to it.
+  The scope cannot delete a calendar, and nothing in Mycel deletes or edits an event —
+  changing a booking happens in Google, where you can see the week you are changing.</p>
+  <p><b>Disconnect</b> on the same screen revokes it at Google and forgets it here.</p>
+</div>
+
+<div class="step">
+  <h3 data-n="03">Ask, and book in one sentence</h3>
+  <p>“What have I got this afternoon?” reads the window and answers with each event's own
+  link. “Book the review, 3pm tomorrow, half an hour” does <em>not</em> book anything: it
+  reads the time back to you in words — <i>Friday 2 October 2026, 15:00</i> — and waits.
+  Only your yes writes to the calendar.</p>
+  <p>That split is deliberate. A time is something the model read out of a sentence, and a
+  wrong reading that reaches Google puts a meeting nobody arranged on a real phone. A
+  proposal you can correct costs one turn; a ghost meeting costs an afternoon.</p>
+  <p>Answers use the timezone in <code>TIMEZONE</code>, in both directions, so a server in
+  UTC does not book your three o'clock seven hours early.</p>
 </div>
 
 <h2 data-n="09">One box, four specialists</h2>
@@ -764,8 +777,6 @@ change anything is refused by the database and the agent says so.</p>
   Mycel reports the field, it does not invent it.</td></tr>
   <tr><td>Effort chart is flat, work is clearly happening</td><td>Nobody is logging work.
   The curve comes from work logs and from nothing else.</td></tr>
-  <tr><td>Nothing arrives in Telegram</td><td><code>TELEGRAM_NOTIFY_CHAT_ID</code> is empty,
-  or the bot is not in that chat. The report itself is unaffected.</td></tr>
   <tr><td>Calendar events never appear</td><td>The calendar is not shared with the service
   account's email address.</td></tr>
   <tr><td>A run is queued and never moves</td><td>The worker is not running.

@@ -1186,3 +1186,69 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
         rows = await repo.conversations_for(user.id)
         assert [row.id for row in rows] == [silent.id, spoken.id]
+
+
+@needs_postgres
+class TestAConnectedGoogleAccount:
+    """One row per person, and reconnecting replaces it rather than adding a second.
+
+    The upsert is the whole of it. Google hands back a refresh token on the first consent
+    only, so someone who reconnects after revoking must end up with the new token in the one
+    place the calendar looks — not with the dead one still sitting beside it.
+    """
+
+    async def test_connecting_keeps_what_the_calendar_needs(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("cal@example.com", "x")
+
+        await repo.upsert_google_account(user.id, "cal@gmail.com", "sealed-token", "openid email")
+
+        row = await repo.google_account(user.id)
+        assert row is not None
+        assert row.email == "cal@gmail.com"
+        assert row.refresh_token_encrypted == "sealed-token"
+        assert row.scope == "openid email"
+
+    async def test_reconnecting_replaces_the_token(self, session: AsyncSession) -> None:
+        """A second consent round supersedes the first: two live tokens for one person is a
+        grant nobody can revoke by disconnecting."""
+        repo = AppRepository(session)
+        user = await repo.create_user("again@example.com", "x")
+
+        await repo.upsert_google_account(user.id, "a@gmail.com", "first", "openid")
+        await repo.upsert_google_account(user.id, "b@gmail.com", "second", "openid email")
+
+        row = await repo.google_account(user.id)
+        assert row is not None
+        assert row.refresh_token_encrypted == "second"
+        assert row.email == "b@gmail.com"
+
+    async def test_nobody_connected_is_no_row(self, session: AsyncSession) -> None:
+        """The normal state, and it must read as `None` rather than as an error."""
+        repo = AppRepository(session)
+        user = await repo.create_user("none@example.com", "x")
+
+        assert await repo.google_account(user.id) is None
+
+    async def test_disconnecting_removes_it(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("gone@example.com", "x")
+        await repo.upsert_google_account(user.id, "g@gmail.com", "token", "openid")
+
+        assert await repo.delete_google_account(user.id) is True
+        assert await repo.google_account(user.id) is None
+
+    async def test_disconnecting_twice_is_not_an_error(self, session: AsyncSession) -> None:
+        """The end state is what was asked for, which is all a disconnect promises."""
+        repo = AppRepository(session)
+        user = await repo.create_user("twice@example.com", "x")
+
+        assert await repo.delete_google_account(user.id) is False
+
+    async def test_one_persons_account_is_not_anothers(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        mine = await repo.create_user("mine@example.com", "x")
+        theirs = await repo.create_user("theirs@example.com", "x")
+        await repo.upsert_google_account(mine.id, "m@gmail.com", "token", "openid")
+
+        assert await repo.google_account(theirs.id) is None

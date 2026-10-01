@@ -86,14 +86,24 @@ class JobBudget:
         if self.remaining_usd() <= 0:
             raise BudgetExceeded(self.job_id, self.spent_usd, self.ceiling_usd)
 
-    def limits(self, cfg: RunLimits) -> "UsageLimits":
-        """Per-run ceilings: the agent's own limits, capped by the job's remaining money."""
+    def limits(self, cfg: RunLimits, spent: "RunUsage | None" = None) -> "UsageLimits":
+        """Per-run ceilings: the agent's own limits, capped by the job's remaining money.
+
+        `spent` is for a delegated run, which continues the caller's counters rather than
+        starting its own — see `runner.delegate`. Its limits are added to what those
+        counters already hold, so `tool_calls_limit: 30` means thirty calls in *this* run
+        whichever run spent what came before. Left out, the counters start at zero and the
+        agent's own numbers are the ceiling as written.
+        """
         from pydantic_ai.usage import UsageLimits
 
+        def after(limit: int | None, already: int) -> int | None:
+            return None if limit is None else limit + already
+
         return UsageLimits(
-            request_limit=cfg.request_limit,
-            tool_calls_limit=cfg.tool_calls_limit,
-            total_tokens_limit=cfg.total_tokens_limit,
+            request_limit=after(cfg.request_limit, spent.requests if spent else 0),
+            tool_calls_limit=after(cfg.tool_calls_limit, spent.tool_calls if spent else 0),
+            total_tokens_limit=after(cfg.total_tokens_limit, spent.total_tokens if spent else 0),
             cost_limit=self.remaining_usd(),
         )
 

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.models import (
     Conversation,
+    GoogleAccount,
     Membership,
     PasswordReset,
     Session,
@@ -61,6 +62,21 @@ class PasswordResetRow:
     user_id: int
     expires_at: datetime
     used_at: datetime | None
+
+
+@dataclass(frozen=True)
+class GoogleAccountRow:
+    """One person's connected Google account.
+
+    Carries the token still encrypted: decrypting is `services/google_oauth.py`'s, and a
+    row that travels in the clear is a row that ends up in a log line.
+    """
+
+    user_id: int
+    email: str
+    refresh_token_encrypted: str
+    scope: str
+    connected_at: datetime
 
 
 @dataclass(frozen=True)
@@ -201,6 +217,48 @@ class AppRepository:
             .order_by(User.email)
         )
         return [_user(row) for row in rows]
+
+    # -- google accounts -----------------------------------------------------
+
+    async def upsert_google_account(
+        self, user_id: int, email: str, refresh_token_encrypted: str, scope: str
+    ) -> None:
+        """Attach a Google account, replacing whatever this person had connected before.
+
+        Upsert rather than insert: a second consent is the same person reconnecting, and two
+        live grants for one user is two answers to "whose calendar" with no way to choose.
+        """
+        stmt = insert(GoogleAccount).values(
+            user_id=user_id,
+            email=email,
+            refresh_token_encrypted=refresh_token_encrypted,
+            scope=scope,
+        )
+        await self._session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[GoogleAccount.user_id],
+                set_={
+                    "email": stmt.excluded.email,
+                    "refresh_token_encrypted": stmt.excluded.refresh_token_encrypted,
+                    "scope": stmt.excluded.scope,
+                    "connected_at": func.now(),
+                },
+            )
+        )
+
+    async def google_account(self, user_id: int) -> GoogleAccountRow | None:
+        """What this person connected, or `None`. `None` is a normal answer."""
+        row = await self._session.scalar(
+            select(GoogleAccount).where(GoogleAccount.user_id == user_id)
+        )
+        return _google(row) if row else None
+
+    async def delete_google_account(self, user_id: int) -> bool:
+        """Disconnect. False when there was nothing to disconnect."""
+        result = await self._session.execute(
+            delete(GoogleAccount).where(GoogleAccount.user_id == user_id)
+        )
+        return bool(getattr(result, "rowcount", 0))
 
     async def delete_sessions_for(self, user_id: int, keep: str | None = None) -> int:
         """Drop one person's sessions, optionally sparing the one asking.
@@ -395,6 +453,16 @@ def _session(row: Session) -> SessionRow:
 def _reset(row: PasswordReset) -> PasswordResetRow:
     return PasswordResetRow(
         id=row.id, user_id=row.user_id, expires_at=row.expires_at, used_at=row.used_at
+    )
+
+
+def _google(row: GoogleAccount) -> GoogleAccountRow:
+    return GoogleAccountRow(
+        user_id=row.user_id,
+        email=row.email,
+        refresh_token_encrypted=row.refresh_token_encrypted,
+        scope=row.scope,
+        connected_at=row.connected_at,
     )
 
 

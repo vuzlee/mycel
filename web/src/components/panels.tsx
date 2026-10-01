@@ -1,16 +1,21 @@
 /**
- * What the account menu opens: the account, the one setting, and how to use this.
+ * What the account menu opens: the account, the settings, and how to use this.
  *
  * Panels rather than pages — each is a few blocks someone reads and dismisses, and all
  * three live here because they are the same size and the same shape. A file each would
  * be three files of twenty lines.
  */
 
-import { useState } from "react";
-import type { Thread } from "../api";
-import { changePassword } from "../api";
+import { useEffect, useState } from "react";
+import type { GoogleStatus, Thread } from "../api";
+import {
+  changePassword,
+  connectGoogle,
+  disconnectGoogle,
+  fetchGoogle,
+} from "../api";
 import { useAuth } from "../auth";
-import { Moon, Screen, Spinner, Sun } from "./icons";
+import { Calendar, Moon, Screen, Spinner, Sun } from "./icons";
 import type { Theme } from "../theme";
 import { useTheme } from "../theme";
 
@@ -133,29 +138,136 @@ const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
   { value: "dark", label: "Dark", icon: <Moon size={17} /> },
 ];
 
-/** One setting, because there is one. Three tiles rather than three sentences: the sun,
- *  the moon and the screen say it, and a paragraph explaining what "Light" means is a
- *  paragraph nobody needed. "System" is a real third option — a boolean cannot say
- *  "follow the machine". */
+/** Two settings: how it looks here, and which calendar it may read.
+ *
+ *  They sit together because both are answers to "how does this behave for me", and neither
+ *  is big enough for a screen of its own. Appearance is per-browser; the Google connection
+ *  is per-account, which the copy under each one says. */
 export function SettingsPanel() {
   const [theme, choose] = useTheme();
 
   return (
+    <>
+      <section>
+        <h3 className="label">Appearance</h3>
+        <div className="theme-picker">
+          {THEMES.map((option) => (
+            <button
+              key={option.value}
+              aria-pressed={theme === option.value}
+              onClick={() => choose(option.value)}
+            >
+              {option.icon}
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <p className="muted">Kept in this browser — another machine keeps its own.</p>
+      </section>
+
+      <GoogleSection />
+    </>
+  );
+}
+
+/** The outcome of a consent round, which arrives in the query string rather than in a
+ *  response: the browser left for Google's own screen and came back by redirect, so there
+ *  was no fetch to answer. Read once and cleared from the address bar, so reloading the
+ *  page does not re-announce a connection made ten minutes ago. */
+function outcome(): "connected" | "failed" | null {
+  const query = new URLSearchParams(window.location.search);
+  if (query.has("google")) return "connected";
+  if (query.has("google_error")) return "failed";
+  return null;
+}
+
+/** Connecting a Google account, so a question about the calendar has one to read.
+ *
+ *  Three states, and the first is about the deployment rather than the person: a machine
+ *  with no OAuth client cannot connect anything, and saying so is better than a button that
+ *  leads to an error. Then connected, and not. */
+function GoogleSection() {
+  const [status, setStatus] = useState<GoogleStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [came] = useState(outcome);
+
+  useEffect(() => {
+    void fetchGoogle().then(setStatus).catch(() => setStatus(null));
+    if (came) window.history.replaceState({}, "", window.location.pathname);
+  }, [came]);
+
+  const drop = async (): Promise<void> => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await disconnectGoogle();
+      setStatus(await fetchGoogle());
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
     <section>
-      <h3 className="label">Appearance</h3>
-      <div className="theme-picker">
-        {THEMES.map((option) => (
-          <button
-            key={option.value}
-            aria-pressed={theme === option.value}
-            onClick={() => choose(option.value)}
-          >
-            {option.icon}
-            {option.label}
+      <h3 className="label">Google Calendar</h3>
+
+      {status === null && <p className="muted">Checking…</p>}
+
+      {status && !status.configured && (
+        <p className="muted">
+          This deployment has no Google client configured, so no calendar can be connected.
+          Whoever runs it sets <code>GOOGLE_CLIENT_ID</code>,{" "}
+          <code>GOOGLE_CLIENT_SECRET</code> and <code>GOOGLE_TOKEN_KEY</code>.
+        </p>
+      )}
+
+      {status?.configured && status.email && (
+        <>
+          <div className="identity">
+            <span className="avatar big" aria-hidden>
+              <Calendar size={17} />
+            </span>
+            <div>
+              <b>{status.email}</b>
+              <span className="muted">
+                Connected{" "}
+                {status.connected_at
+                  ? new Date(status.connected_at).toLocaleDateString()
+                  : ""}
+              </span>
+            </div>
+          </div>
+          <p className="muted">
+            Questions about your time read this calendar, and a booking you agree to is
+            written to it. Nothing else is read, and nothing is ever deleted.
+          </p>
+          {failure && <p className="failure">{failure}</p>}
+          <button onClick={() => void drop()} disabled={busy}>
+            {busy && <Spinner className="spin" size={14} />}
+            Disconnect
           </button>
-        ))}
-      </div>
-      <p className="muted">Kept in this browser — another machine keeps its own.</p>
+        </>
+      )}
+
+      {status?.configured && !status.email && (
+        <>
+          <p className="muted">
+            Connect one and you can ask what is on this afternoon, or say "3pm tomorrow,
+            team, half an hour" and agree to what it reads back. Nothing is written until you
+            do — and nothing here can delete an event.
+          </p>
+          {came === "failed" && (
+            <p className="failure">That did not finish. Nothing was connected.</p>
+          )}
+          <button className="primary" onClick={connectGoogle}>
+            <Calendar size={14} />
+            Connect Google Calendar
+          </button>
+        </>
+      )}
     </section>
   );
 }

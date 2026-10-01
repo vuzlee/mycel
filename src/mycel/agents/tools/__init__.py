@@ -2,6 +2,10 @@
 
   compute.py        percentages, growth, basic statistics
   web_search.py     search the open web
+  mail.py           read the headers of recent mail
+  query.py          read gold with SQL the model wrote
+  calendar.py       read the asker's calendar, and book on it after they agree
+  delegate.py       hand a question to a specialist agent
   rag_search.py     search the knowledge base via infra/vectors/
 
 Each module owns its tools end to end and exports a `build_toolset()`; an agent lists the

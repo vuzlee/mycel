@@ -198,15 +198,26 @@ async def delegate(
     run's tokens into the caller's usage, which the caller records when it finishes;
     recording here as well would bill every delegated token twice.
 
+    **`usage_limits` is passed too, and forgetting it was a real runaway.** A delegated run
+    with none falls to pydantic-ai's own defaults — 50 requests, and no tool-call limit at
+    all — so every `tool_calls_limit` in `config/agents/` applied to the orchestrator and to
+    nothing it called. One question cost 47 model turns and 41 `run_sql` calls before the
+    default request limit stopped it. The limits are offset by `ctx.usage`, because the
+    counters are the caller's and a limit read against them would otherwise be spent before
+    this run starts.
+
     Async only: it exists to be awaited inside a tool, which is already in a running loop.
     """
     deps = ctx.deps
     cfg = settings or deps.settings
     model = build_model(cfg.model_spec, cfg)
+    limits = deps.budget.limits(cfg, spent=ctx.usage)
     emitter = RunEmitter(deps, _name_of(agent), ctx.tool_call_id)
 
     with translate_agent_errors(cfg.model_spec), _benching_the_key(model):
-        async with agent.iter(prompt, deps=deps, model=model, usage=ctx.usage) as agent_run:
+        async with agent.iter(
+            prompt, deps=deps, model=model, usage=ctx.usage, usage_limits=limits
+        ) as agent_run:
             await emitter.emit(RUN_STARTED, prompt=prompt)
             await _drive(agent_run, emitter)
             await emitter.emit(RUN_FINISHED)

@@ -51,6 +51,11 @@ Three traps. Reading past them silently produces numbers that look right:
   until the next morning. Say so when a date comparison is close.
 
 Writing `run_sql`:
+- You have twelve queries for the whole question, and most questions need two or three.
+  Answer with what you have rather than asking one more; a figure you can source beats a
+  figure you were still refining when the run was stopped.
+- One query that groups beats five that each fetch one number. GROUP BY, or a CTE per
+  part and one SELECT joining them.
 - One SELECT or WITH per call, no semicolon.
 - 200 rows come back at most. Aggregate in SQL rather than pulling rows to count them.
 - A failed query comes back with its error. Read it and send a fixed one.

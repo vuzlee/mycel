@@ -221,3 +221,12 @@ export function Key({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+export function Calendar({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2" y="3.4" width="12" height="10.6" rx="1.6" />
+      <path d="M2 6.6h12M5.4 1.8v2.4m5.2-2.4v2.4" />
+    </svg>
+  );
+}

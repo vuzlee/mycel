@@ -4,9 +4,9 @@ Every knob the system needs arrives as an environment variable, so the same imag
 dev, staging and prod with no `if env == "prod"` anywhere in the code. `.env` is read in
 development; in a container the variables are already set.
 
-`extra="ignore"` is load-bearing: `.env.example` carries Postgres, RabbitMQ, Redis, Qdrant and
-Slack keys that most entrypoints do not need, and a strict model would refuse to start over
-a variable it has no field for.
+`extra="ignore"` is load-bearing: `.env.example` carries the Postgres, RabbitMQ and Redis
+credentials the containers read and no field here does, and a strict model would refuse to
+start over a variable it has no field for.
 
 `get_settings()` is cached — config is read once per process, and tests clear the cache.
 """
@@ -76,13 +76,19 @@ class Settings(BaseSettings):
     #: Where a link out of this deployment points. Nothing has no page to be relative to,
     #: so this is the only place the deployment's own address is written down.
     public_base_url: str = "http://localhost:8000"
-    #: The calendar due dates are written to. Give it one of its own — a bug then writes
-    #: junk into a calendar nobody keeps by hand.
-    google_calendar_id: str | None = None
-    #: Path to a service-account key file, kept outside the repo. Note 015's per-user
-    #: OAuth is a different mechanism for a different question; this one is the
-    #: deployment writing to its own calendar, and needs no user to be present.
-    google_service_account_json: str | None = None
+    #: The OAuth client a person consents to, so Mycel may read and write *their* calendar.
+    #: A client rather than a service account: a service account writes to a calendar of
+    #: the deployment's own, which is the wrong calendar for "what have I got this
+    #: afternoon". Console -> APIs & Services -> Credentials -> OAuth client ID, type
+    #: "Web application", with `{public_base_url}/auth/google/callback` as a redirect URI.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    #: The key the stored refresh token is encrypted with, url-safe base64, 32 bytes:
+    #: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    #: No default and no fallback to plaintext — a refresh token opens one person's calendar
+    #: for as long as they leave it alone, so a deployment without this key refuses to
+    #: connect an account rather than keeping one readably.
+    google_token_key: SecretStr | None = None
     #: Seconds between scheduled syncs. Jira keeps its history, so this is a freshness
     #: knob rather than a deadline — nothing is lost by syncing late.
     sync_interval_seconds: int = 900

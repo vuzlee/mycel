@@ -140,6 +140,101 @@ class TestDelegation:
         assert deps.budget.tokens == 54
         assert deps.budget.requests == 3
 
+    async def test_a_delegated_run_is_limited_by_its_own_config(self) -> None:
+        """MYC-48. A delegated run given no `usage_limits` fell to pydantic-ai's defaults —
+        50 requests and no tool-call limit at all — so every number in `config/agents/`
+        bound the orchestrator and nothing it called. One question cost 41 `run_sql` calls
+        before the default request limit stopped it."""
+        deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=3))
+        child = Agent(deps_type=MycelDeps, output_type=str)
+        parent = Agent(deps_type=MycelDeps, output_type=str)
+        queries: list[str] = []
+
+        @child.tool
+        async def run_sql(ctx: RunContext[MycelDeps], query: str) -> str:
+            """Read something, so the child can loop."""
+            queries.append(query)
+            return "rows"
+
+        @parent.tool
+        async def analyst(ctx: RunContext[MycelDeps]) -> str:
+            """Delegate to the child agent."""
+            return await runner.delegate(child, "q", ctx)
+
+        # Different arguments every call, so `guards.py` never fires: the limit is the
+        # only thing that can stop this, which is the whole point of the test.
+        asked = [0]
+
+        def child_says(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            asked[0] += 1
+            return ModelResponse(parts=[ToolCallPart("run_sql", {"query": f"select {asked[0]}"})])
+
+        step = [0]
+
+        def parent_says(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            step[0] += 1
+            if step[0] == 1:
+                return ModelResponse(parts=[ToolCallPart("analyst", {})])
+            return ModelResponse(parts=[TextPart("final")])
+
+        with parent.override(model=FunctionModel(parent_says)):
+            with child.override(model=FunctionModel(child_says)):
+                with pytest.raises(RunawayStopped):
+                    await runner.run(parent, "go", deps)
+
+        assert len(queries) == 3, f"the child's own tool_calls_limit must bind, got {len(queries)}"
+
+    async def test_a_delegate_limit_is_not_spent_by_its_caller(self) -> None:
+        """The counters are the caller's, so a limit read against them raw would already be
+        part-spent before the delegated run starts — and a specialist called late in a long
+        orchestration would get fewer calls than its own file grants it."""
+        CHILD = AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=2)
+        deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=20))
+        child = Agent(deps_type=MycelDeps, output_type=str)
+        parent = Agent(deps_type=MycelDeps, output_type=str)
+        reads: list[str] = []
+
+        @child.tool
+        async def read(ctx: RunContext[MycelDeps], n: int) -> str:
+            """Read something, so the child can use its allowance."""
+            reads.append(str(n))
+            return "rows"
+
+        @parent.tool
+        async def noop(ctx: RunContext[MycelDeps]) -> str:
+            """Spend one of the parent's tool calls before the child is reached."""
+            return "ok"
+
+        @parent.tool
+        async def specialist(ctx: RunContext[MycelDeps]) -> str:
+            """Delegate, on the child's own settings rather than the caller's."""
+            assert ctx.usage.tool_calls >= 1, "the parent must have spent one before delegating"
+            return await runner.delegate(child, "q", ctx, CHILD)
+
+        asked = [0]
+
+        def child_says(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            asked[0] += 1
+            if asked[0] > 2:
+                return ModelResponse(parts=[TextPart("child answer")])
+            return ModelResponse(parts=[ToolCallPart("read", {"n": asked[0]})])
+
+        step = [0]
+
+        def parent_says(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            step[0] += 1
+            if step[0] == 1:
+                return ModelResponse(parts=[ToolCallPart("noop", {})])
+            if step[0] == 2:
+                return ModelResponse(parts=[ToolCallPart("specialist", {})])
+            return ModelResponse(parts=[TextPart("final")])
+
+        with parent.override(model=FunctionModel(parent_says)):
+            with child.override(model=FunctionModel(child_says)):
+                assert await runner.run(parent, "go", deps) == "final"
+
+        assert reads == ["1", "2"], f"the child gets its own two calls, got {reads}"
+
     async def test_child_tokens_count_against_the_same_ceiling(self) -> None:
         """A child spending the job's money is the point of sharing the budget object."""
         deps = _deps()

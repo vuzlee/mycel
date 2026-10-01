@@ -10,14 +10,20 @@ the model's own memory — fluent, undated, and indistinguishable from a search 
 someone checks. The tool cannot prevent this on its own: it can only guarantee that what it
 *returns* carries urls, not that the model used them.
 
-**The mailbox is outside this system too.** `tools/mail.py` joined the toolset for the
-same reason `web_search` is here: both fetch what the prompt does not contain, and both
-fail the same way when the model answers from memory instead. The enforcement above needs
-no change to cover them — every Gmail message has a permalink, so a claim about mail has a
-source in exactly the sense `validate_output` already means.
+**The mailbox and the calendar are outside this system too.** `tools/mail.py` and
+`tools/calendar.py` joined the toolset for the same reason `web_search` is here: all three
+fetch what the prompt does not contain, and all three fail the same way when the model
+answers from memory instead. The enforcement above needs no change to cover them — a Gmail
+message has a permalink and a calendar event has its `htmlLink`, so a claim about either has
+a source in exactly the sense `validate_output` already means.
 
-Searching is `tools/web_search.py`, reading mail is `tools/mail.py`; this file only says
-which toolsets the researcher gets.
+**And the calendar is the first thing this agent can *change*.** Everything else here reads.
+The write is split into a draft and a confirmation inside `tools/calendar.py`, so what makes
+it safe is that tool rather than anything in this file — but it is why the researcher's
+prompt now has a section about reading a time back before booking it.
+
+Searching is `tools/web_search.py`, reading mail is `tools/mail.py`, the calendar is
+`tools/calendar.py`; this file only says which toolsets the researcher gets.
 """
 
 from pydantic import BaseModel, Field
@@ -27,7 +33,7 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import mail, web_search
+from mycel.agents.tools import calendar, mail, web_search
 
 
 class Claim(BaseModel):
@@ -70,7 +76,7 @@ class Researcher(BaseAgent[Research]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        return [web_search.build_toolset(), mail.build_toolset()]
+        return [web_search.build_toolset(), mail.build_toolset(), calendar.build_toolset()]
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Research) -> Research:
