@@ -145,7 +145,8 @@ class Settings(BaseSettings):
             if keys:
                 return keys
         single = {"google": self.gemini_api_key, "anthropic": self.anthropic_api_key}[provider]
-        return [single.get_secret_value()] if single is not None else []
+        value = single.get_secret_value().strip() if single is not None else ""
+        return [value] if value else []
 
     @model_validator(mode="after")
     def _warn_on_both_key_forms(self) -> "Settings":
@@ -153,10 +154,19 @@ class Settings(BaseSettings):
 
         Silently picking one of two declarations is where somebody loses an afternoon, and
         `frozen=True` means this is the last moment anything can say anything about it.
+
+        A declared-but-empty variable is NOT a declaration. `GEMINI_API_KEY=` left in a
+        `.env` to document that the fallback exists would otherwise warn on every start,
+        and a warning that fires when nothing is wrong is one nobody reads when something
+        is.
         """
         from mycel.core.logging import get_logger
 
-        if self.gemini_api_keys.strip() and self.gemini_api_key is not None:
+        singular = self.gemini_api_key
+        both = bool(self.gemini_api_keys.strip()) and bool(
+            singular is not None and singular.get_secret_value().strip()
+        )
+        if both:
             get_logger(__name__).warning(
                 "both key forms are set; the plural one is used",
                 extra={"used": "GEMINI_API_KEYS", "ignored": "GEMINI_API_KEY"},

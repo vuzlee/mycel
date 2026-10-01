@@ -51,3 +51,47 @@ def test_secret_is_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
+
+def test_plural_keys_win_over_the_singular(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One place to declare a thing. The singular is only a fallback."""
+    monkeypatch.setenv("GEMINI_API_KEYS", "one,two,three")
+    monkeypatch.setenv("GEMINI_API_KEY", "ignored")
+    assert Settings().llm_keys("google") == ["one", "two", "three"]
+
+def test_the_singular_is_read_when_the_plural_is_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEYS", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "only-one")
+    assert Settings().llm_keys("google") == ["only-one"]
+
+def test_a_blank_key_is_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`GEMINI_API_KEY=` in a .env documents that the fallback exists; it is not a key.
+
+    Counting it meant llm_keys returned [""], which reaches the provider as a request
+    with an empty credential rather than as a deployment that has none.
+    """
+    monkeypatch.setenv("GEMINI_API_KEYS", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "   ")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    assert Settings().llm_keys("google") == []
+    assert Settings().llm_keys("anthropic") == []
+
+def test_a_blank_singular_does_not_warn(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A warning that fires when nothing is wrong is one nobody reads when something is."""
+    monkeypatch.setenv("GEMINI_API_KEYS", "one,two")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    with caplog.at_level("WARNING"):
+        Settings()
+    assert "both key forms" not in caplog.text
+
+def test_both_forms_set_does_warn(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEYS", "one,two")
+    monkeypatch.setenv("GEMINI_API_KEY", "also-set")
+    with caplog.at_level("WARNING"):
+        Settings()
+    assert "both key forms" in caplog.text

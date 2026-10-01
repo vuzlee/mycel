@@ -35,9 +35,9 @@ services:
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
 
-  # Ticks `domains/sync.py` every SYNC_INTERVAL_SECONDS: Telegram -> bronze -> silver ->
-  # gold. Its own process because its failure mode is its own — Telegram drops updates
-  # after 24 hours, so a scheduler that stays down loses data nothing can replay.
+  # Ticks `domains/sync.py` every SYNC_INTERVAL_SECONDS: Jira -> bronze -> silver -> gold.
+  # Its own process because its failure mode is its own: a tick that overruns or dies
+  # must not take a request with it.
   # Two replicas are safe: the tick takes a Postgres advisory lock and the loser skips.
   # Out of the default `up` for the same reason as `api`: these are the application, not
   # the infrastructure a dev machine wants in the background. The scheduler ticks every
