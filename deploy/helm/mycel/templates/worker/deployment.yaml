@@ -2,8 +2,16 @@
 The worker. Scales freely: RabbitMQ hands each message to one consumer, so workers share
 a queue rather than being capped by a partition count.
 
-No probe. It has no HTTP port, and /metrics is not readiness — a process can serve metrics
-while doing no work at all. Recorded as debt; batch 058 builds the scrape and revisits it.
+A liveness probe on /metrics, and no readiness probe. 057 left both off and recorded it as
+debt; 058 builds the thing that asks /metrics and settles the question.
+
+057 was right that a partly hung process still answers /metrics. But a process killed for
+memory, or deadlocked in its whole loop, does not — and that is the half kubelet can catch.
+The other half, a port open while no job runs, no probe can catch: from outside it is
+indistinguishable from an idle worker, and it belongs to an alert on the failed-job count.
+
+No readiness probe, because nothing sends requests here. "Can it take work yet" is a
+question about a Service's endpoint list, and a worker is in no Service.
 */}}
 apiVersion: apps/v1
 kind: Deployment
@@ -40,6 +48,21 @@ spec:
           ports:
             - name: metrics
               containerPort: {{ .Values.config.METRICS_PORT | int }}
+          env:
+            # Outranks both envFrom sources, and has to: the Secret is built from the whole
+            # of .env, where this is 127.0.0.1 so that a dev machine does not publish an
+            # unauthenticated port. Inside a pod, loopback means the metrics endpoint is
+            # reachable from that container and nothing else — which is the same as not
+            # serving it, and kubelet's probe gets connection refused. All interfaces here
+            # means the pod network; the port is published outside the cluster to nobody.
+            - {name: METRICS_HOST, value: "0.0.0.0"}
           {{- include "mycel.envFrom" . | nindent 10 }}
+          livenessProbe:
+            httpGet: {path: /metrics, port: metrics}
+            # Generous: a job holding the loop for a moment is normal, and a restart in
+            # the middle of one costs the work rather than saving it.
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}

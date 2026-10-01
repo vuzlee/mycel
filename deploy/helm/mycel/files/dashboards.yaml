@@ -1,0 +1,15 @@
+# Tells Grafana to load every dashboard JSON in this directory. Provisioned from a file
+# for the same reason the datasources are: a dashboard clicked together by hand lives in
+# one person's browser and disappears with the container.
+
+apiVersion: 1
+
+providers:
+  - name: mycel
+    type: file
+    # Editable in the UI for trying things out, but the file is the original: a change
+    # made in the browser is lost on the next restart, which is the intended outcome.
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

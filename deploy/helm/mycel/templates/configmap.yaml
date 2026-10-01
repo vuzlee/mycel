@@ -5,6 +5,11 @@ The split against secret.yaml is one rule: anything that UNLOCKS something is a 
 goes in the Secret. That puts every *_URL here on the other side, because a connection URL
 carries the password inside the string itself.
 
+METRICS_HOST is deliberately NOT here. It was, and it did not work: the Secret is built
+from the whole of `.env`, `secretRef` is listed after `configMapRef` in `_helpers.tpl`, and
+the developer's own `METRICS_HOST=127.0.0.1` won — so kubelet's probe got connection
+refused from outside the pod. It now sits in each Deployment's `env:`, which outranks both.
+
 IT IS ALSO A HOOK, and that is not decoration. Helm runs every pre-install hook BEFORE any
 ordinary resource, so the migration Job started against a ConfigMap that did not exist yet
 and sat in CreateContainerConfigError until it gave up. Declaring this as a hook too, at a
@@ -27,7 +32,3 @@ data:
   {{- range $k, $v := .Values.config }}
   {{ $k }}: {{ $v | quote }}
   {{- end }}
-  # Not in values: inside a container, loopback would mean the metrics port is reachable
-  # from that container and nothing else, which is the same as not serving it. All
-  # interfaces here means the pod network, and the port is published to nobody.
-  METRICS_HOST: "0.0.0.0"

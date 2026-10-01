@@ -44,6 +44,14 @@ app.kubernetes.io/component: {{ .component }}
 Every container's environment, identical across the three. Both sources are mounted whole
 rather than key by key: a new setting then reaches the pods by changing one ConfigMap, not
 by editing three Deployments and remembering all of them.
+
+ORDER MATTERS, and it cost a debugging round. The Secret is created with
+`--from-env-file=.env`, so it carries ALL of that file — the settings as well as the keys —
+and `secretRef` listed second wins every collision. A value the ConfigMap sets for cluster
+conditions is therefore silently replaced by whatever the developer's own .env said.
+
+Anything that MUST hold regardless goes in the container's own `env:`, which outranks both.
+METRICS_HOST is the case that found this.
 */}}
 {{- define "mycel.envFrom" -}}
 envFrom:

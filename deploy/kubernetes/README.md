@@ -54,9 +54,44 @@ in the Secret have to name `externalStores.host`.
 No `startupProbe`: it exists to protect a process that takes minutes to boot, and uvicorn
 does not.
 
-`worker` and `scheduler` have **no probe at all**. They have no HTTP port, and `/metrics`
-is not readiness — a process can serve metrics while doing no work. That is recorded as
-debt; batch 058 builds the scrape and revisits it.
+`worker` and `scheduler` have a **liveness probe on `/metrics`** and no readiness probe.
+057 gave them neither and recorded it as debt; 058 built the thing that asks `/metrics` and
+settled it.
+
+A partly hung process does still answer, which is what 057 said. But one killed for memory,
+or deadlocked in its whole loop, does not — and that is the half kubelet catches. The other
+half, a port open while no job runs, no probe can catch: from outside it is identical to an
+idle worker, and it belongs to an alert on the failed-job count.
+
+No readiness probe, because nothing sends requests to a worker. "Can it take work yet" is a
+question about a Service's endpoint list, and a worker is in no Service.
+
+**`METRICS_HOST` is set on the container, not in the ConfigMap.** The Secret is created
+from the whole of `.env`, and `secretRef` is listed after `configMapRef` in `envFrom`, so
+it wins every collision: a developer's `127.0.0.1` — correct on a laptop, where it is what
+keeps an unauthenticated port private — replaced the `0.0.0.0` the cluster needs, and the
+probe got connection refused. `env:` on the container outranks both.
+
+## What measures it
+
+`--set monitoring.enabled=true` adds four more pods: Prometheus, Loki, Promtail and
+Grafana. Off by default, the way compose keeps them behind `profiles: [monitoring]`.
+
+| Pod | Does what |
+|---|---|
+| `prometheus` | asks each process every 15s how it is doing |
+| `promtail` | DaemonSet — reads pod log files off each node and pushes them |
+| `loki` | holds what Promtail pushes |
+| `grafana` | the screen, on its own hostname |
+
+Two things differ from the compose versions, and the second is not a config change.
+Prometheus asks the cluster which pods are alive instead of naming three addresses, so a
+replaced pod costs no edit. Promtail cannot use `docker.sock` — a pod has no docker — so it
+reads `/var/log/pods` directly, and runs one copy per node because a container's log is a
+file on the disk of the machine running it.
+
+No operator. `ServiceMonitor` needs a resident program to read it; a scrape config in a
+ConfigMap can be read by eye. That trade flips when a second team adds services of its own.
 
 ## Scaling: by hand, on purpose
 

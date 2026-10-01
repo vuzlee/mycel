@@ -82,3 +82,40 @@ ingress:
 # --install never migrates and all three pods start against an empty database.
 migrations:
   enabled: true
+
+# Measuring and log collection, on the cluster. Off by default, the way compose keeps them
+# behind `profiles: [monitoring]`: with this false the chart renders exactly the three
+# application pods and nothing else.
+#
+# Prometheus asks the cluster which pods are alive rather than carrying a typed list of
+# addresses, which is why it needs a ServiceAccount at all - see monitoring/rbac.yaml.
+# Both it and Loki keep their data in the pod and lose it on restart: a volume claim stuck
+# Pending on the wrong storage class costs more than seven days of samples on a dev box.
+monitoring:
+  enabled: false
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    retention: 7d
+    scrapeInterval: 15s
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {memory: 1Gi}
+  loki:
+    image: grafana/loki:3.3.2
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {memory: 1Gi}
+  promtail:
+    image: grafana/promtail:3.3.2
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 256Mi}
+  grafana:
+    image: grafana/grafana:11.5.1
+    # Anonymous admin, the same as compose. Behind a real Ingress this is a hole; it is
+    # here because a dev cluster with a login nobody shares is a dashboard nobody opens.
+    anonymous: true
+    host: grafana.mycel.local
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {memory: 512Mi}

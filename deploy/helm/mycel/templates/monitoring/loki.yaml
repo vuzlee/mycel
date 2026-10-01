@@ -1,0 +1,108 @@
+{{/*
+Loki: where the log lines land. Promtail pushes, Grafana queries.
+
+Single binary, filesystem storage, one replica. The compose config under deploy/otel/ says
+the same thing and says why: in production the storage swaps to S3 and the rest stays.
+*/}}
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mycel.fullname" . }}-loki
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+data:
+  loki.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore: {store: inmemory}
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index: {prefix: index_, period: 24h}
+    limits_config:
+      # A job that runs for minutes pushes its first lines minutes after they happened.
+      reject_old_samples: false
+      allow_structured_metadata: false
+    compactor:
+      working_directory: /loki/compactor
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Same reasoning as the prometheus Service: deploy/grafana/ names http://loki:3100, and
+  # that string has to be right on both networks.
+  name: loki
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+  selector:
+    {{- include "mycel.selectorLabels" (dict "ctx" . "component" "loki") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-loki
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "loki") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: loki
+      annotations:
+        # The hash is of the config VALUES, not of this template file: a template that
+        # includes itself to hash itself recurses until Helm gives up. 057's Deployments
+        # could hash templates/configmap.yaml because that was a different file.
+        checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
+    spec:
+      containers:
+        - name: loki
+          image: {{ .Values.monitoring.loki.image }}
+          args: [-config.file=/etc/loki/loki.yaml]
+          ports:
+            - name: http
+              containerPort: 3100
+          volumeMounts:
+            - {name: config, mountPath: /etc/loki}
+            - {name: data, mountPath: /loki}
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.monitoring.loki.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mycel.fullname" . }}-loki
+        - name: data
+          emptyDir: {}
+{{- end }}

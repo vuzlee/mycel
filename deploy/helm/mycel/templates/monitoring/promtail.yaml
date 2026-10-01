@@ -1,0 +1,128 @@
+{{/*
+Promtail: the half of this batch that is NOT a config change.
+
+Prometheus broke on an address. This one broke on HOW IT READS LOGS. In compose it asks
+the docker daemon over /var/run/docker.sock; a pod has no docker, so that route does not
+exist here at all.
+
+Logs live as files on the disk of the machine running the container. Nothing collects them
+centrally. One machine in compose means one collector reads everything — but a collector on
+node A cannot reach a file on node B, so this is a DaemonSet: Kubernetes keeps exactly one
+copy on every node, and a node added later gets one without anyone asking.
+
+Everything is mounted read-only. A log collector with write access to the node's filesystem
+is a much larger thing than a log collector.
+*/}}
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mycel.fullname" . }}-promtail
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: promtail
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    positions:
+      # Which byte of which file was last sent. On an emptyDir, so a restarted pod re-reads
+      # from the start of whatever files are still there: duplicate lines rather than
+      # missing ones, which is the right way round for logs.
+      filename: /run/promtail/positions.yaml
+    scrape_configs:
+      - job_name: pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          # The app already prints JSON carrying trace_id. Pull out the level so a query
+          # can filter on it.
+          - cri: {}
+          - json:
+              expressions:
+                level: level
+                trace_id: trace_id
+          - labels:
+              level:
+        relabel_configs:
+          # Only this node's pods. Without it every Promtail tries to read every pod and
+          # finds no file for most of them.
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: __host__
+            action: replace
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            target_label: component
+          # The path is how Promtail finds the file at all: it is built from the pod's uid
+          # and container name, which only the discovery metadata knows.
+          - source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            target_label: __path__
+            separator: /
+            replacement: /var/log/pods/*$1/*.log
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "mycel.fullname" . }}-promtail
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: promtail
+spec:
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "promtail") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: promtail
+      annotations:
+        # The hash is of the config VALUES, not of this template file: a template that
+        # includes itself to hash itself recurses until Helm gives up. 057's Deployments
+        # could hash templates/configmap.yaml because that was a different file.
+        checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "mycel.fullname" . }}-promtail
+      containers:
+        - name: promtail
+          image: {{ .Values.monitoring.promtail.image }}
+          args: [-config.file=/etc/promtail/promtail.yaml]
+          env:
+            # Which node this copy is on. The relabel rule above compares against it, so
+            # each copy reads only the files that are actually on its own disk.
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef: {fieldPath: spec.nodeName}
+          ports:
+            - name: http
+              containerPort: 9080
+          volumeMounts:
+            - {name: config, mountPath: /etc/promtail}
+            - {name: positions, mountPath: /run/promtail}
+            # Both paths, and both read-only. /var/log/pods holds symlinks into
+            # /var/lib/docker/containers, so mounting only the first gives dangling links
+            # and an empty Loki that looks exactly like a broken config.
+            - {name: pods, mountPath: /var/log/pods, readOnly: true}
+            - {name: containers, mountPath: /var/lib/docker/containers, readOnly: true}
+          resources:
+            {{- toYaml .Values.monitoring.promtail.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mycel.fullname" . }}-promtail
+        - name: positions
+          emptyDir: {}
+        - name: pods
+          hostPath: {path: /var/log/pods}
+        - name: containers
+          hostPath: {path: /var/lib/docker/containers}
+{{- end }}

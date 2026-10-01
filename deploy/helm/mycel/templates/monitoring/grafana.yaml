@@ -1,0 +1,136 @@
+{{/*
+Grafana: the screen. It reads both of the others and owns no data of its own.
+
+The datasources and the dashboard are the SAME FILES compose provisions, loaded with
+.Files.Get rather than copied: two copies of a dashboard drift, and the one that drifts is
+always the one nobody is looking at.
+
+That works because the Service names above are `prometheus` and `loki` with no release
+prefix, so `http://prometheus:9090` is correct on the compose network and here.
+*/}}
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mycel.fullname" . }}-grafana-datasources
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |
+{{ .Files.Get "files/datasources.yaml" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mycel.fullname" . }}-grafana-dashboards
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  dashboards.yaml: |
+{{ .Files.Get "files/dashboards.yaml" | indent 4 }}
+  mycel.json: |
+{{ .Files.Get "files/mycel.json" | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mycel.fullname" . }}-grafana
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+  selector:
+    {{- include "mycel.selectorLabels" (dict "ctx" . "component" "grafana") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-grafana
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "grafana") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: grafana
+      annotations:
+        # Hash the provisioned files themselves: editing a dashboard must roll the pod,
+        # and Grafana reads these once at start. Hashing this template instead would be a
+        # template including itself, which recurses until Helm gives up.
+        checksum/files: {{ printf "%s%s%s" (.Files.Get "files/datasources.yaml") (.Files.Get "files/dashboards.yaml") (.Files.Get "files/mycel.json") | sha256sum }}
+    spec:
+      containers:
+        - name: grafana
+          image: {{ .Values.monitoring.grafana.image }}
+          env:
+            {{- if .Values.monitoring.grafana.anonymous }}
+            - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "true"}
+            - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Admin}
+            {{- end }}
+            # Grafana builds its own absolute urls from this. Without it a page served
+            # through an Ingress redirects to localhost:3000 the first time it tries.
+            - name: GF_SERVER_ROOT_URL
+              value: http://{{ .Values.monitoring.grafana.host }}/
+          ports:
+            - name: http
+              containerPort: 3000
+          volumeMounts:
+            - {name: datasources, mountPath: /etc/grafana/provisioning/datasources}
+            - {name: dashboards, mountPath: /etc/grafana/provisioning/dashboards}
+            - {name: data, mountPath: /var/lib/grafana}
+          readinessProbe:
+            httpGet: {path: /api/health, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.monitoring.grafana.resources | nindent 12 }}
+      volumes:
+        - name: datasources
+          configMap:
+            name: {{ include "mycel.fullname" . }}-grafana-datasources
+        - name: dashboards
+          configMap:
+            name: {{ include "mycel.fullname" . }}-grafana-dashboards
+        # Grafana's own sqlite: sessions, and any panel somebody drags about. The
+        # dashboard itself comes from the ConfigMap, so losing this loses nothing that
+        # was written down.
+        - name: data
+          emptyDir: {}
+---
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "mycel.fullname" . }}-grafana
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    # Its own host rather than a path on the api's: Grafana serves its assets from
+    # absolute paths, so mounting it under /grafana means rewriting every one of them.
+    - host: {{ .Values.monitoring.grafana.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "mycel.fullname" . }}-grafana
+                port: {name: http}
+{{- end }}
+{{- end }}

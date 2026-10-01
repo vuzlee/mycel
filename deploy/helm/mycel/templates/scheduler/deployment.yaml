@@ -5,7 +5,12 @@ RollingUpdate starts the new pod BEFORE removing the old one, so every upgrade o
 window with two live schedulers and every schedule fires twice. The advisory lock in
 domains/sync.py absorbs most of the damage; not running two is still the correct fix.
 
-METRICS_PORT is shifted by one so a future scrape config can tell the two apart.
+THE METRICS PORT IS NOT SET HERE, and that is the point. `scheduler/__main__.py` already
+serves on `METRICS_PORT + 1` — one above the worker's, so the two can run side by side on
+one machine. Setting the shifted value in the environment shifts it twice: the env said
+9101, the process listened on 9102, and Prometheus scraped 9101 and got nothing. The
+container port below has to be the same arithmetic the code does, not the arithmetic that
+looks right.
 */}}
 apiVersion: apps/v1
 kind: Deployment
@@ -39,11 +44,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["python", "-m", "mycel.scheduler"]
           ports:
+            # What `__main__.py` actually binds: METRICS_PORT + 1. The env below passes the
+            # base value, unshifted, because the code does the shifting.
             - name: metrics
               containerPort: {{ add (.Values.config.METRICS_PORT | int) 1 }}
           env:
-            - name: METRICS_PORT
-              value: {{ add (.Values.config.METRICS_PORT | int) 1 | quote }}
+            # Outranks envFrom; see the worker's for why METRICS_HOST has to.
+            - {name: METRICS_HOST, value: "0.0.0.0"}
           {{- include "mycel.envFrom" . | nindent 10 }}
+          # Same reasoning as the worker's, on the shifted port.
+          livenessProbe:
+            httpGet: {path: /metrics, port: metrics}
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.scheduler.resources | nindent 12 }}

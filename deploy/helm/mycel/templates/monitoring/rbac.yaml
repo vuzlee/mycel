@@ -1,0 +1,88 @@
+{{/*
+The only thing in this chart that asks the cluster a question.
+
+The three application pods do their own work and never talk to the Kubernetes API.
+Prometheus has to: it finds its targets by asking "which pods are alive, at what address"
+rather than carrying a typed list, and that is why deleting a pod needs no config edit.
+
+The cluster answers nobody by default, so three objects are needed — an identity, a set of
+permissions, and a line tying them together. The permissions are three verbs and two kinds.
+Nothing is written, nothing is deleted, and no Secret is readable: a scraper that could read
+Secrets would be a way to read every credential in the namespace.
+
+ClusterRole rather than Role because discovery lists across namespaces. One namespace today,
+but the alternative is a Role that silently finds nothing the moment anything moves.
+*/}}
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "mycel.fullname" . }}-prometheus
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "mycel.fullname" . }}-prometheus
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, endpoints, services, nodes]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "mycel.fullname" . }}-prometheus
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "mycel.fullname" . }}-prometheus
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mycel.fullname" . }}-prometheus
+    namespace: {{ .Release.Namespace }}
+---
+{{/*
+Promtail reads log files off the node, so it needs the same discovery to know which pod a
+file belongs to. Without it every line arrives labelled by filename and nothing else.
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "mycel.fullname" . }}-promtail
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: promtail
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "mycel.fullname" . }}-promtail
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "mycel.fullname" . }}-promtail
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "mycel.fullname" . }}-promtail
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "mycel.fullname" . }}-promtail
+    namespace: {{ .Release.Namespace }}
+{{- end }}

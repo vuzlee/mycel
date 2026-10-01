@@ -1,0 +1,18 @@
+# Grafana provisions from files, so this config is versioned with the code rather than
+# clicked together by hand.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    url: http://loki:3100
+    # No derived trace link: the traces live in Langfuse, which Grafana cannot link
+    # into. `trace_id` is still in the JSON log body, so it is copy-pasteable by hand.

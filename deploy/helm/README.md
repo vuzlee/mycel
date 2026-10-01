@@ -24,11 +24,31 @@ deploy/helm/mycel/
     worker/               Deployment
     scheduler/            Deployment (always replicas: 1 — see below)
     hooks/migrate.yaml    pre-install,pre-upgrade: alembic upgrade head
+    monitoring/           Prometheus, Loki, Promtail, Grafana — off by default
+  files/                  the three Grafana files, copied; files/README.md says why
 ```
 
-Seven manifests. No HPA, no StatefulSet, no vllm, no observability — see
-`deploy/kubernetes/README.md` for what each of those would cost and why none is here yet.
-Batch 058 adds `monitoring/`.
+Seven manifests with monitoring off, twenty-six with it on. No HPA and no StatefulSet —
+see `deploy/kubernetes/README.md` for what each would cost and why neither is here.
+
+## Measuring and logs
+
+`--set monitoring.enabled=true` adds Prometheus, Loki, Promtail and Grafana. Off by
+default, the way compose keeps them behind `profiles: [monitoring]`: without it the chart
+renders exactly the three application pods.
+
+Prometheus asks the cluster which pods are alive rather than carrying a list of addresses,
+so a replaced pod is found on the next refresh and nobody edits anything. That is the one
+thing worth testing after a change: delete a worker and watch the target come back.
+
+Promtail is a DaemonSet — one copy per node — because a container's log is a file on the
+disk of the machine running it, and a collector on one node cannot read a file on another.
+
+Both keep their data in the pod and lose it on a restart. Seven days of samples on a dev
+box is not worth a volume claim that can get stuck `Pending` on the wrong storage class.
+
+Grafana gets its own hostname (`grafana.mycel.local`) rather than a path under the api's,
+because it serves assets from absolute paths.
 
 ## Two versions, do not mix them up
 
@@ -74,6 +94,17 @@ helm upgrade --install mycel deploy/helm/mycel -f deploy/helm/mycel/values-minik
 
 minikube tunnel                        # then mycel.local resolves via /etc/hosts
 ```
+
+With measuring and logs:
+
+```bash
+helm upgrade --install mycel deploy/helm/mycel \
+  -f deploy/helm/mycel/values-minikube.yaml \
+  --set monitoring.enabled=true
+```
+
+Both hostnames point at `minikube ip`, so `/etc/hosts` needs `mycel.local` and
+`grafana.mycel.local` on that address.
 
 `helm template` renders without touching a cluster, and is the fastest way to see what a
 values change actually does.
