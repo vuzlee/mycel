@@ -48,16 +48,11 @@ revoke — and only after reading a booking back to you for a yes.
 
 ```bash
 cp .env.example .env      # fill in DB and API keys
-scripts/stack.sh up       # containers, migrations, api, worker, scheduler
+scripts/stack.sh dev up   # containers, migrations, api, worker, scheduler
 ```
 
 One command, idempotent: starts what is down, leaves what is up, applies migrations, and
 waits until each service answers a real query rather than merely accepting TCP.
-
-The containers are `docker compose up -d postgres redis rabbitmq`. The API, the worker and
-the scheduler are not: they run on the host under `uv run`, so an edit is picked up without
-a rebuild. To run them in containers the way prod does, `docker compose --profile app up -d`
-and skip this script.
 
 | | |
 |---|---|
@@ -66,12 +61,33 @@ and skip this script.
 | Postgres | **5433**, so it cannot collide with a system install |
 
 ```bash
-scripts/stack.sh status      # what is running, where
-scripts/stack.sh logs api    # follow api · worker · scheduler
-scripts/stack.sh sync        # one Jira sync now, don't wait for the tick
-scripts/stack.sh restart     # pick up a code change
-scripts/stack.sh down        # stop; named volumes keep the data
+scripts/stack.sh dev status      # what is running, where
+scripts/stack.sh dev logs api    # follow api · worker · scheduler
+scripts/stack.sh dev down        # stop; named volumes keep the data
+scripts/stack.sh sync            # one Jira sync now, don't wait for the tick
 ```
+
+### Three ways to run it
+
+The application is the same in all three; what differs is where it runs.
+
+| | Where the app runs | Use it for |
+|---|---|---|
+| `dev` | on the host under `uv run`, stores in compose | writing code — an edit needs no rebuild |
+| `compose` | in containers, running the image | checking the image CI builds |
+| `k8s` | the chart on minikube, stores still in compose | checking the chart deploys |
+
+```bash
+scripts/stack.sh compose up monitoring   # image in containers, + Prometheus/Loki/Grafana
+scripts/stack.sh k8s build               # build and load the image into minikube
+scripts/stack.sh k8s up monitoring       # the chart, seven pods
+scripts/stack.sh k8s down --all          # uninstall, stop minikube, stop the stores
+```
+
+**The stores never move.** Postgres, RabbitMQ and Redis run in compose in every mode,
+including `k8s` — a StatefulSet with a volume claim is the painful part of Kubernetes and
+proves nothing the chart is meant to prove. The pods reach them at
+`host.minikube.internal`, because inside a pod `localhost` is that pod.
 
 All three host processes matter: no worker means `POST /reports` hands back a job id nobody
 picks up; no scheduler means nothing syncs until you run `sync` by hand.

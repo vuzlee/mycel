@@ -5,7 +5,7 @@ there is no `if env == "prod"` branch anywhere in the code.
 
 | | Runs on | Stores | What runs it |
 |---|---|---|---|
-| **dev** | a developer's machine | Postgres, RabbitMQ, Redis in compose | `scripts/stack.sh up` |
+| **dev** | a developer's machine | Postgres, RabbitMQ, Redis in compose | `scripts/stack.sh dev up` |
 | **dev, on a cluster** | minikube on that same machine | the same compose stores, reached at `host.minikube.internal` | `helm upgrade --install` |
 
 **There is no staging and no prod**, and this file used to describe both. Writing them down
