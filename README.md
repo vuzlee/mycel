@@ -87,7 +87,7 @@ environments, agents, sources — is YAML under `config/`.
 | | |
 |---|---|
 | `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` | the three services |
-| `ANTHROPIC_API_KEY` · `GEMINI_API_KEY` | a run needs the key its model spec asks for, and no other |
+| `GEMINI_API_KEYS` | comma-separated — each key is its own account, so three keys are three free tiers |
 | `JOB_CEILING_USD` | spend ceiling for one queued job |
 | `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `GOOGLE_TOKEN_KEY` | the calendar; leave blank and it's simply off |
 

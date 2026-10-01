@@ -112,11 +112,6 @@ class TestTheRingReachesTheModelBuilder:
         keys = model_builder.key_ring("google", env)
         assert [keys.take() for _ in range(3)] == ["one", "two", "three"]
 
-    def test_the_singular_name_still_works(self) -> None:
-        """No deployment has to change to keep running."""
-        env = Settings(gemini_api_key="only-one")
-        assert model_builder.key_ring("google", env).take() == "only-one"
-
 
 class TestWhichFailuresBenchAKey:
     @pytest.fixture(autouse=True)

@@ -18,7 +18,7 @@ upstreams. The names live below as constants and every reader joins them itself,
 — a test, mostly — names one directory rather than four.
 
 **Secrets are never here.** These files are committed. Where a value must stay private the
-YAML names the variable that holds it (`api_key_env: GEMINI_API_KEY`) and `config.py`
+YAML names the variable that holds it (`api_key_env: GEMINI_API_KEYS`) and `config.py`
 reads it. That way the file still documents what a deployment needs without carrying it.
 """
 

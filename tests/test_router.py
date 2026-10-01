@@ -7,13 +7,13 @@ from mycel.llm.router import ModelSpec, Tier, resolve
 
 
 def test_parses_both_tiers() -> None:
-    assert resolve("cloud:claude-sonnet-5") == ModelSpec(Tier.CLOUD, "claude-sonnet-5")
+    assert resolve("cloud:gemini-3.8-flash") == ModelSpec(Tier.CLOUD, "gemini-3.8-flash")
     assert resolve("local:qwen3-4b") == ModelSpec(Tier.LOCAL, "qwen3-4b")
 
 
 def test_round_trips() -> None:
     """str(spec) must be re-parseable, so a spec can be logged and replayed."""
-    for text in ("cloud:claude-sonnet-5", "local:qwen3-4b"):
+    for text in ("cloud:gemini-3.8-flash", "local:qwen3-4b"):
         assert str(resolve(text)) == text
 
 
@@ -23,13 +23,13 @@ def test_model_name_may_contain_a_colon() -> None:
 
 
 def test_tier_is_case_insensitive_and_trimmed() -> None:
-    assert resolve(" CLOUD : claude-sonnet-5 ").tier is Tier.CLOUD
+    assert resolve(" CLOUD : gemini-3.8-flash ").tier is Tier.CLOUD
 
 
 @pytest.mark.parametrize(
     "bad",
     [
-        "claude-sonnet-5",  # no tier at all
+        "gemini-3.8-flash",  # no tier at all
         "gpu:qwen3-4b",  # tier that does not exist
         "cloud:",  # tier but no model
         "cloud:   ",

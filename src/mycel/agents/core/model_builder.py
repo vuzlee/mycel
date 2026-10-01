@@ -65,13 +65,19 @@ class _Backend:
     """What a spec name resolves to: the provider's own model id, and how to reach it."""
 
     model_name: str
-    provider: Literal["google", "anthropic"]
+    provider: Literal["google"]
 
 
 #: Which variable a provider's keys are written in. Named here rather than on `_Backend`
 #: because it is a property of the provider, and repeating it on every model is six places
 #: to keep in step for no gain.
-_ENV_VARS: dict[str, str] = {"google": "GEMINI_API_KEYS", "anthropic": "ANTHROPIC_API_KEY"}
+#:
+#: One provider today. Anthropic had an entry and two models here until nothing was ever
+#: configured to reach them: a second provider that no agent selects is not a fallback, it
+#: is an untested path that reads like one. `_Backend.provider` stays a Literal rather than
+#: becoming a plain str, so adding the second one back is a type error everywhere it has to
+#: be handled rather than a silent KeyError at the first call.
+_ENV_VARS: dict[str, str] = {"google": "GEMINI_API_KEYS"}
 
 #: One ring per provider, for the life of the process. Rebuilding it per call would lose
 #: the memory of which key was just found spent, which is the only thing a ring is for.
@@ -219,8 +225,6 @@ _CLOUD_MODELS: dict[str, _Backend] = {
     # Preview, and priced as one: the free tier allows 20 requests a day for this model
     # against far more for the GA releases above. Kept for comparison, not for running.
     "gemini-3-flash-preview": _Backend("gemini-3-flash-preview", "google"),
-    "claude-sonnet-5": _Backend("claude-sonnet-5", "anthropic"),
-    "claude-haiku-4-5": _Backend("claude-haiku-4-5-20251001", "anthropic"),
 }
 
 # The local server runs whatever the compose file pins.
@@ -288,30 +292,13 @@ def _cloud_model(spec: ModelSpec, env: Settings, agent_cfg: AgentSettings) -> "M
     api_key = ring.take()
     model_settings = _model_settings(agent_cfg, backend.model_name)
 
-    if backend.provider == "google":
-        from pydantic_ai.models.google import GoogleModel
-        from pydantic_ai.providers.google import GoogleProvider
+    from pydantic_ai.models.google import GoogleModel
+    from pydantic_ai.providers.google import GoogleProvider
 
-        return _remember_key(
-            GoogleModel(
-                backend.model_name,
-                provider=GoogleProvider(api_key=api_key, retry_options=_google_retries(agent_cfg)),
-                settings=model_settings,
-            ),
-            backend.provider,
-            api_key,
-        )
-
-    from anthropic import AsyncAnthropic
-    from pydantic_ai.models.anthropic import AnthropicModel
-    from pydantic_ai.providers.anthropic import AnthropicProvider
-
-    # `max_retries` lives on the client, not the provider, so the client is built here.
-    client = AsyncAnthropic(api_key=api_key, max_retries=agent_cfg.transient_retries)
     return _remember_key(
-        AnthropicModel(
+        GoogleModel(
             backend.model_name,
-            provider=AnthropicProvider(anthropic_client=client),
+            provider=GoogleProvider(api_key=api_key, retry_options=_google_retries(agent_cfg)),
             settings=model_settings,
         ),
         backend.provider,

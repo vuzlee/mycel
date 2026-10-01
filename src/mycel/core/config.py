@@ -15,7 +15,7 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,15 +34,16 @@ class Settings(BaseSettings):
     # LLM. Every key is optional: a run needs the one its model spec asks for and no
     # other, so a Gemini-only machine is a valid deployment.
     #
-    # Plural for Gemini only, because several keys for one provider are several accounts
-    # and so several free tiers — see `llm/keyring.py`, and Gemini's is the quota this
-    # project actually runs into. The singular names below still work and count as a list
-    # of one, so no deployment has to change to keep running. Anthropic has no plural form:
-    # no agent asks for that provider, and an environment variable for something nothing
-    # reads is a promise the code does not keep.
+    # Plural because several keys for one provider are several accounts and so several
+    # free tiers — see `llm/keyring.py`. One name, so there is one place to look when the
+    # quota is the thing that broke.
+    #
+    # Two variables are gone and for the same reason. GEMINI_API_KEY was a singular
+    # fallback read only when the plural was empty, which meant two ways to say one thing
+    # and a warning fired at startup to say so. ANTHROPIC_API_KEY named a provider no
+    # agent ever selected. A variable for something nothing reads is a promise the code
+    # does not keep.
     gemini_api_keys: str = ""
-    anthropic_api_key: SecretStr | None = None
-    gemini_api_key: SecretStr | None = None
     local_llm_base_url: str = "http://localhost:8001/v1"
 
     # Tools that reach outside the process. Optional on the same terms as the model keys:
@@ -136,42 +137,13 @@ class Settings(BaseSettings):
     def llm_keys(self, provider: str) -> list[str]:
         """Every key configured for one provider, in the order they were written.
 
-        Only Gemini has a plural form, and it wins when both are set, because one place to
-        declare a thing is the point of adding it; the singular is read only when the plural
-        is empty.
+        A blank entry is not a key. `GEMINI_API_KEYS=` left in a `.env` to document that
+        the variable exists would otherwise yield `[""]` — a request carrying an empty
+        credential rather than a deployment that has none.
         """
-        if provider == "google":
-            keys = [part.strip() for part in self.gemini_api_keys.split(",") if part.strip()]
-            if keys:
-                return keys
-        single = {"google": self.gemini_api_key, "anthropic": self.anthropic_api_key}[provider]
-        value = single.get_secret_value().strip() if single is not None else ""
-        return [value] if value else []
-
-    @model_validator(mode="after")
-    def _warn_on_both_key_forms(self) -> "Settings":
-        """Say so when Gemini has keys under both names.
-
-        Silently picking one of two declarations is where somebody loses an afternoon, and
-        `frozen=True` means this is the last moment anything can say anything about it.
-
-        A declared-but-empty variable is NOT a declaration. `GEMINI_API_KEY=` left in a
-        `.env` to document that the fallback exists would otherwise warn on every start,
-        and a warning that fires when nothing is wrong is one nobody reads when something
-        is.
-        """
-        from mycel.core.logging import get_logger
-
-        singular = self.gemini_api_key
-        both = bool(self.gemini_api_keys.strip()) and bool(
-            singular is not None and singular.get_secret_value().strip()
-        )
-        if both:
-            get_logger(__name__).warning(
-                "both key forms are set; the plural one is used",
-                extra={"used": "GEMINI_API_KEYS", "ignored": "GEMINI_API_KEY"},
-            )
-        return self
+        if provider != "google":
+            return []
+        return [part.strip() for part in self.gemini_api_keys.split(",") if part.strip()]
 
     #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
     #: is a full-access password with no narrower scope available, which is why the

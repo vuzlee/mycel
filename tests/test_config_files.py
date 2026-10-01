@@ -38,7 +38,7 @@ def config_dir(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (tmp_path / AGENTS_SUBDIR / "analyst.yaml").write_text(
-        "model_spec: cloud:claude-sonnet-5\ntool_calls_limit: 30\n", encoding="utf-8"
+        "model_spec: cloud:gemini-3.8-flash\ntool_calls_limit: 30\n", encoding="utf-8"
     )
     return tmp_path
 
@@ -89,7 +89,7 @@ class TestBadFiles:
 class TestAgentSettings:
     def test_all_three_layers_show_up(self, config_dir: Path) -> None:
         cfg = AgentSettings.from_config("analyst", env="dev", config_dir=config_dir)
-        assert cfg.model_spec == "cloud:claude-sonnet-5"  # the agent's own file
+        assert cfg.model_spec == "cloud:gemini-3.8-flash"  # the agent's own file
         assert cfg.request_limit == 8  # dev.yaml
         assert cfg.tool_calls_limit == 30  # the agent's file beating base.yaml
         assert cfg.temperature == 0.0  # the dataclass default, unset everywhere

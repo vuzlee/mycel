@@ -5,9 +5,7 @@ sets `ALLOW_MODEL_REQUESTS = False`, and building a model must not need the netw
 """
 
 import pytest
-from pydantic import SecretStr
 from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, ModelHTTPError
-from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -42,22 +40,21 @@ def _fresh_key_rings() -> None:
 
 
 class TestCloudTier:
-    def test_builds_an_anthropic_model(self) -> None:
-        model = build_model(
-            "cloud:claude-sonnet-5",
-            settings=_settings(anthropic_api_key=SecretStr("sk-test")),
-        )
-        assert isinstance(model, AnthropicModel)
-        assert model.model_name == "claude-sonnet-5"
-
     def test_missing_key_fails_at_build_time(self) -> None:
         """At startup, not on the first call — a misconfigured deploy must not look
         healthy until someone asks it a question."""
-        with pytest.raises(ConfigError, match="ANTHROPIC_API_KEY"):
-            build_model("cloud:claude-sonnet-5", settings=_settings())
+        with pytest.raises(ConfigError, match="GEMINI_API_KEYS"):
+            build_model("cloud:gemini-3.8-flash", settings=_settings())
 
     def test_error_names_the_spec(self) -> None:
-        with pytest.raises(ConfigError, match="cloud:claude-sonnet-5"):
+        with pytest.raises(ConfigError, match="cloud:gemini-3.8-flash"):
+            build_model("cloud:gemini-3.8-flash", settings=_settings())
+
+    def test_an_unknown_cloud_model_is_refused(self) -> None:
+        """The provider table is the whole list. A spec that is not in it has no key
+        variable to name and no endpoint to reach, so it fails here rather than at the
+        first call with something that reads like an outage."""
+        with pytest.raises(ConfigError):
             build_model("cloud:claude-sonnet-5", settings=_settings())
 
     def test_gemini_gets_googles_own_client(self) -> None:
@@ -65,31 +62,22 @@ class TestCloudTier:
         signatures, and the API then rejects every run that calls a tool."""
         model = build_model(
             "cloud:gemini-3-flash-preview",
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         assert isinstance(model, GoogleModel)
         assert model.model_name == "gemini-3-flash-preview"
 
     def test_gemini_needs_its_own_key(self) -> None:
+        """A blank variable is not a key: the refusal names what to set rather than
+        letting an empty credential reach the API and come back as a 401."""
         with pytest.raises(ConfigError, match="GEMINI_API_KEYS"):
-            build_model(
-                "cloud:gemini-3-flash-preview",
-                settings=_settings(anthropic_api_key=SecretStr("sk-test")),
-            )
+            build_model("cloud:gemini-3-flash-preview", settings=_settings(gemini_api_keys=""))
 
     def test_an_unknown_cloud_model_lists_the_known_ones(self) -> None:
         """The spec usually comes from a YAML file, where a typo is otherwise invisible
         until the first call."""
-        with pytest.raises(ConfigError, match="claude-sonnet-5"):
+        with pytest.raises(ConfigError, match="gemini-3.8-flash"):
             build_model("cloud:gemini-9-ultra", settings=_settings())
-
-    def test_a_dated_version_stays_out_of_the_spec(self) -> None:
-        """Specs are human-sized; pinning a dated release is an edit in one table."""
-        model = build_model(
-            "cloud:claude-haiku-4-5",
-            settings=_settings(anthropic_api_key=SecretStr("sk-test")),
-        )
-        assert model.model_name == "claude-haiku-4-5-20251001"
 
 
 class TestLocalTier:
@@ -146,7 +134,7 @@ class TestModelSettings:
         model = build_model(
             "cloud:gemini-3-flash-preview",
             agent_settings=AgentSettings(temperature=0.7),
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         assert model.settings is not None
         assert "temperature" not in model.settings
@@ -164,7 +152,7 @@ class TestTransientRetries:
         model = build_model(
             "cloud:gemini-3-flash-preview",
             agent_settings=AgentSettings(transient_retries=2, retry_max_delay_s=20.0),
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         options = model.client._api_client._http_options.retry_options
         assert options is not None
@@ -175,17 +163,9 @@ class TestTransientRetries:
         model = build_model(
             "cloud:gemini-3-flash-preview",
             agent_settings=AgentSettings(transient_retries=0),
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         assert model.client._api_client._http_options.retry_options is None
-
-    def test_anthropic_client_carries_the_retries(self) -> None:
-        model = build_model(
-            "cloud:claude-sonnet-5",
-            agent_settings=AgentSettings(transient_retries=4),
-            settings=_settings(anthropic_api_key=SecretStr("sk-test")),
-        )
-        assert model.client.max_retries == 4
 
     def test_local_client_carries_the_retries(self) -> None:
         """The vLLM container restarting is exactly the case this covers."""
@@ -217,7 +197,7 @@ class TestFallbackChain:
         """The shape every agent had before this batch, and the shape a test or a script
         that names no fallback still gets."""
         model = build_model(
-            "cloud:gemini-3.6-flash", settings=_settings(gemini_api_key=SecretStr("gk-test"))
+            "cloud:gemini-3.6-flash", settings=_settings(gemini_api_keys="gk-test")
         )
         assert isinstance(model, GoogleModel)
 
@@ -225,7 +205,7 @@ class TestFallbackChain:
         model = build_model(
             "cloud:gemini-3.5-flash-lite",
             AgentSettings(fallback_specs=("cloud:gemini-3.6-flash", "cloud:gemini-3.8-flash")),
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         assert isinstance(model, FallbackModel)
         assert [inner.model_name for inner in model.models] == [
@@ -242,7 +222,7 @@ class TestFallbackChain:
             build_model(
                 "cloud:gemini-3.6-flash",
                 AgentSettings(fallback_specs=("cloud:gemini-9-imaginary",)),
-                settings=_settings(gemini_api_key=SecretStr("gk-test")),
+                settings=_settings(gemini_api_keys="gk-test"),
             )
 
     def test_a_fallback_may_be_the_local_model(self) -> None:
@@ -251,7 +231,7 @@ class TestFallbackChain:
         model = build_model(
             "cloud:gemini-3.6-flash",
             AgentSettings(fallback_specs=("local:qwen3-4b",)),
-            settings=_settings(gemini_api_key=SecretStr("gk-test")),
+            settings=_settings(gemini_api_keys="gk-test"),
         )
         assert isinstance(model, FallbackModel)
         assert isinstance(model.models[1], OpenAIChatModel)
