@@ -38,6 +38,12 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
+      # The three Grafana files exist twice, because Helm's .Files.Get does not follow
+      # symlinks - see `scripts/stack.sh grafana-sync`. Drift is otherwise invisible until
+      # somebody opens whichever of the two was not updated.
+      - name: Grafana files match
+        run: scripts/stack.sh grafana-sync --check
+
       - name: Type check
         run: uv run mypy
 

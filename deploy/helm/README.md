@@ -14,8 +14,6 @@ deploy/helm/mycel/
   Chart.yaml              chart name, chart version, app version
   values.yaml             defaults — enough to run, right for no environment
   values-minikube.yaml    the one that is actually run
-  values-staging.yaml     a cluster that does not exist yet
-  values-prod.yaml        a cluster that does not exist yet
   templates/
     _helpers.tpl          names, labels, the shared envFrom
     configmap.yaml        settings that are not keys
@@ -49,6 +47,21 @@ box is not worth a volume claim that can get stuck `Pending` on the wrong storag
 
 Grafana gets its own hostname (`grafana.mycel.local`) rather than a path under the api's,
 because it serves assets from absolute paths.
+
+## One environment file, and why there are not three
+
+There were a `values-staging.yaml` and a `values-prod.yaml`. Both described a system that
+had left: Kafka partitions, MinIO storage, autoscaling bounds — none of which any template
+reads any more. They were harmless precisely because nothing read them, which is also why
+they survived several batches of being wrong.
+
+The cost was to the reader. Someone opening `values-prod.yaml` to learn what production
+looks like found a Kafka cluster, and `values-minikube.yaml` — the one that runs — was the
+third file down.
+
+A values file is written when there is a cluster to write it for. `values.yaml` holds the
+defaults and `values-minikube.yaml` shows the shape of an override; a staging file written
+before staging exists is the same fiction one layer down.
 
 ## Two versions, do not mix them up
 

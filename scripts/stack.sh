@@ -9,6 +9,8 @@
 #   scripts/stack.sh sync      run one Jira sync now, without waiting for the tick
 #   scripts/stack.sh refetch   re-read the whole project, after adding a synced field
 #   scripts/stack.sh grants    apply migrations/grants.sql, the two least-privilege roles
+#   scripts/stack.sh grafana-sync          copy deploy/grafana/ into the chart's files/
+#   scripts/stack.sh grafana-sync --check  fail if the two copies have drifted (CI runs this)
 #
 # The containers are `docker compose up -d`, not a `docker run` per service. This script
 # used to spell all three out in bash because the compose CLI was not installed here; it
@@ -318,6 +320,44 @@ from mycel.domains.sync import sync_jira
 print(asyncio.run(sync_jira()))"
 }
 
+cmd_grafana_sync() {
+  # The three Grafana files exist twice: deploy/grafana/ is what compose mounts, and
+  # deploy/helm/mycel/files/ is what the chart loads into a ConfigMap.
+  #
+  # The copy is forced, not chosen. Helm's .Files.Get does not follow symlinks - it reads
+  # the link target as a string, so a symlinked datasources.yaml renders a ConfigMap
+  # holding a path, and Grafana starts cleanly with no datasources at all. That failure
+  # looks like a Grafana problem, which is the expensive kind.
+  #
+  # So: deploy/grafana/ is the original, this copies it, and --check tells CI when the two
+  # have drifted rather than waiting for somebody to open the stale dashboard.
+  local src="deploy/grafana" dst="deploy/helm/mycel/files" drift=0
+  local pairs=(
+    "$src/datasources/datasources.yaml:$dst/datasources.yaml"
+    "$src/dashboards/dashboards.yaml:$dst/dashboards.yaml"
+    "$src/dashboards/mycel.json:$dst/mycel.json"
+  )
+
+  for pair in "${pairs[@]}"; do
+    local from="${pair%%:*}" to="${pair##*:}"
+    if cmp -s "$from" "$to"; then continue; fi
+    drift=1
+    if [[ "${1:-}" == "--check" ]]; then
+      echo "drifted: $to is not $from"
+    else
+      cp "$from" "$to"
+      echo "copied:  $from -> $to"
+    fi
+  done
+
+  if [[ "${1:-}" == "--check" ]]; then
+    (( drift )) && die "grafana files have drifted; run: scripts/stack.sh grafana-sync"
+    echo "grafana files match"
+  elif (( ! drift )); then
+    echo "grafana files already match"
+  fi
+}
+
 case "${1:-up}" in
   up)       cmd_up ;;
   down)     cmd_down ;;
@@ -327,5 +367,6 @@ case "${1:-up}" in
   sync)     cmd_sync ;;
   refetch)  cmd_refetch ;;
   grants)   cmd_grants ;;
-  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | refetch | grants)" ;;
+  grafana-sync) cmd_grafana_sync "${2:-}" ;;
+  *)        die "unknown command: $1 (up | down | restart | status | logs <name> | sync | refetch | grants | grafana-sync [--check])" ;;
 esac

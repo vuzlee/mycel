@@ -77,8 +77,34 @@ spec:
           image: {{ .Values.monitoring.grafana.image }}
           env:
             {{- if .Values.monitoring.grafana.anonymous }}
+            # Anonymous Admin. Correct on a laptop, where a login nobody shares is a
+            # dashboard nobody opens — and a hole the moment the hostname resolves
+            # anywhere real, because Grafana admin includes editing the datasources.
+            # Set `monitoring.grafana.anonymous: false` and supply the two keys below.
             - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "true"}
             - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Admin}
+            {{- else }}
+            # Read from the same Secret the application uses, by key: the chart renders no
+            # credential, so `helm template` still produces nothing worth stealing.
+            #
+            # `optional: false` on purpose. A missing key leaves the pod in
+            # CreateContainerConfigError rather than starting Grafana on its built-in
+            # admin/admin — failing to start is loud, and the alternative is a login page
+            # that opens to anyone who has read the documentation.
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: GRAFANA_ADMIN_USER
+                  optional: false
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: GRAFANA_ADMIN_PASSWORD
+                  optional: false
+            # Nobody signs themselves up for a dashboard.
+            - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
             {{- end }}
             # Grafana builds its own absolute urls from this. Without it a page served
             # through an Ingress redirects to localhost:3000 the first time it tries.

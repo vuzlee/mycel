@@ -112,8 +112,14 @@ monitoring:
       limits: {memory: 256Mi}
   grafana:
     image: grafana/grafana:11.5.1
-    # Anonymous admin, the same as compose. Behind a real Ingress this is a hole; it is
-    # here because a dev cluster with a login nobody shares is a dashboard nobody opens.
+    # Anonymous admin, the same as compose, and the right default for a cluster reachable
+    # only through `minikube ip` plus a hosts entry.
+    #
+    # FALSE IS THE SETTING FOR ANY HOSTNAME THAT RESOLVES. Grafana admin includes editing
+    # the datasources, which hold the addresses of Prometheus and Loki. With it false the
+    # pod reads GRAFANA_ADMIN_USER and GRAFANA_ADMIN_PASSWORD from the Secret and refuses
+    # to start without them — see templates/monitoring/grafana.yaml for why refusing is
+    # better than falling back.
     anonymous: true
     host: grafana.mycel.local
     resources:
