@@ -90,6 +90,7 @@ environments, agents, sources — is YAML under `config/`.
 | `GEMINI_API_KEYS` | comma-separated — each key is its own account, so three keys are three free tiers |
 | `JOB_CEILING_USD` | spend ceiling for one queued job |
 | `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `GOOGLE_TOKEN_KEY` | the calendar; leave blank and it's simply off |
+| `QDRANT_URL` | search over tracked work; blank and the tool is never offered. Embeddings run on this machine, so there is no bill |
 
 Access is a row in `app.membership`: no row, no project, so a new account starts with
 nothing rather than with everything. Grant it from the account menu in the app — anyone who

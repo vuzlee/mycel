@@ -44,6 +44,13 @@ dependencies = [
   # only — declared because `services/google_oauth.py` imports it directly, and it arrives
   # transitively today, which is a fact about this lockfile rather than a promise.
   "cryptography>=43.0",
+  # Search over gold. `qdrant-client` without the `fastembed` extra: embeddings are made
+  # here rather than inside the client, so the two can be swapped apart.
+  "qdrant-client>=1.12",
+  # The embedding model itself, as ONNX. `fastembed` rather than sentence-transformers
+  # because the latter pulls in PyTorch — ~2.5 GiB for a model that is 130 MiB, and a
+  # Dockerfile that takes minutes longer every build for a tier nothing else uses.
+  "fastembed>=0.5",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.

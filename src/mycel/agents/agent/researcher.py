@@ -23,7 +23,12 @@ it safe is that tool rather than anything in this file — but it is why the res
 prompt now has a section about reading a time back before booking it.
 
 Searching is `tools/web_search.py`, reading mail is `tools/mail.py`, the calendar is
-`tools/calendar.py`; this file only says which toolsets the researcher gets.
+`tools/calendar.py`, finding work by subject is `tools/rag_search.py`; this file only says
+which toolsets the researcher gets.
+
+`rag_search` is the one that is conditional: it appears only when `QDRANT_URL` is set,
+because a tool with nothing behind it is worse than an absent one — the model spends a turn
+calling it before it learns that.
 """
 
 from pydantic import BaseModel, Field
@@ -33,7 +38,8 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import calendar, mail, web_search
+from mycel.agents.tools import calendar, mail, rag_search, web_search
+from mycel.infra.vectors.client import configured as vectors_configured
 
 
 class Claim(BaseModel):
@@ -76,7 +82,17 @@ class Researcher(BaseAgent[Research]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        return [web_search.build_toolset(), mail.build_toolset(), calendar.build_toolset()]
+        sets: list[AbstractToolset[MycelDeps]] = [
+            web_search.build_toolset(),
+            mail.build_toolset(),
+            calendar.build_toolset(),
+        ]
+        # Offered only where there is something to search. A tool the model can see is a
+        # tool it will call, and one that fails every time costs a turn to learn that —
+        # on a free tier of twenty requests a day, that turn is worth not spending.
+        if vectors_configured():
+            sets.append(rag_search.build_toolset())
+        return sets
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Research) -> Research:

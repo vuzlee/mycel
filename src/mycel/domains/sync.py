@@ -14,8 +14,10 @@ provider takes, and nothing is waiting on the answer.
 import time
 from dataclasses import dataclass
 
+from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.session import session_scope
+from mycel.infra.vectors.client import configured as vectors_configured
 from mycel.observability.metrics import records_written, sync_duration_seconds
 from mycel.services.fetch import fetch_jira
 from mycel.services.transform import transform
@@ -32,6 +34,9 @@ class SyncResult:
     silver_worklogs: int
     items: int
     worklogs: int
+    #: How many gold rows were embedded this pass. Zero when nothing moved, and also zero
+    #: when QDRANT_URL is unset — the two are told apart in the log, not here.
+    indexed: int = 0
 
 
 async def refetch_jira() -> SyncResult:
@@ -81,6 +86,8 @@ async def sync_jira() -> SyncResult:
     async with session_scope() as session:
         result = await transform(session, keys=fetched.keys)
 
+    indexed = await _index_gold()
+
     # Observed after the transform, not in a `finally`: a sync that failed has no duration
     # worth plotting, and a row count from a half-run would read as data loss.
     sync_duration_seconds.labels(domain="jira").observe(time.monotonic() - started)
@@ -99,6 +106,7 @@ async def sync_jira() -> SyncResult:
             "silver_worklogs": result.silver_worklogs,
             "items": result.items,
             "worklogs": result.worklogs,
+            "indexed": indexed,
         },
     )
     return SyncResult(
@@ -107,4 +115,38 @@ async def sync_jira() -> SyncResult:
         silver_worklogs=result.silver_worklogs,
         items=result.items,
         worklogs=result.worklogs,
+        indexed=indexed,
     )
+
+
+async def _index_gold() -> int:
+    """Embed what gold has touched, if this deployment has somewhere to put it.
+
+    Runs after the transform and outside its transaction: embedding is CPU work on a local
+    model, and holding a Postgres transaction open across it holds it for seconds at a time
+    for no reason.
+
+    **A failure here does not fail the sync.** Gold is already written and correct; a search
+    index one tick behind is a degraded search, while a sync that reports failure is a
+    scheduler retrying work it has already done. That is the argument `notify/` makes for
+    never raising out of a side effect.
+
+    Only what moved is embedded — `index_items` compares each row’s `updated_at` against
+    what Qdrant holds — so a quiet tick costs one query and no model time.
+    """
+    if not vectors_configured():
+        return 0
+
+    project = get_settings().jira_project_key
+    if not project:
+        return 0
+
+    try:
+        from mycel.infra.vectors import indexer
+
+        async with session_scope() as session:
+            result = await indexer.index_project(session, project)
+        return result.embedded
+    except Exception:
+        log.warning("indexing gold failed; search is behind", exc_info=True)
+        return 0

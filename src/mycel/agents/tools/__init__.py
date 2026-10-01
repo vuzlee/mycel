@@ -6,7 +6,7 @@
   query.py          read gold with SQL the model wrote
   calendar.py       read the asker's calendar, and book on it after they agree
   delegate.py       hand a question to a specialist agent
-  rag_search.py     search the knowledge base via infra/vectors/
+  rag_search.py     find work items by subject rather than by predicate
 
 Each module owns its tools end to end and exports a `build_toolset()`; an agent lists the
 toolsets it wants and writes no wrappers of its own. That is what makes a tool reusable:

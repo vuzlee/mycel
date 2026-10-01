@@ -193,6 +193,21 @@ class Settings(BaseSettings):
     #: How many events one job's stream keeps. Capped so a chatty run cannot fill Redis;
     #: a client that falls this far behind sees a gap in `seq` and knows it.
     event_stream_max_events: int = 1000
+
+    # Search over gold. Optional on the same terms as the model keys: a deployment without
+    # Qdrant running is valid, and `rag_search` says so itself rather than failing at
+    # import — see `agents/tools/rag_search.py`.
+    #
+    #: Where Qdrant answers. Empty disables search entirely rather than leaving a tool that
+    #: fails on every call: a tool the model can see is a tool it will try.
+    qdrant_url: str = ""
+    #: The embedding model, run on this machine. Its name is part of the collection name,
+    #: because the dimension belongs to the model: changing it means a new collection and a
+    #: full reindex, and there is no way to mix two vector spaces in one.
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    #: Where fastembed keeps the downloaded ONNX weights. Named so a container can mount it
+    #: and not re-download 130 MiB on every start.
+    embedding_cache_dir: str = ".cache/fastembed"
     #: Most one queued job may spend. The HTTP layer has its own ceiling in
     #: `api/dependencies.py`; a worker has no request to read one from, so it reads this.
     job_ceiling_usd: Decimal = Decimal("0.50")
