@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mycel.fullname" . }}-api
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+  selector:
+    {{- include "mycel.selectorLabels" (dict "ctx" . "component" "api") | nindent 4 }}

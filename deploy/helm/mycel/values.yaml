@@ -1,65 +1,84 @@
 # Defaults: enough to make the chart run, suited to no real environment.
 # Each environment overrides them with values-<env>.yaml.
+#
+# Four things this file used to declare and no longer does: Kafka, MinIO, an internal
+# Harbor registry, and autoscaling. The first two left docker-compose.yml long ago, and a
+# template that reads values for a system which does not exist renders a deployment of
+# nothing. Autoscaling is a decision for a cluster that has load.
 
 image:
-  # Internal registry — see deploy/registry/
-  repository: harbor.internal/mycel/mycel
-  tag: ""            # CI sets this to the commit SHA. Empty falls back to appVersion
+  # ghcr.io at release time; on minikube the image is loaded into the node's own daemon,
+  # so the repository is whatever `minikube image load` was given.
+  repository: mycel
+  tag: ""            # CI sets this to the commit SHA. Empty falls back to appVersion.
   pullPolicy: IfNotPresent
-  pullSecret: harbor-creds
+  # Empty means no imagePullSecret is mounted — correct for a locally loaded image.
+  pullSecret: ""
 
 api:
-  replicas: 2
+  replicas: 1
   resources:
     requests: {cpu: 200m, memory: 512Mi}
     limits: {memory: 1Gi}
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
 
 worker:
-  replicas: 3
+  replicas: 2
   resources:
     requests: {cpu: 500m, memory: 1Gi}
     limits: {memory: 2Gi}
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    # Do NOT exceed the topic's partition count: surplus pods sit idle.
-    maxReplicas: 6
-    # Scale on consumer lag, not CPU — workers are mostly waiting on I/O.
-    kafkaLagThreshold: 100
 
 scheduler:
-  # Always 1. Two schedulers = every schedule fires twice.
+  # Always 1. Two schedulers = every schedule fires twice. The advisory lock in
+  # domains/sync.py absorbs most of it; not running two is still the correct fix.
   replicas: 1
-  strategy: Recreate
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 512Mi}
 
-vllm:
-  # Off by default. Enabling it requires GPU nodes plus NVIDIA's device plugin.
-  enabled: false
-  gpuCount: 1
-  model: Qwen/Qwen2.5-3B-Instruct-AWQ
-  # Loading the model takes minutes — without a startupProbe, liveness kills the pod
-  # before it is ready, forever.
-  startupProbe:
-    failureThreshold: 60
-    periodSeconds: 10
+# The stores stay outside the cluster: Postgres, RabbitMQ and Redis run on the host under
+# docker-compose. StatefulSet + PVC is the painful part of Kubernetes and adds nothing to
+# what this chart is meant to prove.
+#
+# `host` is the address the pods use to reach them. It is EMPTY here on purpose: inside a
+# pod `localhost` is that pod, so a DATABASE_URL copied straight from .env looks perfectly
+# correct and the pod dies with connection refused to itself. Every environment has to say
+# what the host is — values-minikube.yaml uses host.minikube.internal.
+externalStores:
+  host: ""
 
-# Stateful stores: StatefulSet + PVC, not Deployment.
-postgres: {enabled: true, storage: 50Gi}
-kafka:    {enabled: true, storage: 20Gi, partitions: 6}
-qdrant:   {enabled: true, storage: 20Gi}
-minio:    {enabled: true, storage: 100Gi}
+# Values that are not keys. Anything that unlocks something lives in the Secret instead;
+# see secret.yaml for the split and why a URL counts as a key.
+config:
+  MYCEL_ENV: production
+  LOG_LEVEL: INFO
+  DB_POOL_SIZE: "10"
+  RESULT_TTL_SECONDS: "86400"
+  EVENT_STREAM_MAX_EVENTS: "1000"
+  JOB_CEILING_USD: "0.50"
+  SYNC_INTERVAL_SECONDS: "900"
+  OTEL_ENABLED: "false"
+  OTEL_SERVICE_NAME: mycel
+  OTEL_CAPTURE_CONTENT: "false"
+  LANGFUSE_BASE_URL: https://jp.cloud.langfuse.com
+  METRICS_PORT: "9100"
+  JIRA_BASE_URL: ""
+  JIRA_PROJECT_KEY: ""
+  PUBLIC_BASE_URL: ""
+  GOOGLE_CLIENT_ID: ""
+  LOCAL_LLM_BASE_URL: ""
+  GMAIL_ADDRESS: ""
 
-observability:
-  enabled: true
-  # Empty means Langfuse, whose endpoint the app derives from LANGFUSE_BASE_URL. Set this
-  # only to divert spans to a collector on the cluster network — a full path, not a host.
-  otlpEndpoint: ""
+# The chart only references a Secret by name; the values are created outside git.
+# See templates/secret.yaml for how to create it.
+secret:
+  name: mycel-secrets
 
 ingress:
   enabled: true
-  host: mycel.internal
+  className: nginx
+  host: mycel.local
+
+# Migrations run as a pre-install,pre-upgrade hook. pre-upgrade alone means the very first
+# --install never migrates and all three pods start against an empty database.
+migrations:
+  enabled: true

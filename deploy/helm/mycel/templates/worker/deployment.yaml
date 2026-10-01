@@ -1,0 +1,45 @@
+{{/*
+The worker. Scales freely: RabbitMQ hands each message to one consumer, so workers share
+a queue rather than being capped by a partition count.
+
+No probe. It has no HTTP port, and /metrics is not readiness — a process can serve metrics
+while doing no work at all. Recorded as debt; batch 058 builds the scrape and revisits it.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-worker
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      # A job is acked only after it finishes. Long enough for the one in flight to end
+      # rather than be redelivered to another worker halfway through.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: worker
+          image: {{ include "mycel.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "mycel.queue.consumer"]
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.config.METRICS_PORT | int }}
+          {{- include "mycel.envFrom" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}

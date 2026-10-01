@@ -1,0 +1,33 @@
+# Overrides values.yaml for a local minikube cluster. Lists only what differs.
+#
+# This is the file that proves the chart runs. The two others describe clusters that do
+# not exist yet.
+
+# `minikube image load mycel:dev` puts the image in the node's own docker daemon, so there
+# is no registry and nothing to pull. Never means never: IfNotPresent would still try to
+# pull when the tag is missing, and the error that produces names a registry nobody set up.
+image:
+  repository: mycel
+  tag: dev
+  pullPolicy: Never
+
+api:       {replicas: 1}
+worker:    {replicas: 1}
+
+# Postgres, RabbitMQ and Redis run on the host under docker-compose. From inside a pod,
+# this is the name that reaches the host — `localhost` would be the pod itself.
+#
+# It is not substituted into anything automatically: DATABASE_URL, RABBITMQ_URL, REDIS_URL
+# and REDIS_CACHE_URL live in the Secret, and the Secret is created outside Helm. Set this,
+# then make the four URLs in it say the same thing.
+externalStores:
+  host: host.minikube.internal
+
+config:
+  MYCEL_ENV: development
+  LOG_LEVEL: DEBUG
+  PUBLIC_BASE_URL: http://mycel.local
+
+ingress:
+  className: nginx
+  host: mycel.local

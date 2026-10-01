@@ -19,7 +19,12 @@ RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-d
 
 COPY src/ src/
 COPY config/ config/
+# Both halves of alembic, or neither works: migrations/ holds the versions, alembic.ini
+# holds script_location that points at it. Without the ini, `alembic upgrade head` fails
+# with "No 'script_location' key found" - which reads like a broken config file rather
+# than a missing one.
 COPY migrations/ migrations/
+COPY alembic.ini ./
 RUN uv sync --no-dev
 
 # Last: only the built assets cross over, and only `app.py::WEB_DIST` looks for them.

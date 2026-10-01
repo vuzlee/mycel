@@ -2135,6 +2135,14 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         is the cluster's. Two different files, but <em>the same image</em> and the same set of
         environment variables — there is no <code>if env == "prod"</code> branch in the code.
       </p>
+      <p>
+        <b>Seven manifests, three pods, on minikube.</b> The chart renders <code>api</code>,
+        <code>worker</code> and <code>scheduler</code> plus a ConfigMap, a Service, an Ingress and a
+        migration hook. Postgres, RabbitMQ and Redis stay <em>outside</em> the cluster, reached at
+        <code>host.minikube.internal</code>. Four things this section used to promise are deliberately
+        not built: Argo CD, Harbor, autoscaling, and <code>StatefulSet</code> for the stores. Each is
+        priced below.
+      </p>
     </div>
 
     <table class="tbl">
@@ -2158,8 +2166,8 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr>
           <td class="who">More traffic adds pods</td>
-          <td><code>HorizontalPodAutoscaler</code></td>
-          <td><code>api</code> on CPU, but <code>worker</code> has to scale on <em>queue depth</em> — it waits on I/O, so CPU stays low while the queue backs up</td>
+          <td><b>Not built.</b> <code>worker.replicas</code> is a number in values</td>
+          <td>There is no load. An HPA on CPU is ten lines that mean nothing, and the measure that would mean something is RabbitMQ queue depth through KEDA — a second control plane for a problem nobody has</td>
         </tr>
         <tr>
           <td class="who">Services can reach each other</td>
@@ -2173,29 +2181,36 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr class="tone-gold">
           <td class="who">Automated deploys</td>
-          <td><b>Argo CD</b> — git is the source of truth; Argo compares the cluster to git and pulls it into line</td>
-          <td><code>prune</code> deletes resources no longer in git: one wrong line in values loses Postgres's PVC</td>
+          <td><b>Not built.</b> <code>helm upgrade --install</code>, run by hand or by CI</td>
+          <td>Argo CD answers &ldquo;what is running, who changed it, when&rdquo; — and with one person, one cluster and one branch, <code>git log</code> already answers it. Its <code>prune</code> is also a live hazard: one wrong line in values deletes a PVC</td>
         </tr>
         <tr class="tone-gold">
           <td class="who">Private container images</td>
-          <td><b>Harbor</b> — an internal registry with CVE scanning, image signing and a proxy cache</td>
-          <td>Tag = commit SHA, never <code>latest</code>: two pods with the same manifest would run different code</td>
+          <td><b>Not built.</b> <code>minikube image load</code> — no registry at all</td>
+          <td>The only part of Harbor worth having here is the proxy cache, which <code>registry:2</code> does in one container. Tag = commit SHA, never <code>latest</code>: two pods with the same manifest would otherwise run different code</td>
         </tr>
       </tbody>
     </table>
 
     <p>
-      <b>Three probes, three different questions.</b> <code>readinessProbe</code> decides whether it takes
-      requests (on failure it is pulled from the Service, the pod stays alive), <code>livenessProbe</code> decides
-      whether it restarts, <code>startupProbe</code> delays the other two during boot. Without the last one
-      <code>vllm</code> is killed unfairly because loading the model takes minutes — forever.
+      <b>Two probes, and only on the <code>api</code>.</b> <code>readinessProbe</code> hits
+      <code>/health/ready</code>, which does touch Postgres and returns 503 rather than raising — a pod
+      that cannot reach its database leaves the Service instead of dying. <code>livenessProbe</code> hits
+      <code>/health/live</code>, which touches nothing outside the process: a liveness probe that asks the
+      database restarts healthy pods every time the database blinks. No <code>startupProbe</code> — it
+      protects a process that takes minutes to boot, and uvicorn does not.
     </p>
 
     <p>
-      <b><code>worker</code>&rsquo;s hard ceiling:</b> actual running pods = min(replicas, partition count).
-      With a 6-partition topic, an HPA pushing to 10 pods still leaves only 6 with work, so set
-      <code>maxReplicas</code> to the partition count. <code>vllm</code> does not autoscale
-      at all: each pod holds a GPU, and with none free a new pod only sits <code>Pending</code>.
+      <b><code>worker</code> and <code>scheduler</code> have no probe at all.</b> They serve no HTTP, and
+      <code>/metrics</code> is not readiness — a process can serve metrics while doing no work.
+      That is open debt.
+    </p>
+
+    <p>
+      <b>No ceiling on <code>worker</code>.</b> RabbitMQ hands each message to one consumer, so workers
+      share a queue rather than being capped by a partition count. The old figure on this page —
+      pods = min(replicas, partitions) — was Kafka's, and Kafka left the stack.
     </p>
 
     <p>
@@ -2205,19 +2220,30 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     </p>
 
     <p>
-      <b>Stateful stores run as <code>StatefulSet</code> + PVC</b>, not
-      <code>Deployment</code>: Postgres, RabbitMQ, Redis and Qdrant need a stable identity and a volume that
-      reattaches to the same pod. On-prem means providing the storage layer yourself — k3s local-path, or
-      Longhorn if volumes should be able to move between machines. This is the most labour-intensive part of leaving the cloud.
+      <b>The stores are outside the cluster.</b> Postgres, RabbitMQ and Redis keep running under
+      docker-compose on the host, reached at <code>host.minikube.internal</code>.
+      <code>StatefulSet</code> + PVC is the most labour-intensive part of Kubernetes — storage
+      classes, a volume per pod identity — and it proves nothing the chart is meant to prove.
     </p>
 
     <p>
-      <b>CI has no access to the cluster.</b> It builds the image, pushes it to Harbor, then edits
-      <code>image.tag</code> in git. Argo CD sees the git change and runs
-      <code>helm upgrade</code> itself — the cluster credentials live in Argo, not in CI. Staging
-      auto-syncs; prod needs a human, because deploying at 5pm on a Friday is not a machine's decision.
-      Migrations still run first, via a <code>pre-upgrade</code> hook (Helm) or
-      <code>sync-wave -1</code> (Argo); if the hook fails everything stops and the old pods keep running.
+      <b><code>localhost</code> inside a pod is that pod.</b> A <code>DATABASE_URL</code> copied straight
+      out of <code>.env</code> looks perfectly correct and the pod dies with connection refused to itself.
+      This is the one mistake worth naming, because nothing about the value looks wrong.
+    </p>
+
+    <p>
+      <b>Migrations run first, and the hook is <code>pre-install,pre-upgrade</code>.</b> Both events
+      matter: <code>pre-upgrade</code> alone means the very first <code>--install</code> never migrates,
+      and all three pods come up against an empty database — which reads as a broken application
+      rather than a missing step. If the hook fails Helm stops and the new pods never start, while the old
+      ones keep serving. That only holds while migrations stay backward compatible for one step.
+    </p>
+
+    <p>
+      <b>Secrets are never rendered.</b> The chart references a <code>Secret</code> by name and writes
+      none, so <code>helm template</code> produces no credential of any kind. It is created once, outside
+      Helm, with <code>kubectl create secret generic mycel-secrets --from-env-file=.env</code>.
     </p>
   </section>
   <section id="s11">
@@ -2251,7 +2277,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <td>Workflows exist: lint, type check, migrations, tests; builds an image tagged by SHA</td>
         </tr>
         <tr class="tone-bronze">
-          <td class="who">Helm chart · Argo CD · Harbor</td>
+          <td class="who">Helm chart on minikube</td>
           <td class="no">Only <code>values</code>, <code>Application</code> and the decision docs. <code>deploy/helm/*/templates/</code> holds a README and nothing else, and there is no cluster to deploy to</td>
         </tr>
         <tr>

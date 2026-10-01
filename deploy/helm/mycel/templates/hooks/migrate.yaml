@@ -1,0 +1,44 @@
+{{/*
+Migrations, before anything starts.
+
+The hook is pre-install AND pre-upgrade. pre-upgrade alone means the very first
+`--install` never migrates, and all three pods come up against an empty database — which
+looks like a broken application rather than a missing step.
+
+hook-failed stops Helm: the new pods never start, and the old ones are still serving.
+That only holds while migrations stay backward compatible for one step.
+*/}}
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # The name carries the revision: a Job's pod template is immutable, so reusing one name
+  # makes the second upgrade fail on a field that cannot be patched.
+  name: {{ include "mycel.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: {{ include "mycel.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          {{- include "mycel.envFrom" . | nindent 10 }}
+{{- end }}

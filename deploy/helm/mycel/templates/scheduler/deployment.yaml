@@ -1,0 +1,49 @@
+{{/*
+The scheduler. One replica, and Recreate rather than RollingUpdate.
+
+RollingUpdate starts the new pod BEFORE removing the old one, so every upgrade opens a
+window with two live schedulers and every schedule fires twice. The advisory lock in
+domains/sync.py absorbs most of the damage; not running two is still the correct fix.
+
+METRICS_PORT is shifted by one so a future scrape config can tell the two apart.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-scheduler
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: {{ .Values.scheduler.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "scheduler") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: scheduler
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      containers:
+        - name: scheduler
+          image: {{ include "mycel.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "mycel.scheduler"]
+          ports:
+            - name: metrics
+              containerPort: {{ add (.Values.config.METRICS_PORT | int) 1 }}
+          env:
+            - name: METRICS_PORT
+              value: {{ add (.Values.config.METRICS_PORT | int) 1 | quote }}
+          {{- include "mycel.envFrom" . | nindent 10 }}
+          resources:
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}

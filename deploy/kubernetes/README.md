@@ -1,76 +1,76 @@
-# Kubernetes — on-premise
+# Kubernetes — what actually runs
 
-The whole stack runs on a self-hosted cluster, with no dependency on any cloud.
+The three application processes run as pods. The stores do not.
 
-## What Compose and Kubernetes are each for
+## Compose and Kubernetes, and the same image
 
 | | Runs on | Used for |
 |---|---|---|
-| `docker-compose.yml` | a developer's machine | writing code, debugging, trying things out |
-| `deploy/helm/` | the on-prem K8s cluster | staging, prod |
+| `docker-compose.yml` | a developer's machine | writing code, debugging, the stores |
+| `deploy/helm/` | minikube today, a real cluster later | proving the chart, then staging |
 
-Two different files, but the **same image** and the same set of environment variables. There is
-no `if env == "prod"` branch in the code.
+Two files, the **same image** and the same environment variables. There is no
+`if env == "prod"` branch in the code — only a different `values-<env>.yaml`.
 
-## Standing up a cluster
+## minikube, and only minikube
 
-With no cluster yet, pick one of two:
+Nothing here targets k3s or kubeadm. The chart is the same on any cluster; two things
+differ and both live in values:
 
-| | Suits |
-|---|---|
-| **k3s** | 1–3 physical machines. One binary, ingress and local-path storage included |
-| **kubeadm** | multi-node clusters where every component needs to be controlled |
-
-This project targets **k3s**: enough for a few nodes, and less to maintain.
-
-## Why K8s rather than compose on a real host
-
-Four things compose cannot do — and the same four requirements at the bottom of the list:
-
-| Requirement | How K8s does it |
-|---|---|
-| The API can scale | `Deployment.replicas` — many pods behind one Service |
-| A dead pod comes back | kubelet restarts the container; the Deployment recreates a lost pod |
-| More traffic adds pods | `HorizontalPodAutoscaler` on CPU or a custom metric |
-| Services can reach each other | `Service` — one stable DNS name, load-balanced already |
-
-`docker compose up -d` can restart a dead container, but it cannot move the work to another
-machine when the **machine** dies, and it does not scale with load.
-
-## Self-healing only works when the probes are right
-
-A hung pod that still has its port open looks healthy to K8s — no restart, and the Service keeps
-sending requests to it. So every service must declare:
-
-| Probe | Answers | On failure |
+| | minikube | k3s |
 |---|---|---|
-| `readinessProbe` | can it take requests yet | pulled from the Service, pod stays alive |
-| `livenessProbe` | is it still recoverable | container restarted |
-| `startupProbe` | has it finished booting | delays the other two |
+| Ingress | `minikube addons enable ingress` installs nginx | Traefik ships with it |
+| Reaching the api | `minikube tunnel`, or an entry in `/etc/hosts` | straight at the host |
 
-`startupProbe` matters for `vllm`: loading the model takes minutes, and without it liveness
-kills the pod before it is ever ready, forever.
+`ingress.className` is the setting that carries the difference. Nothing is hardcoded, so
+moving to a real cluster is a new values file, not a new chart.
 
-## HPA: a different measure per service
+**The image never goes through a registry.** `minikube image load mycel:dev` puts it in the
+node's own docker daemon, and `pullPolicy: Never` stops the kubelet looking for a registry
+that does not exist.
 
-| Service | Scales on | Why not CPU |
+## Three pods, and what is deliberately not here
+
+| Runs as a pod | Stays outside |
+|---|---|
+| `api` · `worker` · `scheduler` | Postgres · RabbitMQ · Redis |
+
+The stores keep running under docker-compose on the host, reached at
+`host.minikube.internal`. `StatefulSet` + `PersistentVolumeClaim` is the most
+labour-intensive part of Kubernetes — storage classes, a volume per pod identity — and it
+proves nothing the chart is meant to prove.
+
+**`localhost` inside a pod is that pod.** A `DATABASE_URL` copied straight out of `.env`
+looks perfectly correct and the pod dies with connection refused to itself. The four URLs
+in the Secret have to name `externalStores.host`.
+
+## Probes: two, not three, and only on the api
+
+| Probe | Path | Why that path |
 |---|---|---|
-| `api` | CPU | the right kind of load: many small requests |
-| `worker` | **Kafka consumer lag** | workers wait on I/O, CPU stays low while the queue backs up |
-| `vllm` | **no autoscaling** | each pod holds a GPU; with no free GPU an extra pod only sits Pending |
+| `livenessProbe` | `/health/live` | touches nothing outside the process. A liveness probe that asks the database restarts healthy pods every time the database blinks |
+| `readinessProbe` | `/health/ready` | does touch Postgres, and returns 503 rather than raising — a pod that cannot reach its database leaves the Service instead of dying |
 
-Scaling `worker` on lag needs an external metric, via KEDA or prometheus-adapter.
+No `startupProbe`: it exists to protect a process that takes minutes to boot, and uvicorn
+does not.
 
-**Hard ceiling:** actual working workers = min(replicas, partition count). With a 6-partition
-topic, an HPA pushing to 10 pods still leaves only 6 with work — see `KAFKA_NUM_PARTITIONS` in
-`docker-compose.yml`. Set `maxReplicas` to the partition count.
+`worker` and `scheduler` have **no probe at all**. They have no HTTP port, and `/metrics`
+is not readiness — a process can serve metrics while doing no work. That is recorded as
+debt; batch 058 builds the scrape and revisits it.
 
-## Where the stateful services run
+## Scaling: by hand, on purpose
 
-Postgres, Kafka, Qdrant and MinIO all hold data. In the cluster they run as `StatefulSet` +
-`PersistentVolumeClaim`, **not** `Deployment`: they need a stable identity and a volume that
-reattaches to the same pod after a restart.
+`worker.replicas` is a number in values. There is no `HorizontalPodAutoscaler`, because
+there is no load: an HPA on CPU is ten lines that mean nothing, and the measure that would
+mean something is RabbitMQ queue depth through KEDA — a second control plane for a problem
+nobody has.
 
-On-prem means providing the storage layer yourself (k3s local-path, or Longhorn if a pod's
-volume should be able to follow it to another machine). This is the most labour-intensive part
-of leaving the cloud.
+The old ceiling does not apply here. RabbitMQ hands each message to one consumer, so
+workers share a queue rather than being capped by a partition count.
+
+## `scheduler` is always one
+
+`RollingUpdate` starts the new pod **before** removing the old one, so every upgrade opens
+a window with two live schedulers and every schedule fires twice. `strategy: Recreate` and
+`replicas: 1`. The advisory lock in `domains/sync.py` absorbs most of the damage; not
+running two is still the correct fix.
