@@ -76,24 +76,5 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Evals cost money (they call the real model), so only run when a PR touches
-  # prompts or the llm layer.
-  evals:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
-      - id: changed
-        run: |
-          git diff --name-only origin/${{ github.base_ref }}...HEAD \
-            | grep -qE '^(src/mycel/(agents|llm)/|evals/)' && echo "run=true" >> $GITHUB_OUTPUT || true
-      - uses: astral-sh/setup-uv@v5
-        # The image runs 3.11 (Dockerfile); the runner's default is newer.
-        with: {python-version: "3.11"}
-        if: steps.changed.outputs.run == 'true'
-      - name: Golden set
-        if: steps.changed.outputs.run == 'true'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: uv sync && uv run python -m evals.run --compare-baseline
+# No eval job: evals call real models, cost quota, and need the LiteLLM gateway and a LAN
+# proxy CI cannot reach. They are run by hand and announced first - see evals/README.md.

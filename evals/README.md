@@ -24,3 +24,15 @@ golden set and compare scores against the previous run.
 
 Record each run's scores to see the trend. A prompt that drops the score blocks the merge; it
 is not a matter of taste.
+
+## Running them
+
+Evals are **not in CI**. Every case is a real model call through the LiteLLM gateway, and
+the primary model sits behind a LAN proxy CI cannot reach. Run them by hand, and say how
+many calls before you do:
+
+| Command | Model calls | Measures |
+|---|---|---|
+| `uv run python -m evals.run --compare-baseline` | 6 | summariser golden set |
+| `uv run python -m evals.rag.retrieval` | **0** | Recall@5/10/20 for notebook search |
+| `uv run python -m evals.rag.answers` | 30 (up to ~120 with retries) | citation correctness, declining unanswerable |
