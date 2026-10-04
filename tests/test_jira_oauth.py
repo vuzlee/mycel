@@ -24,6 +24,8 @@ No network and no Redis: the token endpoint is a `MockTransport` and the state s
 dict. Postgres is the other half of this module and is covered in `test_postgres.py`.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -86,7 +88,7 @@ def _routes(answers: dict[str, Any], status: int = 200) -> Any:
 WHOLE_ROUND = {
     "/oauth/token": {"refresh_token": "rt-1", "access_token": "at-1", "scope": "read:jira-work"},
     "accessible-resources": [{"id": "cloud-1", "name": "acme"}],
-    "/me": {"account_id": "acct-7", "name": "Nam Nguyen"},
+    "/myself": {"accountId": "acct-7", "displayName": "Nam Nguyen"},
 }
 
 
@@ -169,9 +171,7 @@ class TestWhatTheConsentScreenAsksFor:
 
         assert oauth.PROJECT_SCOPE in query["scope"][0]
 
-    async def test_it_forces_the_consent_prompt(
-        self, configured: None, redis: FakeRedis
-    ) -> None:
+    async def test_it_forces_the_consent_prompt(self, configured: None, redis: FakeRedis) -> None:
         """Without it a reconnect comes back with an access token and nothing to store,
         and the account is connected in a way that stops working within the hour."""
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
@@ -290,6 +290,67 @@ class TestRefreshing:
         monkeypatch.setattr(httpx2, "AsyncClient", routes)
 
         assert await oauth.access_token(seal("rt-1")) == "at"
+
+
+class TestARotatedTokenIsKept:
+    """New Atlassian apps rotate refresh tokens: a refresh that drops the successor works
+    once, and the sync stops silently a few hours later."""
+
+    async def test_the_successor_is_written_back(
+        self, configured: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        kept: list[tuple[int, str]] = []
+
+        class Repo:
+            def __init__(self, _session: object) -> None: ...
+
+            async def jira_account_locked(self, user_id: int) -> object:
+                return type("Row", (), {"refresh_token_encrypted": seal("rt-1")})()
+
+            async def set_jira_refresh_token(self, user_id: int, sealed: str) -> None:
+                kept.append((user_id, sealed))
+
+        @asynccontextmanager
+        async def _scope() -> AsyncIterator[None]:
+            yield None
+
+        monkeypatch.setattr(oauth, "AppRepository", Repo)
+        monkeypatch.setattr(oauth, "session_scope", _scope)
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            _routes({"/oauth/token": {"access_token": "at", "refresh_token": "rt-2"}}),
+        )
+
+        assert await oauth._access_for(7) == "at"
+        assert [(uid, unseal(sealed)) for uid, sealed in kept] == [(7, "rt-2")]
+
+    async def test_no_successor_leaves_the_row_alone(
+        self, configured: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        kept: list[str] = []
+
+        class Repo:
+            def __init__(self, _session: object) -> None: ...
+
+            async def jira_account_locked(self, user_id: int) -> object:
+                return type("Row", (), {"refresh_token_encrypted": seal("rt-1")})()
+
+            async def set_jira_refresh_token(self, user_id: int, sealed: str) -> None:
+                kept.append(sealed)
+
+        @asynccontextmanager
+        async def _scope() -> AsyncIterator[None]:
+            yield None
+
+        monkeypatch.setattr(oauth, "AppRepository", Repo)
+        monkeypatch.setattr(oauth, "session_scope", _scope)
+        monkeypatch.setattr(
+            httpx2, "AsyncClient", _routes({"/oauth/token": {"access_token": "at"}})
+        )
+
+        assert await oauth._access_for(7) == "at"
+        assert kept == []
 
 
 class TestTheTokenAtRest:

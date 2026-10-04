@@ -1378,6 +1378,23 @@ class TestAConnectedJiraAccount:
         assert await repo.delete_jira_account(user_id) is True
         assert await repo.jira_syncer() is None
 
+    async def test_a_rotated_refresh_token_replaces_the_spent_one(
+        self, session: AsyncSession
+    ) -> None:
+        """Atlassian retires a refresh token once it is spent. Keeping the old one works
+        once and then stops every sync, so the successor has to land in the row."""
+        repo = AppRepository(session)
+        user_id = await self._connect(repo, "rotate@example.com", syncer=True, token="old")
+
+        locked = await repo.jira_account_locked(user_id)
+        assert locked is not None
+        await repo.set_jira_refresh_token(user_id, "new")
+
+        row = await repo.jira_account(user_id)
+        assert row is not None
+        assert row.refresh_token_encrypted == "new"
+        assert row.is_syncer is True
+
     async def test_disconnecting_twice_is_not_an_error(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
         user = await repo.create_user("twice-jira@example.com", "x")

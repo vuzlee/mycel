@@ -324,10 +324,28 @@ class AppRepository:
 
     async def jira_account(self, user_id: int) -> JiraAccountRow | None:
         """What this person connected, or `None`. `None` is a normal answer."""
+        row = await self._session.scalar(select(JiraAccount).where(JiraAccount.user_id == user_id))
+        return _jira(row) if row else None
+
+    async def jira_account_locked(self, user_id: int) -> JiraAccountRow | None:
+        """The row, locked until this transaction ends.
+
+        Atlassian rotates refresh tokens: spending one returns the next, and the old one
+        soon stops working. Two processes refreshing at once would both spend the same
+        token and one of them would keep the wrong successor. The lock makes them queue.
+        """
         row = await self._session.scalar(
-            select(JiraAccount).where(JiraAccount.user_id == user_id)
+            select(JiraAccount).where(JiraAccount.user_id == user_id).with_for_update()
         )
         return _jira(row) if row else None
+
+    async def set_jira_refresh_token(self, user_id: int, sealed: str) -> None:
+        """Keep the successor a refresh just returned."""
+        await self._session.execute(
+            update(JiraAccount)
+            .where(JiraAccount.user_id == user_id)
+            .values(refresh_token_encrypted=sealed)
+        )
 
     async def jira_syncer(self) -> JiraAccountRow | None:
         """The account every background sync runs on, or `None` if nobody has connected.
@@ -340,9 +358,7 @@ class AppRepository:
 
     async def has_jira_syncer(self) -> bool:
         """Whether the syncer role is taken. The question a new connection asks."""
-        held = await self._session.scalar(
-            select(JiraAccount.user_id).where(JiraAccount.is_syncer)
-        )
+        held = await self._session.scalar(select(JiraAccount.user_id).where(JiraAccount.is_syncer))
         return held is not None
 
     async def mark_jira_synced(self, user_id: int, at: datetime) -> None:

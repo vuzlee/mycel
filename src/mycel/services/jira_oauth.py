@@ -47,7 +47,9 @@ log = get_logger(__name__)
 AUTH_URL = "https://auth.atlassian.com/authorize"
 TOKEN_URL = "https://auth.atlassian.com/oauth/token"
 RESOURCES_URL = "https://api.atlassian.com/oauth/token/accessible-resources"
-ME_URL = "https://api.atlassian.com/me"
+#: Jira's own "who am I", on the chosen site. Not `api.atlassian.com/me`: that one needs the
+#: `read:me` scope from a second API, and answers 403 to a grant that has only Jira's.
+MYSELF_URL = "https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/myself"
 
 #: What every connection asks for. Reading is the sync and the dashboard; `read:jira-user`
 #: is how "assign it to Nam" becomes an account id; `write:jira-work` covers a comment, a
@@ -186,7 +188,7 @@ async def exchange(code: str) -> Grant:
         raise JiraAuthError("Atlassian returned no access token")
 
     cloud_id = await _cloud_id(access)
-    account_id, display_name = await _whoami(access)
+    account_id, display_name = await _whoami(access, cloud_id)
     return Grant(
         account_id=account_id,
         display_name=display_name,
@@ -204,7 +206,15 @@ async def access_token(refresh_token_encrypted: str) -> str:
     Raises `NotConnected` when Atlassian refuses the grant — the one failure that is not a
     fault: it means the person revoked access or an admin removed the app, and the answer
     is to connect again rather than to retry.
+
+    Does not keep the rotated refresh token; `_access_for` is the caller that does.
     """
+    token, _ = await _refresh(refresh_token_encrypted)
+    return token
+
+
+async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None]:
+    """The access token, and the refresh token that replaces the one just spent, if any."""
     client_id, client_secret = _client()
     payload = await _token_call(
         {
@@ -217,7 +227,26 @@ async def access_token(refresh_token_encrypted: str) -> str:
     token = payload.get("access_token")
     if not token:
         raise JiraAuthError("Atlassian returned no access token")
-    return str(token)
+    rotated = payload.get("refresh_token")
+    return str(token), str(rotated) if rotated else None
+
+
+async def _access_for(user_id: int) -> str:
+    """Refresh one person's grant and keep the successor, under a row lock.
+
+    **New Atlassian apps must rotate refresh tokens.** Every refresh returns the next one
+    and retires the last, so a refresh whose successor is thrown away works once and then
+    leaves a dead token in the row — the sync stops a few hours later, silently.
+    """
+    async with session_scope() as session:
+        repo = AppRepository(session)
+        row = await repo.jira_account_locked(user_id)
+        if row is None:
+            raise NotConnected("no Jira account is connected; connect one in settings")
+        token, rotated = await _refresh(row.refresh_token_encrypted)
+        if rotated:
+            await repo.set_jira_refresh_token(user_id, seal(rotated))
+    return token
 
 
 async def connect(state: str, code: str) -> JiraAccountRow:
@@ -247,9 +276,7 @@ async def connect(state: str, code: str) -> JiraAccountRow:
         )
         row = await repo.jira_account(user_id)
     assert row is not None
-    log.info(
-        "jira account connected", extra={"user_id": user_id, "is_syncer": row.is_syncer}
-    )
+    log.info("jira account connected", extra={"user_id": user_id, "is_syncer": row.is_syncer})
     return row
 
 
@@ -303,7 +330,7 @@ async def token_for(user_id: int) -> tuple[str, str]:
     row = await connected(user_id)
     if row is None:
         raise NotConnected("no Jira account is connected; connect one in settings")
-    return await access_token(row.refresh_token_encrypted), row.cloud_id
+    return await _access_for(user_id), row.cloud_id
 
 
 async def syncer_token() -> tuple[str, str, int]:
@@ -319,7 +346,7 @@ async def syncer_token() -> tuple[str, str, int]:
             "no Jira account is connected, so nothing can be synced. Connect one in "
             "settings — the first person to connect becomes the syncer."
         )
-    return await access_token(row.refresh_token_encrypted), row.cloud_id, row.user_id
+    return await _access_for(row.user_id), row.cloud_id, row.user_id
 
 
 def _unseal(refresh_token_encrypted: str) -> str:
@@ -381,19 +408,19 @@ async def _cloud_id(access: str) -> str:
     return str(cloud_id)
 
 
-async def _whoami(access: str) -> tuple[str, str]:
+async def _whoami(access: str, cloud_id: str) -> tuple[str, str]:
     """Who consented: the account id a write is attributed to, and the name to show.
 
     The name is a label — for the settings screen, and for reading an assignment back
     before it is written. The id is the thing that identifies anybody.
     """
-    me = await _api(access, ME_URL)
+    me = await _api(access, MYSELF_URL.format(cloud_id=cloud_id))
     if not isinstance(me, dict):
         raise JiraAuthError("Atlassian answered with something unreadable")
-    account_id = me.get("account_id")
+    account_id = me.get("accountId")
     if not account_id:
         raise JiraAuthError("Atlassian named no account")
-    return str(account_id), str(me.get("name") or me.get("email") or "(unknown)")
+    return str(account_id), str(me.get("displayName") or me.get("emailAddress") or "(unknown)")
 
 
 async def _api(access: str, url: str) -> Any:
