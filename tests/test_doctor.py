@@ -62,6 +62,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
     async def test_an_empty_error_still_says_something(self) -> None:
         """`str(OSError())` is empty, and a report line with nothing on it is worse than
         a wrong one — the class name is usually enough to know what to do."""
+
         async def probe() -> str:
             raise OSError()
 
@@ -70,6 +71,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
 
     async def test_a_hang_is_broken_rather_than_a_hang(self) -> None:
         """A doctor that waits forever on a dead host is a doctor nobody runs twice."""
+
         async def probe() -> str:
             await asyncio.sleep(10)
             return "never"
@@ -80,18 +82,6 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
 
 
 class TestWhatCountsAsConfigured:
-    def test_no_model_key_is_broken_not_off(self) -> None:
-        """Every other absence is a feature you did without. Without a model key the app
-        cannot answer anything, so it is a fault rather than a choice."""
-        checks = doctor._declared(_settings(gemini_api_keys=""))
-        gemini = next(c for c in checks if c.name == "gemini")
-        assert gemini.state is State.BROKEN
-
-    def test_a_model_key_is_ok(self) -> None:
-        checks = doctor._declared(_settings(gemini_api_keys="one,two"))
-        gemini = next(c for c in checks if c.name == "gemini")
-        assert (gemini.state, "2 key" in gemini.detail) == (State.OK, True)
-
     def test_an_absent_tool_is_off_and_says_what_is_missing(self) -> None:
         """The detail names the tool, because 'not configured' alone leaves the reader to
         work out which capability they just lost."""
@@ -156,3 +146,38 @@ class TestTheReport:
         rendered = doctor.render(checks)
         assert rendered.index("STORES") < rendered.index("TOOLS")
         assert rendered.count("STORES") == 1, "a group must appear once"
+
+
+class TestTheGateway:
+    """Every model is behind LiteLLM, so its model list is the one model check."""
+
+    async def test_it_lists_what_the_gateway_serves(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import httpx2
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            assert request.url.path == "/v1/models"
+            return httpx2.Response(200, json={"data": [{"id": "b"}, {"id": "a"}, {"id": "a"}]})
+
+        real = httpx2.AsyncClient
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            lambda **kw: real(transport=httpx2.MockTransport(handler), **kw),
+        )
+        detail = await doctor._gateway(_settings(litellm_base_url="http://gw:4000"))
+        assert detail == "2 models: a, b"
+
+    async def test_a_gateway_with_no_model_is_broken(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import httpx2
+
+        real = httpx2.AsyncClient
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            lambda **kw: real(
+                transport=httpx2.MockTransport(lambda r: httpx2.Response(200, json={"data": []})),
+                **kw,
+            ),
+        )
+        with pytest.raises(RuntimeError, match="no model"):
+            await doctor._gateway(_settings())

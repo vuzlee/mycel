@@ -29,6 +29,8 @@ services:
     # so configuration is chosen at call time rather than frozen at import.
     command: uvicorn --factory mycel.api.app:create_app --host 0.0.0.0 --port 8000
     env_file: .env
+    environment:
+      LITELLM_BASE_URL: http://litellm:4000
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}
@@ -52,6 +54,7 @@ services:
     # Inside a container all interfaces means "the compose network"; the port is not
     # published, so nothing outside that network can reach it.
     environment:
+      LITELLM_BASE_URL: http://litellm:4000
       METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
@@ -65,6 +68,7 @@ services:
     command: python -m mycel.queue.consumer
     env_file: .env
     environment:
+      LITELLM_BASE_URL: http://litellm:4000
       METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
@@ -81,6 +85,7 @@ services:
       METRICS_HOST: "0.0.0.0"
       QDRANT_URL: http://qdrant:6333
       S3_ENDPOINT_URL: http://minio:9000
+      LITELLM_BASE_URL: http://litellm:4000
     restart: unless-stopped
     mem_limit: 5g
     depends_on:
@@ -126,6 +131,27 @@ services:
       retries: 10
 
   # --- Durable stores ---
+
+  # The one gateway every model call goes through. Models and keys: config/litellm/.
+  # The app speaks OpenAI Chat Completions to it; the provider keys never reach the app.
+  litellm:
+    image: ghcr.io/berriai/litellm@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
+    entrypoint: ["/app/entrypoint.sh"]
+    # Only the provider keys, not the whole .env: DATABASE_URL there would make LiteLLM
+    # try to use the app's Postgres as its own store, and it needs none.
+    environment:
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+      CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
+      CLAUDE_PROXY_BASE_URL: ${CLAUDE_PROXY_BASE_URL:-http://10.1.10.35:20128/v1}
+      LITELLM_MASTER_KEY: ${LITELLM_API_KEY:-sk-mycel-dev}
+    volumes:
+      - ./config/litellm/config.yaml:/app/config.yaml:ro
+      - ./config/litellm/entrypoint.sh:/app/entrypoint.sh:ro
+    ports: ["4000:4000"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:4000/health/liveliness')\""]
+      interval: 10s
+      retries: 12
 
   # Vector store. Postgres holds the truth, Qdrant holds embeddings.
   qdrant:

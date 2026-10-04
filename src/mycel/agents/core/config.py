@@ -38,7 +38,7 @@ from mycel.core.exceptions import ConfigError
 class AgentSettings:
     """What one agent needs to be built and run safely."""
 
-    model_spec: str = "cloud:gemini-3.8-flash"
+    model_spec: str = "cloud:claude-sonnet-5"
 
     # Zero by default: a report that changes between identical runs cannot be reviewed.
     # Gemini 3 and later removed the sampling parameters, so `model_builder.py` drops this

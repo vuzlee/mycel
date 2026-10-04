@@ -21,7 +21,7 @@ API_PORT=8000
 
 #: The compose services that are infrastructure. Named rather than left to a bare `up`, so
 #: adding a service to docker-compose.yml does not silently start it here.
-INFRA=(postgres redis rabbitmq qdrant minio)
+INFRA=(postgres redis rabbitmq qdrant minio litellm)
 
 log()  { printf '\033[36m==\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m!!\033[0m %s\n' "$*" >&2; }
@@ -60,6 +60,7 @@ wait_for_stores() {
   wait_for rabbitmq "docker exec $(cid rabbitmq) rabbitmq-diagnostics -q check_port_connectivity" 90
   wait_for qdrant   "curl -sf http://localhost:6333/readyz"
   wait_for minio    "curl -sf http://localhost:9000/minio/health/ready"
+  wait_for litellm  "curl -sf http://localhost:4000/health/liveliness" 90
 }
 
 # Containers from before compose, started by name with `docker run`. They hold the same

@@ -1,0 +1,57 @@
+# The one gateway every model call goes through (LiteLLM proxy).
+# The app speaks OpenAI Chat Completions to it and names a `model_name` below; adding or
+# swapping a model is an edit here and in `config/agents/*.yaml`, never in code.
+#
+# Keys come from the environment (`.env`), never from this file.
+
+model_list:
+  # Gemini: three free-tier keys, one deployment each, so LiteLLM spreads load across them
+  # and cools down a key that is out of quota.
+  - model_name: gemini-3.5-flash-lite
+    litellm_params: {model: gemini/gemini-3.5-flash-lite, api_key: os.environ/GEMINI_API_KEY_1}
+  - model_name: gemini-3.5-flash-lite
+    litellm_params: {model: gemini/gemini-3.5-flash-lite, api_key: os.environ/GEMINI_API_KEY_2}
+  - model_name: gemini-3.5-flash-lite
+    litellm_params: {model: gemini/gemini-3.5-flash-lite, api_key: os.environ/GEMINI_API_KEY_3}
+
+  - model_name: gemini-3.6-flash
+    litellm_params: {model: gemini/gemini-3.6-flash, api_key: os.environ/GEMINI_API_KEY_1}
+  - model_name: gemini-3.6-flash
+    litellm_params: {model: gemini/gemini-3.6-flash, api_key: os.environ/GEMINI_API_KEY_2}
+  - model_name: gemini-3.6-flash
+    litellm_params: {model: gemini/gemini-3.6-flash, api_key: os.environ/GEMINI_API_KEY_3}
+
+  - model_name: gemini-3.8-flash
+    litellm_params: {model: gemini/gemini-3.8-flash, api_key: os.environ/GEMINI_API_KEY_1}
+  - model_name: gemini-3.8-flash
+    litellm_params: {model: gemini/gemini-3.8-flash, api_key: os.environ/GEMINI_API_KEY_2}
+  - model_name: gemini-3.8-flash
+    litellm_params: {model: gemini/gemini-3.8-flash, api_key: os.environ/GEMINI_API_KEY_3}
+
+  # Claude, through an OpenAI-compatible gateway on the LAN.
+  - model_name: claude-sonnet-5
+    litellm_params:
+      model: openai/cc/claude-sonnet-5
+      api_base: os.environ/CLAUDE_PROXY_BASE_URL
+      api_key: os.environ/CLAUDE_API_KEY_1
+
+  # Local vLLM (compose profile local-llm). Off unless that profile runs.
+  - model_name: qwen3-4b
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen2.5-3B-Instruct-AWQ
+      api_base: http://vllm:8000/v1
+
+router_settings:
+  routing_strategy: simple-shuffle
+  # A key that answers 429 is set aside instead of retried at once.
+  allowed_fails: 1
+  cooldown_time: 60
+  num_retries: 2
+
+litellm_settings:
+  # Gemini 3 rejects temperature/top_p instead of ignoring them.
+  drop_params: true
+  request_timeout: 120
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

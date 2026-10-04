@@ -15,18 +15,17 @@ def test_defaults_need_no_environment() -> None:
     """
     s = Settings()
     assert s.mycel_env == "dev"
-    assert s.gemini_api_keys == ""
-    assert s.local_llm_base_url == "http://localhost:8001/v1"
+    assert s.litellm_base_url == "http://localhost:4000"
 
 
 def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MYCEL_ENV", "prod")
-    monkeypatch.setenv("GEMINI_API_KEYS", "sk-test")
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://litellm:4000")
     monkeypatch.setenv("OTEL_ENABLED", "true")
     s = Settings()
     assert s.mycel_env == "prod"
     assert s.otel_enabled is True
-    assert s.gemini_api_keys == "sk-test"
+    assert s.litellm_base_url == "http://litellm:4000"
 
 
 def test_unknown_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -62,26 +61,12 @@ def test_secret_is_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
 
-def test_keys_are_split_and_kept_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Order matters: the ring hands them out in turn, so it is the order written."""
-    monkeypatch.setenv("GEMINI_API_KEYS", "one, two ,three")
-    assert Settings().llm_keys("google") == ["one", "two", "three"]
 
-def test_a_blank_entry_is_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`GEMINI_API_KEYS=` in a .env documents that the variable exists; it is not a key.
+def test_provider_keys_never_reach_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    """GEMINI_API_KEYS and CLAUDE_API_KEYS are read by the gateway, not by Settings."""
+    monkeypatch.setenv("GEMINI_API_KEYS", "one,two")
+    assert not hasattr(Settings(), "gemini_api_keys")
 
-    Counting it meant llm_keys returned [""], which reaches the provider as a request
-    carrying an empty credential rather than as a deployment that has none.
-    """
-    monkeypatch.setenv("GEMINI_API_KEYS", "  ,  ")
-    assert Settings().llm_keys("google") == []
-
-def test_an_unknown_provider_has_no_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    """One provider is configurable. Asking for another is not an error, it is empty —
-    `build_model` is where an unreachable model becomes a refusal, and it says which
-    variable is missing."""
-    monkeypatch.setenv("GEMINI_API_KEYS", "one")
-    assert Settings().llm_keys("anthropic") == []
 
 class TestWhereSettingsComeFrom:
     """Four sources, and the order between them is the whole of batch 059.

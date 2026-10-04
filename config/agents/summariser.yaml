@@ -1,20 +1,14 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
-# The same GA release the analyst runs on. This agent makes exactly one request per
-# report — no tools, no loop — so it is the cheapest thing in the system and there is no
-# reason to spend a preview quota on it.
-model_spec: cloud:gemini-3.5-flash-lite
+# Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
+model_spec: cloud:claude-sonnet-5
 
 # It has no tools. One call, one answer. Zero does not stop the structured output —
 # that is delivered as `final_result`, which pydantic-ai does not count here — nor a
 # re-prompt when the model returns the wrong shape. `test_summariser.py` pins both.
 tool_calls_limit: 0
 
-# When Google is overloaded the whole family is not down at once: on 2026-09-24 a probe
-# found 3.5-lite on 504 and 3.8 on 503 while 3.6 answered, and five minutes later 3.6 was
-# down too. Rotating a key does not help — every key meets the same 503 — so the run walks
-# down this list instead. Still one provider, so a whole-of-Google outage still stops
-# everything; a second provider is the real answer and needs a key we do not have.
+# A second provider: if Claude is unreachable or out of quota, Gemini answers instead.
 fallback_specs:
+  - cloud:gemini-3.5-flash-lite
   - cloud:gemini-3.6-flash
-  - cloud:gemini-3.8-flash

@@ -14,8 +14,8 @@ etl:
 agents:
   # Fallback for any agent that does not override the key in config/agents/<name>.yaml.
   defaults:
-    model_spec: cloud:gemini-3.8-flash
-    # Dropped for Gemini 3 and later, which reject the sampling parameters.
+    model_spec: cloud:claude-sonnet-5
+    # The gateway drops it for models that reject sampling parameters (Gemini 3).
     temperature: 0.0
     timeout_s: 60.0
     tool_retries: 3
@@ -73,8 +73,8 @@ settings:
   jira_allow_create_project: false
 
   # --- Models ---
-  # vLLM on this machine. The local-llm profile is off, so nothing reaches it today.
-  local_llm_base_url: http://localhost:8001/v1
+  # The LiteLLM gateway every model call goes through. Models and keys: config/litellm/.
+  litellm_base_url: http://localhost:4000
   # Most one queued job may spend.
   job_ceiling_usd: 0.50
 

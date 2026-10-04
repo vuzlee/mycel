@@ -179,6 +179,23 @@ async def _jira(settings: Settings) -> str:
     )
 
 
+async def _gateway(settings: Settings) -> str:
+    """The LiteLLM gateway answers and lists its models. Free: no model is called."""
+    import httpx2
+
+    key = settings.litellm_api_key.get_secret_value() if settings.litellm_api_key else ""
+    async with httpx2.AsyncClient(timeout=5) as client:
+        response = await client.get(
+            f"{settings.litellm_base_url.rstrip('/')}/v1/models",
+            headers={"authorization": f"Bearer {key}"},
+        )
+        response.raise_for_status()
+    names = sorted({m["id"] for m in response.json().get("data", [])})
+    if not names:
+        raise RuntimeError("the gateway answers but serves no model")
+    return f"{len(names)} models: {', '.join(names)}"
+
+
 async def _langfuse(settings: Settings) -> str:
     return f"keys set, sending to {settings.langfuse_base_url}"
 
@@ -188,6 +205,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
     env = settings or Settings()
 
     jobs = [
+        _probe("litellm", "MODELS", lambda: _gateway(env), missing=None),
         _probe("postgres", "STORES", lambda: _postgres(env), missing=None),
         _probe("rabbitmq", "STORES", lambda: _rabbitmq(env), missing=None),
         _probe("redis", "STORES", lambda: _redis(env), missing=None),
@@ -229,13 +247,6 @@ def _declared(env: Settings) -> list[Check]:
     an invalid one.
     """
     out: list[Check] = []
-
-    keys = env.llm_keys("google")
-    out.append(
-        Check("MODELS", "gemini", State.OK if keys else State.BROKEN,
-              f"{len(keys)} key(s), one quota each" if keys
-              else "no key — nothing can be asked a question")
-    )
 
     out.append(
         Check("TOOLS", "web search", State.OK if env.tavily_api_key else State.OFF,

@@ -72,20 +72,10 @@ class Settings(BaseSettings):
 
     mycel_env: Literal["dev", "staging", "prod"] = "dev"
 
-    # LLM. Every key is optional: a run needs the one its model spec asks for and no
-    # other, so a Gemini-only machine is a valid deployment.
-    #
-    # Plural because several keys for one provider are several accounts and so several
-    # free tiers — see `llm/keyring.py`. One name, so there is one place to look when the
-    # quota is the thing that broke.
-    #
-    # Two variables are gone and for the same reason. GEMINI_API_KEY was a singular
-    # fallback read only when the plural was empty, which meant two ways to say one thing
-    # and a warning fired at startup to say so. ANTHROPIC_API_KEY named a provider no
-    # agent ever selected. A variable for something nothing reads is a promise the code
-    # does not keep.
-    gemini_api_keys: str = ""
-    local_llm_base_url: str = "http://localhost:8001/v1"
+    # LLM. Every model is reached through the LiteLLM gateway (`config/litellm/`). The
+    # provider keys live in `.env` and are read by the gateway, never by the app.
+    litellm_base_url: str = "http://localhost:4000"
+    litellm_api_key: SecretStr | None = None
 
     # Tools that reach outside the process. Optional on the same terms as the model keys:
     # an agent that never searches the web is a valid deployment, and `web_search` says so
@@ -187,17 +177,6 @@ class Settings(BaseSettings):
         """The allowlist, lowercased and split. Empty means every domain."""
         parts = self.registration_allowed_domains.split(",")
         return frozenset(p.strip().lower().lstrip("@") for p in parts if p.strip())
-
-    def llm_keys(self, provider: str) -> list[str]:
-        """Every key configured for one provider, in the order they were written.
-
-        A blank entry is not a key. `GEMINI_API_KEYS=` left in a `.env` to document that
-        the variable exists would otherwise yield `[""]` — a request carrying an empty
-        credential rather than a deployment that has none.
-        """
-        if provider != "google":
-            return []
-        return [part.strip() for part in self.gemini_api_keys.split(",") if part.strip()]
 
     #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
     #: is a full-access password with no narrower scope available, which is why the

@@ -24,7 +24,6 @@ failed, or was stopped.
 """
 
 import asyncio
-from contextlib import contextmanager
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic_ai import Agent
@@ -32,14 +31,12 @@ from pydantic_ai.models import Model
 
 from mycel.agents.core.emit import RUN_FINISHED, RUN_STARTED, RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
-from mycel.agents.core.model_builder import build_model, note_failure
+from mycel.agents.core.model_builder import build_model
 from mycel.core.logging import get_logger
 from mycel.llm.budget import BudgetExceeded
 from mycel.observability.metrics import tokens_spent_total
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from pydantic_ai import RunContext
     from pydantic_ai.agent import AgentRun
     from pydantic_ai.usage import RunUsage
@@ -50,22 +47,6 @@ if TYPE_CHECKING:
 OutputT = TypeVar("OutputT")
 
 log = get_logger(__name__)
-
-
-@contextmanager
-def _benching_the_key(model: Model) -> "Iterator[None]":
-    """Let the key ring hear about a credential failure, then re-raise unchanged.
-
-    Inside `translate_agent_errors` so it still sees the provider's own exception: the
-    status code and the body are what say whether a 429 was a burst or the day's quota, and
-    translation replaces both with a sentence. It changes nothing about the error — a key
-    being benched is bookkeeping, not a different failure.
-    """
-    try:
-        yield
-    except Exception as exc:
-        note_failure(model, exc)
-        raise
 
 
 async def run(
@@ -90,7 +71,7 @@ async def run(
 
     overdrawn: BudgetExceeded | None = None
 
-    with translate_agent_errors(cfg.model_spec), _benching_the_key(model):
+    with translate_agent_errors(cfg.model_spec):
         async with agent.iter(prompt, deps=deps, model=model, usage_limits=limits) as agent_run:
             try:
                 await emitter.emit(RUN_STARTED, prompt=prompt)
@@ -214,7 +195,7 @@ async def delegate(
     limits = deps.budget.limits(cfg, spent=ctx.usage)
     emitter = RunEmitter(deps, _name_of(agent), ctx.tool_call_id)
 
-    with translate_agent_errors(cfg.model_spec), _benching_the_key(model):
+    with translate_agent_errors(cfg.model_spec):
         async with agent.iter(
             prompt, deps=deps, model=model, usage=ctx.usage, usage_limits=limits
         ) as agent_run:
