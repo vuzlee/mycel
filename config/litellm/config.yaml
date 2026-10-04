@@ -50,6 +50,8 @@ router_settings:
 litellm_settings:
   # Gemini 3 rejects temperature/top_p instead of ignoring them.
   drop_params: true
+  # A 429 for the day's quota benches that key until the quota resets (mycel_callbacks.py).
+  callbacks: mycel_callbacks.daily_quota_cooldown
   request_timeout: 120
 
 general_settings:
