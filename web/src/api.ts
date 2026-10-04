@@ -302,6 +302,35 @@ export async function disconnectGoogle(): Promise<void> {
   if (!res.ok) throw new Error(await detail(res));
 }
 
+// -- jira -------------------------------------------------------------------
+
+/** Whether a Jira account is attached, and whether it is the one the sync runs on.
+ *
+ *  `configured` is about the deployment, as the Google one is. `isSyncer` is about this
+ *  person: background syncing borrows one person's grant, so disconnecting theirs stops
+ *  the syncing — which the panel has to say before they click. */
+export interface JiraStatus {
+  configured: boolean;
+  display_name: string | null;
+  connected_at: string | null;
+  is_syncer: boolean;
+  syncer_exists: boolean;
+  last_sync_at: string | null;
+}
+
+export const fetchJira = (): Promise<JiraStatus> =>
+  fetch("/auth/jira").then(json<JiraStatus>);
+
+/** A navigation, not a call: consent happens on Atlassian's own screen. */
+export function connectJira(): void {
+  window.location.href = "/auth/jira/start";
+}
+
+export async function disconnectJira(): Promise<void> {
+  const res = await fetch("/auth/jira", { method: "DELETE" });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
 // -- work -------------------------------------------------------------------
 
 /** 202, not 200: the server took the work and has not done it.

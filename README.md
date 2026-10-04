@@ -40,9 +40,11 @@ that read gold. Traces, metrics and logs run alongside the whole path.
   <img src="assets/flow-light.svg" alt="Four columns: connectors pull external platforms into a bronze, silver and gold lakehouse; a prompt goes through the API gateway and middleware onto a message broker; a worker consumes the job and an orchestrator delegates to agents that read gold; traces, metrics and logs alongside" width="100%">
 </picture>
 
-Today the source is Jira; the source layer is pluggable. Mycel never writes to your board.
-It does read and write your own Google Calendar, on consent you give per account and can
-revoke — and only after reading a booking back to you for a yes.
+Today the source is Jira; the source layer is pluggable. Reading and writing both run on
+consent you give per account and can revoke — your Jira, your Google Calendar — and nothing
+is ever written until it has been read back to you for a yes. There is no shared token to
+write with: Jira records an author and cannot correct one afterwards, so a comment carries
+the name of whoever typed it or it does not get written.
 
 ## What it is, and what it is not
 
@@ -57,8 +59,8 @@ spare box, a VM nobody else reaches.
 
 The third answer is the one worth reading twice, because several deliberate choices only
 make sense behind a wall: registration is open until you set an invite code, Grafana has no
-login, and one Jira token serves the whole deployment. Each is right for a team that
-already trusts each other and wrong in front of a public URL.
+login. That is right for a team that already trusts each other and wrong in front of a
+public URL.
 
 **It is not a SaaS and is not becoming one.** There is no tenant id, no isolation between
 organisations, no per-customer accounting — adding them is not a feature, it is a different
@@ -67,7 +69,7 @@ data layer. Said here because the alternative is somebody finding out by deployi
 ## Quickstart
 
 ```bash
-cp .env.example .env      # four lines to fill in; the rest already works
+cp .env.example .env      # five lines to fill in; the rest already works
 scripts/stack.sh doctor   # says what is missing and what each absence costs
 scripts/stack.sh dev up   # containers, migrations, api, worker, scheduler
 ```
@@ -79,7 +81,7 @@ thing apart from one that is **off on purpose**, and from outside those look ide
 STORES
   ok    postgres       connected, 13 tables
 SOURCES
-  FAIL  jira           JIRA_API_TOKEN is not set — the dashboard will be empty
+  FAIL  jira           nobody has connected Jira — no sync can run
 SEARCH
   off   qdrant         not configured — rag_search is not offered to the model
 REGISTRATION
@@ -132,8 +134,13 @@ proves nothing the chart is meant to prove. The pods reach them at
 All three host processes matter: no worker means `POST /reports` hands back a job id nobody
 picks up; no scheduler means nothing syncs until you run `sync` by hand.
 
+**Connect Jira before expecting data.** The deployment has no Jira identity of its own —
+open the app, account menu → Settings → **Connect Jira**. The first person to connect is
+the one every background sync runs on; everyone else connects so that what they ask Mycel
+to write carries their own name.
+
 New Jira project? `scripts/tools/seed_jira.py` fills it with this repo's own history, so the first
-sync doesn't read an empty board.
+sync doesn't read an empty board. It runs on the syncer's consent too, so connect first.
 
 ## Config
 
@@ -145,7 +152,9 @@ environments, agents, sources — is YAML under `config/`.
 | `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` | the three services |
 | `GEMINI_API_KEYS` | comma-separated — each key is its own account, so three keys are three free tiers |
 | `JOB_CEILING_USD` | spend ceiling for one queued job |
-| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` · `GOOGLE_TOKEN_KEY` | the calendar; leave blank and it's simply off |
+| `JIRA_CLIENT_ID` · `JIRA_CLIENT_SECRET` | the tracker, read and written as whoever is asking |
+| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | the calendar; leave blank and it's simply off |
+| `TOKEN_ENCRYPTION_KEY` | encrypts every stored refresh token, Jira's and Google's alike |
 | `QDRANT_URL` | search over tracked work; blank and the tool is never offered. Embeddings run on this machine, so there is no bill |
 
 Access is a row in `app.membership`: no row, no project, so a new account starts with

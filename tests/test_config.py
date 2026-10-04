@@ -47,8 +47,15 @@ def test_invalid_env_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_secret_is_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Settings end up in logs and tracebacks; the key must not travel with them."""
-    monkeypatch.setenv("JIRA_API_TOKEN", "sk-do-not-leak")
+    """Settings end up in logs and tracebacks; the key must not travel with them.
+
+    Named on a field that still exists. `extra="ignore"` means a variable with no field
+    behind it never reaches the repr at all, so this test would pass for the wrong reason
+    the day the field it names is deleted — which is exactly what batch 060 did to
+    `JIRA_API_TOKEN`.
+    """
+    monkeypatch.setenv("JIRA_CLIENT_SECRET", "sk-do-not-leak")
+    assert "jira_client_secret" in repr(Settings())
     assert "sk-do-not-leak" not in repr(Settings())
 
 

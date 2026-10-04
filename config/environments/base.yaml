@@ -54,7 +54,8 @@ settings:
   password_reset_ttl_seconds: 3600
 
   # --- Where the app is, and what it syncs ---
-  # Google redirects the consent round back here, so it must match the registered URI.
+  # Both consent rounds redirect back here, so it must match the URI registered with
+  # Google and the callback URL registered with Atlassian.
   public_base_url: http://localhost:8000
   sync_interval_seconds: 900
   jira_base_url: ""
@@ -63,8 +64,13 @@ settings:
   # Atlassian's usual one for a cloud site, and a site that differs sets it rather than
   # losing the feature. The sync asks for it by id and skips it silently when absent.
   jira_sprint_field: customfield_10020
-  # Writing to Jira is off until a deployment arms it. Batch 060 is what reaches these.
+  # Writing to Jira is off until a deployment arms it. On, and the write tools appear on
+  # the analyst for anyone who has connected their own Jira account.
   jira_write_enabled: false
+  # Creating a PROJECT has its own switch, because it is the one write with no way back:
+  # many sites refuse to delete a project over the API and a key is never reusable. Off,
+  # and `manage:jira-project` is not even asked for on the consent screen.
+  jira_allow_create_project: false
 
   # --- Models ---
   # vLLM on this machine. The local-llm profile is off, so nothing reaches it today.

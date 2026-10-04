@@ -2,6 +2,11 @@
 
 No processing, no cleaning — keeping the original means a bad transform can be re-run
 from bronze instead of hitting the provider again.
+
+**Jira is read on the syncer's consent, and the `Auth` arrives as an argument.** A timer
+has nobody signed in, so one person's grant carries every background read — see
+`services/jira_oauth.py`. It is passed in rather than fetched here so that one sync builds
+one access token and spends it across every call it makes, instead of refreshing per issue.
 """
 
 from dataclasses import dataclass
@@ -40,7 +45,9 @@ class FetchResult:
     keys: list[str]
 
 
-async def fetch_jira(session: AsyncSession, since: datetime | None = _UNSET) -> FetchResult:
+async def fetch_jira(
+    session: AsyncSession, auth: jira.Auth, since: datetime | None = _UNSET
+) -> FetchResult:
     """Pull every issue that moved since the last sync, and its logged effort.
 
     The watermark is the newest `fetched_at` in bronze rather than a cursor kept
@@ -59,13 +66,13 @@ async def fetch_jira(session: AsyncSession, since: datetime | None = _UNSET) -> 
     if since is _UNSET:
         since = await _watermark(session)
 
-    issues = await jira.search_issues(_jql(since))
+    issues = await jira.search_issues(auth, _jql(since))
     stored = await bronze.save_issues(issues)
 
     keys = [str(i["key"]) for i in issues if i.get("key")]
     logged = 0
     for key in keys:
-        logged += await bronze.save_worklogs(key, await jira.issue_worklogs(key))
+        logged += await bronze.save_worklogs(key, await jira.issue_worklogs(auth, key))
 
     log.info(
         "fetched into bronze", extra={"issues": stored, "worklogs": logged, "since": str(since)}

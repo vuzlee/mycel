@@ -1,4 +1,4 @@
-"""An event the model has read out but nobody has agreed to yet.
+"""Something the model has read out but nobody has agreed to yet.
 
 **Why a draft exists at all.** The time in "three o'clock Friday for half an hour" is
 something the model reads out of a sentence, and sentences are vague: which Friday, whose
@@ -14,12 +14,24 @@ long "yes" stays a plausible answer to a question that was asked one turn ago.
 The draft id travels through the conversation's own message history, which has carried tool
 results since batch 032, so the model reads it back with no new machinery. It is spent on
 confirmation, so an enthusiastic "yes, do it" twice over books one meeting.
+
+**Two kinds since batch 060, and the second is a Jira write.** The argument carried over
+unchanged: "assign it to Nam" is a name the model turns into an account id, and a wrong one
+is almost always the *wrong person* rather than a malformed id — two people share a name, or
+one has left. So the write is read back by full name and nothing reaches Jira until someone
+says yes. Each kind has its own key prefix and its own `put`/`take` pair, so a draft of one
+kind can never be spent as the other.
+
+A Jira draft can also come *back*: a write that is certain not to have landed restores it
+under the same id, so a second yes is a retry rather than a whole new round. See
+`restore_jira`.
 """
 
 import json
 import secrets
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from typing import Any
 
 from mycel.infra.redis.client import get_client
 
@@ -99,3 +111,87 @@ def _load(raw: "bytes | str") -> Draft:
         starts_at=datetime.fromisoformat(data["starts_at"]),
         ends_at=datetime.fromisoformat(data["ends_at"]),
     )
+
+
+@dataclass(frozen=True)
+class JiraDraft:
+    """A proposed write to Jira, as it waits to be agreed to.
+
+    One shape for all four writes rather than four dataclasses: what differs between them
+    is which fields are filled, and a confirm that has to branch on a type anyway gains
+    nothing from four. `kind` says which write this is; `spelled` is the sentence the person
+    reads, built where the draft is made because that is where the full names are known.
+
+    Carries `user_id` for the reason the event draft does — the id travels through a prompt,
+    and the only person who may spend it is the one it was drafted for.
+    """
+
+    draft_id: str
+    user_id: int
+    #: "comment" | "move" | "issue" | "project"
+    kind: str
+    #: What the person is shown and asked to confirm. Full names, never ids.
+    spelled: str
+    #: The call's arguments, already resolved — account ids looked up, keys upper-cased.
+    #: Resolved at draft time, so what is confirmed is exactly what is written.
+    payload: dict[str, Any]
+
+
+async def put_jira(user_id: int, kind: str, spelled: str, payload: dict[str, Any]) -> JiraDraft:
+    """Keep a proposed Jira write for ten minutes and return it, id and all."""
+    draft = JiraDraft(
+        draft_id=secrets.token_urlsafe(8),
+        user_id=user_id,
+        kind=kind,
+        spelled=spelled,
+        payload=payload,
+    )
+    client = await get_client()
+    await client.set(_jira_key(draft.draft_id), json.dumps(asdict(draft)), ex=DRAFT_TTL_S)
+    return draft
+
+
+async def take_jira(draft_id: str, user_id: int) -> JiraDraft | None:
+    """Spend a Jira draft, or `None` if there is no such draft for this person.
+
+    Deleted as it is read, so a second confirmation writes nothing. One answer for
+    "expired", "never existed" and "belongs to somebody else", because telling them apart
+    would mean saying whether a stranger's draft id is real.
+    """
+    client = await get_client()
+    raw = await client.getdel(_jira_key(draft_id))
+    if raw is None:
+        return None
+    data = json.loads(raw)
+    draft = JiraDraft(
+        draft_id=data["draft_id"],
+        user_id=int(data["user_id"]),
+        kind=data["kind"],
+        spelled=data["spelled"],
+        payload=data["payload"],
+    )
+    return draft if draft.user_id == user_id else None
+
+
+async def restore_jira(draft: JiraDraft) -> None:
+    """Put a spent draft back, under its own id, for a write that cannot have landed.
+
+    `take_jira` spends the draft before the write is attempted, which is right for a write
+    that succeeds and wrong for one that was refused: the person has already read the
+    change back and already agreed to it, and making them do the whole round again for a
+    refused connection is making them pay for the provider's bad minute.
+
+    **Only ever called on `sources.NotWritten`.** Restoring after a timeout would offer a
+    retry for a request that may well have landed, and a second yes would post the comment
+    twice. The id is kept so the sentence the tool returns can name it and the model can
+    confirm again rather than drafting afresh.
+
+    The TTL starts over. Ten minutes from the failure is the same promise the draft made in
+    the first place — long enough to answer, short enough that an abandoned one is gone.
+    """
+    client = await get_client()
+    await client.set(_jira_key(draft.draft_id), json.dumps(asdict(draft)), ex=DRAFT_TTL_S)
+
+
+def _jira_key(draft_id: str) -> str:
+    return f"mycel:draft:jira:{draft_id}"

@@ -7,8 +7,10 @@ consent round, and what it leaves behind is a refresh token.
 
 **The refresh token is a password with a long life.** It opens one calendar until its owner
 revokes it, so it is encrypted before it reaches Postgres and decrypted only here, on the
-way to a request. It never appears in a log line, a Langfuse span, or a prompt — the
-functions below return access tokens and events, and nothing returns the refresh token.
+way to a request. The key is `TOKEN_ENCRYPTION_KEY` and `services/tokens.py` owns it —
+shared with Jira since batch 060, which is why the name no longer says Google. It never
+appears in a log line, a Langfuse span, or a prompt — the functions below return access
+tokens and events, and nothing returns the refresh token.
 
 **Three scopes, and `email` is the odd one.** `calendar.events` reads and creates events
 and cannot delete a calendar; `openid email` is identity only, and it is here because the
@@ -26,7 +28,6 @@ from dataclasses import dataclass
 from urllib.parse import urlencode
 
 import httpx2
-from cryptography.fernet import Fernet, InvalidToken
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError, MycelError
@@ -34,6 +35,8 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.app import AppRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis.client import get_client
+from mycel.services.tokens import TokenUnreadable, key_set, seal
+from mycel.services.tokens import unseal as _unseal_token
 
 log = get_logger(__name__)
 
@@ -82,7 +85,7 @@ def configured() -> bool:
     counts as not configured rather than as configured badly.
     """
     cfg = get_settings()
-    return bool(cfg.google_client_id and cfg.google_client_secret and cfg.google_token_key)
+    return bool(cfg.google_client_id and cfg.google_client_secret and key_set())
 
 
 async def consent_url(user_id: int) -> str:
@@ -247,21 +250,17 @@ async def token_for(user_id: int) -> str:
     return await access_token(row.refresh_token_encrypted)
 
 
-def seal(refresh_token: str) -> str:
-    """Encrypt a refresh token for storage. The only thing that writes that column."""
-    return _fernet().encrypt(refresh_token.encode()).decode()
-
-
 def unseal(refresh_token_encrypted: str) -> str:
-    """Decrypt a stored refresh token.
+    """Decrypt a stored refresh token, phrased for the person who has to fix it.
 
     A key that has been rotated makes every stored token unreadable, which is the same
     situation as a revoked grant from the person's point of view — so it is reported the
-    same way, and reconnecting fixes it.
+    same way, and reconnecting fixes it. Fernet itself is `services/tokens.py`, shared with
+    Jira since batch 060.
     """
     try:
-        return _fernet().decrypt(refresh_token_encrypted.encode()).decode()
-    except InvalidToken as exc:
+        return _unseal_token(refresh_token_encrypted)
+    except TokenUnreadable as exc:
         raise NotConnected(
             "the stored Google token cannot be read; connect your account again"
         ) from exc
@@ -318,16 +317,6 @@ def _email_from(payload: dict[str, object]) -> str:
         return "(unknown)"
 
 
-def _fernet() -> Fernet:
-    cfg = get_settings()
-    if cfg.google_token_key is None:
-        raise ConfigError("GOOGLE_TOKEN_KEY is not set; no Google account can be connected")
-    try:
-        return Fernet(cfg.google_token_key.get_secret_value())
-    except (ValueError, TypeError) as exc:
-        raise ConfigError(f"GOOGLE_TOKEN_KEY is not a valid Fernet key: {exc}") from exc
-
-
 def _client() -> tuple[str, str]:
     """The client id and secret, or `ConfigError`.
 
@@ -338,7 +327,7 @@ def _client() -> tuple[str, str]:
     if not configured() or cfg.google_client_id is None or cfg.google_client_secret is None:
         raise ConfigError(
             "this deployment has no Google client configured; "
-            "set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_TOKEN_KEY"
+            "set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and TOKEN_ENCRYPTION_KEY"
         )
     return cfg.google_client_id, cfg.google_client_secret.get_secret_value()
 

@@ -401,10 +401,13 @@ go out to a calendar.</p>
 </div>
 
 <div class="note">
-  <p><b>Mycel never writes to your board.</b> Jira is read, and only read. The one thing
-  it writes to — Google Calendar — is an output: due dates go to a calendar, and nothing is
-  ever read back out of it. A deployment with it unconfigured still works; you simply get
-  the dashboard and the report and nothing lands on your calendar.</p>
+  <p><b>Reading is the default and writing is opt-in, twice over.</b> A fresh deployment
+  reads Jira and writes nothing: the write tools only appear where somebody has turned on
+  <code>JIRA_WRITE_ENABLED</code>, and creating a <i>project</i> needs a second switch of
+  its own because it is the one change that cannot be undone from here.</p>
+  <p><b>And nothing is written under a name that did not agree to it.</b> Every write runs
+  on the consent of whoever is asking, and nothing reaches Jira or your calendar until it
+  has been read back to you in words and you have said yes.</p>
 </div>
 
 <h2 data-n="01">Before anything: is the stack up?</h2>
@@ -466,37 +469,50 @@ the session row, so the cookie is dead everywhere, not merely forgotten by this 
 
 <h2 data-n="03">Connect Jira</h2>
 
-<p>One-time setup, done outside the app. Skip this if someone has already pointed the
-deployment at a site.</p>
+<p>Two halves. The first is one-time setup done outside the app; the second is a button
+each person clicks once. Skip the first if someone has already registered the app.</p>
 
 <div class="step">
-  <h3 data-n="01">Make an API token</h3>
-  <p><a href="https://id.atlassian.com/manage-profile/security/api-tokens">id.atlassian.com</a>
-  → Security → API tokens → Create. Copy it now; the page never shows it again.</p>
+  <h3 data-n="01">Register an OAuth app</h3>
+  <p><a href="https://developer.atlassian.com/console/myapps/">developer.atlassian.com</a>
+  → Create → OAuth 2.0 integration. Under Authorization, add a callback URL that is
+  exactly your <code>PUBLIC_BASE_URL</code> followed by <code>/auth/jira/callback</code> —
+  Atlassian refuses the round if it differs by a character.</p>
 </div>
 
 <div class="step key">
   <h3 data-n="02">Put four values in <code>.env</code></h3>
   <pre>JIRA_BASE_URL=https://your-site.atlassian.net
-JIRA_EMAIL=you@example.com
-JIRA_API_TOKEN=ATATT3x…
-JIRA_PROJECT_KEY=MYC          <span class="c"># empty means every project you can see</span></pre>
-  <p>The email matters: the token authenticates <i>that</i> account, and the sync sees
-  exactly what that account can see on the board. Every credential lives in
-  <code>.env</code> and nothing reads one from anywhere else.</p>
+JIRA_CLIENT_ID=…
+JIRA_CLIENT_SECRET=…
+TOKEN_ENCRYPTION_KEY=…        <span class="c"># Fernet key; see .env.example for the one-liner</span></pre>
+  <p><code>TOKEN_ENCRYPTION_KEY</code> is what every stored consent is encrypted with, so
+  without it nobody can connect anything and the board stays unread. The project key
+  itself lives in <code>config/environments/</code>, not here — it is not a secret.</p>
 </div>
 
 <div class="step">
-  <h3 data-n="03">Restart</h3>
-  <p><code>scripts/stack.sh restart</code>, then <code>scripts/stack.sh sync</code> to pull
-  once without waiting for the tick.</p>
+  <h3 data-n="03">Connect your own account</h3>
+  <p>Account menu → Settings → <b>Connect Jira</b>. You land on Atlassian's own consent
+  screen, agree, and come back. <b>The first person to do this becomes the one every
+  background sync runs on</b>, and the panel says so.</p>
+</div>
+
+<div class="note">
+  <p><b>There is no shared Jira token, and that is the point.</b> Reading a board on one
+  would be harmless; writing to one would not. A comment posted on a deployment token
+  appears under the host's name whoever typed it, and Jira offers no way to correct the
+  author of an event already written. So every call runs on somebody's own consent.</p>
+  <p><b>Everyone else connects too</b>, and gets the same thing minus the sync role: what
+  they ask Mycel to write carries their name.</p>
 </div>
 
 <div class="warn">
-  <p><b>A Jira API token expires after exactly one year</b>, with no renewal path and no
-  warning through the API. What you get instead is a <code>401</code> on a sync that worked
-  yesterday. Mycel names that failure specifically rather than reporting a generic auth
-  error, because the cause is almost never a typo.</p>
+  <p><b>If the person driving the sync leaves, the syncing stops silently.</b> Their
+  consent goes with their Atlassian account, every tick fails, and a dashboard that has
+  stopped moving looks exactly like a quiet week. <code>scripts/stack.sh doctor</code>
+  is what tells them apart — it names who is syncing and when they last succeeded.
+  Somebody else connecting takes the role back on.</p>
 </div>
 
 <h2 data-n="04">Work the board</h2>
@@ -677,7 +693,7 @@ offering a button that leads to an error.</p>
   <h3 data-n="01">Set up the client, once</h3>
   <pre>GOOGLE_CLIENT_ID=…apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=…
-GOOGLE_TOKEN_KEY=…</pre>
+TOKEN_ENCRYPTION_KEY=…</pre>
   <p>In the Google Cloud console: <b>Credentials → Create credentials → OAuth client ID →
   Web application</b>, and under authorised redirect URIs add exactly your
   <code>PUBLIC_BASE_URL</code> followed by <code>/auth/google/callback</code>. Google
@@ -729,6 +745,13 @@ before you can ask it.</p>
   <tr><td>&ldquo;who logged the most hours this month&rdquo;</td><td>The analyst, which
   writes its own SQL against the work data and returns each figure with the query that
   produced it.</td></tr>
+  <tr><td>&ldquo;comment on MYC-12 that it is done&rdquo;</td><td>The analyst, where the
+  deployment allows writing. It reads the change back first and writes nothing until you
+  agree &mdash; then the comment appears on Jira under <i>your</i> name.</td></tr>
+  <tr><td>&ldquo;create a task for the login timeout, assign it to Nam&rdquo;</td><td>The
+  analyst again. It looks Nam up by name, reads the whole ticket back &mdash; type,
+  project, title, the assignee&rsquo;s <i>full</i> name &mdash; and waits. Two people called
+  Nam both come back, and it asks which.</td></tr>
   <tr><td>&ldquo;what changed in Jira&rsquo;s API this year&rdquo;</td><td>The researcher,
   which searches the web and cites urls.</td></tr>
   <tr><td>&ldquo;anything important in the mail today&rdquo;</td><td>The researcher again.
@@ -751,9 +774,11 @@ before you can ask it.</p>
   going down is a click.</p>
 </div>
 
-<p>That data is read-only and enforced as such by Postgres, not only asked for in a
-prompt: <code>run_sql</code> runs inside a read-only transaction, so a question that would
-change anything is refused by the database and the agent says so.</p>
+<p>Reading that data is read-only and enforced as such by Postgres, not only asked for in
+a prompt: <code>run_sql</code> runs inside a read-only transaction, so a question that
+would change anything is refused by the database and the agent says so. Changing the
+tracker does not go through there at all — it goes to Jira, on your consent, after a
+read-back.</p>
 
 <div class="note">
   <p><b>What the deletion cost.</b> The dashboard answered in milliseconds and for free;

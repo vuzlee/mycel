@@ -94,11 +94,16 @@ class Settings(BaseSettings):
 
     # Sources. A deployment syncs the providers it has credentials for; a missing token
     # is not an error until something actually asks that source for data.
-    #: Jira is the source of record for what the work *is*. Basic auth with a personal
-    #: API token, which expires exactly one year after it is issued.
+    #: Jira is the source of record for what the work *is*. Reached on a token one person
+    #: consented to, never on a deployment-wide one — see `services/jira_oauth.py`. The
+    #: base url is not a secret: the site is public and the consent is what is not.
     jira_base_url: str | None = None
-    jira_email: str | None = None
-    jira_api_token: SecretStr | None = None
+    #: The Atlassian OAuth 2.0 (3LO) app a person consents to. developer.atlassian.com ->
+    #: your app -> Authorization, with `{public_base_url}/auth/jira/callback` as a
+    #: callback URL. Without it nothing reaches Jira at all: reading happens on the syncer's
+    #: consent, so there is no deployment-wide fallback to drop back to.
+    jira_client_id: str | None = None
+    jira_client_secret: SecretStr | None = None
     #: Which project to sync. Empty means every project the account can see, which is
     #: right for a one-project site and wrong for a shared one.
     jira_project_key: str | None = None
@@ -111,6 +116,11 @@ class Settings(BaseSettings):
     #: tracker is recoverable and commenting on fifty issues by mistake is not, so a write
     #: path that exists has to be switched on deliberately.
     jira_write_enabled: bool = False
+    #: Whether creating a Jira *project* is offered. Its own switch, separate from the one
+    #: above, because the three other writes can be undone and this one cannot: many sites
+    #: refuse to delete a project over the API, and a project key is never reusable. On, and
+    #: the consent screen asks for `manage:jira-project` as well; off, and it never does.
+    jira_allow_create_project: bool = False
 
     # Outputs. One-way and optional: a deployment with nothing configured still works, and
     # `notify/` logs a missing credential rather than failing the job that produced the
@@ -125,12 +135,15 @@ class Settings(BaseSettings):
     #: "Web application", with `{public_base_url}/auth/google/callback` as a redirect URI.
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
-    #: The key the stored refresh token is encrypted with, url-safe base64, 32 bytes:
+    #: The key every stored refresh token is encrypted with — Google's and Atlassian's
+    #: alike. Url-safe base64, 32 bytes:
     #: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
-    #: No default and no fallback to plaintext — a refresh token opens one person's calendar
+    #: No default and no fallback to plaintext — a refresh token opens one person's account
     #: for as long as they leave it alone, so a deployment without this key refuses to
-    #: connect an account rather than keeping one readably.
-    google_token_key: SecretStr | None = None
+    #: connect an account rather than keeping one readably. Named for what it does rather
+    #: than for one of its two users: it was `GOOGLE_TOKEN_KEY` until batch 060 gave it a
+    #: second.
+    token_encryption_key: SecretStr | None = None
     #: Seconds between scheduled syncs. Jira keeps its history, so this is a freshness
     #: knob rather than a deadline — nothing is lost by syncing late.
     sync_interval_seconds: int = 900

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mycel.infra.postgres.models import (
     Conversation,
     GoogleAccount,
+    JiraAccount,
     Membership,
     PasswordReset,
     Session,
@@ -77,6 +78,25 @@ class GoogleAccountRow:
     refresh_token_encrypted: str
     scope: str
     connected_at: datetime
+
+
+@dataclass(frozen=True)
+class JiraAccountRow:
+    """One person's connected Jira account.
+
+    Carries the token still encrypted, as `GoogleAccountRow` does. `is_syncer` is what the
+    settings screen shows and what `domains/sync.py` looks for: at most one row has it.
+    """
+
+    user_id: int
+    account_id: str
+    display_name: str
+    cloud_id: str
+    refresh_token_encrypted: str
+    scope: str
+    is_syncer: bool
+    connected_at: datetime
+    last_sync_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -257,6 +277,89 @@ class AppRepository:
         """Disconnect. False when there was nothing to disconnect."""
         result = await self._session.execute(
             delete(GoogleAccount).where(GoogleAccount.user_id == user_id)
+        )
+        return bool(getattr(result, "rowcount", 0))
+
+    # -- jira accounts -------------------------------------------------------
+
+    async def upsert_jira_account(
+        self,
+        user_id: int,
+        account_id: str,
+        display_name: str,
+        cloud_id: str,
+        refresh_token_encrypted: str,
+        scope: str,
+        is_syncer: bool,
+    ) -> None:
+        """Attach a Jira account, replacing whatever this person had connected before.
+
+        `is_syncer` is only ever raised here, never lowered: a reconnect by the syncer must
+        keep the role, and a reconnect by anybody else must not quietly take it. Deciding
+        who gets it is `services/jira_oauth.py`'s — this writes what it decided.
+        """
+        stmt = insert(JiraAccount).values(
+            user_id=user_id,
+            account_id=account_id,
+            display_name=display_name,
+            cloud_id=cloud_id,
+            refresh_token_encrypted=refresh_token_encrypted,
+            scope=scope,
+            is_syncer=is_syncer,
+        )
+        await self._session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[JiraAccount.user_id],
+                set_={
+                    "account_id": stmt.excluded.account_id,
+                    "display_name": stmt.excluded.display_name,
+                    "cloud_id": stmt.excluded.cloud_id,
+                    "refresh_token_encrypted": stmt.excluded.refresh_token_encrypted,
+                    "scope": stmt.excluded.scope,
+                    "is_syncer": JiraAccount.is_syncer.op("OR")(stmt.excluded.is_syncer),
+                    "connected_at": func.now(),
+                },
+            )
+        )
+
+    async def jira_account(self, user_id: int) -> JiraAccountRow | None:
+        """What this person connected, or `None`. `None` is a normal answer."""
+        row = await self._session.scalar(
+            select(JiraAccount).where(JiraAccount.user_id == user_id)
+        )
+        return _jira(row) if row else None
+
+    async def jira_syncer(self) -> JiraAccountRow | None:
+        """The account every background sync runs on, or `None` if nobody has connected.
+
+        `None` is not a bug and not a normal state either: it means the scheduler has no
+        token and the dashboard is going stale. `doctor` is what says so out loud.
+        """
+        row = await self._session.scalar(select(JiraAccount).where(JiraAccount.is_syncer))
+        return _jira(row) if row else None
+
+    async def has_jira_syncer(self) -> bool:
+        """Whether the syncer role is taken. The question a new connection asks."""
+        held = await self._session.scalar(
+            select(JiraAccount.user_id).where(JiraAccount.is_syncer)
+        )
+        return held is not None
+
+    async def mark_jira_synced(self, user_id: int, at: datetime) -> None:
+        """Record that a background sync succeeded on this token. Best-effort."""
+        await self._session.execute(
+            update(JiraAccount).where(JiraAccount.user_id == user_id).values(last_sync_at=at)
+        )
+
+    async def delete_jira_account(self, user_id: int) -> bool:
+        """Disconnect. False when there was nothing to disconnect.
+
+        The syncer role goes with the row, which is the honest outcome: no token, no
+        syncing. Handing it to somebody else would be choosing on their behalf whose name
+        the next sync runs under.
+        """
+        result = await self._session.execute(
+            delete(JiraAccount).where(JiraAccount.user_id == user_id)
         )
         return bool(getattr(result, "rowcount", 0))
 
@@ -463,6 +566,20 @@ def _google(row: GoogleAccount) -> GoogleAccountRow:
         refresh_token_encrypted=row.refresh_token_encrypted,
         scope=row.scope,
         connected_at=row.connected_at,
+    )
+
+
+def _jira(row: JiraAccount) -> JiraAccountRow:
+    return JiraAccountRow(
+        user_id=row.user_id,
+        account_id=row.account_id,
+        display_name=row.display_name,
+        cloud_id=row.cloud_id,
+        refresh_token_encrypted=row.refresh_token_encrypted,
+        scope=row.scope,
+        is_syncer=row.is_syncer,
+        connected_at=row.connected_at,
+        last_sync_at=row.last_sync_at,
     )
 
 

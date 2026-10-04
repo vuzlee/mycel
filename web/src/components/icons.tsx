@@ -230,3 +230,13 @@ export function Calendar({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** A board of stacked cards: the tracker, as distinct from the calendar beside it. */
+export function Board({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2" y="2.6" width="12" height="10.8" rx="1.6" />
+      <path d="M5.4 5.6v5.2m5.2-5.2v2.6" />
+    </svg>
+  );
+}

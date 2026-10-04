@@ -18,7 +18,6 @@ from typing import Any
 
 import httpx2
 import pytest
-from pydantic import SecretStr
 
 from mycel.core.config import Settings
 from mycel.etl.checks.work import CheckFailed, check_item, check_items, check_worklog
@@ -41,15 +40,18 @@ def _issue(key: str) -> dict[str, Any]:
 
 def _settings(**kw: Any) -> Settings:
     kw.setdefault("jira_base_url", "https://example.atlassian.net")
-    kw.setdefault("jira_email", "dev@example.com")
-    kw.setdefault("jira_api_token", SecretStr("token"))
     return Settings(**kw)
 
 
 @pytest.fixture(autouse=True)
 def _configured(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Credentials by default; the tests that care about their absence override this."""
+    """Settings by default; the tests that care about their absence override this."""
     monkeypatch.setattr(jira, "get_settings", _settings)
+
+
+#: One person's grant, which every call to the connector now takes. A constant
+#: rather than a fixture because it is two strings and nothing in it can go stale.
+AUTH = jira.Auth(access_token="access-token", cloud_id="cloud-1")
 
 
 #: Captured before any test patches the name, so the factory below builds a real client
@@ -118,7 +120,7 @@ def _worklog(**kw: Any) -> WorklogRow:
 class TestSearchingIssues:
     async def test_the_issues_come_back(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"issues": RECORDED["issues"]}))
-        found = await jira.search_issues("project = MYC")
+        found = await jira.search_issues(AUTH, "project = MYC")
         assert [i["key"] for i in found] == ["MYC-6", "MYC-7", "MYC-8"]
 
     async def test_the_jql_is_sent(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -129,7 +131,7 @@ class TestSearchingIssues:
             return httpx2.Response(200, json={"issues": []})
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-        await jira.search_issues("project = MYC AND updated >= '2026-09-01'")
+        await jira.search_issues(AUTH, "project = MYC AND updated >= '2026-09-01'")
         assert seen["jql"] == "project = MYC AND updated >= '2026-09-01'"
         assert "summary" in seen["fields"]
 
@@ -152,24 +154,24 @@ class TestSearchingIssues:
             )
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-        found = await jira.search_issues("project = MYC")
+        found = await jira.search_issues(AUTH, "project = MYC")
         assert tokens == [None, "page-2"]
         assert [i["key"] for i in found] == ["MYC-6", "MYC-7"]
 
     async def test_an_empty_project_is_not_an_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"issues": []}))
-        assert await jira.search_issues("project = MYC") == []
+        assert await jira.search_issues(AUTH, "project = MYC") == []
 
 
 class TestTheWorklogCall:
     async def test_the_entries_come_back(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"worklogs": RECORDED["worklogs"]}))
-        found = await jira.issue_worklogs("MYC-7")
+        found = await jira.issue_worklogs(AUTH, "MYC-7")
         assert [w["timeSpentSeconds"] for w in found] == [18000, 21600]
 
     async def test_an_issue_with_no_effort_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"worklogs": []}))
-        assert await jira.issue_worklogs("MYC-6") == []
+        assert await jira.issue_worklogs(AUTH, "MYC-6") == []
 
 
 class TestWritingBack:
@@ -185,7 +187,7 @@ class TestWritingBack:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"id": "1"}))
 
         with pytest.raises(SourceError, match="writing is off"):
-            await jira.add_comment("MYC-7", "two stories shipped")
+            await jira.add_comment(AUTH, "MYC-7", "two stories shipped")
 
     async def test_a_comment_goes_as_a_document_not_a_string(
         self, monkeypatch: pytest.MonkeyPatch
@@ -199,7 +201,7 @@ class TestWritingBack:
             return httpx2.Response(201, json={"id": "10200"})
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-        created = await jira.add_comment("MYC-7", "two stories shipped")
+        created = await jira.add_comment(AUTH, "MYC-7", "two stories shipped")
 
         assert created["id"] == "10200"
         assert seen["body"]["type"] == "doc"
@@ -222,7 +224,7 @@ class TestWritingBack:
             return httpx2.Response(204)
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-        await jira.transition("MYC-7", "done")
+        await jira.transition(AUTH, "MYC-7", "done")
 
         assert sent == [{"transition": {"id": "31"}}]
 
@@ -238,7 +240,7 @@ class TestWritingBack:
         )
 
         with pytest.raises(SourceError, match="cannot move"):
-            await jira.transition("MYC-7", "Done")
+            await jira.transition(AUTH, "MYC-7", "Done")
 
     async def test_transitions_can_be_read_without_arming_writes(
         self, monkeypatch: pytest.MonkeyPatch
@@ -246,37 +248,104 @@ class TestWritingBack:
         moves = {"transitions": [{"id": "31", "to": {"name": "Done"}}]}
         monkeypatch.setattr(httpx2, "AsyncClient", _responds(moves))
 
-        assert [t["id"] for t in await jira.transitions_for("MYC-7")] == ["31"]
+        assert [t["id"] for t in await jira.transitions_for(AUTH, "MYC-7")] == ["31"]
 
 
 class TestHowJiraFails:
-    async def test_a_missing_base_url_says_so(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(jira, "get_settings", lambda: Settings(jira_base_url=None))
-        with pytest.raises(SourceError, match="JIRA_BASE_URL"):
-            await jira.search_issues("project = MYC")
-
-    async def test_missing_credentials_say_so(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(jira, "get_settings", lambda: _settings(jira_api_token=None))
-        with pytest.raises(SourceError, match="JIRA_EMAIL and JIRA_API_TOKEN"):
-            await jira.search_issues("project = MYC")
-
-    async def test_a_rejected_token_mentions_expiry(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """After a year this is the expected failure, not a bug, and the message says why."""
-        monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=401))
-        with pytest.raises(SourceError, match="expire"):
-            await jira.search_issues("project = MYC")
-
-    async def test_a_forbidden_project_names_the_account(
+    async def test_the_call_is_addressed_by_cloud_id_not_by_hostname(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """An OAuth token is only accepted at `api.atlassian.com/ex/jira/<cloud id>`.
+
+        Sent to the site's own `*.atlassian.net` host it is rejected as unauthenticated,
+        which reads like a revoked grant rather than like the wrong url.
+        """
+        seen: list[str] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            seen.append(str(request.url))
+            return httpx2.Response(200, json={"issues": []})
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+        await jira.search_issues(AUTH, "project = MYC")
+
+        assert seen == ["https://api.atlassian.com/ex/jira/cloud-1/rest/api/3/search/jql"]
+
+    async def test_the_grant_rides_as_a_bearer_token(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Not basic auth. The whole batch rests on a call carrying one person's grant."""
+        seen: dict[str, str] = {}
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            seen.update(request.headers)
+            return httpx2.Response(200, json={"issues": []})
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+        await jira.search_issues(AUTH, "project = MYC")
+
+        assert seen["authorization"] == "Bearer access-token"
+
+    async def test_a_refusal_is_certain_not_to_have_written(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`NotWritten` is what lets a tool offer a draft again, so the line between it
+        and a plain SourceError is the line between a safe retry and a double comment."""
+        from mycel.sources import NotWritten
+
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=403))
-        with pytest.raises(SourceError, match="dev@example.com"):
-            await jira.search_issues("project = MYC")
+        with pytest.raises(NotWritten):
+            await jira.search_issues(AUTH, "project = MYC")
+
+    async def test_a_timeout_is_not_certain_either_way(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The request may have arrived and only the answer been lost. Marking this
+        `NotWritten` would invite a retry that writes the same thing twice."""
+        from mycel.sources import NotWritten
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            raise httpx2.TimeoutException("too slow")
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+        with pytest.raises(SourceError) as caught:
+            await jira.search_issues(AUTH, "project = MYC")
+
+        assert not isinstance(caught.value, NotWritten)
+
+    async def test_a_server_error_is_not_certain_either(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same reason as the timeout: Jira failed partway and said nothing about how far."""
+        from mycel.sources import NotWritten
+
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds({"errorMessages": ["boom"]}, 500))
+        with pytest.raises(SourceError) as caught:
+            await jira.search_issues(AUTH, "project = MYC")
+
+        assert not isinstance(caught.value, NotWritten)
+
+    async def test_a_lapsed_grant_says_to_connect_again(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """401 used to mean a token had reached its one-year expiry, which nobody could
+        act on without a shell. It now means the consent lapsed, and the fix is a click."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=401))
+        with pytest.raises(SourceError, match="Connect Jira again"):
+            await jira.search_issues(AUTH, "project = MYC")
+
+    async def test_a_forbidden_project_blames_the_account_that_consented(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No address to name any more — the deployment has no Jira identity of its own."""
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=403))
+        with pytest.raises(SourceError, match="the account that consented"):
+            await jira.search_issues(AUTH, "project = MYC")
 
     async def test_a_wrong_site_says_where_to_look(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=404))
-        with pytest.raises(SourceError, match="JIRA_BASE_URL"):
-            await jira.search_issues("project = MYC")
+        with pytest.raises(SourceError, match="check the site and the project key"):
+            await jira.search_issues(AUTH, "project = MYC")
 
     async def test_a_bad_jql_reports_jiras_own_message(
         self, monkeypatch: pytest.MonkeyPatch
@@ -287,7 +356,7 @@ class TestHowJiraFails:
             _responds({"errorMessages": ["Field 'sprintt' does not exist"]}, status=400),
         )
         with pytest.raises(SourceError, match="sprintt"):
-            await jira.search_issues("project = MYC")
+            await jira.search_issues(AUTH, "project = MYC")
 
     async def test_rate_limiting_is_retried(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """429 is normal on an adaptive limit; the sync waits rather than failing the run."""
@@ -300,13 +369,13 @@ class TestHowJiraFails:
             return httpx2.Response(200, json={"issues": [_issue("MYC-6")]})
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
-        assert len(await jira.search_issues("project = MYC")) == 1
+        assert len(await jira.search_issues(AUTH, "project = MYC")) == 1
         assert len(calls) == 2
 
     async def test_persistent_rate_limiting_gives_up(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, 429, **{"Retry-After": "0"}))
         with pytest.raises(SourceError, match="rate limited"):
-            await jira.search_issues("project = MYC")
+            await jira.search_issues(AUTH, "project = MYC")
 
     async def test_a_timeout_names_the_provider(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def handler(request: httpx2.Request) -> httpx2.Response:
@@ -314,7 +383,7 @@ class TestHowJiraFails:
 
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
         with pytest.raises(SourceError, match="did not respond"):
-            await jira.search_issues("project = MYC")
+            await jira.search_issues(AUTH, "project = MYC")
 
 
 class TestNormalisingAnIssue:

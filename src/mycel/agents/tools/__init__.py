@@ -5,6 +5,7 @@
   mail.py           read the headers of recent mail
   query.py          read gold with SQL the model wrote
   calendar.py       read the asker's calendar, and book on it after they agree
+  jira.py           write to Jira as the asker, after they agree to a draft
   delegate.py       hand a question to a specialist agent
   rag_search.py     find work items by subject rather than by predicate
 

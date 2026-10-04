@@ -8,7 +8,8 @@ it, so the only thing Postgres ever holds is a Fernet ciphertext. A test that th
 happens is a test that a database dump is not a list of calendars.
 
 **A half-configured deployment counts as unconfigured.** A client with no encryption key
-would connect an account and store the token readably, which is worse than refusing.
+would connect an account and store the token readably, which is worse than refusing. The
+key is `TOKEN_ENCRYPTION_KEY` since batch 060, shared with Jira — one key, two providers.
 
 **`state` is spent once.** The callback arrives as a redirect, so the value nobody saw is the
 only thing tying it to the person who started it, and a url in a history file must not be
@@ -69,7 +70,7 @@ def _answers(payload: dict[str, Any], status: int = 200) -> Any:
 def configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
-    monkeypatch.setenv("GOOGLE_TOKEN_KEY", KEY)
+    monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", KEY)
     monkeypatch.setenv("PUBLIC_BASE_URL", "https://mycel.example.com")
     get_settings.cache_clear()
 
@@ -262,7 +263,7 @@ class TestTheTokenAtRest:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Wrong at start-up, not at the first person who tries to connect."""
-        monkeypatch.setenv("GOOGLE_TOKEN_KEY", "not-base32-and-not-32-bytes")
+        monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "not-base32-and-not-32-bytes")
         get_settings.cache_clear()
 
         with pytest.raises(ConfigError):

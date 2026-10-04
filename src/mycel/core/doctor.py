@@ -131,11 +131,32 @@ async def _qdrant(settings: Settings) -> str:
 
 
 async def _jira(settings: Settings) -> str:
+    """Whether a sync can actually run, which is a question about a person now.
+
+    Jira is read on one person's consent — the syncer's. So "is Jira configured" is no
+    longer enough: a deployment with a client, a key and nobody connected is one where
+    every tick fails and the dashboard quietly ages. The answer names who holds the role
+    and when they last succeeded, because that is the only way to tell a syncer who left
+    from a week in which nothing happened.
+    """
+    from mycel.services.jira_oauth import syncer, syncer_token
     from mycel.sources import jira
 
+    who = await syncer()
+    if who is None:
+        raise RuntimeError(
+            "nobody has connected Jira — no sync can run. The first person to connect in "
+            "Settings becomes the syncer."
+        )
+
+    token, cloud_id, _ = await syncer_token()
     jql = f"project = {settings.jira_project_key} ORDER BY created DESC"
-    issues = await jira.search_issues(jql)
-    return f"reachable, {len(issues)} issues in {settings.jira_project_key}"
+    issues = await jira.search_issues(jira.Auth(token, cloud_id), jql)
+    last = who.last_sync_at.strftime("%Y-%m-%d %H:%M") if who.last_sync_at else "never"
+    return (
+        f"{len(issues)} issues in {settings.jira_project_key}; "
+        f"syncing as {who.display_name}, last sync {last}"
+    )
 
 
 async def _langfuse(settings: Settings) -> str:
@@ -152,7 +173,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
         _probe("redis", "STORES", lambda: _redis(env), missing=None),
         _probe(
             "jira", "SOURCES", lambda: _jira(env),
-            missing=None if (env.jira_base_url and env.jira_api_token and env.jira_project_key)
+            missing=None if (env.jira_client_id and env.jira_client_secret and env.jira_project_key)
             else "not configured — the dashboard will be empty",
             timeout=REMOTE_TIMEOUT,
         ),
@@ -200,11 +221,21 @@ def _declared(env: Settings) -> list[Check]:
               f"reading {env.gmail_address}" if env.gmail_app_password
               else "not configured — read_mail is not offered")
     )
-    configured = env.google_client_id and env.google_client_secret and env.google_token_key
+    key = env.token_encryption_key
+    configured = env.google_client_id and env.google_client_secret and key
     out.append(
         Check("TOOLS", "calendar", State.OK if configured else State.OFF,
               "per-user OAuth ready" if configured
               else "not configured — the calendar tools are not offered")
+    )
+    # Two switches, and off is a decision rather than a gap. A deployment that reads Jira
+    # and does not write to it is a whole valid deployment, so writing OFF is not a fault.
+    writes = bool(env.jira_client_id and env.jira_client_secret and key and env.jira_write_enabled)
+    out.append(
+        Check("TOOLS", "jira writes", State.OK if writes else State.OFF,
+              ("on, as whoever is asking"
+               + (" — including create_project" if env.jira_allow_create_project else ""))
+              if writes else "off — the Jira write tools are not offered")
     )
 
     # The one with a default that is wrong as soon as the app is not on a laptop.

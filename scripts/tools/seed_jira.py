@@ -18,6 +18,10 @@ history is a report that quietly lies, and the label is how gold can tell.
 
 Idempotent: an issue whose summary is already in the project is left alone, so a second run
 adds only what is missing.
+
+Runs on the syncer's grant, like every other call to Jira since batch 060 — so every issue
+it creates is attributed to whoever connected Jira first, which is honest: they are the
+person who ran this.
 """
 
 import os
@@ -26,10 +30,13 @@ from datetime import date, timedelta
 from typing import Any
 
 import httpx
+from _jira_auth import jira_grant
 
-BASE = os.environ["JIRA_BASE_URL"].rstrip("/")
-AUTH = (os.environ["JIRA_EMAIL"], os.environ["JIRA_API_TOKEN"])
 PROJECT = os.environ.get("JIRA_PROJECT_KEY") or "MYC"
+
+#: Filled by `main`, not at import. Fetching the grant reaches Atlassian, and a module
+#: that does that on import cannot be read by a linter, a test or `--help`.
+_GRANT: tuple[str, dict[str, str]] | None = None
 LABEL = "backfill"
 
 TODAY = date.today()
@@ -97,7 +104,11 @@ PLAN: list[tuple[str, str, list[Story]]] = [
 
 
 def call(method: str, path: str, body: dict[str, Any] | None = None) -> Any:
-    res = httpx.request(method, f"{BASE}/rest/api/3{path}", auth=AUTH, json=body, timeout=30.0)
+    assert _GRANT is not None, "call() before main() fetched the grant"
+    base, headers = _GRANT
+    res = httpx.request(
+        method, f"{base}/rest/api/3{path}", headers=headers, json=body, timeout=30.0
+    )
     if res.status_code >= 400:
         raise SystemExit(f"{method} {path} -> {res.status_code}: {res.text[:400]}")
     return res.json() if res.content else None
@@ -179,6 +190,8 @@ def resolve(key: str) -> None:
 
 
 def main() -> None:
+    global _GRANT
+    _GRANT = jira_grant()
     me = call("GET", "/myself")["accountId"]
     seen = existing()
     print(f"{PROJECT}: {len(seen)} issues already there")

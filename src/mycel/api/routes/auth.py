@@ -38,7 +38,7 @@ from mycel.api.dependencies import SESSION_COOKIE, current_user, get_db
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.notify import mail
-from mycel.services import auth, google_oauth
+from mycel.services import auth, google_oauth, jira_oauth
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -262,6 +262,86 @@ async def google_disconnect(user: Annotated[auth.Principal, Depends(current_user
     """Disconnect. Google is asked to forget the grant, and the row goes either way."""
     removed = await google_oauth.disconnect(user.id)
     log.info("google account disconnected", extra={"user_id": user.id, "removed": removed})
+
+
+class JiraStatus(BaseModel):
+    """Whether a Jira account is attached, which one, and whether it drives the sync.
+
+    `configured` is about the deployment rather than the person, as the Google one is.
+    `is_syncer` is about the deployment too, in a different way: it says this person's
+    grant is what every background sync runs on, so disconnecting stops the syncing.
+    """
+
+    configured: bool
+    display_name: str | None = None
+    connected_at: str | None = None
+    is_syncer: bool = False
+    #: Whether anybody at all drives the sync. False with `configured` true means the
+    #: dashboard is going stale and the next person to connect fixes it.
+    syncer_exists: bool = False
+    #: When a background sync last succeeded on this grant, for the person who holds it.
+    last_sync_at: str | None = None
+
+
+@router.get("/jira", response_model=JiraStatus)
+async def jira_status(user: Annotated[auth.Principal, Depends(current_user)]) -> JiraStatus:
+    """Which Jira account this person has connected, if any, and who drives the sync."""
+    if not jira_oauth.configured():
+        return JiraStatus(configured=False)
+    row = await jira_oauth.connected(user.id)
+    exists = await jira_oauth.syncer() is not None
+    if row is None:
+        return JiraStatus(configured=True, syncer_exists=exists)
+    return JiraStatus(
+        configured=True,
+        display_name=row.display_name,
+        connected_at=row.connected_at.isoformat(),
+        is_syncer=row.is_syncer,
+        syncer_exists=exists,
+        last_sync_at=row.last_sync_at.isoformat() if row.last_sync_at else None,
+    )
+
+
+@router.get("/jira/start")
+async def jira_start(user: Annotated[auth.Principal, Depends(current_user)]) -> RedirectResponse:
+    """Send the browser to Atlassian's consent screen."""
+    if not jira_oauth.configured():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment has no Jira OAuth client"
+        )
+    return RedirectResponse(await jira_oauth.consent_url(user.id))
+
+
+@router.get("/jira/callback")
+async def jira_callback(
+    code: Annotated[str | None, Query()] = None,
+    state: Annotated[str | None, Query()] = None,
+    error: Annotated[str | None, Query()] = None,
+) -> RedirectResponse:
+    """Where Atlassian sends the browser back. Connects the account, then returns to the app.
+
+    Not behind `current_user`, always a redirect, and broad in what it catches — all three
+    for the reasons `google_callback` above gives. This url is displayed in an address bar,
+    so a refusal has to land somewhere a person can read it.
+    """
+    if error or not code or not state:
+        return _back(f"jira_error={error or 'cancelled'}")
+    try:
+        row = await jira_oauth.connect(state, code)
+    except Exception as exc:
+        log.warning("jira connect failed", extra={"detail": str(exc)})
+        return _back("jira_error=failed")
+    log.info("jira account connected", extra={"user_id": row.user_id})
+    return _back("jira=connected")
+
+
+@router.delete("/jira", status_code=status.HTTP_204_NO_CONTENT)
+async def jira_disconnect(user: Annotated[auth.Principal, Depends(current_user)]) -> None:
+    """Disconnect. Atlassian is not told — it publishes no revoke endpoint for a 3LO
+    refresh token, so the person finishes the job at id.atlassian.com and the screen
+    says so. Disconnecting the syncer stops the background sync."""
+    removed = await jira_oauth.disconnect(user.id)
+    log.info("jira account disconnected", extra={"user_id": user.id, "removed": removed})
 
 
 def _back(outcome: str) -> RedirectResponse:

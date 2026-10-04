@@ -20,6 +20,7 @@ API does not always bump `updated` for every one of them.
 import sys
 
 import httpx
+from _jira_auth import jira_grant
 
 from mycel.core.config import get_settings
 
@@ -41,15 +42,11 @@ def main() -> int:
         print("JIRA_WRITE_ENABLED is off — set it in .env first")
         return 1
 
-    token = settings.jira_api_token
-    if not (settings.jira_base_url and settings.jira_email and token):
-        print("Jira is not configured — JIRA_BASE_URL, JIRA_EMAIL and JIRA_API_TOKEN")
-        return 1
+    # The syncer's grant, the same one the scheduler reads with. There is no shared Jira
+    # token to fall back on since batch 060, by design.
+    base, headers = jira_grant()
 
-    base = settings.jira_base_url.rstrip("/")
-    auth = (settings.jira_email, token.get_secret_value())
-
-    with httpx.Client(timeout=60, auth=auth) as client:
+    with httpx.Client(timeout=60, headers=headers) as client:
         issues = client.get(
             f"{base}/rest/agile/1.0/board/{BOARD}/issue",
             params={"maxResults": 200, "fields": "issuetype"},

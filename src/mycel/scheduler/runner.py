@@ -9,6 +9,7 @@ from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import sweep_expired_sessions
+from mycel.services.jira_oauth import NotConnected
 
 #: The advisory lock name. Every process running this scheduler contends for the same one,
 #: which is the point: two replicas are for availability, not for twice the syncing.
@@ -22,12 +23,22 @@ log = get_logger(__name__)
 
 
 async def run_sync_once() -> None:
-    """One tick. Skips rather than waits if another process is mid-sync."""
+    """One tick. Skips rather than waits if another process is mid-sync.
+
+    **A missing or lapsed syncer consent is logged at `error`, not `warning`.** Every other
+    failure here is the next tick's work — a provider was slow, a connection dropped — and
+    the data catches up. This one does not: nobody is signed in to notice, every later tick
+    fails the same way, and from the dashboard a stale project is indistinguishable from a
+    quiet week. Silent failure is the expensive kind, so it gets the level that is read.
+    """
     async with try_lock(SYNC_LOCK) as acquired:
         if not acquired:
             log.info("sync already running elsewhere, skipping this tick")
             return
-        await sync_jira()
+        try:
+            await sync_jira()
+        except NotConnected as exc:
+            log.error("sync cannot run: %s", exc)
 
 
 async def run_sweep_once() -> None:

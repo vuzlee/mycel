@@ -17,6 +17,16 @@ it is what makes the dashboard an agent rather than a second screen: the questio
 set of SQL queries could not answer are now written per question. It needs no new rule to
 stay honest — `validate_output` already refuses a figure without a source, and the query
 that produced a number *is* its source.
+
+**`tools/jira.py` is the first thing this agent can change**, and it lands here rather than
+on the researcher because the tracker is this system's own data — the same rows `run_sql`
+reads, written to instead of read. The researcher is for what is outside. What makes the
+write safe is that tool, not this file: nothing reaches Jira until a draft has been read
+back by full name and agreed to.
+
+It is conditional for the reason `rag_search` is: a deployment that has not armed writing,
+or whose person has not connected, gains nothing from a tool that refuses every call — and
+on a free tier of twenty requests a day, the turn spent discovering that is worth keeping.
 """
 
 from pydantic import BaseModel, Field
@@ -26,7 +36,7 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import compute, query
+from mycel.agents.tools import compute, jira, query
 
 
 class Figure(BaseModel):
@@ -65,7 +75,10 @@ class Analyst(BaseAgent[Analysis]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        return [compute.build_toolset(), query.build_toolset()]
+        sets: list[AbstractToolset[MycelDeps]] = [compute.build_toolset(), query.build_toolset()]
+        if jira.offered():
+            sets.append(jira.build_toolset())
+        return sets
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Analysis) -> Analysis:

@@ -7,15 +7,18 @@
  */
 
 import { useEffect, useState } from "react";
-import type { GoogleStatus, Thread } from "../api";
+import type { GoogleStatus, JiraStatus, Thread } from "../api";
 import {
   changePassword,
   connectGoogle,
+  connectJira,
   disconnectGoogle,
+  disconnectJira,
   fetchGoogle,
+  fetchJira,
 } from "../api";
 import { useAuth } from "../auth";
-import { Calendar, Moon, Screen, Spinner, Sun } from "./icons";
+import { Board, Calendar, Moon, Screen, Spinner, Sun } from "./icons";
 import type { Theme } from "../theme";
 import { useTheme } from "../theme";
 
@@ -138,11 +141,12 @@ const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
   { value: "dark", label: "Dark", icon: <Moon size={17} /> },
 ];
 
-/** Two settings: how it looks here, and which calendar it may read.
+/** Three settings: how it looks here, which calendar it may read, and which Jira it
+ *  writes to as you.
  *
- *  They sit together because both are answers to "how does this behave for me", and neither
- *  is big enough for a screen of its own. Appearance is per-browser; the Google connection
- *  is per-account, which the copy under each one says. */
+ *  They sit together because all three answer "how does this behave for me", and none is
+ *  big enough for a screen of its own. Appearance is per-browser; the two connections are
+ *  per-account, which the copy under each one says. */
 export function SettingsPanel() {
   const [theme, choose] = useTheme();
 
@@ -166,18 +170,19 @@ export function SettingsPanel() {
       </section>
 
       <GoogleSection />
+      <JiraSection />
     </>
   );
 }
 
 /** The outcome of a consent round, which arrives in the query string rather than in a
- *  response: the browser left for Google's own screen and came back by redirect, so there
- *  was no fetch to answer. Read once and cleared from the address bar, so reloading the
- *  page does not re-announce a connection made ten minutes ago. */
-function outcome(): "connected" | "failed" | null {
+ *  response: the browser left for the provider's own screen and came back by redirect, so
+ *  there was no fetch to answer. Read once and cleared from the address bar, so reloading
+ *  the page does not re-announce a connection made ten minutes ago. */
+function outcome(provider: "google" | "jira"): "connected" | "failed" | null {
   const query = new URLSearchParams(window.location.search);
-  if (query.has("google")) return "connected";
-  if (query.has("google_error")) return "failed";
+  if (query.has(provider)) return "connected";
+  if (query.has(`${provider}_error`)) return "failed";
   return null;
 }
 
@@ -190,10 +195,13 @@ function GoogleSection() {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [came] = useState(outcome);
+  const [came] = useState(() => outcome("google"));
 
   useEffect(() => {
     void fetchGoogle().then(setStatus).catch(() => setStatus(null));
+    // Cleared here rather than in both sections: whichever round just finished owns the
+    // query string, and clearing it twice is harmless only until one of them clears the
+    // other's outcome before it has been read.
     if (came) window.history.replaceState({}, "", window.location.pathname);
   }, [came]);
 
@@ -220,7 +228,7 @@ function GoogleSection() {
         <p className="muted">
           This deployment has no Google client configured, so no calendar can be connected.
           Whoever runs it sets <code>GOOGLE_CLIENT_ID</code>,{" "}
-          <code>GOOGLE_CLIENT_SECRET</code> and <code>GOOGLE_TOKEN_KEY</code>.
+          <code>GOOGLE_CLIENT_SECRET</code> and <code>TOKEN_ENCRYPTION_KEY</code>.
         </p>
       )}
 
@@ -265,6 +273,120 @@ function GoogleSection() {
           <button className="primary" onClick={connectGoogle}>
             <Calendar size={14} />
             Connect Google Calendar
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Connecting a Jira account, so what the app writes carries your name and not the host's.
+ *
+ *  Four states rather than the Google section's three, and the fourth is the one that
+ *  matters: whether this grant is the one every background sync runs on. Disconnecting
+ *  that one stops the syncing, and somebody about to click Disconnect has to be told
+ *  before they do rather than after. */
+function JiraSection() {
+  const [status, setStatus] = useState<JiraStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [came] = useState(() => outcome("jira"));
+
+  useEffect(() => {
+    void fetchJira().then(setStatus).catch(() => setStatus(null));
+  }, [came]);
+
+  const drop = async (): Promise<void> => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await disconnectJira();
+      setStatus(await fetchJira());
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section>
+      <h3 className="label">Jira</h3>
+
+      {status === null && <p className="muted">Checking…</p>}
+
+      {status && !status.configured && (
+        <p className="muted">
+          This deployment has no Jira OAuth client configured, so no account can be
+          connected. Whoever runs it sets <code>JIRA_CLIENT_ID</code>,{" "}
+          <code>JIRA_CLIENT_SECRET</code> and <code>TOKEN_ENCRYPTION_KEY</code>.
+        </p>
+      )}
+
+      {status?.configured && status.display_name && (
+        <>
+          <div className="identity">
+            <span className="avatar big" aria-hidden>
+              <Board size={17} />
+            </span>
+            <div>
+              <b>{status.display_name}</b>
+              <span className="muted">
+                Connected{" "}
+                {status.connected_at
+                  ? new Date(status.connected_at).toLocaleDateString()
+                  : ""}
+              </span>
+            </div>
+          </div>
+          <p className="muted">
+            A comment, a status change or a new ticket is written under this name. Nothing
+            is written until you have read it back and agreed to it, and nothing here can
+            delete anything.
+          </p>
+          {status.is_syncer && (
+            <p className="muted">
+              <b>Every background sync runs on this account.</b> Last sync{" "}
+              {status.last_sync_at
+                ? new Date(status.last_sync_at).toLocaleString()
+                : "never"}
+              . Disconnecting stops the syncing until somebody else connects.
+            </p>
+          )}
+          {failure && <p className="failure">{failure}</p>}
+          <button onClick={() => void drop()} disabled={busy}>
+            {busy && <Spinner className="spin" size={14} />}
+            Disconnect
+          </button>
+          <p className="muted">
+            Disconnecting here forgets the token. To withdraw the permission at
+            Atlassian's end as well, remove the app at{" "}
+            <code>id.atlassian.com</code> → Account settings → Connected apps.
+          </p>
+        </>
+      )}
+
+      {status?.configured && !status.display_name && (
+        <>
+          <p className="muted">
+            Connect one and you can say "comment on MYC-12 that it's done" or "create a task
+            for the login timeout, assign it to Nam" — written under your own name, after
+            you have read it back and agreed. Jira cannot correct the author of something
+            already written, which is why there is no shared account to fall back on.
+          </p>
+          {!status.syncer_exists && (
+            <p className="muted">
+              <b>Nobody has connected Jira yet</b>, so nothing is syncing and the dashboard
+              is empty. The first person to connect becomes the one every background sync
+              runs on.
+            </p>
+          )}
+          {came === "failed" && (
+            <p className="failure">That did not finish. Nothing was connected.</p>
+          )}
+          <button className="primary" onClick={connectJira}>
+            <Board size={14} />
+            Connect Jira
           </button>
         </>
       )}

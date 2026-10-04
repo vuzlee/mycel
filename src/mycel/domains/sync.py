@@ -9,6 +9,16 @@ makes a failed sync safe to simply run again.
 
 Its main caller is `scheduler/` on a timer, not an endpoint: a sync takes as long as the
 provider takes, and nothing is waiting on the answer.
+
+**And a timer has nobody signed in**, which is why one person — the syncer, the first to
+connect Jira — lends their consent to every background read. One access token is built per
+sync and spent across it, so a tick costs one refresh rather than one per issue.
+
+That makes the syncer a single point of failure with a quiet failure mode: they leave, or
+revoke the app, and every tick fails while the dashboard merely looks like a quiet week. So
+a tick that fails for want of a token logs at `error`, not `warning`, and a tick that
+succeeds stamps `last_sync_at` — which is what `core/doctor.py` reads to say the thing out
+loud.
 """
 
 import time
@@ -20,7 +30,9 @@ from mycel.infra.postgres.session import session_scope
 from mycel.infra.vectors.client import configured as vectors_configured
 from mycel.observability.metrics import records_written, sync_duration_seconds
 from mycel.services.fetch import fetch_jira
+from mycel.services.jira_oauth import mark_synced, syncer_token
 from mycel.services.transform import transform
+from mycel.sources.jira import Auth
 
 log = get_logger(__name__)
 
@@ -51,8 +63,9 @@ async def refetch_jira() -> SyncResult:
     Not on a schedule and not the ordinary path: this reads every issue in the project on
     every call. It is a migration step for the data, run once after a field is added.
     """
+    auth, _ = await _syncer_auth()
     async with session_scope() as session:
-        fetched = await fetch_jira(session, since=None)
+        fetched = await fetch_jira(session, auth, since=None)
 
     async with session_scope() as session:
         result = await transform(session, keys=fetched.keys)
@@ -80,13 +93,15 @@ async def sync_jira() -> SyncResult:
     transform must leave bronze intact, or the replay it exists for has nothing to replay.
     """
     started = time.monotonic()
+    auth, syncer_id = await _syncer_auth()
     async with session_scope() as session:
-        fetched = await fetch_jira(session)
+        fetched = await fetch_jira(session, auth)
 
     async with session_scope() as session:
         result = await transform(session, keys=fetched.keys)
 
     indexed = await _index_gold()
+    await mark_synced(syncer_id)
 
     # Observed after the transform, not in a `finally`: a sync that failed has no duration
     # worth plotting, and a row count from a half-run would read as data loss.
@@ -117,6 +132,18 @@ async def sync_jira() -> SyncResult:
         worklogs=result.worklogs,
         indexed=indexed,
     )
+
+
+async def _syncer_auth() -> tuple[Auth, int]:
+    """The grant every background read runs on, and whose it is.
+
+    Raises `NotConnected` when nobody holds the role or their consent has lapsed. It is
+    raised rather than swallowed so the scheduler's own handler logs it — and that handler
+    logs it at `error`, because "nobody has connected Jira" is not a transient failure that
+    the next tick fixes.
+    """
+    token, cloud_id, user_id = await syncer_token()
+    return Auth(access_token=token, cloud_id=cloud_id), user_id
 
 
 async def _index_gold() -> int:
