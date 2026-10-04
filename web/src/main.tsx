@@ -28,6 +28,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Home } from "./pages/Home";
 import { Forgot } from "./pages/Forgot";
 import { Login } from "./pages/Login";
+import { Notebooks } from "./pages/Notebooks";
 import { Register } from "./pages/Register";
 import { Reset } from "./pages/Reset";
 import { ThreadsProvider } from "./threads";
@@ -51,6 +52,13 @@ function Board() {
   return user ? <Dashboard /> : <Navigate to="/login" replace />;
 }
 
+/** Notebooks are personal, like the board: a stranger is sent to sign in. */
+function Library() {
+  const { user } = useAuth();
+  if (user === undefined) return <div className="waiting" />;
+  return user ? <Notebooks /> : <Navigate to="/login" replace />;
+}
+
 function Root() {
   return (
     <BrowserRouter basename="/app">
@@ -63,6 +71,7 @@ function Root() {
             <Route path="/forgot" element={<Forgot />} />
             <Route path="/reset" element={<Reset />} />
             <Route path="/dashboard" element={<Board />} />
+            <Route path="/notebooks" element={<Library />} />
             <Route path="/" element={<Front />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>

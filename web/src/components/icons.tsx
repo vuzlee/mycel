@@ -240,3 +240,22 @@ export function Board({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** A closed book: a notebook of uploaded documents. */
+export function Notebook({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3.5 2.5h8.5a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1v-9.5a1 1 0 0 1 1-1Z" />
+      <path d="M5.5 2.5v11.5M7.8 5.6h3M7.8 8h3" />
+    </svg>
+  );
+}
+
+/** An arrow into a tray: upload. */
+export function Upload({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 10.5V2.5M5 5.5l3-3 3 3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2" />
+    </svg>
+  );
+}

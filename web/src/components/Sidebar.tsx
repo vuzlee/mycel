@@ -21,7 +21,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Thread } from "../api";
 import { useThreads } from "../threads";
 import { Account } from "./Account";
-import { Bars, Close, Mycelium, Plus, Trash } from "./icons";
+import { Bars, Close, Mycelium, Notebook, Plus, Trash } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -100,6 +100,18 @@ export function Sidebar({ current, open, onClose }: Props) {
         >
           <Bars />
           Dashboard
+        </button>
+
+        <button
+          className="board-link"
+          aria-current={pathname === "/notebooks"}
+          onClick={() => {
+            navigate("/notebooks");
+            onClose();
+          }}
+        >
+          <Notebook />
+          Notebooks
         </button>
 
         <h2 className="label">Recent</h2>

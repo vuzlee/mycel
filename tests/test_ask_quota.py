@@ -14,12 +14,17 @@ pytestmark = [
 ]
 
 
+#: A day that never comes, so the test cannot touch a real day's counters on a shared Redis.
+DAY = "test-0000-00-00"
+
+
 @pytest.fixture(autouse=True)
-async def clean() -> AsyncIterator[None]:
+async def clean(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[None]:
+    monkeypatch.setattr(quota, "_day", lambda: DAY)
     redis = await get_client()
 
     async def wipe() -> None:
-        keys = [k async for k in redis.scan_iter("quota:ask:*")]
+        keys = [k async for k in redis.scan_iter(f"quota:ask:*:{DAY}")]
         if keys:
             await redis.delete(*keys)
 
