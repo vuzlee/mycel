@@ -33,6 +33,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        # The image runs 3.11 (Dockerfile); the runner's default is newer.
+        with: {python-version: "3.11"}
       - run: uv sync
 
       - name: Lint
@@ -87,6 +89,8 @@ jobs:
           git diff --name-only origin/${{ github.base_ref }}...HEAD \
             | grep -qE '^(src/mycel/(agents|llm)/|evals/)' && echo "run=true" >> $GITHUB_OUTPUT || true
       - uses: astral-sh/setup-uv@v5
+        # The image runs 3.11 (Dockerfile); the runner's default is newer.
+        with: {python-version: "3.11"}
         if: steps.changed.outputs.run == 'true'
       - name: Golden set
         if: steps.changed.outputs.run == 'true'
