@@ -34,7 +34,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.api.dependencies import SESSION_COOKIE, current_user, get_db
+from mycel.api.dependencies import SESSION_COOKIE, Db, current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.notify import mail
@@ -91,7 +91,7 @@ class UserResponse(BaseModel):
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 async def register(
     body: Registration,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> UserResponse:
     """Create an account. No session: the new account has to be signed into.
 
@@ -108,7 +108,7 @@ async def register(
 async def login(
     body: Credentials,
     response: Response,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> UserResponse:
     """Exchange an email and password for a session cookie."""
     user = await auth.authenticate(session, body.email, body.password)
@@ -119,7 +119,7 @@ async def login(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     response: Response,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> None:
     """End the session. Deliberately not behind `current_user`.
@@ -136,7 +136,7 @@ async def logout(
 async def change_password(
     body: PasswordChange,
     user: Annotated[auth.Principal, Depends(current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> None:
     """Change the password. The current one is required even though the cookie is valid.
@@ -154,7 +154,7 @@ async def change_password(
 @router.post("/forgot", status_code=status.HTTP_202_ACCEPTED)
 async def forgot_password(
     body: ForgotRequest,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> None:
     """Ask for a reset link. 202 whether or not the address has an account.
 
@@ -171,7 +171,7 @@ async def forgot_password(
 @router.post("/reset", status_code=status.HTTP_204_NO_CONTENT)
 async def reset_password(
     body: PasswordReset,
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> None:
     """Spend a reset link. Every session of that account ends, including any still open."""
     ended = await auth.reset_password(session, body.token, body.new_password)

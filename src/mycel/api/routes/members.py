@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.api.dependencies import current_user, get_db
+from mycel.api.dependencies import Db, current_user
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.services.auth import Principal
@@ -53,7 +53,7 @@ async def add_member(
     project: str,
     email: str,
     user: Annotated[Principal, Depends(current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> None:
     """Grant the project. Granting twice is not an error — the end state is what was asked
     for, which is what makes this a `PUT`."""
@@ -68,7 +68,7 @@ async def remove_member(
     project: str,
     email: str,
     user: Annotated[Principal, Depends(current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
 ) -> None:
     """Take the project back. Revoking your own last project is allowed and locks you out
     of it — the alternative is a rule that cannot be explained in one line."""

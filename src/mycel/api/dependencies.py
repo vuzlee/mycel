@@ -79,13 +79,22 @@ def reset_caches() -> None:
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
-    """One session per request, committed if the handler returns and rolled back if not."""
+    """One session per request, committed if the handler returns and rolled back if not.
+
+    Use it as `Depends(get_db, scope="function")` (`Db`). Since FastAPI 0.118 the default
+    scope commits *after* the response is sent, so a client that logs in and calls the
+    next route at once can arrive before its session row exists.
+    """
     async with session_scope() as session:
         yield session
 
 
+#: A request's database session, committed before the response leaves.
+Db = Annotated[AsyncSession, Depends(get_db, scope="function")]
+
+
 async def current_user(
-    session: Annotated[AsyncSession, Depends(get_db)],
+    session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> Principal:
     """Who is calling, or 401.

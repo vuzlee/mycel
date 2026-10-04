@@ -139,8 +139,9 @@ services:
 
   # Original uploaded files. S3 API, so real S3 is an endpoint change.
   # Chainguard's build: MinIO stopped publishing images and deleted minio/minio in 2026-09.
+  # Pinned by digest: `latest` moves, and a deleted tag is how minio/minio broke last time.
   minio:
-    image: cgr.dev/chainguard/minio:latest
+    image: cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-mycel}

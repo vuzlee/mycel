@@ -63,7 +63,20 @@ dependencies = [
 [project.optional-dependencies]
 ingest = [
   "docling>=2.15",
+  # Named so the CPU index below applies: the default wheel pulls ~3 GB of CUDA libraries
+  # for a worker that runs on CPU.
+  "torch",
+  "torchvision",
 ]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
 [dependency-groups]

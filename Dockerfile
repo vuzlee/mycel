@@ -36,6 +36,10 @@ ENV PATH="/app/.venv/bin:$PATH"
 # restart never downloads gigabytes. Only this target carries the weight.
 FROM python:3.11-slim AS ingest
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+# OpenCV, pulled in by docling's table model, links against these; slim has none of them.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libxcb1 libgl1 libglib2.0-0 \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock* ./
