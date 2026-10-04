@@ -1,0 +1,36 @@
+"""Cached notebook answers. The same question on an unchanged notebook costs nothing.
+
+Keyed by the notebook's version (its newest document change), so any upload, disable or
+delete makes every earlier answer unreachable without deleting anything. Cache server.
+"""
+
+import hashlib
+import json
+from typing import Any
+
+from mycel.infra.redis.client import get_cache_client
+
+TTL_SECONDS = 24 * 3600
+
+
+def normalise(question: str) -> str:
+    return " ".join(question.lower().split()).rstrip("?.! ")
+
+
+def _key(notebook_id: int, version: str, question: str) -> str:
+    digest = hashlib.sha256(normalise(question).encode()).hexdigest()[:32]
+    return f"answer:{notebook_id}:{version}:{digest}"
+
+
+async def get(notebook_id: int, version: str, question: str) -> dict[str, Any] | None:
+    raw = await (await get_cache_client()).get(_key(notebook_id, version, question))
+    if raw is None:
+        return None
+    found: dict[str, Any] = json.loads(raw)
+    return found
+
+
+async def put(notebook_id: int, version: str, question: str, result: dict[str, Any]) -> None:
+    await (await get_cache_client()).set(
+        _key(notebook_id, version, question), json.dumps(result), ex=TTL_SECONDS
+    )

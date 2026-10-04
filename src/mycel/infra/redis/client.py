@@ -29,6 +29,7 @@ from mycel.core.config import get_settings
 #: Keyed by the loop that opened the client as well as the URL — see the module docstring.
 _clients: dict[tuple[asyncio.AbstractEventLoop, str], redis.Redis] = {}
 
+
 def _forget_dead_loops() -> None:
     """Drop clients whose loop has closed, which is the only way they are ever unusable.
 
@@ -37,6 +38,7 @@ def _forget_dead_loops() -> None:
     """
     for key in [key for key in _clients if key[0].is_closed()]:
         del _clients[key]
+
 
 async def _client_for(url: str) -> redis.Redis:
     """One client per loop per URL, opened on first use.
@@ -50,13 +52,16 @@ async def _client_for(url: str) -> redis.Redis:
         _clients[key] = redis.from_url(url, decode_responses=True)
     return _clients[key]
 
+
 async def get_client() -> redis.Redis:
     """The client for in-flight state: results, budgets, event streams. `noeviction`."""
     return await _client_for(get_settings().redis_url)
 
+
 async def get_cache_client() -> redis.Redis:
     """The client for cached values, on a server that is allowed to evict them."""
     return await _client_for(get_settings().redis_cache_url)
+
 
 async def close_clients() -> None:
     """Close what this loop opened. Safe when nothing ever was.

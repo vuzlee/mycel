@@ -122,3 +122,29 @@ class ProgressSummary(BaseModel):
         default_factory=list,
         description="Limits on the summary itself, e.g. that the window was truncated.",
     )
+
+
+class Citation(BaseModel):
+    """One claim's source: which passage, and the words taken from it."""
+
+    id: str = Field(description="The passage label it came from, e.g. `c2`.")
+    quote: str = Field(
+        description="A short phrase copied word for word from that passage, 3 to 25 words."
+    )
+
+
+class NotebookAnswer(BaseModel):
+    """An answer drawn only from the passages it was given."""
+
+    answer: str = Field(
+        description=(
+            "Markdown. Every claim ends with its passage label in brackets, e.g. `[c2]`. "
+            "If the passages do not answer the question, say so and cite nothing."
+        )
+    )
+    citations: list[Citation] = Field(
+        default_factory=list, description="One entry per label used in `answer`."
+    )
+    answered: bool = Field(
+        description="False when the passages do not contain the answer.",
+    )

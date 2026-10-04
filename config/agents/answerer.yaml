@@ -1,0 +1,6 @@
+# Notebook answers (batch 062). One call per question, no tools, structured output.
+model_spec: cloud:gemini-3.5-flash-lite
+tool_calls_limit: 0
+fallback_specs:
+  - cloud:gemini-3.6-flash
+  - cloud:gemini-3.8-flash

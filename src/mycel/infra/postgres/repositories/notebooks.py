@@ -110,6 +110,14 @@ class NotebookRepository:
             )
         )
 
+    async def version(self, notebook_id: int) -> str:
+        """Changes whenever any document in the notebook changes."""
+        newest = await self._session.scalar(
+            select(func.max(Document.updated_at)).where(Document.notebook_id == notebook_id)
+        )
+        count = await self.count_documents(notebook_id)
+        return f"{count}-{newest.timestamp() if newest else 0}"
+
     # --- documents ---
 
     async def add_document(

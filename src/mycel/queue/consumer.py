@@ -36,6 +36,7 @@ from opentelemetry import context as otel_context
 from mycel.agents.core.exceptions import AgentError
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
+from mycel.domains import ask as ask_domain
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import results
@@ -115,6 +116,8 @@ async def _run(job: Job) -> None:
         await ingest_domain.run(job)
     elif job.kind is JobKind.DELETE_DOCUMENT:
         await ingest_domain.delete(job)
+    elif job.kind is JobKind.ASK:
+        await ask_domain.run(job)
     else:
         await chat_domain.run(job)
 
@@ -123,6 +126,8 @@ async def _record_failure(job: Job, error: str) -> None:
     """Each domain records its own failure where its caller looks for it."""
     if job.kind in INGEST_KINDS:
         await ingest_domain.record_failure(job, error)
+    elif job.kind is JobKind.ASK:
+        await ask_domain.record_failure(job, error)
     else:
         await chat_domain.record_failure(job, error)
 
