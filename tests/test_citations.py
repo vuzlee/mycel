@@ -54,3 +54,13 @@ class TestCheck:
         out = check(answer("FAISS [c2].", ("[C2]", "using FAISS")), PASSAGES)
 
         assert out.cited == ["c2"]
+
+    def test_a_markdown_link_matches_its_text(self) -> None:
+        """Found by 063 phase B: the model quoted the words, the passage held a link."""
+        passages = {
+            "c1": "Make sure you [Upgrade the FastAPI version](../v.md#up) to at least 0.95.1."
+        }
+        quote = "Upgrade the FastAPI version to at least 0.95.1"
+        out = check(answer("Upgrade first [c1].", ("c1", quote)), passages)
+
+        assert out.cited == ["c1"]

@@ -20,7 +20,11 @@ class Checked:
     dropped: list[str]
 
 
+_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+
+
 def _normalise(text: str) -> str:
+    text = _LINK.sub(r"\1", text)
     text = re.sub(r"-\s*\n\s*", "", text)
     text = re.sub(r"[*_`#|]", " ", text)
     return " ".join(text.lower().split())
