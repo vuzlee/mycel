@@ -1,0 +1,21 @@
+{
+  "questions": 30,
+  "answerable": 25,
+  "recall@5": 1.0,
+  "recall@10": 1.0,
+  "recall@20": 1.0,
+  "mrr": 0.821,
+  "latency_p50_ms": 28,
+  "latency_p95_ms": 62,
+  "threshold": 0.8073,
+  "threshold_keeps": "24/25",
+  "threshold_blocks_unanswerable": "0/5",
+  "misses": [],
+  "unanswerable_top_scores": [
+    0.8505,
+    0.8231,
+    0.8507,
+    0.8398,
+    0.815
+  ]
+}

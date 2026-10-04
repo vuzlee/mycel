@@ -1,0 +1,29 @@
+# Public English documents for the RAG benchmark (batch 063). Not committed: fetched by
+# scripts/fetch_rag_corpus.py and checked against these hashes. URLs are pinned to a commit
+# or an arXiv version so the bytes never change under the labels.
+
+documents:
+  - name: bert.pdf
+    url: https://arxiv.org/pdf/1810.04805v2
+    sha256: 5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e
+  - name: rag.pdf
+    url: https://arxiv.org/pdf/2005.11401v4
+    sha256: 23e3249e9a1e75418d82efecab0ea8c4d033b89c93742f63208d47ce01f21233
+  - name: fastapi-dependencies.md
+    url: https://raw.githubusercontent.com/fastapi/fastapi/5f9fc5c59a9bb54608aa35376715f3ba9708188e/docs/en/docs/tutorial/dependencies/index.md
+    sha256: 83319cc87297bb0959c5721a112133e6a3cd19900163c348a8ee6cf4818cd21f
+  - name: fastapi-async.md
+    url: https://raw.githubusercontent.com/fastapi/fastapi/5f9fc5c59a9bb54608aa35376715f3ba9708188e/docs/en/docs/async.md
+    sha256: 1d4397242a6b63f64dd5106e36999dff6deacdc79bb0bb157aae6cc36f8a2c44
+  - name: qdrant-capacity-planning.md
+    url: https://raw.githubusercontent.com/qdrant/landing_page/bb7f15b97237c97748fdbeea45499e2fcaba2377/qdrant-landing/content/documentation/capacity-planning.md
+    sha256: b21d21f47208d06896bddaf27a7bc39b516e18a6ada780d6d0b83a7cef17affd
+  - name: qdrant-common-errors.md
+    url: https://raw.githubusercontent.com/qdrant/landing_page/bb7f15b97237c97748fdbeea45499e2fcaba2377/qdrant-landing/content/documentation/common-errors.md
+    sha256: ae18f0f4bfc3a0b7987ac54410d71949243a291812f4f433685dad3515c3e56b
+  # The DOCX path: built from the Markdown page below by scripts/fetch_rag_corpus.py,
+  # so it is checked by its source hash rather than its own.
+  - name: fastapi-background-tasks.docx
+    url: https://raw.githubusercontent.com/fastapi/fastapi/5f9fc5c59a9bb54608aa35376715f3ba9708188e/docs/en/docs/tutorial/background-tasks.md
+    sha256: 7a34e7a4a7bd2cb9e0b465588b77cf007b0a5c8bdcf7530ff3619ff6b3642468
+    convert: docx

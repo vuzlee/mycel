@@ -279,6 +279,7 @@ class Settings(BaseSettings):
     document_max_attempts: int = 3
     document_stuck_seconds: int = 600
     ingest_worker_max_jobs: int = 20
+    document_min_score: float = 0.75
     #: Most one queued job may spend. The HTTP layer has its own ceiling in
     #: `api/dependencies.py`; a worker has no request to read one from, so it reads this.
     job_ceiling_usd: Decimal = Decimal("0.50")
