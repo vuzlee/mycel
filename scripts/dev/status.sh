@@ -28,6 +28,8 @@ else
 fi
 printf '%-12s %-9s consuming the job queue\n' worker \
   "$(alive worker && echo running || echo stopped)"
+printf '%-12s %-9s parsing and embedding documents\n' ingest \
+  "$(alive ingest && echo running || echo stopped)"
 printf '%-12s %-9s every SYNC_INTERVAL_SECONDS\n' scheduler \
   "$(alive scheduler && echo running || echo stopped)"
 

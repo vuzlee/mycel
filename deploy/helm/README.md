@@ -99,7 +99,7 @@ Then re-read the four URLs in it: `DATABASE_URL`, `RABBITMQ_URL`, `REDIS_URL` an
 minikube start --driver=docker
 minikube addons enable ingress
 
-docker build -t mycel:dev .
+docker build --target app -t mycel:dev .
 minikube image load mycel:dev          # no registry involved
 
 kubectl create secret generic mycel-secrets --from-env-file=.env

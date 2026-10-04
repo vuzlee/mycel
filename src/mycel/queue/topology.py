@@ -46,6 +46,20 @@ QUEUE = "jobs"
 RETRY_QUEUE = "jobs.retry"
 DEAD_QUEUE = "jobs.dlq"
 
+#: Document ingest has its own queue and its own worker: docling holds ~3-4 GB of RAM and
+#: minutes of CPU, and a chat question must never wait behind it.
+INGEST_QUEUE = "ingest"
+INGEST_RETRY_QUEUE = "ingest.retry"
+INGEST_DEAD_QUEUE = "ingest.dlq"
+
+
+def retry_queue_for(queue: str) -> str:
+    return INGEST_RETRY_QUEUE if queue == INGEST_QUEUE else RETRY_QUEUE
+
+
+def dead_queue_for(queue: str) -> str:
+    return INGEST_DEAD_QUEUE if queue == INGEST_QUEUE else DEAD_QUEUE
+
 
 @dataclass(frozen=True, slots=True)
 class Topology:
@@ -56,6 +70,7 @@ class Topology:
     jobs: AbstractQueue
     retry: AbstractQueue
     dead: AbstractQueue
+    ingest: AbstractQueue
 
 
 async def declare(channel: AbstractChannel) -> Topology:
@@ -66,30 +81,42 @@ async def declare(channel: AbstractChannel) -> Topology:
     """
     exchange = await channel.declare_exchange(EXCHANGE, ExchangeType.DIRECT, durable=True)
     dlx = await channel.declare_exchange(DLX, ExchangeType.DIRECT, durable=True)
-
-    jobs = await channel.declare_queue(
-        QUEUE,
-        durable=True,
-        arguments={"x-dead-letter-exchange": DLX, "x-dead-letter-routing-key": RETRY_QUEUE},
+    jobs, retry, dead = await _family(channel, exchange, dlx, QUEUE, RETRY_QUEUE, DEAD_QUEUE)
+    ingest, _, _ = await _family(
+        channel, exchange, dlx, INGEST_QUEUE, INGEST_RETRY_QUEUE, INGEST_DEAD_QUEUE
     )
-    await jobs.bind(exchange, routing_key=QUEUE)
+    return Topology(
+        exchange=exchange, dlx=dlx, jobs=jobs, retry=retry, dead=dead, ingest=ingest
+    )
 
-    # Dead-letters back to the main exchange once the TTL expires. Without the routing key
-    # override the message would keep its original one and loop straight back here.
+
+async def _family(
+    channel: AbstractChannel,
+    exchange: AbstractExchange,
+    dlx: AbstractExchange,
+    name: str,
+    retry_name: str,
+    dead_name: str,
+) -> tuple[AbstractQueue, AbstractQueue, AbstractQueue]:
+    """One work queue, its delayed-retry queue, and its dead-letter queue."""
+    work = await channel.declare_queue(
+        name,
+        durable=True,
+        arguments={"x-dead-letter-exchange": DLX, "x-dead-letter-routing-key": retry_name},
+    )
+    await work.bind(exchange, routing_key=name)
+
     retry = await channel.declare_queue(
-        RETRY_QUEUE,
+        retry_name,
         durable=True,
         arguments={
             "x-message-ttl": RETRY_DELAY_MS,
             "x-dead-letter-exchange": EXCHANGE,
-            "x-dead-letter-routing-key": QUEUE,
+            "x-dead-letter-routing-key": name,
         },
     )
-    await retry.bind(dlx, routing_key=RETRY_QUEUE)
+    await retry.bind(dlx, routing_key=retry_name)
 
-    # The end of the line: no TTL and no dead-letter target, so a message stays until
-    # somebody looks at it.
-    dead = await channel.declare_queue(DEAD_QUEUE, durable=True)
-    await dead.bind(dlx, routing_key=DEAD_QUEUE)
-
-    return Topology(exchange=exchange, dlx=dlx, jobs=jobs, retry=retry, dead=dead)
+    dead = await channel.declare_queue(dead_name, durable=True)
+    await dead.bind(dlx, routing_key=dead_name)
+    return work, retry, dead

@@ -36,6 +36,12 @@ class JobKind(StrEnum):
     """
 
     CHAT = "chat"
+    INGEST = "ingest"
+    DELETE_DOCUMENT = "delete_document"
+
+
+#: Kinds that run on the ingest worker rather than the chat worker.
+INGEST_KINDS = frozenset({JobKind.INGEST, JobKind.DELETE_DOCUMENT})
 
 
 class Job(BaseModel):

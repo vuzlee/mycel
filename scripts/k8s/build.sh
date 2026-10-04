@@ -15,7 +15,7 @@ need minikube
 TAG=${1:-dev}
 
 log "building mycel:$TAG"
-docker build -t "mycel:$TAG" "$ROOT"
+docker build --target app -t "mycel:$TAG" "$ROOT"
 
 log "loading it into minikube (this takes a minute)"
 minikube image load "mycel:$TAG"

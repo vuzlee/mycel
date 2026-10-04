@@ -53,7 +53,16 @@ from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import dependencies, health
 from mycel.api.middleware import RequestIdMiddleware
-from mycel.api.routes import auth, chat, dashboard, events, members, metrics, projects
+from mycel.api.routes import (
+    auth,
+    chat,
+    dashboard,
+    events,
+    members,
+    metrics,
+    notebooks,
+    projects,
+)
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
@@ -115,6 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(members.router)
     app.include_router(dashboard.router)
     app.include_router(chat.router)
+    app.include_router(notebooks.router)
     app.include_router(events.router)
     app.include_router(metrics.router)
 

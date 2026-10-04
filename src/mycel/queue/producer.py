@@ -16,10 +16,15 @@ from aio_pika import DeliveryMode, Message
 from mycel.core.logging import get_logger
 from mycel.queue import context, topology
 from mycel.queue.connection import channel
-from mycel.queue.job import Job
+from mycel.queue.job import INGEST_KINDS, Job
 from mycel.queue.retry import ATTEMPT_HEADER
 
 log = get_logger(__name__)
+
+
+def queue_for(job: Job) -> str:
+    """Which queue, and so which pool of workers, takes this kind of work."""
+    return topology.INGEST_QUEUE if job.kind in INGEST_KINDS else topology.QUEUE
 
 
 async def publish(job: Job) -> str:
@@ -50,7 +55,7 @@ async def publish(job: Job) -> str:
 
         # aio-pika waits for the broker's confirm by default, so this returning means the
         # broker has the message — not merely that it was written to a socket.
-        await topo.exchange.publish(message, routing_key=topology.QUEUE)
+        await topo.exchange.publish(message, routing_key=queue_for(job))
 
     log.info(
         "job published",

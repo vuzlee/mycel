@@ -30,12 +30,13 @@ fi
 
 spawn api       uv run uvicorn --factory mycel.api.app:create_app --port "$API_PORT"
 spawn worker    uv run python -m mycel.queue.consumer
+spawn ingest    "$ROOT/scripts/dev/ingest-loop.sh"
 spawn scheduler uv run python -m mycel.scheduler
 
 # Each one, before waiting on the API: a worker that died on a bad import is invisible
 # otherwise, and the stack would report itself up with nothing consuming the queue.
 failed=0
-for name in api worker scheduler; do settled "$name" || failed=1; done
+for name in api worker ingest scheduler; do settled "$name" || failed=1; done
 [[ $failed -eq 0 ]] || die "not everything came up — see the logs above, then: scripts/stack.sh dev down"
 
 # `/health/live`, not `/health`: the router has a prefix and no route at the bare path, so

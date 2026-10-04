@@ -51,6 +51,18 @@ dependencies = [
   # because the latter pulls in PyTorch — ~2.5 GiB for a model that is 130 MiB, and a
   # Dockerfile that takes minutes longer every build for a tier nothing else uses.
   "fastembed>=0.5",
+  # Notebook files in MinIO / S3.
+  "aioboto3>=13.0",
+  # File type by content, not by extension.
+  "filetype>=1.2",
+  # Multipart form parsing for uploads.
+  "python-multipart>=0.0.9",
+]
+
+# Only the ingest worker parses documents. docling pulls in torch, so the API image skips it.
+[project.optional-dependencies]
+ingest = [
+  "docling>=2.15",
 ]
 
 # Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
@@ -94,6 +106,19 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.11"
 strict = true
 files = ["src", "evals"]
+
+# Libraries without type information. Their surface is wrapped in one module each.
+[[tool.mypy.overrides]]
+module = [
+  "aioboto3", "aioboto3.*", "botocore.*", "filetype",
+  # The ingest extra; CI type-checks without it.
+  "docling.*", "docling_core.*", "transformers",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["mycel.infra.documents.*"]
+disable_error_code = ["attr-defined"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

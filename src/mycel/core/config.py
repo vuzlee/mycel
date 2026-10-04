@@ -262,6 +262,23 @@ class Settings(BaseSettings):
     #: Where fastembed keeps the downloaded ONNX weights. Named so a container can mount it
     #: and not re-download 130 MiB on every start.
     embedding_cache_dir: str = ".cache/fastembed"
+
+    # Notebooks: uploaded documents, chunked and embedded for question answering.
+    s3_endpoint_url: str = ""
+    s3_access_key: SecretStr | None = None
+    s3_secret_key: SecretStr | None = None
+    documents_bucket: str = "mycel-documents"
+    document_embedding_model: str = "jinaai/jina-embeddings-v2-small-en"
+    document_chunk_tokens: int = 500
+    document_table_max_tokens: int = 1500
+    document_max_bytes: int = 2 * 1024 * 1024
+    document_max_pages: int = 100
+    documents_per_notebook: int = 50
+    notebooks_per_user: int = 20
+    documents_in_flight_per_user: int = 5
+    document_max_attempts: int = 3
+    document_stuck_seconds: int = 600
+    ingest_worker_max_jobs: int = 20
     #: Most one queued job may spend. The HTTP layer has its own ceiling in
     #: `api/dependencies.py`; a worker has no request to read one from, so it reads this.
     job_ceiling_usd: Decimal = Decimal("0.50")

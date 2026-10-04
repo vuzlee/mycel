@@ -74,7 +74,8 @@ async def reject(
     """
     attempt = attempt_of(message) + 1
     dead = give_up or exhausted(message)
-    target = topology.DEAD_QUEUE if dead else topology.RETRY_QUEUE
+    origin = getattr(message, "routing_key", None) or topology.QUEUE
+    target = topology.dead_queue_for(origin) if dead else topology.retry_queue_for(origin)
 
     headers = dict(message.headers or {})
     headers[ATTEMPT_HEADER] = topology.MAX_ATTEMPTS if dead else attempt

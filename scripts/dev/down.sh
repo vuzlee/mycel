@@ -11,6 +11,7 @@ source "$ROOT/scripts/lib/hostproc.sh"
 
 reap api
 reap worker
+reap ingest
 reap scheduler
 sweep
 docker compose stop "${INFRA[@]}"

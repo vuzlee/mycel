@@ -3,7 +3,7 @@
 # The stack, in one command. Three ways to run the same application.
 #
 #   scripts/stack.sh dev up|down|status|logs <name>
-#   scripts/stack.sh compose up [monitoring] [vectors] | down | status
+#   scripts/stack.sh compose up [monitoring] | down | status
 #   scripts/stack.sh k8s build | up [monitoring] | down [--all] | status | secret
 #
 #   scripts/stack.sh doctor               what is configured, broken, or off on purpose

@@ -130,6 +130,26 @@ async def _qdrant(settings: Settings) -> str:
     return f"connected, {count.count} points"
 
 
+async def _minio(settings: Settings) -> str:
+    from mycel.infra.objects.client import s3
+
+    async with s3() as client:
+        buckets = (await client.list_buckets()).get("Buckets", [])
+    names = {b["Name"] for b in buckets}
+    if settings.documents_bucket not in names:
+        return "connected, no documents uploaded yet"
+    return f"connected, bucket {settings.documents_bucket}"
+
+
+async def _parser(settings: Settings) -> str:
+    """Whether this machine can run the ingest worker at all."""
+    import importlib.util
+
+    if importlib.util.find_spec("docling") is None:
+        raise RuntimeError("docling is not installed — uv sync --extra ingest")
+    return f"docling installed; embedding with {settings.document_embedding_model}"
+
+
 async def _jira(settings: Settings) -> str:
     """Whether a sync can actually run, which is a question about a person now.
 
@@ -182,6 +202,12 @@ async def run(settings: Settings | None = None) -> list[Check]:
             missing=None if env.qdrant_url.strip()
             else "not configured — rag_search is not offered to the model",
         ),
+        _probe(
+            "minio", "NOTEBOOKS", lambda: _minio(env),
+            missing=None if (env.s3_endpoint_url and env.s3_access_key and env.s3_secret_key)
+            else "not configured — notebooks cannot store uploads",
+        ),
+        _probe("ingest", "NOTEBOOKS", lambda: _parser(env), missing=None),
         _probe(
             "langfuse", "OBSERVABILITY", lambda: _langfuse(env),
             missing=None if (env.langfuse_public_key and env.langfuse_secret_key)

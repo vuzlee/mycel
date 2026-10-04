@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.domains.ingest import watchdog
 from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
@@ -18,6 +19,9 @@ SYNC_LOCK = "sync:jira"
 #: A second lock, so the sweep does not wait behind a long sync and vice versa. They share
 #: nothing and contend for nothing.
 SWEEP_LOCK = "sweep:sessions"
+
+WATCHDOG_LOCK = "watchdog:documents"
+WATCHDOG_INTERVAL_SECONDS = 60
 
 log = get_logger(__name__)
 
@@ -53,6 +57,13 @@ async def run_sweep_once() -> None:
             log.info("expired sessions swept", extra={"deleted": deleted})
 
 
+async def run_watchdog_once() -> None:
+    """Fail documents stuck processing; resend deletes that never finished."""
+    async with try_lock(WATCHDOG_LOCK) as acquired:
+        if acquired:
+            await watchdog()
+
+
 async def run_forever() -> None:
     """Tick both loops until the process is stopped.
 
@@ -75,6 +86,7 @@ async def run_forever() -> None:
     await asyncio.gather(
         _loop("sync", run_sync_once, settings.sync_interval_seconds),
         _loop("session sweep", run_sweep_once, settings.session_sweep_interval_seconds),
+        _loop("document watchdog", run_watchdog_once, WATCHDOG_INTERVAL_SECONDS),
     )
 
 

@@ -28,6 +28,7 @@ and paid for twice.
 
 import asyncio
 import signal
+import sys
 
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 from opentelemetry import context as otel_context
@@ -36,6 +37,7 @@ from mycel.agents.core.exceptions import AgentError
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
 from mycel.domains import chat as chat_domain
+from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import results
 from mycel.infra.redis.client import close_clients
 from mycel.llm.budget import BudgetExceeded
@@ -43,7 +45,7 @@ from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel, close_connection
-from mycel.queue.job import Job
+from mycel.queue.job import INGEST_KINDS, Job, JobKind
 
 log = get_logger(__name__)
 
@@ -87,18 +89,18 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
         # Out of money is not transient: another attempt spends money the job does not
         # have. Straight to the dead-letter queue.
         log.warning("job refused for budget", extra={"job_id": job.job_id})
-        await chat_domain.record_failure(job, str(exc))
+        await _record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except (AgentError, OSError) as exc:
         # A provider 503, a rate limit, a broken socket: worth another attempt in a minute.
         # The result is only marked failed on the last one, so a caller polling in between
         # sees `running` rather than a failure that is about to be retried.
         if retry.exhausted(message):
-            await chat_domain.record_failure(job, str(exc))
+            await _record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
     except Exception as exc:  # noqa: BLE001 - see the docstring: the loop must survive
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
-        await chat_domain.record_failure(job, repr(exc))
+        await _record_failure(job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
 
 
@@ -109,10 +111,23 @@ async def _run(job: Job) -> None:
     budget and stored its result — the order of steps for one kind of work, written in the
     transport layer, where a second kind would have meant a second copy of it.
     """
-    await chat_domain.run(job)
+    if job.kind is JobKind.INGEST:
+        await ingest_domain.run(job)
+    elif job.kind is JobKind.DELETE_DOCUMENT:
+        await ingest_domain.delete(job)
+    else:
+        await chat_domain.run(job)
 
 
-async def run_worker(stop: asyncio.Event | None = None) -> None:
+async def _record_failure(job: Job, error: str) -> None:
+    """Each domain records its own failure where its caller looks for it."""
+    if job.kind in INGEST_KINDS:
+        await ingest_domain.record_failure(job, error)
+    else:
+        await chat_domain.record_failure(job, error)
+
+
+async def run_worker(stop: asyncio.Event | None = None, queue: str = topology.QUEUE) -> None:
     """Consume until told to stop, then finish the job in flight and leave.
 
     Takes the stop event as an argument so a test can drive the loop without sending the
@@ -120,24 +135,37 @@ async def run_worker(stop: asyncio.Event | None = None) -> None:
     """
     stop = stop or asyncio.Event()
 
+    ingest = queue == topology.INGEST_QUEUE
+    budget = get_settings().ingest_worker_max_jobs if ingest else 0
+    done = 0
+
     async with channel() as ch:
-        await ch.set_qos(prefetch_count=PREFETCH)
+        await ch.set_qos(prefetch_count=1 if ingest else PREFETCH)
         topo = await topology.declare(ch)
 
         # `no_ack=False` is the default and stated anyway: the one setting here whose wrong
         # value loses jobs rather than merely slowing things down.
         async def _on_message(message: AbstractIncomingMessage) -> None:
+            nonlocal done
             await handle(message, topo.dlx)
+            done += 1
+            # docling keeps native memory it never gives back; exit and be restarted.
+            if budget and done >= budget:
+                log.info("ingest worker recycling", extra={"jobs": done})
+                stop.set()
 
-        await topo.jobs.consume(_on_message, no_ack=False)
-        log.info("worker ready", extra={"queue": topology.QUEUE, "prefetch": PREFETCH})
+        source = topo.ingest if ingest else topo.jobs
+        await source.consume(_on_message, no_ack=False)
+        log.info("worker ready", extra={"queue": queue})
 
         await stop.wait()
         log.info("worker stopping")
 
 
-def main() -> int:
-    """Entry point for `python -m mycel.queue.consumer`."""
+def main(argv: list[str] | None = None) -> int:
+    """Entry point for `python -m mycel.queue.consumer [--queue ingest]`."""
+    args = argv if argv is not None else sys.argv[1:]
+    queue = args[args.index("--queue") + 1] if "--queue" in args else topology.QUEUE
     settings = get_settings()
     setup_logging(settings.log_level)
     provider = setup_tracing(settings)
@@ -152,9 +180,10 @@ def main() -> int:
 
         # The worker is where jobs actually run, so it is the process whose numbers matter
         # most — and the only reason it has a port at all.
-        metrics = await serve_metrics(settings.metrics_port, settings.metrics_host)
+        port = settings.metrics_port + (2 if queue == topology.INGEST_QUEUE else 0)
+        metrics = await serve_metrics(port, settings.metrics_host)
         try:
-            await run_worker(stop)
+            await run_worker(stop, queue)
         finally:
             metrics.close()
             await close_connection()

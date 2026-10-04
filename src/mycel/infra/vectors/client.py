@@ -59,25 +59,22 @@ async def close() -> None:
         _client = None
 
 
-@lru_cache(maxsize=1)
-def _model():  # type: ignore[no-untyped-def]  # fastembed ships no stubs
-    """The embedding model, loaded once per process."""
+@lru_cache(maxsize=4)
+def _model(name: str):  # type: ignore[no-untyped-def]  # fastembed ships no stubs
+    """One loaded model per name, per process."""
     from fastembed import TextEmbedding
 
-    settings = get_settings()
-    log.info("loading embedding model", extra={"model": settings.embedding_model})
-    return TextEmbedding(
-        model_name=settings.embedding_model, cache_dir=settings.embedding_cache_dir
-    )
+    log.info("loading embedding model", extra={"model": name})
+    return TextEmbedding(model_name=name, cache_dir=get_settings().embedding_cache_dir)
 
 
-def embed(texts: Sequence[str]) -> list[list[float]]:
+def embed(texts: Sequence[str], model: str | None = None) -> list[list[float]]:
     """Text to vectors, in the order given.
 
-    Synchronous and CPU-bound — an async caller wraps it in `asyncio.to_thread`, the same
-    way `tools/mail.py` wraps `imaplib`. Blocking here blocks the whole event loop, and a
-    batch of fifty takes long enough to notice.
+    Synchronous and CPU-bound — an async caller wraps it in `asyncio.to_thread`.
+    `model` defaults to the gold-search model.
     """
     if not texts:
         return []
-    return [vector.tolist() for vector in _model().embed(list(texts))]
+    name = model or get_settings().embedding_model
+    return [vector.tolist() for vector in _model(name).embed(list(texts))]

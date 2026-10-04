@@ -1,8 +1,22 @@
-"""Bucket declarations and storage lifecycle.
+"""Bucket declarations. Created on first use if missing."""
 
-  mycel-bronze     original files downloaded from providers
-  mycel-reports    rendered reports (PDF, HTML)
+from mycel.core.config import get_settings
+from mycel.infra.objects.client import s3
 
-Set lifecycle rules from the start: without them a bucket only grows, and cost is the thing
-nobody looks at until the bill arrives.
-"""
+_ready: set[str] = set()
+
+
+def documents() -> str:
+    """Original files uploaded into notebooks."""
+    return get_settings().documents_bucket
+
+
+async def ensure(bucket: str) -> None:
+    """Create the bucket once per process. Safe when it already exists."""
+    if bucket in _ready:
+        return
+    async with s3() as client:
+        existing = await client.list_buckets()
+        if not any(b["Name"] == bucket for b in existing.get("Buckets", [])):
+            await client.create_bucket(Bucket=bucket)
+    _ready.add(bucket)

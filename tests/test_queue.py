@@ -458,3 +458,32 @@ class TestTheBudgetSurvivesARetry:
         # got, so this is not a transient failure.
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert store["job-1"]["status"] == "failed"
+
+
+class TestIngestJobs:
+    """Ingest work retries and parks in its own queues, and records its own failure."""
+
+    async def test_a_failing_ingest_job_retries_on_the_ingest_queue(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        from mycel.domains import ingest as ingest_domain
+
+        async def boom(job: Job) -> None:
+            raise OSError("minio went away")
+
+        failed: list[Job] = []
+
+        async def record(job: Job, error: str) -> None:
+            failed.append(job)
+
+        monkeypatch.setattr(ingest_domain, "run", boom)
+        monkeypatch.setattr(ingest_domain, "record_failure", record)
+        job = Job(kind=JobKind.INGEST, payload={"document_id": 1}, job_id="job-9")
+        message = FakeMessage(job.model_dump_json().encode())
+        message.routing_key = topology.INGEST_QUEUE  # type: ignore[attr-defined]
+        dlx = FakeExchange()
+
+        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.INGEST_RETRY_QUEUE]
+        assert failed == []
