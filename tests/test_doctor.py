@@ -181,3 +181,47 @@ class TestTheGateway:
         )
         with pytest.raises(RuntimeError, match="no model"):
             await doctor._gateway(_settings())
+
+
+class TestTheUpstreams:
+    """MYC-103: the gateway can be up while the LAN proxy behind it is down."""
+
+    def _info(self, *pairs: tuple[str, str | None]) -> dict[str, object]:
+        return {
+            "data": [
+                {"model_name": name, "litellm_params": {"api_base": base} if base else {}}
+                for name, base in pairs
+            ]
+        }
+
+    async def test_an_answering_upstream_is_ok_even_on_401(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import httpx2
+
+        async def info(settings: Settings, path: str) -> dict[str, object]:
+            return self._info(("claude", "http://proxy/v1"), ("gemini", None))
+
+        real = httpx2.AsyncClient
+        monkeypatch.setattr(doctor, "_ask_gateway", info)
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            lambda **kw: real(transport=httpx2.MockTransport(lambda r: httpx2.Response(401)), **kw),
+        )
+        assert await doctor._upstreams(_settings()) == "1 answering: claude"
+
+    async def test_a_silent_upstream_is_broken(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        async def info(settings: Settings, path: str) -> dict[str, object]:
+            return self._info(("claude", "http://127.0.0.1:9/v1"))
+
+        monkeypatch.setattr(doctor, "_ask_gateway", info)
+        with pytest.raises(RuntimeError, match="not answering: claude"):
+            await doctor._upstreams(_settings())
+
+    async def test_hosted_apis_are_not_probed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        async def info(settings: Settings, path: str) -> dict[str, object]:
+            return self._info(("gemini", None))
+
+        monkeypatch.setattr(doctor, "_ask_gateway", info)
+        assert await doctor._upstreams(_settings()) == "no self-hosted upstream"

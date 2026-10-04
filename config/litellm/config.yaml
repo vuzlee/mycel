@@ -35,11 +35,10 @@ model_list:
       api_base: os.environ/CLAUDE_PROXY_BASE_URL
       api_key: os.environ/CLAUDE_API_KEY_1
 
-  # Local vLLM (compose profile local-llm). Off unless that profile runs.
-  - model_name: qwen3-4b
-    litellm_params:
-      model: hosted_vllm/Qwen/Qwen2.5-3B-Instruct-AWQ
-      api_base: http://vllm:8000/v1
+  # Local vLLM is not listed: the local-llm profile is off and no agent names it. To use
+  # it, start that profile and add:
+  #   - model_name: qwen3-4b
+  #     litellm_params: {model: hosted_vllm/Qwen/Qwen2.5-3B-Instruct-AWQ, api_base: http://vllm:8000/v1}
 
 router_settings:
   routing_strategy: simple-shuffle

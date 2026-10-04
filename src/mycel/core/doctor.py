@@ -20,6 +20,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from mycel.core.config import Settings
 
@@ -89,8 +90,10 @@ async def _postgres(settings: Settings) -> str:
 
     async with session_scope() as session:
         count = await session.scalar(
-            text("select count(*) from information_schema.tables "
-                 "where table_schema in ('bronze','silver','gold','app')")
+            text(
+                "select count(*) from information_schema.tables "
+                "where table_schema in ('bronze','silver','gold','app')"
+            )
         )
     return f"connected, {count} tables"
 
@@ -181,19 +184,54 @@ async def _jira(settings: Settings) -> str:
 
 async def _gateway(settings: Settings) -> str:
     """The LiteLLM gateway answers and lists its models. Free: no model is called."""
+    names = sorted({m["id"] for m in (await _ask_gateway(settings, "/v1/models"))["data"]})
+    if not names:
+        raise RuntimeError("the gateway answers but serves no model")
+    return f"{len(names)} models: {', '.join(names)}"
+
+
+async def _upstreams(settings: Settings) -> str:
+    """Whether each self-hosted upstream behind the gateway answers at all.
+
+    No model is called, so this costs no quota. Hosted APIs (no `api_base`) are skipped:
+    their reachability is the provider's, not ours.
+    """
+    import httpx2
+
+    bases: dict[str, str] = {}
+    for entry in (await _ask_gateway(settings, "/model/info"))["data"]:
+        base = entry.get("litellm_params", {}).get("api_base")
+        if base:
+            bases.setdefault(base, entry["model_name"])
+    if not bases:
+        return "no self-hosted upstream"
+
+    down: list[str] = []
+    async with httpx2.AsyncClient(timeout=5) as client:
+        for base, model in sorted(bases.items(), key=lambda kv: kv[1]):
+            # Any HTTP answer, 401 included, means the host is up: the app holds no
+            # provider key, so it cannot ask for more than that without spending one.
+            try:
+                await client.get(f"{base.rstrip('/')}/models")
+            except Exception:  # noqa: BLE001 - no answer at all is the one failure
+                down.append(model)
+    if down:
+        raise RuntimeError(f"not answering: {', '.join(down)} — calls fall back")
+    return f"{len(bases)} answering: {', '.join(sorted(bases.values()))}"
+
+
+async def _ask_gateway(settings: Settings, path: str) -> dict[str, Any]:
     import httpx2
 
     key = settings.litellm_api_key.get_secret_value() if settings.litellm_api_key else ""
     async with httpx2.AsyncClient(timeout=5) as client:
         response = await client.get(
-            f"{settings.litellm_base_url.rstrip('/')}/v1/models",
+            f"{settings.litellm_base_url.rstrip('/')}{path}",
             headers={"authorization": f"Bearer {key}"},
         )
         response.raise_for_status()
-    names = sorted({m["id"] for m in response.json().get("data", [])})
-    if not names:
-        raise RuntimeError("the gateway answers but serves no model")
-    return f"{len(names)} models: {', '.join(names)}"
+    found: dict[str, Any] = response.json()
+    return found
 
 
 async def _langfuse(settings: Settings) -> str:
@@ -206,29 +244,42 @@ async def run(settings: Settings | None = None) -> list[Check]:
 
     jobs = [
         _probe("litellm", "MODELS", lambda: _gateway(env), missing=None),
+        _probe("upstreams", "MODELS", lambda: _upstreams(env), missing=None),
         _probe("postgres", "STORES", lambda: _postgres(env), missing=None),
         _probe("rabbitmq", "STORES", lambda: _rabbitmq(env), missing=None),
         _probe("redis", "STORES", lambda: _redis(env), missing=None),
         _probe(
-            "jira", "SOURCES", lambda: _jira(env),
-            missing=None if (env.jira_client_id and env.jira_client_secret and env.jira_project_key)
+            "jira",
+            "SOURCES",
+            lambda: _jira(env),
+            missing=None
+            if (env.jira_client_id and env.jira_client_secret and env.jira_project_key)
             else "not configured — the dashboard will be empty",
             timeout=REMOTE_TIMEOUT,
         ),
         _probe(
-            "qdrant", "SEARCH", lambda: _qdrant(env),
-            missing=None if env.qdrant_url.strip()
+            "qdrant",
+            "SEARCH",
+            lambda: _qdrant(env),
+            missing=None
+            if env.qdrant_url.strip()
             else "not configured — rag_search is not offered to the model",
         ),
         _probe(
-            "minio", "NOTEBOOKS", lambda: _minio(env),
-            missing=None if (env.s3_endpoint_url and env.s3_access_key and env.s3_secret_key)
+            "minio",
+            "NOTEBOOKS",
+            lambda: _minio(env),
+            missing=None
+            if (env.s3_endpoint_url and env.s3_access_key and env.s3_secret_key)
             else "not configured — notebooks cannot store uploads",
         ),
         _probe("ingest", "NOTEBOOKS", lambda: _parser(env), missing=None),
         _probe(
-            "langfuse", "OBSERVABILITY", lambda: _langfuse(env),
-            missing=None if (env.langfuse_public_key and env.langfuse_secret_key)
+            "langfuse",
+            "OBSERVABILITY",
+            lambda: _langfuse(env),
+            missing=None
+            if (env.langfuse_public_key and env.langfuse_secret_key)
             else "not configured — the app runs, nothing records what it did",
         ),
     ]
@@ -249,36 +300,62 @@ def _declared(env: Settings) -> list[Check]:
     out: list[Check] = []
 
     out.append(
-        Check("TOOLS", "web search", State.OK if env.tavily_api_key else State.OFF,
-              "key set" if env.tavily_api_key
-              else "not configured — web_search is not offered")
+        Check(
+            "TOOLS",
+            "web search",
+            State.OK if env.tavily_api_key else State.OFF,
+            "key set" if env.tavily_api_key else "not configured — web_search is not offered",
+        )
     )
     out.append(
-        Check("TOOLS", "mail", State.OK if env.gmail_app_password else State.OFF,
-              f"reading {env.gmail_address}" if env.gmail_app_password
-              else "not configured — read_mail is not offered")
+        Check(
+            "TOOLS",
+            "mail",
+            State.OK if env.gmail_app_password else State.OFF,
+            f"reading {env.gmail_address}"
+            if env.gmail_app_password
+            else "not configured — read_mail is not offered",
+        )
     )
     key = env.token_encryption_key
     configured = env.google_client_id and env.google_client_secret and key
     out.append(
-        Check("TOOLS", "calendar", State.OK if configured else State.OFF,
-              "per-user OAuth ready" if configured
-              else "not configured — the calendar tools are not offered")
+        Check(
+            "TOOLS",
+            "calendar",
+            State.OK if configured else State.OFF,
+            "per-user OAuth ready"
+            if configured
+            else "not configured — the calendar tools are not offered",
+        )
     )
     # Two switches, and off is a decision rather than a gap. A deployment that reads Jira
     # and does not write to it is a whole valid deployment, so writing OFF is not a fault.
     writes = bool(env.jira_client_id and env.jira_client_secret and key and env.jira_write_enabled)
     out.append(
-        Check("TOOLS", "jira writes", State.OK if writes else State.OFF,
-              ("on, as whoever is asking"
-               + (" — including create_project" if env.jira_allow_create_project else ""))
-              if writes else "off — the Jira write tools are not offered")
+        Check(
+            "TOOLS",
+            "jira writes",
+            State.OK if writes else State.OFF,
+            (
+                "on, as whoever is asking"
+                + (" — including create_project" if env.jira_allow_create_project else "")
+            )
+            if writes
+            else "off — the Jira write tools are not offered",
+        )
     )
 
     # The one with a default that is wrong as soon as the app is not on a laptop.
     if env.registration_invite_code is None and not env.allowed_domains:
-        out.append(Check("REGISTRATION", "who may sign up", State.BROKEN,
-                         "ANYONE who can reach the URL — set REGISTRATION_INVITE_CODE"))
+        out.append(
+            Check(
+                "REGISTRATION",
+                "who may sign up",
+                State.BROKEN,
+                "ANYONE who can reach the URL — set REGISTRATION_INVITE_CODE",
+            )
+        )
     else:
         how = []
         if env.registration_invite_code is not None:
