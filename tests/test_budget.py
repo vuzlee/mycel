@@ -92,3 +92,39 @@ class TestDeps:
     def test_child_is_a_separate_object(self) -> None:
         parent = MycelDeps(job_id="j", budget=JobBudget("j", Decimal("1.00")))
         assert parent.child() is not parent
+
+
+class TestPricingFromTheTable:
+    """MYC-102: pydantic-ai cannot price a model named by the gateway, so the job budget
+    falls back to the per-million-token table in config."""
+
+    def test_a_listed_model_is_priced_per_million_tokens(self) -> None:
+        from pydantic_ai.usage import RunUsage
+
+        from mycel.llm.budget import price_usd
+
+        prices = {"claude-sonnet-5": (Decimal("2"), Decimal("10"))}
+        usage = RunUsage(input_tokens=4_000, output_tokens=200)
+        assert price_usd(prices, "claude-sonnet-5", usage) == Decimal("0.010")
+
+    def test_an_unlisted_model_has_no_price(self) -> None:
+        from pydantic_ai.usage import RunUsage
+
+        from mycel.llm.budget import price_usd
+
+        assert price_usd({}, "gemini-3.6-flash", RunUsage(input_tokens=10)) is None
+
+    def test_the_table_fills_in_when_pydantic_ai_cannot(self) -> None:
+        b = JobBudget("j", Decimal("1.00"))
+        b.record(_usage(None, tokens=100), fallback_cost=Decimal("0.25"))
+        assert b.spent_usd == Decimal("0.25")
+
+    def test_pydantic_ais_own_price_wins(self) -> None:
+        b = JobBudget("j", Decimal("1.00"))
+        b.record(_usage("0.10", tokens=100), fallback_cost=Decimal("0.25"))
+        assert b.spent_usd == Decimal("0.10")
+
+    def test_the_ceiling_still_stops_a_gateway_model(self) -> None:
+        b = JobBudget("j", Decimal("0.50"))
+        with pytest.raises(BudgetExceeded):
+            b.record(_usage(None, tokens=100), fallback_cost=Decimal("0.60"))

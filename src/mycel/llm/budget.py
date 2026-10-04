@@ -107,7 +107,7 @@ class JobBudget:
             cost_limit=self.remaining_usd(),
         )
 
-    def record(self, usage: "RunUsage") -> None:
+    def record(self, usage: "RunUsage", fallback_cost: Decimal | None = None) -> None:
         """Charge one completed top-level run.
 
         Called from `runner.run` and nowhere else. Sub-agent tokens are already merged into
@@ -119,10 +119,11 @@ class JobBudget:
         """
         self.tokens += usage.total_tokens
         self.requests += usage.requests
-        # `cost` is None when the provider's price is unknown. Tokens are still recorded,
-        # so the run is visible in logs even when it cannot be priced.
-        if usage.cost is not None:
-            self.spent_usd += usage.cost
+        # `cost` is None when pydantic-ai cannot price the model, which is every model behind
+        # the gateway; the caller's price table fills in. Neither known: tokens only.
+        cost = usage.cost if usage.cost is not None else fallback_cost
+        if cost is not None:
+            self.spent_usd += Decimal(cost)
 
         if self.spent_usd >= self.ceiling_usd:
             raise BudgetExceeded(self.job_id, self.spent_usd, self.ceiling_usd)
@@ -135,3 +136,15 @@ class JobBudget:
 # seeds a `JobBudget` at the start of an attempt and writes the larger total back at the
 # end. An interface with one implementation and no second caller is a guess about the
 # future; this file keeps the arithmetic and lets the store live next to Redis.
+
+
+def price_usd(
+    prices: "dict[str, tuple[Decimal, Decimal]]", model: str, usage: "RunUsage"
+) -> Decimal | None:
+    """Cost of a run from a per-million-token table, or `None` for a model not in it."""
+    found = prices.get(model)
+    if found is None:
+        return None
+    per_input, per_output = found
+    million = Decimal(1_000_000)
+    return (usage.input_tokens * per_input + usage.output_tokens * per_output) / million

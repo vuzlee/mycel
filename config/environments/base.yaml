@@ -75,6 +75,12 @@ settings:
   # --- Models ---
   # The LiteLLM gateway every model call goes through. Models and keys: config/litellm/.
   litellm_base_url: http://localhost:4000
+  # USD per million tokens, [input, output], by gateway model name. pydantic-ai prices
+  # by the provider's own model id, which a gateway name is not, so the job budget falls
+  # back to this. A model missing here is counted in tokens but not in dollars.
+  # Gemini runs on free-tier keys, so it costs nothing and is not listed.
+  model_prices_usd:
+    claude-sonnet-5: [2.00, 10.00]
   # Most one queued job may spend.
   job_ceiling_usd: 0.50
 

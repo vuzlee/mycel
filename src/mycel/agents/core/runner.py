@@ -32,8 +32,10 @@ from pydantic_ai.models import Model
 from mycel.agents.core.emit import RUN_FINISHED, RUN_STARTED, RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
 from mycel.agents.core.model_builder import build_model
+from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.llm.budget import BudgetExceeded
+from mycel.llm.budget import BudgetExceeded, price_usd
+from mycel.llm.router import resolve
 from mycel.observability.metrics import tokens_spent_total
 
 if TYPE_CHECKING:
@@ -150,8 +152,9 @@ def _charge(deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage") -> Budge
     tokens_spent_total.labels(model=cfg.model_spec, direction="input").inc(usage.input_tokens)
     tokens_spent_total.labels(model=cfg.model_spec, direction="output").inc(usage.output_tokens)
 
+    model = resolve(cfg.model_spec).name
     try:
-        deps.budget.record(usage)
+        deps.budget.record(usage, price_usd(get_settings().model_prices_usd, model, usage))
         overdrawn = None
     except BudgetExceeded as exc:
         overdrawn = exc

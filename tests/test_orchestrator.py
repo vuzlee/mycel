@@ -130,9 +130,9 @@ class TestMoney:
         recorded: list[Any] = []
         original = deps.budget.record
 
-        def _record(usage: Any) -> Any:
+        def _record(usage: Any, fallback_cost: Any = None) -> Any:
             recorded.append(usage)
-            return original(usage)
+            return original(usage, fallback_cost)
 
         monkeypatch.setattr(deps.budget, "record", _record)
 

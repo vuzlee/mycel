@@ -309,8 +309,8 @@ class TestBookkeepingNeverMasks:
         overdraft is forced here rather than waited for."""
 
         class Overdrawing(JobBudget):
-            def record(self, usage: Any) -> None:
-                super().record(usage)
+            def record(self, usage: Any, fallback_cost: Decimal | None = None) -> None:
+                super().record(usage, fallback_cost)
                 raise BudgetExceeded(self.job_id, Decimal("9.99"), self.ceiling_usd)
 
         deps = MycelDeps(

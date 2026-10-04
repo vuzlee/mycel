@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     # provider keys live in `.env` and are read by the gateway, never by the app.
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: SecretStr | None = None
+    #: USD per million tokens, (input, output), by gateway model name.
+    model_prices_usd: dict[str, tuple[Decimal, Decimal]] = {}
 
     # Tools that reach outside the process. Optional on the same terms as the model keys:
     # an agent that never searches the web is a valid deployment, and `web_search` says so
