@@ -125,7 +125,7 @@ files = ["src", "evals"]
 module = [
   "aioboto3", "aioboto3.*", "botocore.*", "filetype",
   # The ingest extra; CI type-checks without it.
-  "docling.*", "docling_core.*", "transformers",
+  "docling.*", "docling_core.*", "docx", "transformers",
 ]
 ignore_missing_imports = true
 
