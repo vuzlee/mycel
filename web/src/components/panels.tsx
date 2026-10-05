@@ -158,7 +158,6 @@ export function SettingsPanel() {
     <>
       <section className="settings-zone">
         <h3 className="zone-title">Accounts</h3>
-        <p className="muted">Connected as you, per account.</p>
         <div className="settings-grid">
           {CONNECTIONS.map((p) => (
             <Connection key={p.id} provider={p} />
@@ -285,7 +284,13 @@ function Connection({ provider }: { provider: Provider }) {
 
   return (
     <section className="connection">
-      <h3 className="label">{provider.title}</h3>
+      <header className="connection-head">
+        <span className="connection-icon" aria-hidden>
+          {provider.icon}
+        </span>
+        <h4>{provider.title}</h4>
+        {status?.who && <span className="pill on">Connected</span>}
+      </header>
       {status === null && <p className="muted">Checking…</p>}
       {status && !status.configured && (
         <p className="muted">
@@ -294,23 +299,20 @@ function Connection({ provider }: { provider: Provider }) {
       )}
       {status?.configured && status.who && (
         <>
-          <div className="identity">
-            <span className="avatar big" aria-hidden>
-              {provider.icon}
+          <div className="connection-who">
+            <b>{status.who}</b>
+            <span className="muted">
+              since{" "}
+              {status.since ? new Date(status.since).toLocaleDateString() : "—"}
             </span>
-            <div>
-              <b>{status.who}</b>
-              <span className="muted">
-                Connected{" "}
-                {status.since
-                  ? new Date(status.since).toLocaleDateString()
-                  : ""}
-              </span>
-            </div>
           </div>
           {status.note && <p className="muted">{status.note}</p>}
           {failure && <p className="failure">{failure}</p>}
-          <button onClick={() => void drop()} disabled={busy}>
+          <button
+            className="outline"
+            onClick={() => void drop()}
+            disabled={busy}
+          >
             {busy && <Spinner className="spin" size={14} />}
             Disconnect
           </button>
@@ -325,7 +327,6 @@ function Connection({ provider }: { provider: Provider }) {
             </p>
           )}
           <button className="primary" onClick={provider.connect}>
-            {provider.icon}
             Connect {provider.title}
           </button>
         </>
