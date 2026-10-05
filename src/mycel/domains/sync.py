@@ -10,27 +10,30 @@ makes a failed sync safe to simply run again.
 Its main caller is `scheduler/` on a timer, not an endpoint: a sync takes as long as the
 provider takes, and nothing is waiting on the answer.
 
-**And a timer has nobody signed in**, which is why one person — the syncer, the first to
-connect Jira — lends their consent to every background read. One access token is built per
-sync and spent across it, so a tick costs one refresh rather than one per issue.
+**A timer has nobody signed in, so it reads as the deployment.** The service account in
+`JIRA_SERVICE_TOKEN` reads every project it may browse; no person's token is used, so
+nobody leaving can stop it. Each run is recorded in `app.sync_state`, success or failure,
+which is what `core/doctor.py` reads — a stopped sync and a quiet week look the same on a
+dashboard.
 
-That makes the syncer a single point of failure with a quiet failure mode: they leave, or
-revoke the app, and every tick fails while the dashboard merely looks like a quiet week. So
-a tick that fails for want of a token logs at `error`, not `warning`, and a tick that
-succeeds stamps `last_sync_at` — which is what `core/doctor.py` reads to say the thing out
-loud.
+After the data, access: every connected person's projects are asked of Jira again, so
+someone removed from a project there loses it here within one tick.
 """
 
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from mycel.core.config import get_settings
+from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
+from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.gold import GoldRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.vectors.client import configured as vectors_configured
 from mycel.observability.metrics import records_written, sync_duration_seconds
+from mycel.services import access
 from mycel.services.fetch import fetch_jira
-from mycel.services.jira_oauth import mark_synced, syncer_token
 from mycel.services.transform import transform
 from mycel.sources.jira import Auth
 
@@ -63,9 +66,8 @@ async def refetch_jira() -> SyncResult:
     Not on a schedule and not the ordinary path: this reads every issue in the project on
     every call. It is a migration step for the data, run once after a field is added.
     """
-    auth, _ = await _syncer_auth()
     async with session_scope() as session:
-        fetched = await fetch_jira(session, auth, since=None)
+        fetched = await fetch_jira(session, service_auth(), since=None)
 
     async with session_scope() as session:
         result = await transform(session, keys=fetched.keys)
@@ -93,15 +95,19 @@ async def sync_jira() -> SyncResult:
     transform must leave bronze intact, or the replay it exists for has nothing to replay.
     """
     started = time.monotonic()
-    auth, syncer_id = await _syncer_auth()
-    async with session_scope() as session:
-        fetched = await fetch_jira(session, auth)
+    try:
+        async with session_scope() as session:
+            fetched = await fetch_jira(session, service_auth())
 
-    async with session_scope() as session:
-        result = await transform(session, keys=fetched.keys)
+        async with session_scope() as session:
+            result = await transform(session, keys=fetched.keys)
+    except Exception as exc:
+        await _record(error=str(exc) or type(exc).__name__)
+        raise
 
     indexed = await _index_gold()
-    await mark_synced(syncer_id)
+    await _record()
+    refreshed = await access.refresh_everyone()
 
     # Observed after the transform, not in a `finally`: a sync that failed has no duration
     # worth plotting, and a row count from a half-run would read as data loss.
@@ -122,6 +128,7 @@ async def sync_jira() -> SyncResult:
             "items": result.items,
             "worklogs": result.worklogs,
             "indexed": indexed,
+            "access_refreshed": refreshed,
         },
     )
     return SyncResult(
@@ -134,16 +141,25 @@ async def sync_jira() -> SyncResult:
     )
 
 
-async def _syncer_auth() -> tuple[Auth, int]:
-    """The grant every background read runs on, and whose it is.
+def service_auth() -> Auth:
+    """The deployment's own Jira identity: the service account's token and its site.
 
-    Raises `NotConnected` when nobody holds the role or their consent has lapsed. It is
-    raised rather than swallowed so the scheduler's own handler logs it — and that handler
-    logs it at `error`, because "nobody has connected Jira" is not a transient failure that
-    the next tick fixes.
+    Raises `ConfigError` when either is missing. The scheduler logs it at `error`: with no
+    identity there is no sync, and the dashboard would only look quiet.
     """
-    token, cloud_id, user_id = await syncer_token()
-    return Auth(access_token=token, cloud_id=cloud_id), user_id
+    settings = get_settings()
+    if settings.jira_service_token is None or not settings.jira_cloud_id:
+        raise ConfigError("JIRA_SERVICE_TOKEN and JIRA_CLOUD_ID must be set for the sync to run")
+    return Auth(settings.jira_service_token.get_secret_value(), settings.jira_cloud_id)
+
+
+async def _record(error: str | None = None) -> None:
+    """Stamp this run in `app.sync_state`. Best-effort: a stamp must not fail a sync."""
+    try:
+        async with session_scope() as session:
+            await AppRepository(session).record_sync(datetime.now(UTC), error)
+    except Exception:
+        log.warning("could not record the sync run", exc_info=True)
 
 
 async def _index_gold() -> int:
@@ -164,16 +180,14 @@ async def _index_gold() -> int:
     if not vectors_configured():
         return 0
 
-    project = get_settings().jira_project_key
-    if not project:
-        return 0
-
     try:
         from mycel.infra.vectors import indexer
 
+        embedded = 0
         async with session_scope() as session:
-            result = await indexer.index_project(session, project)
-        return result.embedded
+            for project in await GoldRepository(session).projects():
+                embedded += (await indexer.index_project(session, project)).embedded
+        return embedded
     except Exception:
         log.warning("indexing gold failed; search is behind", exc_info=True)
         return 0

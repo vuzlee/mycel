@@ -72,10 +72,8 @@ config:
   LANGFUSE_BASE_URL: https://jp.cloud.langfuse.com
   METRICS_PORT: "9100"
   JIRA_BASE_URL: ""
-  JIRA_PROJECT_KEY: ""
   PUBLIC_BASE_URL: ""
   GOOGLE_CLIENT_ID: ""
-  GMAIL_ADDRESS: ""
 
 # The chart only references a Secret by name; the values are created outside git.
 # See templates/secret.yaml for how to create it.

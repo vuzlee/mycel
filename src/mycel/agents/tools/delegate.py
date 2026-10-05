@@ -55,7 +55,7 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.session import session_scope
 from mycel.services.analyze import render
 from mycel.services.gather import gather_progress
-from mycel.services.permission import can_read_project
+from mycel.services.permission import NotReadable, require
 
 log = get_logger(__name__)
 
@@ -113,12 +113,6 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
     return toolset
 
 
-#: Said for a project that does not exist and for one the asker was never granted, on
-#: purpose. Two different sentences would turn this tool into a way of finding out which
-#: projects exist by asking about them one at a time.
-_NO_SUCH_PROJECT = "project {project} does not exist or you do not have access to it"
-
-
 async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
     """Stop before reading, or raise `ToolFailed`.
 
@@ -129,10 +123,11 @@ async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
     No principal is no access. A run with nobody attached reads nothing here, the same as
     `run_sql` — see `agents/core/deps.py` for why `None` is closed rather than open.
     """
-    user = ctx.deps.principal
-    if user is None or not await can_read_project(user, project):
+    try:
+        await require(ctx.deps.principal, project)
+    except NotReadable as exc:
         log.info("project read refused", extra={"project": project, "job_id": ctx.deps.job_id})
-        raise ToolFailed("summariser", _NO_SUCH_PROJECT.format(project=project))
+        raise ToolFailed("summariser", str(exc)) from None
 
 
 async def _delegate(

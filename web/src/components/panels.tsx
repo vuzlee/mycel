@@ -344,15 +344,16 @@ function JiraSection() {
             is written until you have read it back and agreed to it, and nothing here can
             delete anything.
           </p>
-          {status.is_syncer && (
-            <p className="muted">
-              <b>Every background sync runs on this account.</b> Last sync{" "}
-              {status.last_sync_at
-                ? new Date(status.last_sync_at).toLocaleString()
-                : "never"}
-              . Disconnecting stops the syncing until somebody else connects.
-            </p>
-          )}
+          <p className="muted">
+            {status.projects.length > 0 ? (
+              <>
+                You can read <b>{status.projects.join(", ")}</b> — the projects Jira lets
+                you browse. It is asked again after every sync.
+              </>
+            ) : (
+              <>Jira lets this account browse no project, so there is nothing to show yet.</>
+            )}
+          </p>
           {failure && <p className="failure">{failure}</p>}
           <button onClick={() => void drop()} disabled={busy}>
             {busy && <Spinner className="spin" size={14} />}
@@ -369,18 +370,11 @@ function JiraSection() {
       {status?.configured && !status.display_name && (
         <>
           <p className="muted">
-            Connect one and you can say "comment on MYC-12 that it's done" or "create a task
-            for the login timeout, assign it to Nam" — written under your own name, after
-            you have read it back and agreed. Jira cannot correct the author of something
-            already written, which is why there is no shared account to fall back on.
+            Connect it to see the projects you can browse in Jira — Mycel asks Jira, and
+            shows you exactly those. You can also say "comment on PROJ-12 that it's done" or
+            "create a task for the login timeout" — written under your own name, after you
+            have read it back and agreed.
           </p>
-          {!status.syncer_exists && (
-            <p className="muted">
-              <b>Nobody has connected Jira yet</b>, so nothing is syncing and the dashboard
-              is empty. The first person to connect becomes the one every background sync
-              runs on.
-            </p>
-          )}
           {came === "failed" && (
             <p className="failure">That did not finish. Nothing was connected.</p>
           )}

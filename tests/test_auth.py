@@ -394,7 +394,7 @@ class TestWhoMayRegister:
 
 @needs_postgres
 class TestMembership:
-    """A row is a grant. No row, no access — the absent case is the closed one."""
+    """A row is access, and the rows are what Jira said. No row, no access."""
 
     async def test_a_new_account_may_read_nothing(self, session: AsyncSession) -> None:
         """Otherwise a person nobody has recorded anything about is an administrator."""
@@ -403,43 +403,36 @@ class TestMembership:
         assert await permission.readable_projects(user) == frozenset()
         assert await permission.can_read_project(user, "MYC") is False
 
-    async def test_a_grant_is_what_opens_one_project(self, session: AsyncSession) -> None:
+    async def test_jira_s_answer_becomes_the_access(self, session: AsyncSession) -> None:
         user = await auth.register(session, "mem2@example.com", PASSWORD)
 
-        await permission.grant(session, user.id, "MYC")
+        await AppRepository(session).replace_projects(user.id, ["MYC", "OPS"])
 
-        assert await AppRepository(session).projects_for(user.id) == frozenset({"MYC"})
+        assert await AppRepository(session).projects_for(user.id) == frozenset({"MYC", "OPS"})
 
-    async def test_granting_twice_is_not_an_error(self, session: AsyncSession) -> None:
+    async def test_a_project_lost_in_jira_is_lost_here(self, session: AsyncSession) -> None:
+        """Replaced, never merged: a merge would only ever add."""
         user = await auth.register(session, "mem3@example.com", PASSWORD)
+        repo = AppRepository(session)
+        await repo.replace_projects(user.id, ["MYC", "OPS"])
 
-        await permission.grant(session, user.id, "MYC")
-        await permission.grant(session, user.id, "MYC")
+        await repo.replace_projects(user.id, ["OPS"])
 
-        assert await AppRepository(session).projects_for(user.id) == frozenset({"MYC"})
+        assert await repo.projects_for(user.id) == frozenset({"OPS"})
 
-    async def test_revoking_leaves_the_others(self, session: AsyncSession) -> None:
+    async def test_nothing_from_jira_means_nothing_here(self, session: AsyncSession) -> None:
         user = await auth.register(session, "mem4@example.com", PASSWORD)
-        await permission.grant(session, user.id, "MYC")
-        await permission.grant(session, user.id, "OPS")
+        repo = AppRepository(session)
+        await repo.replace_projects(user.id, ["MYC"])
 
-        await permission.revoke(session, user.id, "MYC")
+        await repo.replace_projects(user.id, [])
 
-        assert await AppRepository(session).projects_for(user.id) == frozenset({"OPS"})
+        assert await repo.projects_for(user.id) == frozenset()
 
-    async def test_revoking_what_was_never_granted_is_not_an_error(
-        self, session: AsyncSession
-    ) -> None:
-        user = await auth.register(session, "mem5@example.com", PASSWORD)
-
-        await permission.revoke(session, user.id, "MYC")
-
-        assert await AppRepository(session).projects_for(user.id) == frozenset()
-
-    async def test_one_person_s_grant_is_not_another_s(self, session: AsyncSession) -> None:
+    async def test_one_person_s_access_is_not_another_s(self, session: AsyncSession) -> None:
         one = await auth.register(session, "mem6@example.com", PASSWORD)
         two = await auth.register(session, "mem7@example.com", PASSWORD)
-        await permission.grant(session, one.id, "MYC")
+        await AppRepository(session).replace_projects(one.id, ["MYC"])
 
         assert await AppRepository(session).projects_for(two.id) == frozenset()
 
@@ -538,100 +531,6 @@ class TestForgottenPasswords:
         ended = await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
 
         assert ended == 2
-
-
-@needs_postgres
-class TestMembersOf:
-    """The read behind the project-access screen."""
-
-    async def test_it_lists_everyone_granted_by_address(self, session: AsyncSession) -> None:
-        one = await auth.register(session, "am@example.com", PASSWORD)
-        two = await auth.register(session, "bm@example.com", PASSWORD)
-        await auth.register(session, "cm@example.com", PASSWORD)
-        await permission.grant(session, one.id, "MYC")
-        await permission.grant(session, two.id, "MYC")
-
-        members = await AppRepository(session).members_of("MYC")
-
-        assert [m.email for m in members] == ["am@example.com", "bm@example.com"]
-
-    async def test_a_project_nobody_has_is_empty(self, session: AsyncSession) -> None:
-        assert await AppRepository(session).members_of("NONE") == []
-
-
-@needs_postgres
-class TestProjectAccessOverHttp:
-    """The screen that replaced opening a shell. You may grant what you may read."""
-
-    @staticmethod
-    def _sign_in(client: TestClient, email: str) -> None:
-        created = client.post("/auth/register", json={"email": email, "password": PASSWORD})
-        assert created.status_code == 201, created.text
-        entered = client.post("/auth/login", json={"email": email, "password": PASSWORD})
-        assert entered.status_code == 200, entered.text
-
-    @staticmethod
-    def _grant(email: str, project: str) -> None:
-        """Straight to the database: somebody has to be first, and until migration 0007
-        has run on a real deployment that somebody is whoever runs this."""
-
-        async def work() -> None:
-            engine = create_async_engine(async_dsn(DSN))
-            async with async_sessionmaker(engine, expire_on_commit=False)() as db:
-                user = await AppRepository(db).user_by_email(email)
-                assert user is not None
-                await permission.grant(db, user.id, project)
-                await db.commit()
-            await engine.dispose()
-
-        asyncio.run(work())
-
-    def test_a_project_you_cannot_read_has_no_member_list(self, client: TestClient) -> None:
-        """404 rather than 403: someone who cannot read a project should not learn it
-        exists."""
-        self._sign_in(client, "outsider@example.com")
-
-        assert client.get("/projects/MYC/members").status_code == 404
-
-    def test_granting_lets_the_other_person_read_it(self, client: TestClient) -> None:
-        self._sign_in(client, "owner@example.com")
-        self._grant("owner@example.com", "MYC")
-        client.post("/auth/register", json={"email": "invited@example.com", "password": PASSWORD})
-
-        assert client.put("/projects/MYC/members/invited@example.com").status_code == 204
-
-        listed = client.get("/projects/MYC/members").json()
-        assert [m["email"] for m in listed] == ["invited@example.com", "owner@example.com"]
-
-    def test_granting_twice_is_the_same_end_state(self, client: TestClient) -> None:
-        self._sign_in(client, "owner2@example.com")
-        self._grant("owner2@example.com", "MYC")
-        client.post("/auth/register", json={"email": "twice@example.com", "password": PASSWORD})
-
-        client.put("/projects/MYC/members/twice@example.com")
-        assert client.put("/projects/MYC/members/twice@example.com").status_code == 204
-        assert len(client.get("/projects/MYC/members").json()) == 2
-
-    def test_revoking_takes_it_back(self, client: TestClient) -> None:
-        self._sign_in(client, "owner3@example.com")
-        self._grant("owner3@example.com", "MYC")
-        client.post("/auth/register", json={"email": "gone@example.com", "password": PASSWORD})
-        client.put("/projects/MYC/members/gone@example.com")
-
-        assert client.delete("/projects/MYC/members/gone@example.com").status_code == 204
-        assert [m["email"] for m in client.get("/projects/MYC/members").json()] == [
-            "owner3@example.com"
-        ]
-
-    def test_an_address_with_no_account_cannot_be_granted(self, client: TestClient) -> None:
-        """An account that exists before its owner does is an account nobody controls."""
-        self._sign_in(client, "owner4@example.com")
-        self._grant("owner4@example.com", "MYC")
-
-        assert client.put("/projects/MYC/members/stranger@example.com").status_code == 404
-
-    def test_signed_out_gets_nothing(self, client: TestClient) -> None:
-        assert client.get("/projects/MYC/members").status_code == 401
 
 
 @needs_postgres

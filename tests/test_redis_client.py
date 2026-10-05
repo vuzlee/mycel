@@ -20,9 +20,11 @@ from mycel.infra.redis import client as module
 
 pytestmark = pytest.mark.anyio
 
+
 @pytest.fixture(autouse=True)
 def empty() -> None:
     module._clients.clear()
+
 
 class TestOneClientPerLoop:
     async def test_the_same_loop_gets_the_same_client(self) -> None:
@@ -47,6 +49,7 @@ class TestOneClientPerLoop:
         asyncio.run(module.get_client())
         asyncio.run(module.get_client())
         assert len(module._clients) == 1
+
 
 class TestClosing:
     async def test_closing_forgets_what_it_closed(self) -> None:

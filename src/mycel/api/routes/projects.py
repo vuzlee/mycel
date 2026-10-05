@@ -19,7 +19,6 @@ from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import known_projects
 from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads, thread_turns
 from mycel.services.auth import Principal
-from mycel.services.permission import readable_projects
 
 router = APIRouter(tags=["projects"])
 
@@ -69,8 +68,7 @@ async def read_projects(user: Annotated[Principal, Depends(current_user)]) -> li
     A list of keys and nothing else. A project has no attributes of its own in gold — its
     counts belong to a window, and asking for a window is what `/dashboard` is for.
     """
-    allowed = await readable_projects(user)
-    return [key for key in await known_projects() if key in allowed]
+    return await known_projects(user)
 
 
 @router.get("/conversations", response_model=list[ThreadResponse])

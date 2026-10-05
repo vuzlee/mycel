@@ -9,7 +9,6 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.etl import normalise, promote
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
@@ -50,12 +49,11 @@ async def transform(session: AsyncSession, keys: Sequence[str] | None = None) ->
     instead of a rebuild from bronze wearing a different name.
     """
     bronze = BronzeRepository(session)
-    project = get_settings().jira_project_key or ""
 
     items = [
         row
         for row in (
-            normalise.from_jira_issue(payload, _project(payload, project))
+            normalise.from_jira_issue(payload, _project(payload))
             for payload in await bronze.issue_payloads(keys)
         )
         if row is not None
@@ -64,7 +62,7 @@ async def transform(session: AsyncSession, keys: Sequence[str] | None = None) ->
     worklogs = [
         row
         for row in (
-            normalise.from_jira_worklog(payload, by_key.get(str(payload.get("issue_key")), project))
+            normalise.from_jira_worklog(payload, _worklog_project(payload, by_key))
             for payload in await bronze.worklog_payloads(keys)
         )
         if row is not None
@@ -101,11 +99,22 @@ async def transform(session: AsyncSession, keys: Sequence[str] | None = None) ->
     )
 
 
-def _project(payload: dict[str, object], fallback: str) -> str:
-    """The project an issue belongs to, taken from its key rather than from configuration.
+def _worklog_project(payload: dict[str, object], by_key: dict[str, str]) -> str:
+    """A worklog's project: its issue's, or the issue key's prefix when the issue is not here."""
+    issue = str(payload.get("issue_key", ""))
+    return by_key.get(issue, issue.split("-", 1)[0])
 
-    `JIRA_PROJECT_KEY` may be empty, meaning "every project this account can see", and in
-    that case the key prefix is the only thing that says which one an issue came from.
+
+def _project(payload: dict[str, object]) -> str:
+    """The project an issue belongs to, read from the issue itself.
+
+    The sync reads every project the service account may browse, so configuration cannot
+    say which one an issue came from. Its own `fields.project.key` does; the key's prefix
+    is the fallback for a payload without it.
     """
+    fields = payload.get("fields")
+    project = fields.get("project") if isinstance(fields, dict) else None
+    if isinstance(project, dict) and project.get("key"):
+        return str(project["key"])
     key = str(payload.get("key", ""))
-    return key.split("-", 1)[0] if "-" in key else fallback
+    return key.split("-", 1)[0]

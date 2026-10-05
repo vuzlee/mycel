@@ -38,7 +38,8 @@ from mycel.api.dependencies import SESSION_COOKIE, Db, current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.notify import mail
-from mycel.services import auth, google_oauth, jira_oauth
+from mycel.services import access, auth, google_oauth, jira_oauth
+from mycel.services.permission import readable_projects
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -265,40 +266,31 @@ async def google_disconnect(user: Annotated[auth.Principal, Depends(current_user
 
 
 class JiraStatus(BaseModel):
-    """Whether a Jira account is attached, which one, and whether it drives the sync.
+    """Whether a Jira account is attached, which one, and the projects it opens here.
 
     `configured` is about the deployment rather than the person, as the Google one is.
-    `is_syncer` is about the deployment too, in a different way: it says this person's
-    grant is what every background sync runs on, so disconnecting stops the syncing.
+    `projects` is what Jira said this person may browse, the last time it was asked.
     """
 
     configured: bool
     display_name: str | None = None
     connected_at: str | None = None
-    is_syncer: bool = False
-    #: Whether anybody at all drives the sync. False with `configured` true means the
-    #: dashboard is going stale and the next person to connect fixes it.
-    syncer_exists: bool = False
-    #: When a background sync last succeeded on this grant, for the person who holds it.
-    last_sync_at: str | None = None
+    projects: list[str] = []
 
 
 @router.get("/jira", response_model=JiraStatus)
 async def jira_status(user: Annotated[auth.Principal, Depends(current_user)]) -> JiraStatus:
-    """Which Jira account this person has connected, if any, and who drives the sync."""
+    """Which Jira account this person has connected, if any, and what it lets them read."""
     if not jira_oauth.configured():
         return JiraStatus(configured=False)
     row = await jira_oauth.connected(user.id)
-    exists = await jira_oauth.syncer() is not None
     if row is None:
-        return JiraStatus(configured=True, syncer_exists=exists)
+        return JiraStatus(configured=True)
     return JiraStatus(
         configured=True,
         display_name=row.display_name,
         connected_at=row.connected_at.isoformat(),
-        is_syncer=row.is_syncer,
-        syncer_exists=exists,
-        last_sync_at=row.last_sync_at.isoformat() if row.last_sync_at else None,
+        projects=sorted(await readable_projects(user)),
     )
 
 
@@ -331,6 +323,9 @@ async def jira_callback(
     except Exception as exc:
         log.warning("jira connect failed", extra={"detail": str(exc)})
         return _back("jira_error=failed")
+    # Access at once rather than at the next sync: connecting is what the person did to see
+    # their projects, and fifteen minutes of an empty app would read as a broken connect.
+    await access.refresh(row.user_id)
     log.info("jira account connected", extra={"user_id": row.user_id})
     return _back("jira=connected")
 
@@ -339,7 +334,7 @@ async def jira_callback(
 async def jira_disconnect(user: Annotated[auth.Principal, Depends(current_user)]) -> None:
     """Disconnect. Atlassian is not told — it publishes no revoke endpoint for a 3LO
     refresh token, so the person finishes the job at id.atlassian.com and the screen
-    says so. Disconnecting the syncer stops the background sync."""
+    says so. Their project access goes with the token."""
     removed = await jira_oauth.disconnect(user.id)
     log.info("jira account disconnected", extra={"user_id": user.id, "removed": removed})
 

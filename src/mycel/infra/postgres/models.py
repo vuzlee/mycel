@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
-    Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -23,7 +23,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -353,33 +352,15 @@ class JiraAccount(Base):
     """One person's standing permission to read, and write to, Jira as themselves.
 
     The same shape as `GoogleAccount` and for the same reasons — one row per user, the
-    token encrypted before it arrives, no access token column. Two columns differ, and both
-    are about Jira rather than about OAuth.
+    token encrypted before it arrives, no access token column.
 
-    `cloud_id` is which Atlassian site the grant opens. A person may have consented to
-    several and the API is addressed per site, so the id is stored at connect time rather
-    than looked up on every call.
-
-    `is_syncer` is the one that carries weight. Background reading has nobody signed in, so
-    it runs on one person's refresh token, and that person is a role rather than a setting:
-    the first to connect takes it. Exactly one row may hold it, which is a partial unique
-    index rather than a check — "at most one true" is a statement about the table.
-
-    **Whoever holds it can stop the syncing by leaving.** Revoke their grant and the
-    scheduler fails every tick; `core/doctor.py` names the syncer for that reason, and a
-    tick that fails on a token logs at `error`.
+    It carries no background work. The sync runs on the deployment's service account; this
+    token is used only for what is *this person's*: asking Jira which projects they may
+    browse, and writing as them. `cloud_id` is which Atlassian site the grant opens.
     """
 
     __tablename__ = "jira_account"
-    __table_args__ = (
-        Index(
-            "uq_jira_account_syncer",
-            "is_syncer",
-            unique=True,
-            postgresql_where=text("is_syncer"),
-        ),
-        {"schema": APP},
-    )
+    __table_args__ = {"schema": APP}
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey(f"{APP}.user.id", ondelete="CASCADE"), primary_key=True
@@ -393,13 +374,26 @@ class JiraAccount(Base):
     #: As granted, not as asked for. A site may hand back less than the consent screen
     #: requested, and a tool that assumes otherwise fails at the write rather than here.
     scope: Mapped[str] = mapped_column(Text)
-    is_syncer: Mapped[bool] = mapped_column(Boolean, default=False)
     connected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    #: When a background sync last succeeded on this token. Null until one has. Read by
-    #: `doctor`, which is the only thing that can say "the syncer left and nobody noticed".
-    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SyncState(Base):
+    """How the last background sync went. One row, for the whole deployment.
+
+    The sync belongs to no person, so neither does its record. `doctor` reads it to tell a
+    sync that stopped from a week in which nothing happened — the two look the same on a
+    dashboard.
+    """
+
+    __tablename__ = "sync_state"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_sync_state_one_row"), {"schema": APP})
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class Conversation(Base):

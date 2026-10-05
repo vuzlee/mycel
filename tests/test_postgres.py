@@ -1259,26 +1259,15 @@ class TestAConnectedGoogleAccount:
 
 @needs_postgres
 class TestAConnectedJiraAccount:
-    """The Google table's twin, plus the one column that is not about OAuth.
-
-    `is_syncer` says this person's grant carries every background read. The rule is "at
-    most one", and it is a partial unique index rather than a branch in Python — two
-    people connecting at once both read "nobody holds it" and only one can hold it, and
-    the place that has to be right about that is the database.
-    """
+    """The Google table's twin. It carries no background work: the sync runs on the
+    deployment's service account, and this token only asks and writes as its owner."""
 
     async def _connect(
-        self,
-        repo: AppRepository,
-        email: str,
-        *,
-        syncer: bool,
-        account: str = "acct-1",
-        token: str = "sealed",
+        self, repo: AppRepository, email: str, *, account: str = "acct-1", token: str = "sealed"
     ) -> int:
         user = await repo.create_user(email, "x")
         await repo.upsert_jira_account(
-            user.id, account, "Nam Nguyen", "cloud-1", token, "read:jira-work", syncer
+            user.id, account, "Nam Nguyen", "cloud-1", token, "read:jira-work"
         )
         return user.id
 
@@ -1286,24 +1275,23 @@ class TestAConnectedJiraAccount:
         """The account id is the author of every write, and the cloud id addresses the
         site. Neither is in the token response, so both are kept at connect time."""
         repo = AppRepository(session)
-        user_id = await self._connect(repo, "jira@example.com", syncer=True)
+        user_id = await self._connect(repo, "jira@example.com")
 
         row = await repo.jira_account(user_id)
         assert row is not None
         assert (row.account_id, row.cloud_id) == ("acct-1", "cloud-1")
         assert row.display_name == "Nam Nguyen"
         assert row.refresh_token_encrypted == "sealed"
-        assert row.is_syncer is True
 
     async def test_reconnecting_replaces_the_token(self, session: AsyncSession) -> None:
         """A dead token sitting beside a live one is two answers to "whose grant"."""
         repo = AppRepository(session)
         user = await repo.create_user("again@example.com", "x")
         await repo.upsert_jira_account(
-            user.id, "acct-1", "Nam", "cloud-1", "first", "read:jira-work", False
+            user.id, "acct-1", "Nam", "cloud-1", "first", "read:jira-work"
         )
         await repo.upsert_jira_account(
-            user.id, "acct-1", "Nam Nguyen", "cloud-1", "second", "read:jira-work", False
+            user.id, "acct-1", "Nam Nguyen", "cloud-1", "second", "read:jira-work"
         )
 
         row = await repo.jira_account(user.id)
@@ -1311,83 +1299,31 @@ class TestAConnectedJiraAccount:
         assert row.refresh_token_encrypted == "second"
         assert row.display_name == "Nam Nguyen"
 
-    async def test_the_syncer_keeps_the_role_when_they_reconnect(
-        self, session: AsyncSession
-    ) -> None:
-        """A reconnect must not quietly cost somebody the role, which would stop the
-        syncing in the middle of fixing it."""
-        repo = AppRepository(session)
-        user_id = await self._connect(repo, "keeps@example.com", syncer=True)
-        await repo.upsert_jira_account(
-            user_id, "acct-1", "Nam", "cloud-1", "fresh", "read:jira-work", False
-        )
-
-        row = await repo.jira_account(user_id)
-        assert row is not None
-        assert row.is_syncer is True
-
-    async def test_only_one_account_can_be_the_syncer(self, session: AsyncSession) -> None:
-        """Enforced in the database, because two processes can both read "nobody holds
-        it" and a Python check cannot see the other one."""
-        from sqlalchemy.exc import IntegrityError
-
-        repo = AppRepository(session)
-        await self._connect(repo, "first@example.com", syncer=True)
-
-        with pytest.raises(IntegrityError):
-            await self._connect(repo, "second@example.com", syncer=True, account="acct-2")
-
-    async def test_everyone_else_connects_without_taking_the_role(
+    async def test_everyone_connected_is_listed_for_the_refresh(
         self, session: AsyncSession
     ) -> None:
         repo = AppRepository(session)
-        first = await self._connect(repo, "syncer@example.com", syncer=True)
-        second = await self._connect(repo, "plain@example.com", syncer=False, account="acct-2")
+        first = await self._connect(repo, "one@example.com")
+        second = await self._connect(repo, "two@example.com", account="acct-2")
 
-        held = await repo.jira_syncer()
-        assert held is not None
-        assert held.user_id == first
-        assert (await repo.jira_account(second)) is not None
+        assert set(await repo.jira_connected_users()) >= {first, second}
 
-    async def test_nobody_connected_means_no_syncer(self, session: AsyncSession) -> None:
-        """Not a bug and not a normal state either: it means the scheduler has no token
-        and the dashboard is going stale. `doctor` is what says so out loud."""
+    async def test_disconnecting_takes_the_access_with_it(self, session: AsyncSession) -> None:
+        """The access came from Jira on this token; with no token nothing keeps it true."""
         repo = AppRepository(session)
-
-        assert await repo.jira_syncer() is None
-        assert await repo.has_jira_syncer() is False
-
-    async def test_a_successful_sync_is_stamped(self, session: AsyncSession) -> None:
-        """The only way to tell a syncer who left from a week in which nothing happened."""
-        repo = AppRepository(session)
-        user_id = await self._connect(repo, "stamp@example.com", syncer=True)
-        assert (await repo.jira_account(user_id)) is not None
-        assert (await repo.jira_account(user_id)).last_sync_at is None  # type: ignore[union-attr]
-
-        await repo.mark_jira_synced(user_id, datetime(2026, 10, 2, 9, tzinfo=UTC))
-
-        row = await repo.jira_account(user_id)
-        assert row is not None
-        assert row.last_sync_at == datetime(2026, 10, 2, 9, tzinfo=UTC)
-
-    async def test_disconnecting_the_syncer_leaves_nobody_syncing(
-        self, session: AsyncSession
-    ) -> None:
-        """The honest outcome. Handing the role on would be choosing, for somebody else,
-        whose name the next sync runs under."""
-        repo = AppRepository(session)
-        user_id = await self._connect(repo, "leaving@example.com", syncer=True)
+        user_id = await self._connect(repo, "leaving@example.com")
+        await repo.replace_projects(user_id, ["MYC"])
 
         assert await repo.delete_jira_account(user_id) is True
-        assert await repo.jira_syncer() is None
+        assert await repo.projects_for(user_id) == frozenset()
 
     async def test_a_rotated_refresh_token_replaces_the_spent_one(
         self, session: AsyncSession
     ) -> None:
-        """Atlassian retires a refresh token once it is spent. Keeping the old one works
-        once and then stops every sync, so the successor has to land in the row."""
+        """Atlassian retires a refresh token once it is spent, so the successor has to land
+        in the row or the next use of this person's grant fails."""
         repo = AppRepository(session)
-        user_id = await self._connect(repo, "rotate@example.com", syncer=True, token="old")
+        user_id = await self._connect(repo, "rotate@example.com", token="old")
 
         locked = await repo.jira_account_locked(user_id)
         assert locked is not None
@@ -1396,10 +1332,36 @@ class TestAConnectedJiraAccount:
         row = await repo.jira_account(user_id)
         assert row is not None
         assert row.refresh_token_encrypted == "new"
-        assert row.is_syncer is True
 
     async def test_disconnecting_twice_is_not_an_error(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
         user = await repo.create_user("twice-jira@example.com", "x")
 
         assert await repo.delete_jira_account(user.id) is False
+
+
+@needs_postgres
+class TestTheSyncRecord:
+    """The sync belongs to no person, so its record is one row of its own."""
+
+    async def test_before_any_run_there_is_nothing(self, session: AsyncSession) -> None:
+        state = await AppRepository(session).sync_state()
+        assert (state.last_success_at, state.last_error) == (None, None)
+
+    async def test_a_failure_keeps_the_last_success(self, session: AsyncSession) -> None:
+        """A stopped sync must not erase when it last worked — that is what dates it."""
+        repo = AppRepository(session)
+        ok = datetime(2026, 10, 6, 9, tzinfo=UTC)
+        await repo.record_sync(ok)
+        await repo.record_sync(datetime(2026, 10, 6, 10, tzinfo=UTC), "401 from Jira")
+
+        state = await repo.sync_state()
+        assert state.last_success_at == ok
+        assert state.last_error == "401 from Jira"
+
+    async def test_a_success_clears_the_error(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        await repo.record_sync(datetime(2026, 10, 6, 10, tzinfo=UTC), "401 from Jira")
+        await repo.record_sync(datetime(2026, 10, 6, 11, tzinfo=UTC))
+
+        assert (await repo.sync_state()).last_error is None

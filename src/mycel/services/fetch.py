@@ -3,10 +3,9 @@
 No processing, no cleaning — keeping the original means a bad transform can be re-run
 from bronze instead of hitting the provider again.
 
-**Jira is read on the syncer's consent, and the `Auth` arrives as an argument.** A timer
-has nobody signed in, so one person's grant carries every background read — see
-`services/jira_oauth.py`. It is passed in rather than fetched here so that one sync builds
-one access token and spends it across every call it makes, instead of refreshing per issue.
+**The `Auth` arrives as an argument.** A timer has nobody signed in, so the sync reads as
+the deployment's service account (`domains/sync.py`). Passed in rather than built here, so
+one sync spends one identity across every call it makes.
 """
 
 from dataclasses import dataclass
@@ -15,7 +14,6 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.models import JiraIssue
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
@@ -81,13 +79,14 @@ async def fetch_jira(
 
 
 def _jql(since: datetime | None) -> str:
-    """Which issues to ask for. Project first, so a shared site is not read wholesale."""
-    project = get_settings().jira_project_key
-    clauses = [f"project = {project}"] if project else []
-    if since is not None:
-        clauses.append(f'updated >= "{since.strftime(JQL_STAMP)}"')
-    where = " AND ".join(clauses)
-    return f"{where} ORDER BY updated ASC" if where else "ORDER BY updated ASC"
+    """Which issues to ask for: everything the service account may browse, since a time.
+
+    Which projects is Jira's answer, not configuration — a project the account is added to
+    is synced from the next tick, and one it loses stops arriving.
+    """
+    if since is None:
+        return "ORDER BY updated ASC"
+    return f'updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'
 
 
 async def _watermark(session: AsyncSession) -> datetime | None:

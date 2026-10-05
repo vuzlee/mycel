@@ -7,7 +7,6 @@ dev/            app on the host, stores in compose
 compose/        everything in containers
 k8s/            the chart on minikube
 data/           talks to the data or the repo, not to a mode
-tools/          one-off jobs: grant the first person a project
 ```
 
 ## Why a directory per mode

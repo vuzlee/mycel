@@ -9,6 +9,7 @@ All SQL for `app` lives here. A row's expiry is *not* one of the rules enforced 
 see `session_by_id` for why the caller decides what "expired" means.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -25,6 +26,7 @@ from mycel.infra.postgres.models import (
     Membership,
     PasswordReset,
     Session,
+    SyncState,
     Turn,
     User,
 )
@@ -80,12 +82,20 @@ class GoogleAccountRow:
     connected_at: datetime
 
 
+@dataclass(frozen=True, slots=True)
+class SyncStateRow:
+    """How the last background sync went. All `None` before the first run."""
+
+    last_success_at: datetime | None
+    last_failure_at: datetime | None
+    last_error: str | None
+
+
 @dataclass(frozen=True)
 class JiraAccountRow:
     """One person's connected Jira account.
 
-    Carries the token still encrypted, as `GoogleAccountRow` does. `is_syncer` is what the
-    settings screen shows and what `domains/sync.py` looks for: at most one row has it.
+    Carries the token still encrypted, as `GoogleAccountRow` does.
     """
 
     user_id: int
@@ -94,9 +104,7 @@ class JiraAccountRow:
     cloud_id: str
     refresh_token_encrypted: str
     scope: str
-    is_syncer: bool
     connected_at: datetime
-    last_sync_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -213,32 +221,23 @@ class AppRepository:
         )
         return frozenset(rows)
 
-    async def grant_project(self, user_id: int, project: str) -> None:
-        """Give someone a project. Granting twice is not an error."""
-        await self._session.execute(
-            insert(Membership)
-            .values(user_id=user_id, project=project)
-            .on_conflict_do_nothing(constraint="uq_membership_user_project")
-        )
+    async def replace_projects(self, user_id: int, projects: Iterable[str]) -> None:
+        """Make this person's grants exactly `projects`, which came from Jira.
 
-    async def revoke_project(self, user_id: int, project: str) -> None:
-        """Take it back. Revoking what was never granted is not an error."""
-        await self._session.execute(
-            delete(Membership).where(Membership.user_id == user_id, Membership.project == project)
-        )
+        Replaced, never merged: a project they lost in Jira must leave here too, and a
+        merge would only ever add.
+        """
+        await self._session.execute(delete(Membership).where(Membership.user_id == user_id))
+        rows = [{"user_id": user_id, "project": p} for p in sorted(set(projects))]
+        if rows:
+            await self._session.execute(insert(Membership).values(rows))
 
-    async def members_of(self, project: str) -> list[UserRow]:
-        """Everyone granted one project, by address. One join rather than a list of ids
-        the caller then has to resolve one at a time."""
+    async def jira_connected_users(self) -> list[int]:
+        """Everyone with a Jira grant, whose access a sync refreshes."""
         rows = await self._session.scalars(
-            select(User)
-            .join(Membership, Membership.user_id == User.id)
-            .where(Membership.project == project)
-            .order_by(User.email)
+            select(JiraAccount.user_id).order_by(JiraAccount.user_id)
         )
-        return [_user(row) for row in rows]
-
-    # -- google accounts -----------------------------------------------------
+        return list(rows)
 
     async def upsert_google_account(
         self, user_id: int, email: str, refresh_token_encrypted: str, scope: str
@@ -290,14 +289,8 @@ class AppRepository:
         cloud_id: str,
         refresh_token_encrypted: str,
         scope: str,
-        is_syncer: bool,
     ) -> None:
-        """Attach a Jira account, replacing whatever this person had connected before.
-
-        `is_syncer` is only ever raised here, never lowered: a reconnect by the syncer must
-        keep the role, and a reconnect by anybody else must not quietly take it. Deciding
-        who gets it is `services/jira_oauth.py`'s — this writes what it decided.
-        """
+        """Attach a Jira account, replacing whatever this person had connected before."""
         stmt = insert(JiraAccount).values(
             user_id=user_id,
             account_id=account_id,
@@ -305,7 +298,6 @@ class AppRepository:
             cloud_id=cloud_id,
             refresh_token_encrypted=refresh_token_encrypted,
             scope=scope,
-            is_syncer=is_syncer,
         )
         await self._session.execute(
             stmt.on_conflict_do_update(
@@ -316,7 +308,6 @@ class AppRepository:
                     "cloud_id": stmt.excluded.cloud_id,
                     "refresh_token_encrypted": stmt.excluded.refresh_token_encrypted,
                     "scope": stmt.excluded.scope,
-                    "is_syncer": JiraAccount.is_syncer.op("OR")(stmt.excluded.is_syncer),
                     "connected_at": func.now(),
                 },
             )
@@ -347,33 +338,32 @@ class AppRepository:
             .values(refresh_token_encrypted=sealed)
         )
 
-    async def jira_syncer(self) -> JiraAccountRow | None:
-        """The account every background sync runs on, or `None` if nobody has connected.
+    async def sync_state(self) -> SyncStateRow:
+        """How the last background sync went. Empty before the first one."""
+        row = await self._session.get(SyncState, 1)
+        if row is None:
+            return SyncStateRow(None, None, None)
+        return SyncStateRow(row.last_success_at, row.last_failure_at, row.last_error)
 
-        `None` is not a bug and not a normal state either: it means the scheduler has no
-        token and the dashboard is going stale. `doctor` is what says so out loud.
-        """
-        row = await self._session.scalar(select(JiraAccount).where(JiraAccount.is_syncer))
-        return _jira(row) if row else None
-
-    async def has_jira_syncer(self) -> bool:
-        """Whether the syncer role is taken. The question a new connection asks."""
-        held = await self._session.scalar(select(JiraAccount.user_id).where(JiraAccount.is_syncer))
-        return held is not None
-
-    async def mark_jira_synced(self, user_id: int, at: datetime) -> None:
-        """Record that a background sync succeeded on this token. Best-effort."""
+    async def record_sync(self, at: datetime, error: str | None = None) -> None:
+        """Stamp one run: a success clears the error, a failure keeps the last success."""
+        values: dict[str, object] = (
+            {"last_success_at": at, "last_error": None}
+            if error is None
+            else {"last_failure_at": at, "last_error": error[:2000]}
+        )
+        stmt = insert(SyncState).values(id=1, **values)
         await self._session.execute(
-            update(JiraAccount).where(JiraAccount.user_id == user_id).values(last_sync_at=at)
+            stmt.on_conflict_do_update(index_elements=[SyncState.id], set_=values)
         )
 
     async def delete_jira_account(self, user_id: int) -> bool:
         """Disconnect. False when there was nothing to disconnect.
 
-        The syncer role goes with the row, which is the honest outcome: no token, no
-        syncing. Handing it to somebody else would be choosing on their behalf whose name
-        the next sync runs under.
+        Their project access goes with it: it came from Jira on this token, and with no
+        token there is nothing to keep it true.
         """
+        await self._session.execute(delete(Membership).where(Membership.user_id == user_id))
         result = await self._session.execute(
             delete(JiraAccount).where(JiraAccount.user_id == user_id)
         )
@@ -593,9 +583,7 @@ def _jira(row: JiraAccount) -> JiraAccountRow:
         cloud_id=row.cloud_id,
         refresh_token_encrypted=row.refresh_token_encrypted,
         scope=row.scope,
-        is_syncer=row.is_syncer,
         connected_at=row.connected_at,
-        last_sync_at=row.last_sync_at,
     )
 
 

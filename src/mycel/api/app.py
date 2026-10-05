@@ -6,7 +6,6 @@ knows which routers the system has:
     include_router(health.router)
     include_router(auth.router)
     include_router(projects.router)
-    include_router(members.router)
     include_router(dashboard.router)
     include_router(chat.router)
     include_router(events.router)
@@ -59,7 +58,6 @@ from mycel.api.routes import (
     dashboard,
     documents,
     events,
-    members,
     metrics,
     projects,
 )
@@ -121,7 +119,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
-    app.include_router(members.router)
     app.include_router(dashboard.router)
     app.include_router(chat.router)
     app.include_router(documents.router)

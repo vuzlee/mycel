@@ -19,6 +19,7 @@ host, or dies on the first one, is a doctor nobody runs twice.
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -154,32 +155,42 @@ async def _parser(settings: Settings) -> str:
 
 
 async def _jira(settings: Settings) -> str:
-    """Whether a sync can actually run, which is a question about a person now.
+    """Whether the sync's own identity works, and how its last run went.
 
-    Jira is read on one person's consent — the syncer's. So "is Jira configured" is no
-    longer enough: a deployment with a client, a key and nobody connected is one where
-    every tick fails and the dashboard quietly ages. The answer names who holds the role
-    and when they last succeeded, because that is the only way to tell a syncer who left
-    from a week in which nothing happened.
+    Asked with the service account's token, the one the sync uses — a person's working
+    token says nothing about whether the background reads can run. Free: one project list.
     """
-    from mycel.services.jira_oauth import syncer, syncer_token
+    from mycel.domains.sync import service_auth
+    from mycel.infra.postgres.repositories.app import AppRepository
+    from mycel.infra.postgres.session import session_scope
     from mycel.sources import jira
 
-    who = await syncer()
-    if who is None:
+    projects = await jira.browsable_projects(service_auth())
+    if not projects:
         raise RuntimeError(
-            "nobody has connected Jira — no sync can run. The first person to connect in "
-            "Settings becomes the syncer."
+            "the service account can browse no project — add it to each project as Viewer"
         )
+    async with session_scope() as session:
+        state = await AppRepository(session).sync_state()
+    last = state.last_success_at.strftime("%Y-%m-%d %H:%M") if state.last_success_at else "never"
+    if state.last_error and (
+        state.last_success_at is None
+        or (state.last_failure_at and state.last_failure_at > state.last_success_at)
+    ):
+        raise RuntimeError(f"last sync failed: {state.last_error[:160]} (last success {last})")
+    return f"service account browses {', '.join(projects)}; last sync {last}"
 
-    token, cloud_id, _ = await syncer_token()
-    jql = f"project = {settings.jira_project_key} ORDER BY created DESC"
-    issues = await jira.search_issues(jira.Auth(token, cloud_id), jql)
-    last = who.last_sync_at.strftime("%Y-%m-%d %H:%M") if who.last_sync_at else "never"
-    return (
-        f"{len(issues)} issues in {settings.jira_project_key}; "
-        f"syncing as {who.display_name}, last sync {last}"
-    )
+
+def _service_token_expiry(env: Settings) -> Check | None:
+    """Warn a month before the service token's last day. None when no date is written down."""
+    end = env.jira_service_token_expires
+    if end is None:
+        return None
+    days = (end - datetime.now(UTC).date()).days
+    if days < 0:
+        return Check("SOURCES", "jira token", State.BROKEN, f"expired on {end} — make a new one")
+    soon = f" — EXPIRES IN {days} DAYS, make the next one now" if days <= 30 else ""
+    return Check("SOURCES", "jira token", State.OK, f"valid until {end}{soon}")
 
 
 async def _gateway(settings: Settings) -> str:
@@ -253,8 +264,8 @@ async def run(settings: Settings | None = None) -> list[Check]:
             "SOURCES",
             lambda: _jira(env),
             missing=None
-            if (env.jira_client_id and env.jira_client_secret and env.jira_project_key)
-            else "not configured — the dashboard will be empty",
+            if (env.jira_service_token and env.jira_cloud_id)
+            else "no service account — set JIRA_SERVICE_TOKEN and JIRA_CLOUD_ID",
             timeout=REMOTE_TIMEOUT,
         ),
         _probe(
@@ -287,6 +298,9 @@ async def run(settings: Settings | None = None) -> list[Check]:
 
     # Not probes: nothing to connect to, but the answer is what somebody wants to know.
     checks.extend(_declared(env))
+    expiry = _service_token_expiry(env)
+    if expiry is not None:
+        checks.append(expiry)
     return checks
 
 
@@ -307,16 +321,6 @@ def _declared(env: Settings) -> list[Check]:
             "key set" if env.tavily_api_key else "not configured — web_search is not offered",
         )
     )
-    out.append(
-        Check(
-            "TOOLS",
-            "mail",
-            State.OK if env.gmail_app_password else State.OFF,
-            f"reading {env.gmail_address}"
-            if env.gmail_app_password
-            else "not configured — read_mail is not offered",
-        )
-    )
     mail_out = bool(env.smtp_host and env.smtp_from)
     out.append(
         Check(
@@ -333,11 +337,11 @@ def _declared(env: Settings) -> list[Check]:
     out.append(
         Check(
             "TOOLS",
-            "calendar",
+            "calendar & mail",
             State.OK if configured else State.OFF,
-            "per-user OAuth ready"
+            "per-user OAuth ready — each person's own calendar and mail"
             if configured
-            else "not configured — the calendar tools are not offered",
+            else "not configured — the calendar and mail tools are not offered",
         )
     )
     # Two switches, and off is a decision rather than a gap. A deployment that reads Jira

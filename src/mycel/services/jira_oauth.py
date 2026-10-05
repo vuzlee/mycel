@@ -7,14 +7,10 @@ name whoever typed it, and Jira offers no way to correct the author of an event 
 recorded. So reading could have stayed on one token and writing could not, and keeping two
 mechanisms for one provider would be two things to configure and two ways to be broken.
 
-**Two roles come out of one consent round.** A person who connects can write as themselves;
-the *first* person who connects also becomes the syncer, whose refresh token runs every
-background tick because a timer has nobody signed in. The role is taken, not assigned —
-`connect` raises it when nobody holds it, and nothing lowers it but disconnecting.
-
-**And that is this file's sharp edge.** The syncer leaving, revoking, or losing their
-Atlassian access stops every sync, and a stale dashboard looks exactly like a quiet week.
-`core/doctor.py` names the syncer and when they last succeeded for that reason alone.
+**A person's token does two things, and background reading is not one of them.** It
+tells Mycel which projects that person may browse (`services/access.py`), and it writes
+as them. The sync runs on the deployment's service account instead: a sync carried by one
+person's consent stops the day they leave, and looks like a quiet week while it does.
 
 **Scopes are asked for narrowly, and one of them conditionally.** `manage:jira-project` is
 requested only where `JIRA_ALLOW_CREATE_PROJECT` is on, so a deployment that never creates
@@ -28,7 +24,6 @@ in batch 051. This is the second provider through it rather than a second design
 
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 
@@ -250,21 +245,11 @@ async def _access_for(user_id: int) -> str:
 
 
 async def connect(state: str, code: str) -> JiraAccountRow:
-    """Finish a consent round: check the state, exchange the code, keep the token.
-
-    **The syncer role is decided here, inside the same transaction that writes the row.**
-    Reading "is it taken" and then writing in two transactions lets two people connecting
-    at once both read `False` — and the partial unique index would then refuse the second
-    write outright, turning a race into a failed connection rather than into a second
-    ordinary account.
-    """
+    """Finish a consent round: check the state, exchange the code, keep the token."""
     user_id = await spend_state(state)
     grant = await exchange(code)
     async with session_scope() as session:
         repo = AppRepository(session)
-        taken = await repo.has_jira_syncer()
-        mine = await repo.jira_account(user_id)
-        becomes_syncer = not taken or bool(mine and mine.is_syncer)
         await repo.upsert_jira_account(
             user_id,
             grant.account_id,
@@ -272,11 +257,10 @@ async def connect(state: str, code: str) -> JiraAccountRow:
             grant.cloud_id,
             seal(grant.refresh_token),
             grant.scope,
-            becomes_syncer,
         )
         row = await repo.jira_account(user_id)
     assert row is not None
-    log.info("jira account connected", extra={"user_id": user_id, "is_syncer": row.is_syncer})
+    log.info("jira account connected", extra={"user_id": user_id})
     return row
 
 
@@ -286,39 +270,15 @@ async def connected(user_id: int) -> JiraAccountRow | None:
         return await AppRepository(session).jira_account(user_id)
 
 
-async def syncer() -> JiraAccountRow | None:
-    """Whose token the scheduler runs on, or `None` when nobody has connected one."""
-    async with session_scope() as session:
-        return await AppRepository(session).jira_syncer()
-
-
 async def disconnect(user_id: int) -> bool:
-    """Forget the grant here. Atlassian is not told, and cannot be.
+    """Forget the grant here, and the project access it carried. Atlassian is not told.
 
     Unlike Google, Atlassian publishes no revoke endpoint for a 3LO refresh token — the
     person removes the app at id.atlassian.com. The row goes either way, which is what they
     asked for; the settings screen says where to finish the job.
-
-    **Disconnecting the syncer stops the background sync**, and that is the honest outcome:
-    moving the role to somebody else would be choosing whose name the next sync runs under.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
-        row = await repo.jira_account(user_id)
-        if row is None:
-            return False
-        if row.is_syncer:
-            log.warning(
-                "the jira syncer disconnected; background sync stops until somebody connects",
-                extra={"user_id": user_id},
-            )
-        return await repo.delete_jira_account(user_id)
-
-
-async def mark_synced(user_id: int) -> None:
-    """Record that a background sync succeeded. Read only by `doctor`."""
-    async with session_scope() as session:
-        await AppRepository(session).mark_jira_synced(user_id, datetime.now(UTC))
+        return await AppRepository(session).delete_jira_account(user_id)
 
 
 async def token_for(user_id: int) -> tuple[str, str]:
@@ -331,22 +291,6 @@ async def token_for(user_id: int) -> tuple[str, str]:
     if row is None:
         raise NotConnected("no Jira account is connected; connect one in settings")
     return await _access_for(user_id), row.cloud_id
-
-
-async def syncer_token() -> tuple[str, str, int]:
-    """The access token, cloud id and user id every background read runs on.
-
-    Raises `NotConnected` when nobody holds the role or their grant has lapsed. The caller
-    logs that at `error`: a sync that cannot run is not a quiet week, and the whole reason
-    this role is visible in `doctor` is that the two look identical from the dashboard.
-    """
-    row = await syncer()
-    if row is None:
-        raise NotConnected(
-            "no Jira account is connected, so nothing can be synced. Connect one in "
-            "settings — the first person to connect becomes the syncer."
-        )
-    return await _access_for(row.user_id), row.cloud_id, row.user_id
 
 
 def _unseal(refresh_token_encrypted: str) -> str:

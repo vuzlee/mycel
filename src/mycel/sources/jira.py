@@ -8,8 +8,9 @@ Until batch 060 this file used one API token out of `.env`, and that was adequat
 only read: everyone saw the same board and nobody's name was recorded. It stopped being
 adequate the moment it wrote — a comment on a shared token appears under the host's name
 whoever typed it, and Jira cannot correct the author of an event already recorded. So a
-call takes an `Auth`, and `services/jira_oauth.py` is where one comes from: the syncer's
-for a background read, the asker's for anything a question caused.
+call takes an `Auth`: the deployment's service account for a background read
+(`domains/sync.py`), the asker's own grant for anything a question caused
+(`services/jira_oauth.py`).
 
 **A failed write says whether it is certain nothing happened.** `NotWritten` — a 4xx, a
 connection never made, a switch that is off — means the request cannot have landed, and
@@ -60,6 +61,7 @@ API_HOST = "https://api.atlassian.com"
 #: The fields a work item is built from. Asking for the set we use rather than `*all`
 #: keeps a payload that has to fit in bronze down to what is actually read.
 FIELDS = (
+    "project",
     "summary",
     "issuetype",
     "status",
@@ -84,7 +86,7 @@ class Auth:
     """Whose grant this call runs on: an access token, and the site it opens.
 
     A value rather than a global, because the whole point of the batch is that two calls in
-    one process may run as two different people — the scheduler as the syncer, a tool as
+    one process may run as two identities — the scheduler as the service account, a tool as
     whoever typed the question. A module-level credential cannot express that.
 
     Short-lived by construction: an access token lives under an hour, so one of these is
@@ -132,6 +134,25 @@ async def issue_worklogs(auth: Auth, key: str) -> list[dict[str, Any]]:
     """
     payload = await _call(auth, "GET", f"/issue/{key}/worklog", None)
     return [w for w in payload.get("worklogs", []) if isinstance(w, dict)]
+
+
+async def browsable_projects(auth: Auth) -> list[str]:
+    """The keys of every project this grant may browse, paged to the end.
+
+    Jira answers this from its own permission scheme, which is the whole point: whoever the
+    token belongs to, the answer is what Jira itself would show them.
+    """
+    keys: list[str] = []
+    start = 0
+    while True:
+        page = await _call(
+            auth, "GET", "/project/search", None, params={"startAt": str(start), "maxResults": "50"}
+        )
+        values = [v for v in page.get("values", []) if isinstance(v, dict)]
+        keys.extend(str(v["key"]) for v in values if v.get("key"))
+        if page.get("isLast", True) or not values:
+            return keys
+        start += len(values)
 
 
 async def find_users(auth: Auth, query: str) -> list[dict[str, Any]]:

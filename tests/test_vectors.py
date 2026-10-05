@@ -290,7 +290,7 @@ class TestTheTool:
             await _call(tool, query="x", limit=0)
 
     async def test_the_two_empty_cases_read_differently(self) -> None:
-        """"You may see nothing" reported as "nothing exists" is the system claiming work
+        """ "You may see nothing" reported as "nothing exists" is the system claiming work
         is absent when the asker simply cannot see it."""
         from mycel.agents.tools.rag_search import _render
 

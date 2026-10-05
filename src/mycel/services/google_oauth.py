@@ -12,10 +12,10 @@ shared with Jira since batch 060, which is why the name no longer says Google. I
 appears in a log line, a Langfuse span, or a prompt — the functions below return access
 tokens and events, and nothing returns the refresh token.
 
-**Three scopes, and `email` is the odd one.** `calendar.events` reads and creates events
-and cannot delete a calendar; `openid email` is identity only, and it is here because the
-settings screen has to be able to say *which* Google account is connected. Asking for
-`calendar` instead would be one word shorter and a great deal wider.
+**Four scopes, and `email` is the odd one.** `calendar.events` reads and creates events
+and cannot delete a calendar; `gmail.readonly` reads the person's own mail and cannot send
+or delete any; `openid email` is identity only, so the settings screen can say *which*
+Google account is connected. Each is the narrowest that does the job.
 
 **`state` lives in Redis, not in a cookie.** The callback arrives as a redirect from
 Google, so the only thing tying it to the person who started it is a value they never saw;
@@ -44,9 +44,14 @@ AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
-#: Narrowest that does the job. `calendar.events` cannot delete a calendar; `email` is
-#: identity, so the settings screen can name the account that is connected.
-SCOPES = ("openid", "email", "https://www.googleapis.com/auth/calendar.events")
+#: Narrowest that does the job. `calendar.events` cannot delete a calendar; `gmail.readonly`
+#: cannot send or delete; `email` is identity, so settings can name the account connected.
+SCOPES = (
+    "openid",
+    "email",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/gmail.readonly",
+)
 
 CALLBACK_PATH = "/auth/google/callback"
 HTTP_TIMEOUT_S = 15.0

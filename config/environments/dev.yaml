@@ -16,7 +16,6 @@ settings:
   # This machine's own Jira. Not a secret — the site is public, the token beside it in
   # `.env` is what is not.
   jira_base_url: https://mycel-app.atlassian.net
-  jira_project_key: MYC
   # Traces on, because the whole point of a dev machine is being able to see what happened.
   otel_enabled: true
   # Spans carry the prompt and the answer on a dev machine, and nowhere else: the content

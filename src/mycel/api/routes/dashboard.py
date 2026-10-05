@@ -19,7 +19,7 @@ from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import DEFAULT_DAYS, get_dashboard
 from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.services.auth import Principal
-from mycel.services.permission import can_read_project
+from mycel.services.permission import NotReadable
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -207,10 +207,12 @@ async def read_dashboard(
     A project with no data is an empty dashboard, not a 404: a project set up but not yet
     synced is a normal state, and the page for it should say so rather than look broken.
     """
-    if not await can_read_project(user, project):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not your project")
-
-    board = await get_dashboard(project, days=days)
+    try:
+        board = await get_dashboard(user, project, days=days)
+    except NotReadable:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="not your project"
+        ) from None
     return DashboardResponse(
         project=board.project,
         since=board.since,

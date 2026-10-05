@@ -244,38 +244,6 @@ export async function changePassword(
   if (!res.ok) throw new Error(await detail(res));
 }
 
-// -- members ----------------------------------------------------------------
-
-export interface Member {
-  id: number;
-  email: string;
-}
-
-export const fetchMembers = (project: string): Promise<Member[]> =>
-  fetch(`/projects/${encodeURIComponent(project)}/members`).then(
-    json<Member[]>,
-  );
-
-/** PUT, because granting twice asks for the same end state. */
-export async function addMember(project: string, email: string): Promise<void> {
-  const res = await fetch(
-    `/projects/${encodeURIComponent(project)}/members/${encodeURIComponent(email)}`,
-    { method: "PUT" },
-  );
-  if (!res.ok) throw new Error(await detail(res));
-}
-
-export async function removeMember(
-  project: string,
-  email: string,
-): Promise<void> {
-  const res = await fetch(
-    `/projects/${encodeURIComponent(project)}/members/${encodeURIComponent(email)}`,
-    { method: "DELETE" },
-  );
-  if (!res.ok) throw new Error(await detail(res));
-}
-
 // -- google -----------------------------------------------------------------
 
 /** Whether a Google account is attached, and which one.
@@ -308,16 +276,13 @@ export async function disconnectGoogle(): Promise<void> {
 
 /** Whether a Jira account is attached, and whether it is the one the sync runs on.
  *
- *  `configured` is about the deployment, as the Google one is. `isSyncer` is about this
- *  person: background syncing borrows one person's grant, so disconnecting theirs stops
- *  the syncing — which the panel has to say before they click. */
+ *  `configured` is about the deployment, as the Google one is. `projects` is what Jira
+ *  said this person may browse, which is exactly what Mycel shows them. */
 export interface JiraStatus {
   configured: boolean;
   display_name: string | null;
   connected_at: string | null;
-  is_syncer: boolean;
-  syncer_exists: boolean;
-  last_sync_at: string | null;
+  projects: string[];
 }
 
 export const fetchJira = (): Promise<JiraStatus> =>

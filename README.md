@@ -134,10 +134,10 @@ proves nothing the chart is meant to prove. The pods reach them at
 All three host processes matter: no worker means `POST /reports` hands back a job id nobody
 picks up; no scheduler means nothing syncs until you run `sync` by hand.
 
-**Connect Jira before expecting data.** The deployment has no Jira identity of its own —
-open the app, account menu → Settings → **Connect Jira**. The first person to connect is
-the one every background sync runs on; everyone else connects so that what they ask Mycel
-to write carries their own name.
+**Setup is once, by an admin; use is one click per person.** The admin gives the sync its
+own Jira identity and registers the two OAuth apps — [docs/setup.md](docs/setup.md). Each
+person then opens Settings and connects Jira and Google: Mycel shows them exactly the
+projects Jira lets them browse, and their own calendar and mail.
 
 ## Config
 
@@ -154,17 +154,11 @@ environments, agents, sources — is YAML under `config/`.
 | `TOKEN_ENCRYPTION_KEY` | encrypts every stored refresh token, Jira's and Google's alike |
 | `QDRANT_URL` | search over tracked work; blank and the tool is never offered. Embeddings run on this machine, so there is no bill |
 
-Access is a row in `app.membership`: no row, no project, so a new account starts with
-nothing rather than with everything. Grant it from the account menu in the app — anyone who
-may read a project may share it.
-
-**A fresh deployment has to grant the first one from a shell.** Sharing needs somebody who
-can already read the project, and on a new database nobody can read anything:
-
-```bash
-uv run python scripts/tools/grant_project.py              # who has what
-uv run python scripts/tools/grant_project.py you@example.com PROJ
-```
+Who reads which project is **Jira's answer, not a list kept here.** Each person connects
+Jira in Settings, and Mycel asks Jira which projects they may browse — on connect and after
+every sync. Someone removed from a project in Jira loses it here within one sync, and a
+person who never connected sees no Jira data at all. Setup is in
+[docs/setup.md](docs/setup.md).
 
 That rule reaches the model too. `analyst` writes its own SQL, and gold is behind a
 row-level security policy scoped to whoever asked — a query that names a project they were

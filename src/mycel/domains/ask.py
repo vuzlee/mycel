@@ -131,10 +131,13 @@ async def run(job: Job) -> None:
     if answer.answered and not checked.cited:
         text, sources = NOT_GROUNDED, []
     else:
-        text, sources = checked.answer, [
-            _source(label, labelled[label], checked.quotes.get(label, ""))
-            for label in checked.cited
-        ]
+        text, sources = (
+            checked.answer,
+            [
+                _source(label, labelled[label], checked.quotes.get(label, ""))
+                for label in checked.cited
+            ],
+        )
     if checked.dropped:
         log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
     await _finish(job, owner_id, version, query, text, sources, cache=True)

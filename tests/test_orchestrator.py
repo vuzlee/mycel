@@ -318,10 +318,10 @@ class TestTheSummariserTool:
 def _granted(monkeypatch: pytest.MonkeyPatch, *projects: str) -> None:
     """What this person may read, without a database behind it."""
 
-    async def _can_read(user: Principal, project: str) -> bool:
-        return project in projects
+    async def _readable(user: Principal) -> frozenset[str]:
+        return frozenset(projects)
 
-    monkeypatch.setattr(delegate, "can_read_project", _can_read)
+    monkeypatch.setattr("mycel.services.permission.readable_projects", _readable)
 
 
 async def _call_summariser(deps: MycelDeps, project: str) -> str:

@@ -525,6 +525,25 @@ class TestTheThingsThatFailSilently:
         trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
 
 
+def _may_read(monkeypatch: pytest.MonkeyPatch, projects: set[str]) -> None:
+    """What `services/permission.py` reads, without a database: this person's projects."""
+
+    async def fake(user: Principal) -> frozenset[str]:
+        return frozenset(projects)
+
+    monkeypatch.setattr("mycel.services.permission.readable_projects", fake)
+
+
+def _no_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A session that is never used, for a domain whose service is stubbed."""
+
+    @asynccontextmanager
+    async def fake() -> AsyncIterator[None]:
+        yield None
+
+    monkeypatch.setattr("mycel.domains.dashboard.session_scope", fake)
+
+
 class TestTheBoard:
     """`GET /dashboard/{project}`: counting queries, answered inside the request.
 
@@ -534,14 +553,12 @@ class TestTheBoard:
     """
 
     def _answers(self, monkeypatch: pytest.MonkeyPatch, board: Dashboard) -> None:
-        async def fake_get(project: str, days: int = 7) -> Dashboard:
+        async def fake_build(session: Any, project: str, since: Any, until: Any) -> Dashboard:
             return board
 
-        async def allowed(user: Principal, project: str) -> bool:
-            return True
-
-        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
-        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", allowed)
+        _may_read(monkeypatch, {"MYC"})
+        _no_session(monkeypatch)
+        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
 
     def _late(self) -> WorkItemRow:
         """One story, past its due date and still in progress — the row the screen is for."""
@@ -687,15 +704,13 @@ class TestTheBoard:
     ) -> None:
         seen: dict[str, int] = {}
 
-        async def fake_get(project: str, days: int = 7) -> Dashboard:
-            seen["days"] = days
+        async def fake_build(session: Any, project: str, since: Any, until: Any) -> Dashboard:
+            seen["days"] = round((until - since).total_seconds() / 86400)
             return self._board()
 
-        async def allowed(user: Principal, project: str) -> bool:
-            return True
-
-        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
-        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", allowed)
+        _may_read(monkeypatch, {"MYC"})
+        _no_session(monkeypatch)
+        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
         client.get("/dashboard/MYC?days=30")
         assert seen["days"] == 30
 
@@ -709,15 +724,13 @@ class TestTheBoard:
         """Permission is checked first, so a 403 costs no query."""
         read: list[str] = []
 
-        async def fake_get(project: str, days: int = 7) -> Dashboard:
+        async def fake_build(session: Any, project: str, since: Any, until: Any) -> Dashboard:
             read.append(project)
             return self._board()
 
-        async def refused(user: Principal, project: str) -> bool:
-            return False
-
-        monkeypatch.setattr("mycel.api.routes.dashboard.get_dashboard", fake_get)
-        monkeypatch.setattr("mycel.api.routes.dashboard.can_read_project", refused)
+        _may_read(monkeypatch, set())
+        _no_session(monkeypatch)
+        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
 
         assert client.get("/dashboard/MYC").status_code == 403
         assert read == []
@@ -731,14 +744,12 @@ class TestTheLists:
     ) -> None:
         """The route lists what this person may read, not what the deployment has."""
 
-        async def fake_projects() -> list[str]:
+        async def fake_list(session: Any) -> list[str]:
             return ["MYC", "OPS"]
 
-        async def fake_allowed(user: Principal) -> frozenset[str]:
-            return frozenset({"MYC"})
-
-        monkeypatch.setattr("mycel.api.routes.projects.known_projects", fake_projects)
-        monkeypatch.setattr("mycel.api.routes.projects.readable_projects", fake_allowed)
+        _may_read(monkeypatch, {"MYC"})
+        _no_session(monkeypatch)
+        monkeypatch.setattr("mycel.domains.dashboard.list_projects", fake_list)
 
         assert client.get("/projects").json() == ["MYC"]
 

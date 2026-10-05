@@ -123,11 +123,14 @@ class TestTheConsentUrl:
     async def test_it_asks_for_the_narrowest_scopes(
         self, configured: None, redis: FakeRedis
     ) -> None:
-        """`calendar.events` cannot delete a calendar, and `calendar` would be one word
-        shorter and a great deal wider."""
+        """`calendar.events` cannot delete a calendar and `gmail.readonly` cannot send or
+        delete; `calendar` and `gmail.modify` would each be a great deal wider."""
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
-        assert query["scope"] == ["openid email https://www.googleapis.com/auth/calendar.events"]
+        assert query["scope"] == [
+            "openid email https://www.googleapis.com/auth/calendar.events "
+            "https://www.googleapis.com/auth/gmail.readonly"
+        ]
 
     async def test_the_redirect_matches_the_registered_callback(
         self, configured: None, redis: FakeRedis

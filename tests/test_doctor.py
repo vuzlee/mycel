@@ -94,7 +94,7 @@ class TestWhatCountsAsConfigured:
         """Two of three is not partly working: the consent round fails at the end, after
         the person has already agreed to something."""
         partial = _settings(google_client_id="id", google_client_secret="secret")
-        check = next(c for c in doctor._declared(partial) if c.name == "calendar")
+        check = next(c for c in doctor._declared(partial) if c.name == "calendar & mail")
         assert check.state is State.OFF
 
 

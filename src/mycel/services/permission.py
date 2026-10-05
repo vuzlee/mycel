@@ -3,17 +3,17 @@
 The data is a team's own tracked work, so permission is checked before touching gold — not
 after an answer has already been produced from it.
 
-The rule is a row in `app.membership`: a grant exists, or it does not. The absent case is
-the closed one on purpose — a table of denials would make a person nobody has recorded
-anything about an administrator.
+The rule is a row in `app.membership`: a grant exists, or it does not. The rows are a copy
+of what Jira says each person may browse, written only by `services/access.py`; nothing
+here grants by hand. The absent case is the closed one on purpose.
 
-One function reads it, and every place that reads one project's data calls that function.
-The rule lives here, so the day it grows a second clause it grows in one file.
+**Every read of one project's data for a person goes through `readable` or `require`.**
+`domains/dashboard.py`, the summariser and the project picker call them; `run_sql` and
+`rag_search` pass `readable_projects` down to the database and to Qdrant. A test fails if
+a person-facing route reads gold another way.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from mycel.infra.postgres.repositories.app import AppRepository, UserRow
+from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import Principal
 
@@ -33,19 +33,19 @@ async def readable_projects(user: Principal) -> frozenset[str]:
         return await AppRepository(session).projects_for(user.id)
 
 
-async def members_of(project: str) -> list[UserRow]:
-    """Everyone granted this project, for the screen that manages them. The caller checks
-    it may see the project first — this function answers, it does not decide."""
-    async with session_scope() as session:
-        return await AppRepository(session).members_of(project)
+class NotReadable(Exception):
+    """This person may not read this project. Worded the same whether it exists or not."""
 
 
-async def grant(session: AsyncSession, user_id: int, project: str) -> None:
-    """Give someone a project. `api/routes/members.py` is the way in; a shell still works
-    and is what a deployment with nobody granted anything has to start from."""
-    await AppRepository(session).grant_project(user_id, project)
+async def require(user: Principal | None, project: str) -> None:
+    """Raise `NotReadable` unless this person may read `project`. No person, no access."""
+    if user is None or not await can_read_project(user, project):
+        raise NotReadable(f"project {project} does not exist or you do not have access to it")
 
 
-async def revoke(session: AsyncSession, user_id: int, project: str) -> None:
-    """Take a project back. Sessions are untouched — this is about data, not about login."""
-    await AppRepository(session).revoke_project(user_id, project)
+async def readable(user: Principal | None, projects: list[str]) -> list[str]:
+    """`projects`, keeping only those this person may read, in the order given."""
+    if user is None:
+        return []
+    allowed = await readable_projects(user)
+    return [p for p in projects if p in allowed]

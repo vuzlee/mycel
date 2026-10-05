@@ -18,14 +18,13 @@ Headers only, and why, is `sources/gmail.py`. This file is the window, the cap, 
 shape the model reads.
 """
 
-import asyncio
-
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.core.logging import get_logger
+from mycel.services.google_oauth import NotConnected, token_for
 from mycel.sources import SourceError, gmail
 
 log = get_logger(__name__)
@@ -38,13 +37,19 @@ MAX_HOURS = 720
 MAX_MESSAGES = 60
 
 
+CONNECT = (
+    "No Google account is connected, or it has not allowed Mycel to read mail. Open the "
+    "account menu, choose Settings, and connect Google — then ask again."
+)
+
+
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    """Reading the mailbox, as a toolset an agent can be given."""
+    """Reading the asker's own mailbox, as a toolset an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
     @toolset.tool(name="read_mail")
     async def _read_mail(ctx: RunContext[MycelDeps], hours: int = 24) -> str:
-        """Read the sender, subject and date of messages received recently.
+        """Read the sender, subject and date of the asker's own recent messages.
 
         Message bodies are never read, so judge only from sender and subject — and say
         when that is not enough to be sure. Every line carries a link; cite it.
@@ -58,9 +63,16 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         if hours < 1:
             raise ModelRetry("read_mail needs a window of at least one hour.")
 
+        # The asker's own inbox, on their own Google grant. A run with nobody behind it reads
+        # nothing: "connect an account" is the answer, never somebody else's mail.
+        if ctx.deps.principal is None:
+            return CONNECT
         capped = min(hours, MAX_HOURS)
         try:
-            mailbox = await asyncio.to_thread(gmail.read_recent, capped, MAX_MESSAGES)
+            token = await token_for(ctx.deps.principal.id)
+            mailbox = await gmail.read_recent(token, capped, MAX_MESSAGES)
+        except NotConnected:
+            return CONNECT
         except SourceError as exc:
             # Not the model's to fix: no credentials, or a mailbox that will not answer.
             # Re-prompting would walk it round the same loop until the run dies unread.

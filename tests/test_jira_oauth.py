@@ -8,13 +8,8 @@ token was fine; writing on one puts the host's name on every comment, and Jira c
 correct the author of an event already written. Nothing in a test can assert that directly
 — what it can assert is that there is no shared-token path left to fall back to.
 
-**The syncer is a role, taken by the first person to connect.** Background syncing has
-nobody signed in, so one grant carries it. At most one, enforced in the database rather
-than in a branch.
-
-**And that role's failure is silent.** They leave, the syncing stops, and the dashboard
-merely looks like a quiet week. So the role and its last success are visible, and a sync
-that cannot run says so loudly.
+**No person's grant carries the background sync.** It runs on the deployment's service
+account; a person's grant only asks Jira what they may browse and writes as them.
 
 **One scope is asked for conditionally.** A deployment that never creates a project must
 never grant the right to, because a consent screen that over-asks describes an app that

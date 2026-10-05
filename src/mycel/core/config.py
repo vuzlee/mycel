@@ -11,6 +11,7 @@ start over a variable it has no field for.
 `get_settings()` is cached — config is read once per process, and tests clear the cache.
 """
 
+from datetime import date
 from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
@@ -86,19 +87,22 @@ class Settings(BaseSettings):
 
     # Sources. A deployment syncs the providers it has credentials for; a missing token
     # is not an error until something actually asks that source for data.
-    #: Jira is the source of record for what the work *is*. Reached on a token one person
-    #: consented to, never on a deployment-wide one — see `services/jira_oauth.py`. The
-    #: base url is not a secret: the site is public and the consent is what is not.
+    #: Jira is the source of record for what the work *is*. The base url is not a secret:
+    #: the site is public and the consent is what is not.
     jira_base_url: str | None = None
-    #: The Atlassian OAuth 2.0 (3LO) app a person consents to. developer.atlassian.com ->
-    #: your app -> Authorization, with `{public_base_url}/auth/jira/callback` as a
-    #: callback URL. Without it nothing reaches Jira at all: reading happens on the syncer's
-    #: consent, so there is no deployment-wide fallback to drop back to.
+    #: The background sync's own identity: an Atlassian service account with Browse on
+    #: the projects to sync, and its API token. Never a person's token — a sync that runs
+    #: on someone stops when they leave. Every project it can browse is synced.
+    jira_service_token: SecretStr | None = None
+    jira_cloud_id: str | None = None
+    #: The service token's last day. Atlassian does not return it, so it is written down
+    #: when the token is made; `doctor` warns a month before.
+    jira_service_token_expires: date | None = None
+    #: The Atlassian OAuth 2.0 (3LO) app a person consents to, so Mycel can ask Jira which
+    #: projects *they* may browse and write as them. developer.atlassian.com -> your app ->
+    #: Authorization, with `{public_base_url}/auth/jira/callback` as a callback URL.
     jira_client_id: str | None = None
     jira_client_secret: SecretStr | None = None
-    #: Which project to sync. Empty means every project the account can see, which is
-    #: right for a one-project site and wrong for a shared one.
-    jira_project_key: str | None = None
     #: Which custom field holds the sprint. Jira numbers custom fields per site, so
     #: there is no id that is right everywhere — this default is Atlassian's usual one for
     #: a cloud site, and a site that differs sets it rather than being unable to use the
@@ -179,12 +183,6 @@ class Settings(BaseSettings):
         """The allowlist, lowercased and split. Empty means every domain."""
         parts = self.registration_allowed_domains.split(",")
         return frozenset(p.strip().lower().lstrip("@") for p in parts if p.strip())
-
-    #: The mailbox `agents/tools/mail.py` reads headers from, over IMAP. An app password
-    #: is a full-access password with no narrower scope available, which is why the
-    #: headers-only discipline is enforced in the IMAP fetch string rather than here.
-    gmail_address: str | None = None
-    gmail_app_password: SecretStr | None = None
 
     # Observability. Agent runs go to Langfuse over OTLP HTTP; the endpoint is derived from
     # the base url, so a deployment sets the two keys and nothing else.
