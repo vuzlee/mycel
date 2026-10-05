@@ -12,8 +12,8 @@ from pathlib import Path
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.objects import buckets, files
-from mycel.infra.postgres.notebooks import DELETING, FAILED, READY
-from mycel.infra.postgres.repositories.notebooks import NewChunk, NotebookRepository
+from mycel.infra.postgres.documents import DELETING, FAILED, READY
+from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.job import Job, JobKind
@@ -33,7 +33,7 @@ def delete_job(document_id: int) -> Job:
 async def run(job: Job) -> None:
     document_id = int(str(job.payload["document_id"]))
     async with session_scope() as session:
-        repo = NotebookRepository(session)
+        repo = DocumentRepository(session)
         doc = await repo.document(document_id)
         if doc is None or doc.status in (DELETING, READY):
             log.info("ingest skipped", extra={"document_id": document_id})
@@ -52,7 +52,7 @@ async def run(job: Job) -> None:
 
     await vectors.delete(document_id)
     async with session_scope() as session:
-        repo = NotebookRepository(session)
+        repo = DocumentRepository(session)
         current = await repo.lock_document(document_id)
         if current is None or current.status == DELETING:
             await vectors.delete(document_id)
@@ -65,7 +65,7 @@ async def run(job: Job) -> None:
             ],
         )
         await vectors.write(
-            current.notebook_id,
+            current.owner_id,
             document_id,
             current.enabled,
             chunk_ids,
@@ -79,14 +79,14 @@ async def delete(job: Job) -> None:
     """Points, then the file, then the row. Each step is already-done-safe."""
     document_id = int(str(job.payload["document_id"]))
     async with session_scope() as session:
-        doc = await NotebookRepository(session).document(document_id)
+        doc = await DocumentRepository(session).document(document_id)
     if doc is None:
         await vectors.delete(document_id)
         return
     await vectors.delete(document_id)
     await files.delete(buckets.documents(), doc.object_key)
     async with session_scope() as session:
-        await NotebookRepository(session).delete_document(document_id)
+        await DocumentRepository(session).delete_document(document_id)
     log.info("document deleted", extra={"document_id": document_id})
 
 
@@ -94,7 +94,7 @@ async def watchdog() -> None:
     """A dead worker leaves rows in flight forever; this unlocks them."""
     stuck = timedelta(seconds=get_settings().document_stuck_seconds)
     async with session_scope() as session:
-        repo = NotebookRepository(session)
+        repo = DocumentRepository(session)
         failed = await repo.fail_stuck_parsing(stuck)
         deleting = await repo.stuck(DELETING, stuck)
     if failed:
@@ -104,7 +104,7 @@ async def watchdog() -> None:
 
 
 async def record_failure(job: Job, error: str) -> None:
-    """The last attempt failed: the row says so, and the notebook unlocks."""
+    """The last attempt failed: the row says so, and the knowledge base unlocks."""
     if job.kind is JobKind.INGEST:
         await _fail(int(str(job.payload["document_id"])), "error")
     log.error("ingest job failed", extra={"job": str(job.kind), "error": error[:300]})
@@ -112,7 +112,7 @@ async def record_failure(job: Job, error: str) -> None:
 
 async def _fail(document_id: int, reason: str) -> None:
     async with session_scope() as session:
-        repo = NotebookRepository(session)
+        repo = DocumentRepository(session)
         doc = await repo.document(document_id)
         if doc is not None and doc.status != DELETING:
             await repo.set_status(document_id, FAILED, reason=reason)

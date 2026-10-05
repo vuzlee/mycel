@@ -57,10 +57,10 @@ from mycel.api.routes import (
     auth,
     chat,
     dashboard,
+    documents,
     events,
     members,
     metrics,
-    notebooks,
     projects,
 )
 from mycel.core.config import Settings, get_settings
@@ -124,7 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(members.router)
     app.include_router(dashboard.router)
     app.include_router(chat.router)
-    app.include_router(notebooks.router)
+    app.include_router(documents.router)
     app.include_router(events.router)
     app.include_router(metrics.router)
 

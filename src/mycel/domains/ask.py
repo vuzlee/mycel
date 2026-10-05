@@ -1,4 +1,4 @@
-"""Ask one notebook: search, read through layer two, one Gemini call, check citations.
+"""Ask the user's documents: search, read through layer two, one model call, check citations.
 
 The request side (`request_ask`) runs every gate that costs nothing. The worker side
 (`run`) is the only place a Gemini call is made, and it gives the quota back on failure.
@@ -15,7 +15,7 @@ from mycel.agents.schemas import NotebookAnswer
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.events.channel import RecordingChannel
-from mycel.infra.postgres.repositories.notebooks import ChunkRow, NotebookRepository
+from mycel.infra.postgres.repositories.documents import ChunkRow, DocumentRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import answers, budgets, quota, results
 from mycel.infra.redis import citations as stored_citations
@@ -25,19 +25,19 @@ from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
 from mycel.services.auth import Principal
 from mycel.services.citations import check
-from mycel.services.notebooks import NotebookError
+from mycel.services.documents import DocumentError
 
 log = get_logger(__name__)
 
-NOT_FOUND = "No relevant passages were found in this notebook."
+NOT_FOUND = "No relevant passages were found in your documents."
 NOT_GROUNDED = "Could not ground an answer in the documents."
 OUT_OF_QUOTA = "Daily question limit reached. Try again tomorrow."
-BUSY = "Notebook is still processing documents."
+BUSY = (
+    "Note: documents are being processed — the knowledge base is unavailable until they are ready."
+)
 
 
-async def request_ask(
-    owner_id: int, notebook_id: int, question: str, previous: str = ""
-) -> dict[str, Any]:
+async def request_ask(owner_id: int, question: str, previous: str = "") -> dict[str, Any]:
     """Gates in order of cost. Returns a cached answer, or the queued job id.
 
     `previous` is the question asked just before, if any. It is embedded with this one so
@@ -48,30 +48,27 @@ async def request_ask(
     question = question.strip()
     previous = previous.strip()[: settings.ask_max_chars]
     if not question:
-        raise NotebookError(422, "Ask a question.")
+        raise DocumentError(422, "Ask a question.")
     if len(question) > settings.ask_max_chars:
-        raise NotebookError(422, f"Questions are limited to {settings.ask_max_chars} characters.")
+        raise DocumentError(422, f"Questions are limited to {settings.ask_max_chars} characters.")
 
     async with session_scope() as session:
-        repo = NotebookRepository(session)
-        if await repo.notebook(notebook_id, owner_id) is None:
-            raise NotebookError(404, "Not found.")
-        if await repo.busy(notebook_id):
-            raise NotebookError(409, BUSY)
-        version = await repo.version(notebook_id)
+        repo = DocumentRepository(session)
+        if await repo.busy(owner_id):
+            raise DocumentError(409, BUSY)
+        version = await repo.version(owner_id)
 
-    cached = await answers.get(notebook_id, version, search_text(question, previous))
+    cached = await answers.get(owner_id, version, search_text(question, previous))
     if cached is not None:
         return {"cached": True, **cached}
 
     left = await quota.remaining(owner_id, settings.ask_per_user_daily, settings.ask_system_daily)
     if left <= 0:
-        raise NotebookError(429, OUT_OF_QUOTA)
+        raise DocumentError(429, OUT_OF_QUOTA)
 
     job = Job(
         kind=JobKind.ASK,
         payload={
-            "notebook_id": notebook_id,
             "question": question,
             "previous": previous,
             "user_id": owner_id,
@@ -89,29 +86,28 @@ async def remaining(owner_id: int) -> int:
 
 async def run(job: Job) -> None:
     settings = get_settings()
-    notebook_id = int(str(job.payload["notebook_id"]))
     owner_id = int(str(job.payload["user_id"]))
     question = str(job.payload["question"])
     version = str(job.payload["version"])
 
     previous = str(job.payload.get("previous") or "")
     query = search_text(question, previous)
-    hits = await vectors.search(notebook_id, query, settings.ask_top_k)
+    hits = await vectors.search(owner_id, query, settings.ask_top_k)
     if not hits or hits[0].score < settings.document_min_score:
-        await _finish(job, notebook_id, version, query, NOT_FOUND, [], cache=True)
+        await _finish(job, owner_id, version, query, NOT_FOUND, [], cache=True)
         return
 
     async with session_scope() as session:
-        chunks = await NotebookRepository(session).readable_chunks(
+        chunks = await DocumentRepository(session).readable_chunks(
             [h.chunk_id for h in hits], owner_id
         )
     if not chunks:
-        await _finish(job, notebook_id, version, query, NOT_FOUND, [], cache=True)
+        await _finish(job, owner_id, version, query, NOT_FOUND, [], cache=True)
         return
 
     labelled = {f"c{i}": c for i, c in enumerate(chunks, start=1)}
     if not await quota.reserve(owner_id, settings.ask_per_user_daily, settings.ask_system_daily):
-        await _finish(job, notebook_id, version, query, OUT_OF_QUOTA, [], cache=False)
+        await _finish(job, owner_id, version, query, OUT_OF_QUOTA, [], cache=False)
         return
     try:
         answer = await _ask_model(job, owner_id, question, labelled)
@@ -126,7 +122,7 @@ async def run(job: Job) -> None:
         text, sources = checked.answer, [_source(label, labelled[label]) for label in checked.cited]
     if checked.dropped:
         log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
-    await _finish(job, notebook_id, version, query, text, sources, cache=True)
+    await _finish(job, owner_id, version, query, text, sources, cache=True)
 
 
 async def record_failure(job: Job, error: str) -> None:
@@ -138,7 +134,7 @@ async def read(owner_id: int, job_id: str) -> dict[str, Any]:
     """The state of an ask job, for its owner only. Running until the worker writes it."""
     meta = await stored_citations.fetch(job_id)
     if meta is not None and meta["owner_id"] != owner_id:
-        raise NotebookError(404, "Not found.")
+        raise DocumentError(404, "Not found.")
     result = await results.fetch(job_id)
     if meta is None or result is None or result.status == "running":
         return {"status": "running", "answer": None, "sources": [], "error": None}
@@ -199,7 +195,7 @@ def _source(label: str, chunk: ChunkRow) -> dict[str, Any]:
 
 async def _finish(
     job: Job,
-    notebook_id: int,
+    owner_id: int,
     version: str,
     question: str,
     text: str,
@@ -210,5 +206,5 @@ async def _finish(
     await stored_citations.store(job.job_id, int(str(job.payload["user_id"])), sources)
     await results.store(job.job_id, text, str(Decimal("0")))
     if cache:
-        await answers.put(notebook_id, version, question, {"answer": text, "sources": sources})
-    log.info("notebook answered", extra={"job_id": job.job_id, "sources": len(sources)})
+        await answers.put(owner_id, version, question, {"answer": text, "sources": sources})
+    log.info("knowledge answered", extra={"job_id": job.job_id, "sources": len(sources)})

@@ -1,4 +1,4 @@
-"""The citations of a finished notebook answer, beside the answer text in `results`."""
+"""The citations of a finished knowledge answer, beside the answer text in `results`."""
 
 import json
 from typing import Any

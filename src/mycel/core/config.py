@@ -254,8 +254,7 @@ class Settings(BaseSettings):
     document_table_max_tokens: int = 1500
     document_max_bytes: int = 2 * 1024 * 1024
     document_max_pages: int = 100
-    documents_per_notebook: int = 50
-    notebooks_per_user: int = 20
+    documents_per_user: int = 200
     documents_in_flight_per_user: int = 5
     document_max_attempts: int = 3
     document_stuck_seconds: int = 600

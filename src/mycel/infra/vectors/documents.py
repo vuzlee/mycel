@@ -1,7 +1,7 @@
-"""Notebook passages in Qdrant: write, hide, delete, search. Filters run inside Qdrant.
+"""Document passages in Qdrant: write, hide, delete, search. Filters run inside Qdrant.
 
-The payload carries ids and the `enabled` flag, never permissions: who may read a
-notebook is decided in Postgres at question time.
+The payload carries ids and the `enabled` flag. `owner_id` keeps one user's passages out
+of another's search; Postgres checks ownership again when the text is read.
 """
 
 import asyncio
@@ -54,13 +54,15 @@ async def ensure() -> str:
     qdrant = client()
     if not await qdrant.collection_exists(name):
         await qdrant.create_collection(name, vectors_config=_collection().params)
-        await qdrant.create_payload_index(
-            name,
-            "notebook_id",
-            field_schema=KeywordIndexParams(type=KeywordIndexType.KEYWORD, is_tenant=True),
-        )
-        await qdrant.create_payload_index(name, "document_id", PayloadSchemaType.KEYWORD)
-        await qdrant.create_payload_index(name, "enabled", PayloadSchemaType.BOOL)
+    # Re-declared on every start: creating an index that exists is a no-op, and a
+    # collection made before batch 066 has no `owner_id` index yet.
+    await qdrant.create_payload_index(
+        name,
+        "owner_id",
+        field_schema=KeywordIndexParams(type=KeywordIndexType.KEYWORD, is_tenant=True),
+    )
+    await qdrant.create_payload_index(name, "document_id", PayloadSchemaType.KEYWORD)
+    await qdrant.create_payload_index(name, "enabled", PayloadSchemaType.BOOL)
     _ready = True
     return name
 
@@ -71,7 +73,7 @@ async def embed_texts(texts: Sequence[str]) -> list[list[float]]:
 
 
 async def write(
-    notebook_id: int,
+    owner_id: int,
     document_id: int,
     enabled: bool,
     chunk_ids: Sequence[int],
@@ -87,7 +89,7 @@ async def write(
                 id=point_id(document_id, start + i),
                 vector=vector,
                 payload={
-                    "notebook_id": str(notebook_id),
+                    "owner_id": str(owner_id),
                     "document_id": str(document_id),
                     "chunk_id": chunk_ids[start + i],
                     "enabled": enabled,
@@ -114,8 +116,8 @@ async def count(document_id: int) -> int:
     return result.count
 
 
-async def search(notebook_id: int, query: str, limit: int) -> list[Hit]:
-    """The nearest enabled passages in one notebook."""
+async def search(owner_id: int, query: str, limit: int) -> list[Hit]:
+    """The nearest enabled passages among one user's documents."""
     name = await ensure()
     vector = (await embed_texts([query]))[0]
     found = await client().query_points(
@@ -123,7 +125,7 @@ async def search(notebook_id: int, query: str, limit: int) -> list[Hit]:
         query=vector,
         query_filter=Filter(
             must=[
-                FieldCondition(key="notebook_id", match=MatchValue(value=str(notebook_id))),
+                FieldCondition(key="owner_id", match=MatchValue(value=str(owner_id))),
                 FieldCondition(key="enabled", match=MatchValue(value=True)),
             ]
         ),

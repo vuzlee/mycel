@@ -1,8 +1,8 @@
-"""Ask one notebook a real question and print the answer with its sources.
+"""Ask your documents a real question and print the answer with its sources.
 
-    uv run python scripts/try_ask.py NOTEBOOK_ID "question" [--email x --password y]
+    uv run python scripts/try_ask.py "question" [--email x --password y]
 
-Needs `scripts/stack.sh dev up` and a notebook from scripts/try_ingest.py. Spends one
+Needs `scripts/stack.sh dev up` and a document from scripts/try_ingest.py. Spends one
 Gemini call unless the answer is cached.
 """
 
@@ -17,7 +17,6 @@ BASE = "http://127.0.0.1:8000"
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("notebook", type=int)
     parser.add_argument("question")
     parser.add_argument("--email", default="ingest-try@example.com")
     parser.add_argument("--password", default="ingest try password")
@@ -27,7 +26,7 @@ def main() -> int:
         client.post("/auth/login", json={"email": args.email, "password": args.password})
         time.sleep(0.5)
         print("quota left:", client.get("/asks/quota").json()["remaining"])
-        response = client.post(f"/notebooks/{args.notebook}/ask", json={"question": args.question})
+        response = client.post("/knowledge/ask", json={"question": args.question})
         body = response.json()
         print("ask:", response.status_code, "cached" if body.get("cached") else body.get("job_id"))
         if response.status_code >= 400:

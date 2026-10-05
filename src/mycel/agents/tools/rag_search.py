@@ -60,9 +60,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             limit: How many to return. Five is usually enough; twenty is the most.
             status_category: Optionally narrow to `todo`, `doing` or `done`.
         """
-        guard_repeat(
-            ctx, "rag_search", threshold=ctx.deps.settings.repeat_threshold, query=query
-        )
+        guard_repeat(ctx, "rag_search", threshold=ctx.deps.settings.repeat_threshold, query=query)
 
         if not query.strip():
             raise ModelRetry("rag_search needs something to search for.")
@@ -89,9 +87,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
     return toolset
 
 
-def _render(
-    hits: list[vectors.Hit], query: str, asked: int, capped: int, scoped: bool
-) -> str:
+def _render(hits: list[vectors.Hit], query: str, asked: int, capped: int, scoped: bool) -> str:
     """The hits as text the model can quote from.
 
     The empty cases are told apart on purpose. "Granted no projects" and "nothing like this

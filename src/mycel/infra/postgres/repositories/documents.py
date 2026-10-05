@@ -1,4 +1,4 @@
-"""All SQL for notebooks, documents and chunks. Ownership is checked in every read."""
+"""All SQL for a user's documents and their chunks. Ownership is checked in every read."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.notebooks import (
+from mycel.infra.postgres.documents import (
     DELETING,
     FAILED,
     IN_FLIGHT,
@@ -16,22 +16,13 @@ from mycel.infra.postgres.notebooks import (
     READY,
     Chunk,
     Document,
-    Notebook,
 )
-
-
-@dataclass(frozen=True, slots=True)
-class NotebookRow:
-    id: int
-    owner_id: int
-    name: str
-    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
 class DocumentRow:
     id: int
-    notebook_id: int
+    owner_id: int
     filename: str
     mime: str
     size: int
@@ -59,7 +50,7 @@ class NewChunk:
 class ChunkRow:
     id: int
     document_id: int
-    notebook_id: int
+    owner_id: int
     filename: str
     mime: str
     ord: int
@@ -68,63 +59,31 @@ class ChunkRow:
     page_start: int | None
 
 
-class NotebookRepository:
+class DocumentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    # --- notebooks ---
+    # --- the store ---
 
-    async def create_notebook(self, owner_id: int, name: str) -> NotebookRow:
-        row = Notebook(owner_id=owner_id, name=name)
-        self._session.add(row)
-        await self._session.flush()
-        await self._session.refresh(row)
-        return _notebook(row)
+    async def busy(self, owner_id: int) -> bool:
+        """A document is still being processed, so the knowledge base cannot be asked."""
+        return bool(await self.count_in_flight(owner_id))
 
-    async def notebooks(self, owner_id: int) -> list[NotebookRow]:
-        rows = await self._session.scalars(
-            select(Notebook).where(Notebook.owner_id == owner_id).order_by(Notebook.id)
-        )
-        return [_notebook(r) for r in rows]
-
-    async def notebook(self, notebook_id: int, owner_id: int) -> NotebookRow | None:
-        """`None` both when it does not exist and when it is someone else's."""
-        row = await self._session.scalar(
-            select(Notebook).where(Notebook.id == notebook_id, Notebook.owner_id == owner_id)
-        )
-        return _notebook(row) if row else None
-
-    async def count_notebooks(self, owner_id: int) -> int:
-        return await self._count(select(Notebook.id).where(Notebook.owner_id == owner_id))
-
-    async def delete_notebook(self, notebook_id: int) -> None:
-        await self._session.execute(delete(Notebook).where(Notebook.id == notebook_id))
-
-    async def busy(self, notebook_id: int) -> bool:
-        """A document is still being processed, so the notebook cannot be asked."""
-        return bool(
-            await self._count(
-                select(Document.id).where(
-                    Document.notebook_id == notebook_id, Document.status.in_(IN_FLIGHT)
-                )
-            )
-        )
-
-    async def version(self, notebook_id: int) -> str:
-        """Changes whenever any document in the notebook changes."""
+    async def version(self, owner_id: int) -> str:
+        """Changes whenever any of the user's documents changes."""
         newest = await self._session.scalar(
-            select(func.max(Document.updated_at)).where(Document.notebook_id == notebook_id)
+            select(func.max(Document.updated_at)).where(Document.owner_id == owner_id)
         )
-        count = await self.count_documents(notebook_id)
+        count = await self.count_documents(owner_id)
         return f"{count}-{newest.timestamp() if newest else 0}"
 
     # --- documents ---
 
     async def add_document(
-        self, notebook_id: int, filename: str, mime: str, size: int, sha256: str
+        self, owner_id: int, filename: str, mime: str, size: int, sha256: str
     ) -> DocumentRow:
         row = Document(
-            notebook_id=notebook_id,
+            owner_id=owner_id,
             filename=filename,
             mime=mime,
             size=size,
@@ -136,15 +95,15 @@ class NotebookRepository:
         )
         self._session.add(row)
         await self._session.flush()
-        row.object_key = f"notebooks/{notebook_id}/{row.id}/{filename}"
+        row.object_key = f"users/{owner_id}/{row.id}/{filename}"
         await self._session.flush()
         await self._session.refresh(row)
         return _document(row)
 
-    async def documents(self, notebook_id: int) -> list[DocumentRow]:
+    async def documents(self, owner_id: int) -> list[DocumentRow]:
         rows = await self._session.scalars(
             select(Document)
-            .where(Document.notebook_id == notebook_id, Document.status != DELETING)
+            .where(Document.owner_id == owner_id, Document.status != DELETING)
             .order_by(Document.id)
         )
         return [_document(r) for r in rows]
@@ -155,9 +114,7 @@ class NotebookRepository:
 
     async def owned_document(self, document_id: int, owner_id: int) -> DocumentRow | None:
         row = await self._session.scalar(
-            select(Document)
-            .join(Notebook, Notebook.id == Document.notebook_id)
-            .where(Document.id == document_id, Notebook.owner_id == owner_id)
+            select(Document).where(Document.id == document_id, Document.owner_id == owner_id)
         )
         return _document(row) if row else None
 
@@ -168,23 +125,19 @@ class NotebookRepository:
         )
         return _document(row) if row else None
 
-    async def duplicate(self, notebook_id: int, sha256: str) -> bool:
+    async def duplicate(self, owner_id: int, sha256: str) -> bool:
         return bool(
             await self._count(
-                select(Document.id).where(
-                    Document.notebook_id == notebook_id, Document.sha256 == sha256
-                )
+                select(Document.id).where(Document.owner_id == owner_id, Document.sha256 == sha256)
             )
         )
 
-    async def count_documents(self, notebook_id: int) -> int:
-        return await self._count(select(Document.id).where(Document.notebook_id == notebook_id))
+    async def count_documents(self, owner_id: int) -> int:
+        return await self._count(select(Document.id).where(Document.owner_id == owner_id))
 
     async def count_in_flight(self, owner_id: int) -> int:
         return await self._count(
-            select(Document.id)
-            .join(Notebook, Notebook.id == Document.notebook_id)
-            .where(Notebook.owner_id == owner_id, Document.status.in_(IN_FLIGHT))
+            select(Document.id).where(Document.owner_id == owner_id, Document.status.in_(IN_FLIGHT))
         )
 
     async def start_parsing(self, document_id: int) -> None:
@@ -275,21 +228,20 @@ class NotebookRepository:
         return await self._count(select(Chunk.id).where(Chunk.document_id == document_id))
 
     async def readable_chunks(self, chunk_ids: Sequence[int], owner_id: int) -> list[ChunkRow]:
-        """Chunks the owner may read right now: own notebook, document ready and enabled."""
+        """Chunks the owner may read right now: their document, ready and enabled."""
         if not chunk_ids:
             return []
         rows = await self._session.execute(
-            select(Chunk, Document, Notebook)
+            select(Chunk, Document)
             .join(Document, Document.id == Chunk.document_id)
-            .join(Notebook, Notebook.id == Document.notebook_id)
             .where(
                 Chunk.id.in_(list(chunk_ids)),
-                Notebook.owner_id == owner_id,
+                Document.owner_id == owner_id,
                 Document.status == READY,
                 Document.enabled.is_(True),
             )
         )
-        found = {c.id: _chunk(c, d) for c, d, _ in rows.tuples()}
+        found = {c.id: _chunk(c, d) for c, d in rows.tuples()}
         return [found[i] for i in chunk_ids if i in found]
 
     async def _count(self, query: Select[Any]) -> int:
@@ -297,14 +249,10 @@ class NotebookRepository:
         return int(total or 0)
 
 
-def _notebook(row: Notebook) -> NotebookRow:
-    return NotebookRow(row.id, row.owner_id, row.name, row.created_at)
-
-
 def _document(row: Document) -> DocumentRow:
     return DocumentRow(
         row.id,
-        row.notebook_id,
+        row.owner_id,
         row.filename,
         row.mime,
         row.size,
@@ -323,7 +271,7 @@ def _chunk(row: Chunk, doc: Document) -> ChunkRow:
     return ChunkRow(
         row.id,
         row.document_id,
-        doc.notebook_id,
+        doc.owner_id,
         doc.filename,
         doc.mime,
         row.ord,

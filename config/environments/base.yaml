@@ -103,8 +103,7 @@ settings:
   document_table_max_tokens: 1500
   document_max_bytes: 2097152
   document_max_pages: 100
-  documents_per_notebook: 50
-  notebooks_per_user: 20
+  documents_per_user: 200
   documents_in_flight_per_user: 5
   document_max_attempts: 3
   document_stuck_seconds: 600

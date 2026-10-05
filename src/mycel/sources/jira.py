@@ -229,9 +229,7 @@ async def create_issue(
     return created
 
 
-async def create_project(
-    auth: Auth, key: str, name: str, lead_account_id: str
-) -> dict[str, Any]:
+async def create_project(auth: Auth, key: str, name: str, lead_account_id: str) -> dict[str, Any]:
     """Create one project. **The only call here that cannot be undone from the app.**
 
     Behind its own switch, and the reason is not that it is hard to write. Many Jira sites
@@ -251,9 +249,7 @@ async def create_project(
         "key": key.upper(),
         "name": name,
         "projectTypeKey": "software",
-        "projectTemplateKey": (
-            "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"
-        ),
+        "projectTemplateKey": ("com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"),
         "leadAccountId": lead_account_id,
     }
     created = await _call(auth, "POST", "/project", body)

@@ -85,9 +85,7 @@ async def declare(channel: AbstractChannel) -> Topology:
     ingest, _, _ = await _family(
         channel, exchange, dlx, INGEST_QUEUE, INGEST_RETRY_QUEUE, INGEST_DEAD_QUEUE
     )
-    return Topology(
-        exchange=exchange, dlx=dlx, jobs=jobs, retry=retry, dead=dead, ingest=ingest
-    )
+    return Topology(exchange=exchange, dlx=dlx, jobs=jobs, retry=retry, dead=dead, ingest=ingest)
 
 
 async def _family(

@@ -6,7 +6,7 @@ from mycel.domains.ingest import delete_job, ingest_job
 from mycel.queue import topology
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import queue_for
-from mycel.services.notebooks import DOCX, MARKDOWN, PDF, NotebookError, sniff
+from mycel.services.documents import DOCX, MARKDOWN, PDF, DocumentError, sniff
 
 
 class TestSniff:
@@ -14,7 +14,7 @@ class TestSniff:
         assert sniff("a.pdf", b"%PDF-1.7\n...") == PDF
 
     def test_an_executable_named_pdf_is_refused(self) -> None:
-        with pytest.raises(NotebookError) as caught:
+        with pytest.raises(DocumentError) as caught:
             sniff("a.pdf", b"\x7fELF\x02\x01\x01" + b"\x00" * 64)
         assert caught.value.status == 415
 
@@ -22,7 +22,7 @@ class TestSniff:
         assert sniff("notes.md", b"# Title\n\nbody") == MARKDOWN
 
     def test_text_with_another_name_is_refused(self) -> None:
-        with pytest.raises(NotebookError):
+        with pytest.raises(DocumentError):
             sniff("notes.txt", b"# Title")
 
     def test_a_docx_is_recognised(self) -> None:

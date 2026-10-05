@@ -289,9 +289,8 @@ async def _resolve(
             # By name, never by id. The id is what Jira needs and the name is what a person
             # can check, and a draft that reads back an id catches nothing.
             who = await _name_of(auth, assignee_account_id)
-        spelled = (
-            f"Create a {issue_type} in {proj}: {title!r}, assigned to {who}"
-            + (f" — {text!r}" if text else "")
+        spelled = f"Create a {issue_type} in {proj}: {title!r}, assigned to {who}" + (
+            f" — {text!r}" if text else ""
         )
         return spelled, {
             "project": proj,

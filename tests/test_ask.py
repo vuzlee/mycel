@@ -11,10 +11,10 @@ import pytest
 
 from mycel.agents.schemas import Citation, NotebookAnswer
 from mycel.domains import ask
-from mycel.infra.postgres.repositories.notebooks import ChunkRow
+from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors.documents import Hit
 from mycel.queue.job import Job, JobKind
-from mycel.services.notebooks import NotebookError
+from mycel.services.documents import DocumentError
 
 pytestmark = pytest.mark.anyio
 
@@ -47,7 +47,7 @@ def world(monkeypatch: pytest.MonkeyPatch) -> World:
         ),
     )
 
-    async def search(notebook_id: int, query: str, limit: int) -> list[Hit]:
+    async def search(owner_id: int, query: str, limit: int) -> list[Hit]:
         return w.hits
 
     class Repo:
@@ -81,7 +81,7 @@ def world(monkeypatch: pytest.MonkeyPatch) -> World:
         w.finished = {"text": text, "sources": sources, "cache": cache}
 
     monkeypatch.setattr(ask.vectors, "search", search)
-    monkeypatch.setattr(ask, "NotebookRepository", Repo)
+    monkeypatch.setattr(ask, "DocumentRepository", Repo)
     monkeypatch.setattr(ask, "session_scope", lambda: Scope())
     monkeypatch.setattr(ask.quota, "reserve", reserve)
     monkeypatch.setattr(ask.quota, "release", release)
@@ -93,7 +93,7 @@ def world(monkeypatch: pytest.MonkeyPatch) -> World:
 def job() -> Job:
     return Job(
         kind=JobKind.ASK,
-        payload={"notebook_id": 1, "question": "masking?", "user_id": 7, "version": "v"},
+        payload={"question": "masking?", "user_id": 7, "version": "v"},
     )
 
 
@@ -136,14 +136,12 @@ class TestRun:
         assert world.finished["sources"] == []
 
     async def test_not_answered_is_passed_through_without_sources(self, world: World) -> None:
-        world.model = NotebookAnswer(
-            answer="The documents in this notebook do not cover that.", answered=False
-        )
+        world.model = NotebookAnswer(answer="Your documents do not cover that.", answered=False)
 
         await ask.run(job())
 
         assert world.finished is not None
-        assert world.finished["text"].startswith("The documents")
+        assert world.finished["text"].startswith("Your documents")
         assert world.finished["sources"] == []
 
     async def test_a_failed_call_gives_the_question_back(self, world: World) -> None:
@@ -175,13 +173,13 @@ class TestRender:
 
 class TestRequestGates:
     async def test_an_empty_question_is_refused(self) -> None:
-        with pytest.raises(NotebookError) as caught:
-            await ask.request_ask(1, 1, "   ")
+        with pytest.raises(DocumentError) as caught:
+            await ask.request_ask(1, "   ")
         assert caught.value.status == 422
 
     async def test_a_long_question_is_refused(self) -> None:
-        with pytest.raises(NotebookError) as caught:
-            await ask.request_ask(1, 1, "x" * 501)
+        with pytest.raises(DocumentError) as caught:
+            await ask.request_ask(1, "x" * 501)
         assert caught.value.status == 422
 
 
@@ -201,15 +199,19 @@ class TestFollowUps:
     ) -> None:
         seen: list[str] = []
 
-        async def search(notebook_id: int, query: str, limit: int) -> list[Hit]:
+        async def search(owner_id: int, query: str, limit: int) -> list[Hit]:
             seen.append(query)
             return world.hits
 
         monkeypatch.setattr(ask.vectors, "search", search)
         follow_up = Job(
             kind=JobKind.ASK,
-            payload={"notebook_id": 1, "question": "And it?", "previous": "What is BERT?",
-                     "user_id": 7, "version": "v"},
+            payload={
+                "question": "And it?",
+                "previous": "What is BERT?",
+                "user_id": 7,
+                "version": "v",
+            },
         )
 
         await ask.run(follow_up)

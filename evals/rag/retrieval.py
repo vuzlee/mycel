@@ -4,7 +4,7 @@
     uv run python -m evals.rag.retrieval [--keep]
 
 Ingests the corpus through the same parse / chunk / embed code as the worker into one
-eval notebook, asks every question for its top 20, and reports Recall@5/10/20, MRR,
+eval owner id, asks every question for its top 20, and reports Recall@5/10/20, MRR,
 latency and a suggested no-answer threshold. No Gemini call is made.
 """
 
@@ -29,8 +29,8 @@ CORPUS_DIR = ROOT / ".cache" / "rag-corpus"
 RESULTS = HERE / "results"
 TOP_K = 20
 
-#: Ids far above anything the app hands out, so the eval never touches real rows.
-NOTEBOOK_ID = 900_000
+#: An owner id far above any real user, so the eval never touches real rows.
+EVAL_OWNER_ID = 900_000
 FIRST_DOCUMENT_ID = 900_000
 
 
@@ -69,7 +69,7 @@ async def ingest(names: list[str]) -> tuple[dict[int, tuple[str, str]], dict[str
         for chunk_id, p in zip(ids, found, strict=True):
             lookup[chunk_id] = (name, p.text)
         await vectors.delete(document_id)
-        await vectors.write(NOTEBOOK_ID, document_id, True, ids, [p.text for p in found])
+        await vectors.write(EVAL_OWNER_ID, document_id, True, ids, [p.text for p in found])
         print(f"  {name}: {len(found)} passages in {time.monotonic() - started:.0f}s")
     return lookup, texts
 
@@ -80,7 +80,7 @@ async def ask(
     results, latencies = [], []
     for q in questions:
         started = time.monotonic()
-        hits = await vectors.search(NOTEBOOK_ID, str(q["question"]), TOP_K)
+        hits = await vectors.search(EVAL_OWNER_ID, str(q["question"]), TOP_K)
         latencies.append(time.monotonic() - started)
         answerable = q.get("answerable") is not False
         results.append(Ranked(

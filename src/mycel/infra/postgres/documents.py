@@ -1,4 +1,4 @@
-"""Mapped tables for notebooks: a notebook holds documents, a document is cut into chunks."""
+"""Mapped tables for a user's document store: a document is cut into chunks."""
 
 from datetime import datetime
 
@@ -23,29 +23,21 @@ READY = "ready"
 FAILED = "failed"
 DELETING = "deleting"
 
-#: A notebook with a document in one of these cannot be asked.
+#: While a user has a document in one of these, their knowledge base cannot be asked.
 IN_FLIGHT = (UPLOADED, PARSING)
-
-
-class Notebook(Base):
-    __tablename__ = "notebook"
-    __table_args__ = {"schema": APP}
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
-    name: Mapped[str] = mapped_column(String(120))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Document(Base):
     __tablename__ = "document"
     __table_args__ = (
-        UniqueConstraint("notebook_id", "sha256", name="uq_document_notebook_sha256"),
+        UniqueConstraint("owner_id", "sha256", name="uq_document_owner_sha256"),
         {"schema": APP},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    notebook_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.notebook.id", ondelete="CASCADE"))
+    owner_id: Mapped[int] = mapped_column(
+        ForeignKey(f"{APP}.user.id", ondelete="CASCADE"), index=True
+    )
     filename: Mapped[str] = mapped_column(String(255))
     mime: Mapped[str] = mapped_column(String(100))
     size: Mapped[int] = mapped_column(Integer)

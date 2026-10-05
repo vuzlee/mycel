@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from mycel.etl.checks.work import CheckFailed
 from mycel.etl.normalise import JIRA
-from mycel.infra.postgres import notebooks as _notebook_tables  # noqa: F401
+from mycel.infra.postgres import documents as _document_tables  # noqa: F401
 from mycel.infra.postgres.engine import async_dsn, dispose_engine
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.models import Base
@@ -448,7 +448,6 @@ class TestTheMigration:
             ("app", "session"),
             ("app", "conversation"),
             ("app", "turn"),
-            ("app", "notebook"),
             ("app", "document"),
             ("app", "chunk"),
         ],

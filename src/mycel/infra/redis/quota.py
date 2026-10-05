@@ -1,4 +1,4 @@
-"""Daily question quotas for notebook RAG: one per user, one for all of RAG.
+"""Daily question quotas for knowledge questions: one per user, one for all of RAG.
 
 Reserved before Gemini is called and given back if the call fails, so a failed question
 costs nothing. Lives on the noeviction server: an evicted counter would refund a day.

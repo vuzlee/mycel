@@ -22,7 +22,7 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.domains.ask import render
-from mycel.infra.postgres.repositories.notebooks import ChunkRow
+from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors import documents as vectors
 from mycel.services.citations import check
 
@@ -39,7 +39,7 @@ async def answer_one(
     q: dict[str, Any], lookup: dict[int, tuple[str, str]]
 ) -> dict[str, Any]:
     settings = get_settings()
-    hits = await vectors.search(retrieval.NOTEBOOK_ID, str(q["question"]), settings.ask_top_k)
+    hits = await vectors.search(retrieval.EVAL_OWNER_ID, str(q["question"]), settings.ask_top_k)
     base = {"id": q["id"], "answerable": q.get("answerable") is not False}
     if not hits or hits[0].score < settings.document_min_score:
         return {**base, "gemini": False, "answered": False, "cited": [], "grounded": False}

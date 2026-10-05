@@ -271,7 +271,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
             lambda: _minio(env),
             missing=None
             if (env.s3_endpoint_url and env.s3_access_key and env.s3_secret_key)
-            else "not configured — notebooks cannot store uploads",
+            else "not configured — documents cannot be uploaded",
         ),
         _probe("ingest", "NOTEBOOKS", lambda: _parser(env), missing=None),
         _probe(

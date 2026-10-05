@@ -1,4 +1,4 @@
-"""Upload one real file into a fresh notebook and wait for it to become ready.
+"""Upload one real file into your documents and wait for it to become ready.
 
     uv run python scripts/try_ingest.py path/to/file.pdf [--email x --password y]
 
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 
-from mycel.infra.postgres.repositories.notebooks import NotebookRepository
+from mycel.infra.postgres.repositories.documents import DocumentRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.vectors import documents as vectors
 
@@ -28,7 +28,7 @@ def login(client: httpx.Client, email: str, password: str) -> None:
 
 async def counts(document_id: int) -> tuple[int, int]:
     async with session_scope() as session:
-        chunks = await NotebookRepository(session).count_chunks(document_id)
+        chunks = await DocumentRepository(session).count_chunks(document_id)
     return chunks, await vectors.count(document_id)
 
 
@@ -41,11 +41,10 @@ def main() -> int:
 
     with httpx.Client(base_url=BASE, timeout=60) as client:
         login(client, args.email, args.password)
-        notebook = client.post("/notebooks", json={"name": f"try {time.time():.0f}"}).json()
         started = time.monotonic()
         with args.file.open("rb") as handle:
             response = client.post(
-                f"/notebooks/{notebook['id']}/documents",
+                "/documents",
                 files={"file": (args.file.name, handle)},
             )
         print("upload:", response.status_code, response.json())
@@ -54,7 +53,7 @@ def main() -> int:
         document_id = response.json()["id"]
 
         while True:
-            docs = client.get(f"/notebooks/{notebook['id']}/documents").json()
+            docs = client.get("/documents").json()
             doc = next(d for d in docs if d["id"] == document_id)
             if doc["status"] in ("ready", "failed"):
                 break

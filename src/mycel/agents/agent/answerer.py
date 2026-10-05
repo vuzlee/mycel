@@ -1,4 +1,4 @@
-"""Answers a question from notebook passages. No tools: uploaded text is untrusted."""
+"""Answers a question from the user's document passages. No tools: uploaded text is untrusted."""
 
 from pydantic_ai.toolsets import AbstractToolset
 

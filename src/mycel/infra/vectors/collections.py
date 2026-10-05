@@ -46,7 +46,7 @@ def work_items(model: str) -> Collection:
 
 
 def documents(model: str) -> Collection:
-    """One point per notebook passage."""
+    """One point per document passage."""
     return _named("documents", model)
 
 

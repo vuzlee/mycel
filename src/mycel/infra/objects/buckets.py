@@ -7,7 +7,7 @@ _ready: set[str] = set()
 
 
 def documents() -> str:
-    """Original files uploaded into notebooks."""
+    """Original files users upload."""
     return get_settings().documents_bucket
 
 
