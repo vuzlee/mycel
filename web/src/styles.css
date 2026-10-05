@@ -4897,10 +4897,60 @@ td[data-status="late"] {
 .pdf-mark { position: absolute; background: rgb(110 86 207 / 30%); mix-blend-mode: multiply; border-radius: 2px; }
 .nb-passage mark { background: var(--quote-mark); color: inherit; border-radius: 2px; }
 
-/* Settings: the two connections side by side once there is room, stacked on a phone. */
+/* Settings: two zones. Accounts are cards side by side; appearance is one small row. */
+.settings-zone + .settings-zone {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+}
+.zone-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.settings-zone > .muted { margin: 0 0 12px; }
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 0 24px;
+  gap: 12px;
 }
-.settings-grid > section { min-width: 0; }
+.modal .body .settings-grid > section.connection {
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+.settings-grid > .connection > button { margin-top: auto; }
+.modal .body section.settings-zone { display: block; }
+.modal .body section.settings-zone.appearance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.settings-zone.appearance .zone-title { margin: 0; }
+.theme-picker.compact {
+  display: inline-flex;
+  margin: 0;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+}
+.theme-picker.compact button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12.5px;
+}
+.theme-picker.compact button svg { width: 14px; height: 14px; }
+.small { font-size: 12px; }

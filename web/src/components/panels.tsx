@@ -156,9 +156,19 @@ export function SettingsPanel() {
 
   return (
     <>
-      <section>
-        <h3 className="label">Appearance</h3>
-        <div className="theme-picker">
+      <section className="settings-zone">
+        <h3 className="zone-title">Accounts</h3>
+        <p className="muted">Connected as you, per account.</p>
+        <div className="settings-grid">
+          {CONNECTIONS.map((p) => (
+            <Connection key={p.id} provider={p} />
+          ))}
+        </div>
+      </section>
+
+      <section className="settings-zone appearance">
+        <h3 className="zone-title">Appearance</h3>
+        <div className="theme-picker compact" role="group" aria-label="Theme">
           {THEMES.map((option) => (
             <button
               key={option.value}
@@ -170,16 +180,8 @@ export function SettingsPanel() {
             </button>
           ))}
         </div>
-        <p className="muted">
-          Kept in this browser — another machine keeps its own.
-        </p>
+        <span className="muted small">This browser only.</span>
       </section>
-
-      <div className="settings-grid">
-        {CONNECTIONS.map((p) => (
-          <Connection key={p.id} provider={p} />
-        ))}
-      </div>
     </>
   );
 }
