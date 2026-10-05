@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { GoogleStatus, JiraStatus, Thread } from "../api";
+import type { Thread } from "../api";
 import {
   changePassword,
   connectGoogle,
@@ -55,8 +55,9 @@ export function ProfilePanel({ threads }: { threads: Thread[] }) {
       </dl>
 
       <p className="muted">
-        Your runs are kept under this account, so signing in on another machine brings them
-        with you. The address is the identity here and cannot be changed.
+        Your runs are kept under this account, so signing in on another machine
+        brings them with you. The address is the identity here and cannot be
+        changed.
       </p>
 
       <PasswordForm />
@@ -124,7 +125,11 @@ function PasswordForm() {
         </label>
 
         {failure && <p className="failure">{failure}</p>}
-        {done && <p className="notice">Changed. Every other browser has been signed out.</p>}
+        {done && (
+          <p className="notice">
+            Changed. Every other browser has been signed out.
+          </p>
+        )}
 
         <button className="primary" type="submit" disabled={busy}>
           {busy && <Spinner className="spin" size={14} />}
@@ -165,12 +170,15 @@ export function SettingsPanel() {
             </button>
           ))}
         </div>
-        <p className="muted">Kept in this browser — another machine keeps its own.</p>
+        <p className="muted">
+          Kept in this browser — another machine keeps its own.
+        </p>
       </section>
 
       <div className="settings-grid">
-        <GoogleSection />
-        <JiraSection />
+        {CONNECTIONS.map((p) => (
+          <Connection key={p.id} provider={p} />
+        ))}
       </div>
     </>
   );
@@ -187,125 +195,85 @@ function outcome(provider: "google" | "jira"): "connected" | "failed" | null {
   return null;
 }
 
-/** Connecting a Google account: one grant opens this person's own calendar and mail.
- *
- *  Three states, and the first is about the deployment rather than the person: a machine
- *  with no OAuth client cannot connect anything, and saying so is better than a button that
- *  leads to an error. Then connected, and not. */
-function GoogleSection() {
-  const [status, setStatus] = useState<GoogleStatus | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
-  const [came] = useState(() => outcome("google"));
-
-  useEffect(() => {
-    void fetchGoogle().then(setStatus).catch(() => setStatus(null));
-    // Cleared here rather than in both sections: whichever round just finished owns the
-    // query string, and clearing it twice is harmless only until one of them clears the
-    // other's outcome before it has been read.
-    if (came) window.history.replaceState({}, "", window.location.pathname);
-  }, [came]);
-
-  const drop = async (): Promise<void> => {
-    setBusy(true);
-    setFailure(null);
-    try {
-      await disconnectGoogle();
-      setStatus(await fetchGoogle());
-    } catch (error) {
-      setFailure(error instanceof Error ? error.message : String(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section>
-      <h3 className="label">Google</h3>
-
-      {status === null && <p className="muted">Checking…</p>}
-
-      {status && !status.configured && (
-        <p className="muted">
-          This deployment has no Google client configured, so no calendar or mail can be
-          connected.
-          Whoever runs it sets <code>GOOGLE_CLIENT_ID</code>,{" "}
-          <code>GOOGLE_CLIENT_SECRET</code> and <code>TOKEN_ENCRYPTION_KEY</code>.
-        </p>
-      )}
-
-      {status?.configured && status.email && (
-        <>
-          <div className="identity">
-            <span className="avatar big" aria-hidden>
-              <Calendar size={17} />
-            </span>
-            <div>
-              <b>{status.email}</b>
-              <span className="muted">
-                Connected{" "}
-                {status.connected_at
-                  ? new Date(status.connected_at).toLocaleDateString()
-                  : ""}
-              </span>
-            </div>
-          </div>
-          <p className="muted">
-            Questions about your time read this calendar, and a booking you agree to is
-            written to it. Questions about mail read this inbox — senders and subjects only,
-            never a body. Nothing is sent, and nothing is ever deleted.
-          </p>
-          {failure && <p className="failure">{failure}</p>}
-          <button onClick={() => void drop()} disabled={busy}>
-            {busy && <Spinner className="spin" size={14} />}
-            Disconnect
-          </button>
-        </>
-      )}
-
-      {status?.configured && !status.email && (
-        <>
-          <p className="muted">
-            One connection, your own calendar and mail. Ask what is on this afternoon or
-            whether anything important came in today, or say "3pm tomorrow, team, half an
-            hour" and agree to what it reads back. Nothing is written until you do, mail is
-            only read, and nothing here can delete anything.
-          </p>
-          {came === "failed" && (
-            <p className="failure">That did not finish. Nothing was connected.</p>
-          )}
-          <button className="primary" onClick={connectGoogle}>
-            <Calendar size={14} />
-            Connect Google
-          </button>
-        </>
-      )}
-    </section>
-  );
+/** One account a person connects. Adding a provider is one entry in `CONNECTIONS` — the
+ *  status call, the consent redirect and the disconnect are all it needs from `api.ts`. */
+interface Provider {
+  id: "google" | "jira";
+  title: string;
+  icon: React.ReactNode;
+  /** One line, shown before connecting: what connecting opens. */
+  offers: string;
+  status: () => Promise<{
+    configured: boolean;
+    who: string | null;
+    since: string | null;
+    note?: string;
+  }>;
+  connect: () => void;
+  disconnect: () => Promise<void>;
 }
 
-/** Connecting a Jira account, so what the app writes carries your name and not the host's.
- *
- *  Four states rather than the Google section's three, and the fourth is the one that
- *  matters: whether this grant is the one every background sync runs on. Disconnecting
- *  that one stops the syncing, and somebody about to click Disconnect has to be told
- *  before they do rather than after. */
-function JiraSection() {
-  const [status, setStatus] = useState<JiraStatus | null>(null);
+const CONNECTIONS: Provider[] = [
+  {
+    id: "google",
+    title: "Google",
+    icon: <Calendar size={16} />,
+    offers:
+      "Your own calendar and mail. Mail is read-only; nothing is deleted.",
+    status: async () => {
+      const s = await fetchGoogle();
+      return { configured: s.configured, who: s.email, since: s.connected_at };
+    },
+    connect: connectGoogle,
+    disconnect: disconnectGoogle,
+  },
+  {
+    id: "jira",
+    title: "Jira",
+    icon: <Board size={16} />,
+    offers: "The projects Jira lets you browse. Writes only after you agree.",
+    status: async () => {
+      const s = await fetchJira();
+      const note = s.display_name
+        ? s.projects.length
+          ? `Reads ${s.projects.join(", ")}`
+          : "Jira lets this account browse no project"
+        : undefined;
+      return {
+        configured: s.configured,
+        who: s.display_name,
+        since: s.connected_at,
+        note,
+      };
+    },
+    connect: connectJira,
+    disconnect: disconnectJira,
+  },
+];
+
+type Status = Awaited<ReturnType<Provider["status"]>>;
+
+/** One provider's card: not set up here, connected, or not yet. */
+function Connection({ provider }: { provider: Provider }) {
+  const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [came] = useState(() => outcome("jira"));
+  const [came] = useState(() => outcome(provider.id));
 
   useEffect(() => {
-    void fetchJira().then(setStatus).catch(() => setStatus(null));
-  }, [came]);
+    void provider
+      .status()
+      .then(setStatus)
+      .catch(() => setStatus(null));
+    if (came) window.history.replaceState({}, "", window.location.pathname);
+  }, [came, provider]);
 
   const drop = async (): Promise<void> => {
     setBusy(true);
     setFailure(null);
     try {
-      await disconnectJira();
-      setStatus(await fetchJira());
+      await provider.disconnect();
+      setStatus(await provider.status());
     } catch (error) {
       setFailure(error instanceof Error ? error.message : String(error));
     } finally {
@@ -314,77 +282,49 @@ function JiraSection() {
   };
 
   return (
-    <section>
-      <h3 className="label">Jira</h3>
-
+    <section className="connection">
+      <h3 className="label">{provider.title}</h3>
       {status === null && <p className="muted">Checking…</p>}
-
       {status && !status.configured && (
         <p className="muted">
-          This deployment has no Jira OAuth client configured, so no account can be
-          connected. Whoever runs it sets <code>JIRA_CLIENT_ID</code>,{" "}
-          <code>JIRA_CLIENT_SECRET</code> and <code>TOKEN_ENCRYPTION_KEY</code>.
+          Not set up on this deployment — see docs/setup.md.
         </p>
       )}
-
-      {status?.configured && status.display_name && (
+      {status?.configured && status.who && (
         <>
           <div className="identity">
             <span className="avatar big" aria-hidden>
-              <Board size={17} />
+              {provider.icon}
             </span>
             <div>
-              <b>{status.display_name}</b>
+              <b>{status.who}</b>
               <span className="muted">
                 Connected{" "}
-                {status.connected_at
-                  ? new Date(status.connected_at).toLocaleDateString()
+                {status.since
+                  ? new Date(status.since).toLocaleDateString()
                   : ""}
               </span>
             </div>
           </div>
-          <p className="muted">
-            A comment, a status change or a new ticket is written under this name. Nothing
-            is written until you have read it back and agreed to it, and nothing here can
-            delete anything.
-          </p>
-          <p className="muted">
-            {status.projects.length > 0 ? (
-              <>
-                You can read <b>{status.projects.join(", ")}</b> — the projects Jira lets
-                you browse. It is asked again after every sync.
-              </>
-            ) : (
-              <>Jira lets this account browse no project, so there is nothing to show yet.</>
-            )}
-          </p>
+          {status.note && <p className="muted">{status.note}</p>}
           {failure && <p className="failure">{failure}</p>}
           <button onClick={() => void drop()} disabled={busy}>
             {busy && <Spinner className="spin" size={14} />}
             Disconnect
           </button>
-          <p className="muted">
-            Disconnecting here forgets the token. To withdraw the permission at
-            Atlassian's end as well, remove the app at{" "}
-            <code>id.atlassian.com</code> → Account settings → Connected apps.
-          </p>
         </>
       )}
-
-      {status?.configured && !status.display_name && (
+      {status?.configured && !status.who && (
         <>
-          <p className="muted">
-            Connect it to see the projects you can browse in Jira — Mycel asks Jira, and
-            shows you exactly those. You can also say "comment on PROJ-12 that it's done" or
-            "create a task for the login timeout" — written under your own name, after you
-            have read it back and agreed.
-          </p>
+          <p className="muted">{provider.offers}</p>
           {came === "failed" && (
-            <p className="failure">That did not finish. Nothing was connected.</p>
+            <p className="failure">
+              That did not finish. Nothing was connected.
+            </p>
           )}
-          <button className="primary" onClick={connectJira}>
-            <Board size={14} />
-            Connect Jira
+          <button className="primary" onClick={provider.connect}>
+            {provider.icon}
+            Connect {provider.title}
           </button>
         </>
       )}
@@ -430,8 +370,8 @@ export function HelpPanel() {
           <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">
             the repository
           </a>
-          , or write to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Replies are from one
-          person, so give it a day.
+          , or write to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Replies are
+          from one person, so give it a day.
         </p>
       </section>
     </>
