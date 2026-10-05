@@ -219,6 +219,7 @@ def _source(label: str, chunk: ChunkRow, quote: str = "") -> dict[str, Any]:
         "filename": chunk.filename,
         "mime": chunk.mime,
         "page": chunk.page_start,
+        "page_end": chunk.page_end,
         "section": chunk.section_path,
         "quote": quote,
     }

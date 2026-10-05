@@ -408,6 +408,8 @@ export interface SourceRef {
   filename: string;
   mime: string;
   page: number | null;
+  /** The last page the passage runs onto; the quote may sit there rather than on `page`. */
+  page_end?: number | null;
   section: string;
   /** The words the answer cited, checked to occur in the passage. */
   quote?: string;

@@ -2754,6 +2754,11 @@ td[data-status="late"] {
   box-shadow: var(--shadow-lg);
 }
 
+.modal.wide {
+  max-width: 52rem;
+  max-height: 90vh;
+}
+
 .modal > header {
   display: flex;
   align-items: flex-start;
@@ -4884,7 +4889,7 @@ td[data-status="late"] {
   }
 }
 
-.pdf-view { max-height: 70vh; overflow: auto; margin-bottom: 12px; }
+.pdf-view { max-height: 66vh; overflow: auto; margin-bottom: 12px; }
 .pdf-stage { position: relative; width: max-content; }
 .pdf-stage canvas { display: block; }
 .pdf-marks { position: absolute; inset: 0; pointer-events: none; }

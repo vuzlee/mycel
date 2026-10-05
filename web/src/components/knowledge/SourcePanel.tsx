@@ -40,18 +40,24 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
     window.open(isPdf ? `${original}#page=${source.page}` : original, "_blank", "noopener");
   };
 
-  const where = [source.page ? `page ${source.page}` : null, source.section || null]
+  const pages =
+    source.page && source.page_end && source.page_end !== source.page
+      ? `pages ${source.page}–${source.page_end}`
+      : source.page
+        ? `page ${source.page}`
+        : null;
+  const where = [pages, source.section || null]
     .filter(Boolean)
     .join(" · ");
   const loading = !failure && (isPdf ? url === null : passage === null);
 
   return (
-    <Modal title={`[${source.label}] ${source.filename}`} lede={where || undefined} onClose={onClose}>
+    <Modal title={`[${source.label}] ${source.filename}`} lede={where || undefined} onClose={onClose} wide={isPdf}>
       {failure && <p className="nb-error">{failure}</p>}
       {loading && <p className="empty">Loading…</p>}
       {isPdf && url && (
         <Suspense fallback={<p className="empty">Loading…</p>}>
-          <PdfPage url={url} page={source.page!} quote={quote} />
+          <PdfPage url={url} first={source.page!} last={source.page_end ?? source.page!} quote={quote} />
         </Suspense>
       )}
       {passage && <Marked text={passage.text} quote={quote} />}

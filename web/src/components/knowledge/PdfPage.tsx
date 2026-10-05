@@ -1,26 +1,53 @@
 /**
- * One page of a PDF, drawn in the app, with the cited quote highlighted.
+ * The page of a PDF a quote sits on, drawn in the app, with the quote highlighted.
  *
  * pdf.js is imported only when a PDF source is opened, so the chat page does not carry it.
- * The quote is found in the page's text layer by matching normalised words; when it cannot
- * be placed (two columns, a hyphen across a line) the page still shows, unhighlighted.
+ * A passage can run across pages, so each page from `first` to `last` is searched and the
+ * first that holds the quote is shown. Matching ignores spaces and punctuation: pdf.js splits
+ * maths into items ("β", "1", "= 0", ".", "9") that the passage text joins differently. When
+ * the quote cannot be placed the first page still shows, unhighlighted.
  */
 
 import { useEffect, useRef, useState } from "react";
+import type { PDFPageProxy } from "pdfjs-dist";
 
 interface Props {
   url: string;
-  page: number;
+  first: number;
+  last: number;
   quote: string;
 }
 
-const norm = (text: string): string => text.toLowerCase().replace(/\s+/g, " ").trim();
+/** Letters and digits only, lower case: what survives every way of splitting a line. */
+const key = (text: string): string => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
-export function PdfPage({ url, page, quote }: Props) {
+type Item = { str: string; transform: number[]; width: number };
+
+/** The items the quote covers on this page, or null when it is not there. */
+function cover(items: Item[], quote: string): Item[] | null {
+  const wanted = key(quote);
+  if (!wanted) return null;
+  let joined = "";
+  const starts = items.map((item) => {
+    const at = joined.length;
+    joined += key(item.str);
+    return at;
+  });
+  const at = joined.indexOf(wanted);
+  if (at < 0) return null;
+  const end = at + wanted.length;
+  return items.filter((item, i) => {
+    const length = key(item.str).length;
+    return length > 0 && starts[i]! < end && starts[i]! + length > at;
+  });
+}
+
+export function PdfPage({ url, first, last, quote }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const layer = useRef<HTMLDivElement>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [found, setFound] = useState<boolean | null>(null);
+  const [shown, setShown] = useState<number | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -31,48 +58,54 @@ export function PdfPage({ url, page, quote }: Props) {
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
 
         const doc = await pdfjs.getDocument(url).promise;
-        const pdfPage = await doc.getPage(Math.min(Math.max(page, 1), doc.numPages));
-        const viewport = pdfPage.getViewport({ scale: 1.3 });
+        const clamp = (n: number): number => Math.min(Math.max(n, 1), doc.numPages);
+        const from = clamp(first);
+        const to = Math.max(from, clamp(last));
+
+        let page: PDFPageProxy | null = null;
+        let marked: Item[] | null = null;
+        for (let n = from; n <= to && !marked; n++) {
+          const candidate = await doc.getPage(n);
+          const content = await candidate.getTextContent();
+          const items = content.items.filter((i): i is typeof i & Item => "str" in i);
+          marked = cover(items, quote);
+          if (marked || !page) page = candidate;
+        }
         const node = canvas.current;
         const text = layer.current;
-        if (!live || !node || !text) return;
+        if (!live || !page || !node || !text) return;
 
-        node.width = viewport.width;
-        node.height = viewport.height;
-        await pdfPage.render({ canvasContext: node.getContext("2d")!, viewport }).promise;
+        // Fit the frame's width; drawn at the device's pixel ratio so text stays sharp.
+        const fit = (node.parentElement?.parentElement?.clientWidth ?? 600) / page.getViewport({ scale: 1 }).width;
+        const viewport = page.getViewport({ scale: fit });
+        const ratio = window.devicePixelRatio || 1;
+        node.width = Math.floor(viewport.width * ratio);
+        node.height = Math.floor(viewport.height * ratio);
+        node.style.width = `${viewport.width}px`;
+        node.style.height = `${viewport.height}px`;
+        await page.render({
+          canvasContext: node.getContext("2d")!,
+          viewport,
+          transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
+        }).promise;
 
-        const content = await pdfPage.getTextContent();
         text.replaceChildren();
         text.style.width = `${viewport.width}px`;
         text.style.height = `${viewport.height}px`;
-        const items = content.items.filter((i): i is typeof i & { str: string; transform: number[] } =>
-          "str" in i,
-        );
-
-        // Which text items the quote covers: join them with spaces and find the quote.
-        let joined = "";
-        const starts = items.map((item) => {
-          const at = joined.length;
-          joined += `${norm(item.str)} `;
-          return at;
-        });
-        const at = quote ? joined.indexOf(norm(quote)) : -1;
-        const end = at + norm(quote).length;
-
-        items.forEach((item, index) => {
-          const covered = at >= 0 && starts[index]! < end && starts[index]! + norm(item.str).length > at;
-          if (!covered) return;
+        for (const item of marked ?? []) {
           const [x, y] = pdfjs.Util.applyTransform([item.transform[4]!, item.transform[5]!], viewport.transform);
           const height = Math.hypot(item.transform[2]!, item.transform[3]!) * viewport.scale;
           const mark = document.createElement("span");
           mark.className = "pdf-mark";
           mark.style.left = `${x}px`;
           mark.style.top = `${y! - height}px`;
-          mark.style.width = `${("width" in item ? (item.width as number) : 0) * viewport.scale}px`;
+          mark.style.width = `${item.width * viewport.scale}px`;
           mark.style.height = `${height}px`;
           text.appendChild(mark);
-        });
-        setFound(at >= 0);
+        }
+        text.firstElementChild?.scrollIntoView({ block: "center" });
+        setShown(page.pageNumber);
+        setFound(marked !== null);
       } catch (error) {
         if (live) setFailure(error instanceof Error ? error.message : String(error));
       }
@@ -80,12 +113,13 @@ export function PdfPage({ url, page, quote }: Props) {
     return () => {
       live = false;
     };
-  }, [url, page, quote]);
+  }, [url, first, last, quote]);
 
   if (failure) return <p className="nb-error">Could not show the PDF: {failure}</p>;
   return (
     <div className="pdf-view">
       {found === false && <p className="empty">The quote could not be located on this page.</p>}
+      {shown !== null && shown !== first && <p className="empty">Page {shown}</p>}
       <div className="pdf-stage">
         <canvas ref={canvas} />
         <div ref={layer} className="pdf-marks" />

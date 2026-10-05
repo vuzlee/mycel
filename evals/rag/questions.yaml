@@ -4,132 +4,158 @@
 # Labels are quotes, not chunk ids, so they survive any change to the chunker.
 # `evidence` was checked to occur exactly once in its document.
 # For `table` questions the evidence is the row label; the number sits in the same row.
+# `reference` (batch 067) is the answer a grader compares with, written from the source.
 
 - id: b01
   question: "What fraction of input tokens does BERT hide at random during masked language model pre-training?"
   doc: bert.pdf
   evidence: "we mask 15% of all WordPiece tokens"
   kind: prose
+  reference: "15% of all WordPiece tokens in each sequence, chosen at random."
 - id: b02
   question: "In next sentence prediction, what label is given when sentence B is just a random sentence from the corpus?"
   doc: bert.pdf
   evidence: "labeled as NotNext"
   kind: name
+  reference: "NotNext (the actual next sentence is labelled IsNext); each case is 50% of the examples."
 - id: b03
   question: "How long does it take to reproduce BERT's fine-tuning results on TPU hardware?"
   doc: bert.pdf
   evidence: "at most 1 hour on a single Cloud TPU"
   kind: prose
+  reference: "At most 1 hour on a single Cloud TPU (or a few hours on a GPU), from the same pre-trained model."
 - id: b04
   question: "What GLUE average score did the ELMo baseline with BiLSTM and attention get on the test set?"
   doc: bert.pdf
   evidence: "BiLSTM+ELMo+Attn"
   kind: table
+  reference: "71.0 average on the GLUE test set."
 - id: b05
   question: "How does an expert human score on the SWAG commonsense inference benchmark compared to BERT?"
   doc: bert.pdf
   evidence: "Human (expert)"
   kind: table
+  reference: "Expert humans score 85.0 on the SWAG test set; BERT-Large scores 86.3, slightly above them (five-annotation humans score 88.0)."
 - id: r01
   question: "How many passages does the Wikipedia knowledge source contain once the articles are split into chunks?"
   doc: rag.pdf
   evidence: "to make a total of 21M documents"
   kind: prose
+  reference: "About 21 million passages: each article is split into disjoint 100-word chunks."
 - id: r02
   question: "Which library is used to build the nearest-neighbour index over document embeddings in RAG?"
   doc: rag.pdf
   evidence: "single MIPS index using FAISS"
   kind: name
+  reference: "FAISS, as a single MIPS index with a Hierarchical Navigable Small World approximation."
 - id: r03
   question: "How big is the BART generator that RAG uses, in parameters?"
   doc: rag.pdf
   evidence: "with 400M parameters"
   kind: name
+  reference: "About 400M parameters (BART-large)."
 - id: r04
   question: "On FEVER, how often is RAG's first retrieved passage from a gold evidence article?"
   doc: rag.pdf
   evidence: "top retrieved document is from a gold article"
   kind: prose
+  reference: "In 71% of cases; a gold article is in the top 10 in 90% of cases."
 - id: r05
   question: "In the human evaluation of Jeopardy questions, what share of cases were judged bad for both BART and RAG?"
   doc: rag.pdf
   evidence: "Both poor"
   kind: table
+  reference: "17.7% for factuality and 6.9% for specificity were judged 'both poor'."
 - id: d01
   question: "What is the minimum FastAPI version I should upgrade to before using Annotated?"
   doc: fastapi-dependencies.md
   evidence: "to at least 0.95.1 before using"
   kind: name
+  reference: "0.95.1 (Annotated was added in 0.95.0)."
 - id: d02
   question: "When I pass my function to Depends, should I invoke it with parentheses?"
   doc: fastapi-dependencies.md
   evidence: "don't add the parenthesis at the end"
   kind: prose
+  reference: "No. Pass the function itself to Depends without calling it, so no parentheses."
 - id: d03
   question: "Do I need to write a plug-in system to add integrations to FastAPI?"
   doc: fastapi-dependencies.md
   evidence: "declare an infinite number of integrations"
   kind: prose
+  reference: "No. Dependencies already let you declare any number of integrations, so no plug-in system is needed."
 - id: d04
   question: "If I'm unsure whether my endpoint should be async or not, which should I pick by default?"
   doc: fastapi-async.md
   evidence: "If you just don't know, use normal"
   kind: prose
+  reference: "Plain def."
 - id: d05
   question: "How does FastAPI execute a path operation declared with plain def so it doesn't block the server?"
   doc: fastapi-async.md
   evidence: "run in an external threadpool that is then awaited"
   kind: prose
+  reference: "It runs the function in an external threadpool and awaits that, instead of calling it directly."
 - id: d06
   question: "Is defining trivial compute-only endpoints with def instead of async def faster in FastAPI?"
   doc: fastapi-async.md
   evidence: "tiny performance gain (about 100 nanoseconds)"
   kind: prose
+  reference: "No. In FastAPI the effect is the opposite; use async def unless the function does blocking I/O."
 - id: d07
   question: "Why shouldn't I put the HNSW index on the cold memory tier in Qdrant?"
   doc: qdrant-capacity-planning.md
   evidence: "graph traversal does many small random reads"
   kind: prose
+  reference: "Graph traversal does many small random reads, which suffer badly from disk latency on the cold tier."
 - id: d08
   question: "Roughly how many vectors can a single Qdrant node handle before I need more nodes?"
   doc: qdrant-capacity-planning.md
   evidence: "typically tops out around 100 million vectors"
   kind: prose
+  reference: "Around 100 million vectors, as a rough ceiling that depends on dimensions, datatype and quantization."
 - id: d09
   question: "What shard count is recommended so a Qdrant collection divides evenly as the cluster grows?"
   doc: qdrant-capacity-planning.md
   evidence: "12 shards are a common choice"
   kind: prose
+  reference: "12 shards, which divide evenly across 1, 2, 3, 4, 6 and 12 nodes."
 - id: d10
   question: "What HTTP status code does Qdrant return when a disk usage quota blocks writes?"
   doc: qdrant-common-errors.md
   evidence: "clients see an HTTP 507 Insufficient Storage"
   kind: name
+  reference: "HTTP 507 Insufficient Storage (gRPC ResourceExhausted)."
 - id: d11
   question: "How do I fix Qdrant failing with OS error 24 about too many files?"
   doc: qdrant-common-errors.md
   evidence: "need to increase the limit of the open files"
   kind: prose
+  reference: "Raise the open-files limit, for example docker run --ulimit nofile=10000:10000, or ulimit for the user session."
 - id: d12
   question: "Why does a Qdrant node in a distributed setup fail to open the collections meta WAL with WouldBlock?"
   doc: qdrant-common-errors.md
   evidence: "the same files are already being used"
   kind: prose
+  reference: "Another Qdrant instance is already using the same WAL files; each node needs its own storage directory or volume."
 - id: d13
   question: "If an uploaded file needs slow processing, how can my FastAPI endpoint respond immediately?"
   doc: fastapi-background-tasks.docx
   evidence: "process the file in the background"
   kind: prose
+  reference: "Return a response such as 202 Accepted right away and process the file with BackgroundTasks."
 - id: d14
   question: "What happens when BackgroundTasks is declared both in a dependency and in the path operation?"
   doc: fastapi-background-tasks.docx
   evidence: "all the background tasks are merged together"
   kind: prose
+  reference: "FastAPI reuses one object, so all the tasks are merged and run in the background after the response."
 - id: d15
   question: "When should I use Celery instead of FastAPI's built-in background tasks?"
   doc: fastapi-background-tasks.docx
   evidence: "you don't need to share memory"
   kind: prose
+  reference: "When the heavy work need not run in the same process, for example no shared memory or variables; Celery runs it across processes and servers but needs a queue such as RabbitMQ or Redis."
 
 # No document answers these. They share vocabulary with the corpus on purpose, so search
 # returns something and the threshold has to tell them apart by score.

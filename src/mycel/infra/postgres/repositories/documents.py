@@ -57,6 +57,7 @@ class ChunkRow:
     text: str
     section_path: str
     page_start: int | None
+    page_end: int | None = None
 
 
 class DocumentRepository:
@@ -278,4 +279,5 @@ def _chunk(row: Chunk, doc: Document) -> ChunkRow:
         row.text,
         row.section_path,
         row.page_start,
+        row.page_end,
     )

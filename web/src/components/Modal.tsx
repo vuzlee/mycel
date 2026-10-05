@@ -18,9 +18,11 @@ interface Props {
   lede?: string;
   onClose: () => void;
   children: React.ReactNode;
+  /** Room for a page to be read, not a form to be filled. */
+  wide?: boolean;
 }
 
-export function Modal({ title, lede, onClose, children }: Props) {
+export function Modal({ title, lede, onClose, children, wide }: Props) {
   useEffect(() => {
     const key = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
@@ -32,7 +34,7 @@ export function Modal({ title, lede, onClose, children }: Props) {
   return (
     <div className="scrim asking" data-open onClick={onClose}>
       <div
-        className="modal"
+        className={wide ? "modal wide" : "modal"}
         role="dialog"
         aria-modal
         aria-label={title}
