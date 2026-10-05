@@ -4896,3 +4896,11 @@ td[data-status="late"] {
 /* The page is paper in either theme, so its mark is the light one, multiplied into the ink. */
 .pdf-mark { position: absolute; background: rgb(110 86 207 / 30%); mix-blend-mode: multiply; border-radius: 2px; }
 .nb-passage mark { background: var(--quote-mark); color: inherit; border-radius: 2px; }
+
+/* Settings: the two connections side by side once there is room, stacked on a phone. */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0 24px;
+}
+.settings-grid > section { min-width: 0; }

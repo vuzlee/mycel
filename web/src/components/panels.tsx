@@ -141,8 +141,7 @@ const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
   { value: "dark", label: "Dark", icon: <Moon size={17} /> },
 ];
 
-/** Three settings: how it looks here, which calendar it may read, and which Jira it
- *  writes to as you.
+/** Three settings: how it looks here, your Google (calendar and mail), and your Jira.
  *
  *  They sit together because all three answer "how does this behave for me", and none is
  *  big enough for a screen of its own. Appearance is per-browser; the two connections are
@@ -169,8 +168,10 @@ export function SettingsPanel() {
         <p className="muted">Kept in this browser — another machine keeps its own.</p>
       </section>
 
-      <GoogleSection />
-      <JiraSection />
+      <div className="settings-grid">
+        <GoogleSection />
+        <JiraSection />
+      </div>
     </>
   );
 }
@@ -186,7 +187,7 @@ function outcome(provider: "google" | "jira"): "connected" | "failed" | null {
   return null;
 }
 
-/** Connecting a Google account, so a question about the calendar has one to read.
+/** Connecting a Google account: one grant opens this person's own calendar and mail.
  *
  *  Three states, and the first is about the deployment rather than the person: a machine
  *  with no OAuth client cannot connect anything, and saying so is better than a button that
@@ -220,13 +221,14 @@ function GoogleSection() {
 
   return (
     <section>
-      <h3 className="label">Google Calendar</h3>
+      <h3 className="label">Google</h3>
 
       {status === null && <p className="muted">Checking…</p>}
 
       {status && !status.configured && (
         <p className="muted">
-          This deployment has no Google client configured, so no calendar can be connected.
+          This deployment has no Google client configured, so no calendar or mail can be
+          connected.
           Whoever runs it sets <code>GOOGLE_CLIENT_ID</code>,{" "}
           <code>GOOGLE_CLIENT_SECRET</code> and <code>TOKEN_ENCRYPTION_KEY</code>.
         </p>
@@ -250,7 +252,8 @@ function GoogleSection() {
           </div>
           <p className="muted">
             Questions about your time read this calendar, and a booking you agree to is
-            written to it. Nothing else is read, and nothing is ever deleted.
+            written to it. Questions about mail read this inbox — senders and subjects only,
+            never a body. Nothing is sent, and nothing is ever deleted.
           </p>
           {failure && <p className="failure">{failure}</p>}
           <button onClick={() => void drop()} disabled={busy}>
@@ -263,16 +266,17 @@ function GoogleSection() {
       {status?.configured && !status.email && (
         <>
           <p className="muted">
-            Connect one and you can ask what is on this afternoon, or say "3pm tomorrow,
-            team, half an hour" and agree to what it reads back. Nothing is written until you
-            do — and nothing here can delete an event.
+            One connection, your own calendar and mail. Ask what is on this afternoon or
+            whether anything important came in today, or say "3pm tomorrow, team, half an
+            hour" and agree to what it reads back. Nothing is written until you do, mail is
+            only read, and nothing here can delete anything.
           </p>
           {came === "failed" && (
             <p className="failure">That did not finish. Nothing was connected.</p>
           )}
           <button className="primary" onClick={connectGoogle}>
             <Calendar size={14} />
-            Connect Google Calendar
+            Connect Google
           </button>
         </>
       )}

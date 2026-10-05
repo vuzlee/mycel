@@ -124,7 +124,12 @@ export function Account({ where }: Props) {
       )}
 
       {panel === "settings" && (
-        <Modal title="Settings" lede="How this app looks on this machine." onClose={shut}>
+        <Modal
+          title="Settings"
+          lede="How it looks here, and the accounts it reads as you."
+          onClose={shut}
+          wide
+        >
           <SettingsPanel />
         </Modal>
       )}
