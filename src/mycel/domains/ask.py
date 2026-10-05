@@ -131,7 +131,10 @@ async def run(job: Job) -> None:
     if answer.answered and not checked.cited:
         text, sources = NOT_GROUNDED, []
     else:
-        text, sources = checked.answer, [_source(label, labelled[label]) for label in checked.cited]
+        text, sources = checked.answer, [
+            _source(label, labelled[label], checked.quotes.get(label, ""))
+            for label in checked.cited
+        ]
     if checked.dropped:
         log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
     await _finish(job, owner_id, version, query, text, sources, cache=True)
@@ -208,7 +211,7 @@ async def _ask_model(
     return result
 
 
-def _source(label: str, chunk: ChunkRow) -> dict[str, Any]:
+def _source(label: str, chunk: ChunkRow, quote: str = "") -> dict[str, Any]:
     return {
         "label": label,
         "chunk_id": chunk.id,
@@ -217,6 +220,7 @@ def _source(label: str, chunk: ChunkRow) -> dict[str, Any]:
         "mime": chunk.mime,
         "page": chunk.page_start,
         "section": chunk.section_path,
+        "quote": quote,
     }
 
 

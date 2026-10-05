@@ -409,6 +409,8 @@ export interface SourceRef {
   mime: string;
   page: number | null;
   section: string;
+  /** The words the answer cited, checked to occur in the passage. */
+  quote?: string;
 }
 
 export interface AskState {

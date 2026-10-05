@@ -64,3 +64,16 @@ class TestCheck:
         out = check(answer("Upgrade first [c1].", ("c1", quote)), passages)
 
         assert out.cited == ["c1"]
+
+    def test_a_checked_quote_is_kept_for_the_source_viewer(self) -> None:
+        out = check(
+            answer("It masks 15% [c1].", ("c1", "masks 15% of all"), ("c1", "at random")),
+            PASSAGES,
+        )
+
+        assert out.quotes == {"c1": "masks 15% of all"}
+
+    def test_an_invented_quote_is_not_kept(self) -> None:
+        out = check(answer("Half [c1].", ("c1", "masks 50% of tokens")), PASSAGES)
+
+        assert out.quotes == {}

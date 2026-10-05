@@ -19,17 +19,19 @@
   --rule: #e7e3f0;
   --rule-2: #d9d3e6;
 
-  --accent: #6d3fd1;
-  --accent-hover: #5c33b8;
+  --accent: #6e56cf;
+  --accent-hover: #654dc4;
   --accent-ink: #ffffff;
-  --accent-soft: #efe9fc;
-  --accent-line: #d6c8f7;
+  --accent-soft: #f4f0fe;
+  --accent-line: #d4cafe;
   /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
      a selection lands on are already tinted — the question bubble is `--accent-soft` —
      and a tint over a tint is not a mark. The pair is the one combination that reads on
      every background the app has. */
-  --select: #6d3fd1;
+  --select: #6e56cf;
   --select-ink: #ffffff;
+  /* A cited quote, marked over text: the accent, thin enough to read through. */
+  --quote-mark: rgb(110 86 207 / 22%);
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -59,11 +61,11 @@
   /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
      accent: a translucent cell picks up whatever is behind it, and these sit on two
      different surfaces. */
-  --heat-0: #f1eef7;
-  --heat-1: #ded4f4;
-  --heat-2: #bda6ea;
-  --heat-3: #9570dc;
-  --heat-4: #6d3fd1;
+  --heat-0: #f4f0fe;
+  --heat-1: #e1d9ff;
+  --heat-2: #c2b5f5;
+  --heat-3: #aa99ec;
+  --heat-4: #6e56cf;
 
   --shadow-sm: 0 1px 2px rgb(23 20 31 / 0.05);
   --shadow-md: 0 4px 16px -4px rgb(23 20 31 / 0.1), 0 1px 3px rgb(23 20 31 / 0.05);
@@ -104,13 +106,14 @@
     --rule: #241f30;
     --rule-2: #332c42;
 
-    --accent: #b79cff;
-    --accent-hover: #c9b5ff;
+    --accent: #baa7ff;
+    --accent-hover: #e2ddfe;
     --accent-ink: #14101d;
-    --accent-soft: #1d1730;
-    --accent-line: #3a2f5c;
-    --select: #b79cff;
+    --accent-soft: #291f43;
+    --accent-line: #473876;
+    --select: #baa7ff;
     --select-ink: #14101d;
+    --quote-mark: rgb(186 167 255 / 30%);
 
     --flag: #f090b4;
     --flag-soft: #2a1520;
@@ -120,11 +123,11 @@
     --done: #b87cf0;
     --late: #f18ab4;
 
-    --heat-0: #17131f;
-    --heat-1: #3b2f60;
-    --heat-2: #58439c;
-    --heat-3: #7d5bd4;
-    --heat-4: #b79cff;
+    --heat-0: #1b1525;
+    --heat-1: #33255b;
+    --heat-2: #473876;
+    --heat-3: #6958ad;
+    --heat-4: #baa7ff;
 
     --shadow-sm: none;
     --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -147,13 +150,14 @@
   --rule: #241f30;
   --rule-2: #332c42;
 
-  --accent: #b79cff;
-  --accent-hover: #c9b5ff;
+  --accent: #baa7ff;
+  --accent-hover: #e2ddfe;
   --accent-ink: #14101d;
-  --accent-soft: #1d1730;
-  --accent-line: #3a2f5c;
-  --select: #b79cff;
+  --accent-soft: #291f43;
+  --accent-line: #473876;
+  --select: #baa7ff;
   --select-ink: #14101d;
+  --quote-mark: rgb(186 167 255 / 30%);
 
   --flag: #f090b4;
   --flag-soft: #2a1520;
@@ -163,11 +167,11 @@
   --done: #b87cf0;
   --late: #f18ab4;
 
-  --heat-0: #17131f;
-  --heat-1: #3b2f60;
-  --heat-2: #58439c;
-  --heat-3: #7d5bd4;
-  --heat-4: #b79cff;
+  --heat-0: #1b1525;
+  --heat-1: #33255b;
+  --heat-2: #473876;
+  --heat-3: #6958ad;
+  --heat-4: #baa7ff;
 
   --shadow-sm: none;
   --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -4879,3 +4883,11 @@ td[data-status="late"] {
     box-shadow: var(--shadow-lg);
   }
 }
+
+.pdf-view { max-height: 70vh; overflow: auto; margin-bottom: 12px; }
+.pdf-stage { position: relative; width: max-content; }
+.pdf-stage canvas { display: block; }
+.pdf-marks { position: absolute; inset: 0; pointer-events: none; }
+/* The page is paper in either theme, so its mark is the light one, multiplied into the ink. */
+.pdf-mark { position: absolute; background: rgb(110 86 207 / 30%); mix-blend-mode: multiply; border-radius: 2px; }
+.nb-passage mark { background: var(--quote-mark); color: inherit; border-radius: 2px; }

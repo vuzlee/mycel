@@ -18,6 +18,7 @@ class Checked:
     answer: str
     cited: list[str]
     dropped: list[str]
+    quotes: dict[str, str]
 
 
 _LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
@@ -32,12 +33,12 @@ def _normalise(text: str) -> str:
 
 def check(answer: NotebookAnswer, passages: Mapping[str, str]) -> Checked:
     """Keep the citations that hold, strip markers for the ones that do not."""
-    valid: set[str] = set()
+    valid: dict[str, str] = {}
     for citation in answer.citations:
         label = citation.id.strip().strip("[]").lower()
         text = passages.get(label)
         if text is not None and _normalise(citation.quote) in _normalise(text):
-            valid.add(label)
+            valid.setdefault(label, citation.quote)
 
     dropped: list[str] = []
 
@@ -50,4 +51,4 @@ def check(answer: NotebookAnswer, passages: Mapping[str, str]) -> Checked:
 
     cleaned = _MARKER.sub(keep_or_drop, answer.answer)
     cited = [label for label in passages if f"[{label}]" in cleaned]
-    return Checked(answer=cleaned.strip(), cited=cited, dropped=sorted(set(dropped)))
+    return Checked(answer=cleaned.strip(), cited=cited, dropped=sorted(set(dropped)), quotes=valid)

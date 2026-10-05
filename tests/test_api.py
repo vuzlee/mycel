@@ -83,11 +83,11 @@ def _stored(
     result: JobResult | None,
     kept: TurnRow | None = None,
 ) -> None:
-    """Make both halves of "written twice" answer, with neither Redis nor Postgres here.
+    """Make everything the route reads answer, with neither Redis nor Postgres here.
 
-    Both, because the route reads both: Redis while a run is in flight, and the kept row
-    once the TTL has passed. Stubbing only the first leaves the second reaching for a real
-    database, which is a connection error dressed up as a 500.
+    The route reads three things: the result in Redis while a run is in flight, the kept
+    row once the TTL has passed, and the cited sources. Leaving any one unstubbed sends it
+    to a real store, which is a connection error dressed up as a 500.
     """
 
     async def fake_fetch(job_id: str) -> JobResult | None:
@@ -96,8 +96,12 @@ def _stored(
     async def fake_find(job_id: str) -> TurnRow | None:
         return kept
 
+    async def no_citations(job_id: str) -> dict[str, Any] | None:
+        return None
+
     monkeypatch.setattr("mycel.api.routes.chat.results.fetch", fake_fetch)
     monkeypatch.setattr("mycel.api.routes.chat.find_turn", fake_find)
+    monkeypatch.setattr("mycel.api.routes.chat.citations.fetch", no_citations)
 
 
 #: What a finished run left behind, for the tests that read a kept row.
