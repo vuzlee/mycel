@@ -1,6 +1,19 @@
 # Full dev stack: app + databases + observability.
 # Prod uses this same file with a prebuilt image instead of building in place.
 
+# Where the stores are, for every application container. .env names them at localhost,
+# which is right for `dev` mode on the host and wrong inside a container, where localhost
+# is the container itself: the worker died on RabbitMQ and the api's readiness said 503.
+# `environment:` outranks `env_file:`, so these win. The passwords come from the same .env.
+x-stores: &stores
+  DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mycel}
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-mycel}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+  REDIS_URL: redis://redis:6379/0
+  REDIS_CACHE_URL: redis://redis:6379/1
+  QDRANT_URL: http://qdrant:6333
+  S3_ENDPOINT_URL: http://minio:9000
+  LITELLM_BASE_URL: http://litellm:4000
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,7 +43,7 @@ services:
     command: uvicorn --factory mycel.api.app:create_app --host 0.0.0.0 --port 8000
     env_file: .env
     environment:
-      LITELLM_BASE_URL: http://litellm:4000
+      <<: *stores
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}
@@ -54,7 +67,7 @@ services:
     # Inside a container all interfaces means "the compose network"; the port is not
     # published, so nothing outside that network can reach it.
     environment:
-      LITELLM_BASE_URL: http://litellm:4000
+      <<: *stores
       METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
@@ -68,7 +81,7 @@ services:
     command: python -m mycel.queue.consumer
     env_file: .env
     environment:
-      LITELLM_BASE_URL: http://litellm:4000
+      <<: *stores
       METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
@@ -82,10 +95,8 @@ services:
     profiles: [app]
     env_file: .env
     environment:
+      <<: *stores
       METRICS_HOST: "0.0.0.0"
-      QDRANT_URL: http://qdrant:6333
-      S3_ENDPOINT_URL: http://minio:9000
-      LITELLM_BASE_URL: http://litellm:4000
     restart: unless-stopped
     mem_limit: 5g
     depends_on:
