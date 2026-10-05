@@ -1,6 +1,6 @@
 """Download the RAG benchmark corpus and check every hash.
 
-    uv run python scripts/tools/fetch_rag_corpus.py [--dir .cache/rag-corpus]
+    uv run python -m evals.rag.fetch_corpus [--dir .cache/rag-corpus]
 
 Stops on the first mismatch: a changed document silently invalidates every label in
 evals/rag/questions.yaml.
@@ -15,8 +15,8 @@ from pathlib import Path
 import httpx
 import yaml
 
-ROOT = Path(__file__).resolve().parents[1]
-CORPUS = ROOT / "evals" / "rag" / "corpus.yaml"
+ROOT = Path(__file__).resolve().parents[2]
+CORPUS = Path(__file__).with_name("corpus.yaml")
 DEFAULT_DIR = ROOT / ".cache" / "rag-corpus"
 
 

@@ -1,5 +1,5 @@
 # Public English documents for the RAG benchmark (batch 063). Not committed: fetched by
-# scripts/tools/fetch_rag_corpus.py and checked against these hashes. URLs are pinned to a commit
+# evals/rag/fetch_corpus.py and checked against these hashes. URLs are pinned to a commit
 # or an arXiv version so the bytes never change under the labels.
 
 documents:
@@ -21,7 +21,7 @@ documents:
   - name: qdrant-common-errors.md
     url: https://raw.githubusercontent.com/qdrant/landing_page/bb7f15b97237c97748fdbeea45499e2fcaba2377/qdrant-landing/content/documentation/common-errors.md
     sha256: ae18f0f4bfc3a0b7987ac54410d71949243a291812f4f433685dad3515c3e56b
-  # The DOCX path: built from the Markdown page below by scripts/tools/fetch_rag_corpus.py,
+  # The DOCX path: built from the Markdown page below by evals/rag/fetch_corpus.py,
   # so it is checked by its source hash rather than its own.
   - name: fastapi-background-tasks.docx
     url: https://raw.githubusercontent.com/fastapi/fastapi/5f9fc5c59a9bb54608aa35376715f3ba9708188e/docs/en/docs/tutorial/background-tasks.md

@@ -1,6 +1,6 @@
 """Phase A of batch 063: does search find the right passage at all?
 
-    uv run python scripts/tools/fetch_rag_corpus.py
+    uv run python -m evals.rag.fetch_corpus
     uv run python -m evals.rag.retrieval [--keep]
 
 Ingests the corpus through the same parse / chunk / embed code as the worker into one
@@ -134,7 +134,7 @@ async def main_async(keep: bool) -> int:
     names = sorted({str(q["doc"]) for q in questions if q.get("answerable") is not False})
     absent = [n for n in names if not (CORPUS_DIR / n).exists()]
     if absent:
-        sys.exit(f"missing {absent}; run: uv run python scripts/tools/fetch_rag_corpus.py")
+        sys.exit(f"missing {absent}; run: uv run python -m evals.rag.fetch_corpus")
 
     print("ingesting")
     lookup, texts = await ingest(names)
