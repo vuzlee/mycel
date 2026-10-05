@@ -6,7 +6,7 @@ Revises: 0015
 Batch 066 moves knowledge into the chat. Every thread of a user asks every one of their
 documents, so the notebook between a user and a document has no job left. Each document
 takes its notebook's owner, the notebook table goes, and the duplicate check becomes
-per user. Qdrant's payload is re-keyed by `scripts/rekey_document_vectors.py`.
+per user. Qdrant's payload was re-keyed once, after this migration, by a one-off script.
 """
 
 from collections.abc import Sequence

@@ -1,6 +1,6 @@
 """Upload one real file into your documents and wait for it to become ready.
 
-    uv run python scripts/try_ingest.py path/to/file.pdf [--email x --password y]
+    uv run python scripts/tools/try_ingest.py path/to/file.pdf [--email x --password y]
 
 Needs `scripts/stack.sh dev up`. Prints passage count, Qdrant point count and timing.
 """

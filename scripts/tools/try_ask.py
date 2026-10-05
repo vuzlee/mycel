@@ -1,8 +1,8 @@
 """Ask your documents a real question and print the answer with its sources.
 
-    uv run python scripts/try_ask.py "question" [--email x --password y]
+    uv run python scripts/tools/try_ask.py "question" [--email x --password y]
 
-Needs `scripts/stack.sh dev up` and a document from scripts/try_ingest.py. Spends one
+Needs `scripts/stack.sh dev up` and a document from scripts/tools/try_ingest.py. Spends one
 Gemini call unless the answer is cached.
 """
 

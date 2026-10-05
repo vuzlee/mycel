@@ -1,6 +1,6 @@
 """Download the RAG benchmark corpus and check every hash.
 
-    uv run python scripts/fetch_rag_corpus.py [--dir .cache/rag-corpus]
+    uv run python scripts/tools/fetch_rag_corpus.py [--dir .cache/rag-corpus]
 
 Stops on the first mismatch: a changed document silently invalidates every label in
 evals/rag/questions.yaml.

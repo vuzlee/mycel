@@ -9,6 +9,9 @@ by CI.
 | `record_demo.py` | drives the real app in a browser and records the README's demo |
 | `seed_jira.py` | fills an empty Jira project with this repo's own history |
 | `assign_sprint.py` | drags every non-epic board issue into a sprint |
+| `try_ingest.py` | uploads one real file and waits until it is ready |
+| `try_ask.py` | asks your documents one question — **one model call** unless cached |
+| `fetch_rag_corpus.py` | downloads the RAG benchmark corpus and checks every hash |
 
 **The two Jira ones need somebody to have connected Jira first.** Since batch 060 there is
 no deployment token: every call runs on one person's consent, and for a script with nobody

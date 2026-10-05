@@ -75,7 +75,6 @@ config:
   JIRA_PROJECT_KEY: ""
   PUBLIC_BASE_URL: ""
   GOOGLE_CLIENT_ID: ""
-  LOCAL_LLM_BASE_URL: ""
   GMAIL_ADDRESS: ""
 
 # The chart only references a Secret by name; the values are created outside git.

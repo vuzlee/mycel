@@ -8,7 +8,7 @@ compose/        everything in containers
 k8s/            the chart on minikube
 data/           talks to the data or the repo, not to a mode
 smoke/          hand-run, real models, real money, no CI
-tools/          one-off jobs: seed a board, grant a project, record a demo
+tools/          one-off jobs: seed a board, grant a project, record a demo, try a document
 ```
 
 ## Why a directory per mode

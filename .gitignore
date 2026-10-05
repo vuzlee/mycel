@@ -49,3 +49,6 @@ assets/demo/
 # The embedding model's ONNX weights, fetched on first use. ~130 MiB, and a build
 # artefact rather than source: EMBEDDING_CACHE_DIR points here.
 .cache/
+
+# A timestamped file per retrieval run; the summary that matters goes in the batch note.
+evals/rag/results/retrieval-*.json
