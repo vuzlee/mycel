@@ -25,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
+from mycel.agents.core.chips import Chip
 from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
@@ -39,7 +40,7 @@ from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
 from mycel.services.auth import Principal
-from mycel.services.enqueue import enqueue_chat
+from mycel.services.enqueue import enqueue_chat, enqueue_knowledge
 
 log = get_logger(__name__)
 
@@ -92,9 +93,18 @@ async def request_chat(
             thread = await _thread_of(repo, user_id, conversation_id)
             history = _recall(await repo.turns_for_conversation(thread.id))
 
-        job_id = await enqueue_chat(question, thread.id, history, user_id=user_id, chips=chips)
+        if chips is not None and Chip.KNOWLEDGE in chips:
+            previous = _last_question(await repo.turns_for_conversation(thread.id))
+            job_id = await enqueue_knowledge(question, thread.id, previous, user_id)
+        else:
+            job_id = await enqueue_chat(question, thread.id, history, user_id=user_id, chips=chips)
         await repo.upsert_turn(thread.id, job_id, question, status="queued")
     return job_id, thread.id
+
+
+def _last_question(turns: list[TurnRow]) -> str:
+    """The question before this one, for a follow-up's search. Empty on a first question."""
+    return turns[-1].question if turns else ""
 
 
 async def _thread_of(repo: AppRepository, user_id: int, conversation_id: int) -> ConversationRow:
@@ -191,6 +201,13 @@ async def record_failure(job: Job, error: str) -> None:
     """Mark a job as not coming back, in both places it is written."""
     await results.store_failure(job.job_id, error)
     await _record(job, status="failed", error=error[:500])
+
+
+async def record_turn(
+    job: Job, status: str, answer: str | None = None, error: str | None = None
+) -> None:
+    """Keep a turn another domain ran (a Knowledge answer) in its thread, like a chat turn."""
+    await _record(job, status=status, answer=answer, error=error)
 
 
 async def _who_asked(job: Job) -> Principal:

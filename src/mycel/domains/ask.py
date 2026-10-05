@@ -1,7 +1,11 @@
 """Ask the user's documents: search, read through layer two, one model call, check citations.
 
-The request side (`request_ask`) runs every gate that costs nothing. The worker side
-(`run`) is the only place a Gemini call is made, and it gives the quota back on failure.
+Reached two ways: `POST /knowledge/ask`, and a chat turn with the Knowledge chip, which
+carries a `conversation_id` and is kept in that thread. The worker side (`run`) is the
+only place the model is called, and it gives the quota back on failure.
+
+The answer streams as it is written. The page hides `[cN]` markers while it streams; the
+final answer, with only the citations that passed the check, replaces it at the end.
 """
 
 from decimal import Decimal
@@ -14,6 +18,7 @@ from mycel.agents.registry import build_deps
 from mycel.agents.schemas import NotebookAnswer
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.domains import chat as chat_domain
 from mycel.events.channel import RecordingChannel
 from mycel.infra.postgres.repositories.documents import ChunkRow, DocumentRepository
 from mycel.infra.postgres.session import session_scope
@@ -88,7 +93,14 @@ async def run(job: Job) -> None:
     settings = get_settings()
     owner_id = int(str(job.payload["user_id"]))
     question = str(job.payload["question"])
-    version = str(job.payload["version"])
+    if job.payload.get("conversation_id"):
+        await results.mark_running(job.job_id)
+    async with session_scope() as session:
+        repo = DocumentRepository(session)
+        if await repo.busy(owner_id):
+            await _finish(job, owner_id, "", "", BUSY, [], cache=False)
+            return
+        version = str(job.payload.get("version") or await repo.version(owner_id))
 
     previous = str(job.payload.get("previous") or "")
     query = search_text(question, previous)
@@ -128,6 +140,19 @@ async def run(job: Job) -> None:
 async def record_failure(job: Job, error: str) -> None:
     await stored_citations.store(job.job_id, int(str(job.payload["user_id"])), [])
     await results.store_failure(job.job_id, error)
+    if job.payload.get("conversation_id"):
+        await chat_domain.record_turn(job, "failed", error=error[:500])
+
+
+def _with_sources(text: str, sources: list[dict[str, Any]]) -> str:
+    """The kept answer, with its sources listed, so a reopened thread still shows them."""
+    if not sources:
+        return text
+    lines = [
+        f"- [{s['label']}] {s['filename']}" + (f", page {s['page']}" if s.get("page") else "")
+        for s in sources
+    ]
+    return text + "\n\n**Sources**\n\n" + "\n".join(lines)
 
 
 async def read(owner_id: int, job_id: str) -> dict[str, Any]:
@@ -175,7 +200,9 @@ async def _ask_model(
         principal=Principal(id=owner_id, email=""),
     )
     try:
-        result = await runner.run(Answerer.build(settings), render(question, labelled), deps)
+        result = await runner.run(
+            Answerer.build(settings), render(question, labelled), deps, streamed_field="answer"
+        )
     finally:
         await budgets.save(deps.budget)
     return result
@@ -207,4 +234,6 @@ async def _finish(
     await results.store(job.job_id, text, str(Decimal("0")))
     if cache:
         await answers.put(owner_id, version, question, {"answer": text, "sources": sources})
+    if job.payload.get("conversation_id"):
+        await chat_domain.record_turn(job, "done", answer=_with_sources(text, sources))
     log.info("knowledge answered", extra={"job_id": job.job_id, "sources": len(sources)})

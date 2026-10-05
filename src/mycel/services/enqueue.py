@@ -46,3 +46,23 @@ async def enqueue_chat(
         },
     )
     return await publish(job)
+
+
+async def enqueue_knowledge(
+    question: str, conversation_id: int, previous: str, user_id: int
+) -> str:
+    """Queue a Knowledge-chip turn: the answerer reads the user's documents, nothing else.
+
+    A chat turn like any other - it lands in the thread and streams on the same channel -
+    but the worker never builds the orchestrator for it, so it costs one model call.
+    """
+    job = Job(
+        kind=JobKind.ASK,
+        payload={
+            "question": question,
+            "previous": previous,
+            "conversation_id": conversation_id,
+            "user_id": user_id,
+        },
+    )
+    return await publish(job)

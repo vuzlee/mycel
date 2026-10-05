@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterable
 from typing import TYPE_CHECKING
 
+import pydantic_core
 from pydantic_ai import messages
 
 from mycel.events.event import (
@@ -40,11 +41,18 @@ PREVIEW_CHARS = 500
 class RunEmitter:
     """Publishes one agent's events, tagged with that agent and its parent tool call."""
 
-    def __init__(self, deps: "MycelDeps", agent: str, parent_tool_call_id: str | None) -> None:
+    def __init__(
+        self,
+        deps: "MycelDeps",
+        agent: str,
+        parent_tool_call_id: str | None,
+        streamed_field: str | None = None,
+    ) -> None:
         self._deps = deps
         self._agent = agent
         self._parent = parent_tool_call_id
         self._streamed = False
+        self._field = streamed_field
 
     async def emit(self, type: str, **payload: object) -> None:
         await self._deps.events.publish(
@@ -72,9 +80,19 @@ class RunEmitter:
 
         Sets a flag the finished response then reads: the same words must not go out twice,
         once as deltas and once whole.
+
+        A structured answer arrives as tool-call arguments, not prose. When the agent names
+        a `STREAMED_FIELD`, that field is read out of the partial JSON as it grows and its
+        new text goes out as deltas too.
         """
+        args = ""
+        sent = 0
         async for event in events:
             delta = _delta(event)
+            if not delta and self._field:
+                args += _args_delta(event)
+                text = _partial_field(args, self._field)
+                delta, sent = text[sent:], len(text)
             if delta:
                 self._streamed = True
                 await self.emit(TEXT_DELTA, text=delta)
@@ -121,6 +139,27 @@ def _delta(event: object) -> str:
     ):
         return event.delta.content_delta
     return ""
+
+
+def _args_delta(event: object) -> str:
+    """The JSON text this event adds to a tool call's arguments, or ""."""
+    if isinstance(event, messages.PartStartEvent) and isinstance(event.part, messages.ToolCallPart):
+        return event.part.args if isinstance(event.part.args, str) else ""
+    if isinstance(event, messages.PartDeltaEvent) and isinstance(
+        event.delta, messages.ToolCallPartDelta
+    ):
+        return event.delta.args_delta if isinstance(event.delta.args_delta, str) else ""
+    return ""
+
+
+def _partial_field(args: str, field: str) -> str:
+    """One string field out of JSON that is still being written."""
+    try:
+        parsed = pydantic_core.from_json(args, allow_partial="trailing-strings")
+    except ValueError:
+        return ""
+    value = parsed.get(field) if isinstance(parsed, dict) else None
+    return value if isinstance(value, str) else ""
 
 
 def _preview(value: object) -> str:

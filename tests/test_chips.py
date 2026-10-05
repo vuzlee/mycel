@@ -67,3 +67,48 @@ class TestParsing:
 
     def test_knowledge_opens_no_orchestrator_tool(self) -> None:
         assert tools_for(frozenset({Chip.KNOWLEDGE})) == frozenset()
+
+
+class TestKnowledgeSkipsTheOrchestrator:
+    """A Knowledge turn is queued as an ask job: one model call, no orchestrator."""
+
+    async def test_a_knowledge_turn_is_queued_as_ask(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from contextlib import asynccontextmanager
+        from types import SimpleNamespace
+
+        from mycel.domains import chat
+
+        queued: list[tuple[str, object]] = []
+
+        async def knowledge(question: str, thread: int, previous: str, user_id: int) -> str:
+            queued.append(("ask", previous))
+            return "job-k"
+
+        async def plain(*args: object, **kwargs: object) -> str:
+            queued.append(("chat", kwargs.get("chips")))
+            return "job-c"
+
+        class Repo:
+            def __init__(self, session: object) -> None: ...
+
+            async def create_conversation(self, *a: object, **k: object) -> object:
+                return SimpleNamespace(id=1)
+
+            async def turns_for_conversation(self, thread_id: int) -> list[object]:
+                return []
+
+            async def upsert_turn(self, *a: object, **k: object) -> None: ...
+
+        @asynccontextmanager
+        async def scope():  # type: ignore[no-untyped-def]
+            yield None
+
+        monkeypatch.setattr(chat, "AppRepository", Repo)
+        monkeypatch.setattr(chat, "session_scope", scope)
+        monkeypatch.setattr(chat, "enqueue_knowledge", knowledge)
+        monkeypatch.setattr(chat, "enqueue_chat", plain)
+
+        await chat.request_chat(7, "What is BERT?", chips=["knowledge"])
+        await chat.request_chat(7, "Late tickets?", chips=["jira"])
+
+        assert queued == [("ask", ""), ("chat", ["jira"])]

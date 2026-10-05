@@ -29,6 +29,7 @@ class World:
     chunks: list[ChunkRow]
     model: NotebookAnswer | Exception
     reserved: bool = True
+    busy: bool = False
     calls: int = 0
     released: int = 0
     finished: dict[str, Any] | None = None
@@ -55,6 +56,12 @@ def world(monkeypatch: pytest.MonkeyPatch) -> World:
 
         async def readable_chunks(self, ids: list[int], owner_id: int) -> list[ChunkRow]:
             return [c for c in w.chunks if c.id in ids]
+
+        async def busy(self, owner_id: int) -> bool:
+            return w.busy
+
+        async def version(self, owner_id: int) -> str:
+            return "v"
 
     class Scope:
         async def __aenter__(self) -> None:
@@ -161,6 +168,17 @@ class TestRun:
         assert world.finished is not None
         assert world.finished["text"] == ask.OUT_OF_QUOTA
         assert world.finished["cache"] is False
+
+    async def test_a_document_processing_stops_it_before_any_search(self, world: World) -> None:
+        """The knowledge base is locked while a document is in flight, checked at run time
+        too: a turn queued just before an upload must not answer from half the store."""
+        world.busy = True
+
+        await ask.run(job())
+
+        assert world.calls == 0
+        assert world.finished is not None
+        assert world.finished["text"] == ask.BUSY
 
 
 class TestRender:

@@ -57,19 +57,22 @@ async def run(
     deps: "MycelDeps",
     settings: "AgentSettings | None" = None,
     parent_tool_call_id: str | None = None,
+    streamed_field: str | None = None,
 ) -> OutputT:
     """Run an agent to completion, charging the job budget exactly once.
 
     Raises `BudgetExceeded` before spending anything if the job has no headroom left, and
     `RunawayStopped` if the run hits its own limits part-way — with whatever it spent up to
     that point already recorded.
+
+    `streamed_field` names the string field of a structured output to stream as text.
     """
     cfg = settings or deps.settings
     deps.budget.check()
 
     model = build_model(cfg.model_spec, cfg)
     limits = deps.budget.limits(cfg)
-    emitter = RunEmitter(deps, _name_of(agent), parent_tool_call_id)
+    emitter = RunEmitter(deps, _name_of(agent), parent_tool_call_id, streamed_field)
 
     overdrawn: BudgetExceeded | None = None
 
