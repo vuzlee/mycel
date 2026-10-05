@@ -158,3 +158,17 @@ class TestWatchdog:
         assert after is not None
         assert (after.status, after.fail_reason) == (tables.FAILED, "timeout")
         assert await repo.busy(nb.id) is False
+
+
+class TestRename:
+    async def test_rename_changes_the_name_only(self, session: AsyncSession) -> None:
+        repo = NotebookRepository(session)
+        a = await _owner(session, "a@x.com")
+        nb = await repo.create_notebook(a, "n")
+        doc = await repo.add_document(nb.id, "old.pdf", "application/pdf", 1, "s1")
+
+        await repo.rename(doc.id, "BERT paper.pdf")
+
+        after = await repo.document(doc.id)
+        assert after is not None
+        assert (after.filename, after.object_key) == ("BERT paper.pdf", doc.object_key)

@@ -39,10 +39,11 @@ export function AskPane({ notebookId, busy, empty, onSource }: Props) {
     const text = question.trim();
     if (!text || busy || waiting) return;
     const index = history.length;
+    const previous = history.at(-1)?.question ?? "";
     setHistory((all) => [...all, { question: text, state: null, error: null }]);
     setQuestion("");
     try {
-      let state = await askNotebook(notebookId, text);
+      let state = await askNotebook(notebookId, text, previous);
       while (state.status === "queued" || state.status === "running") {
         await new Promise((done) => setTimeout(done, POLL_MS));
         state = await fetchAsk(state.job_id ?? "");

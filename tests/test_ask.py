@@ -183,3 +183,35 @@ class TestRequestGates:
         with pytest.raises(NotebookError) as caught:
             await ask.request_ask(1, 1, "x" * 501)
         assert caught.value.status == 422
+
+
+class TestFollowUps:
+    """A follow-up is embedded with the question before it, so "it" has a referent."""
+
+    def test_the_previous_question_comes_first(self) -> None:
+        assert ask.search_text("What is it used for?", "What is BERT?") == (
+            "What is BERT?\nWhat is it used for?"
+        )
+
+    def test_a_first_question_is_embedded_alone(self) -> None:
+        assert ask.search_text("What is BERT?", "") == "What is BERT?"
+
+    async def test_the_search_uses_both(
+        self, world: World, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[str] = []
+
+        async def search(notebook_id: int, query: str, limit: int) -> list[Hit]:
+            seen.append(query)
+            return world.hits
+
+        monkeypatch.setattr(ask.vectors, "search", search)
+        follow_up = Job(
+            kind=JobKind.ASK,
+            payload={"notebook_id": 1, "question": "And it?", "previous": "What is BERT?",
+                     "user_id": 7, "version": "v"},
+        )
+
+        await ask.run(follow_up)
+
+        assert seen == ["What is BERT?\nAnd it?"]

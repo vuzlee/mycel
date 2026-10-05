@@ -475,8 +475,21 @@ export const fetchPassage = (chunkId: number): Promise<Passage> =>
   fetch(`/chunks/${chunkId}`).then(json<Passage>);
 
 /** 202 queued, or 200 with the cached answer already in it. */
-export const askNotebook = (notebookId: number, question: string): Promise<AskState> =>
-  post<AskState>(`/notebooks/${notebookId}/ask`, { question });
+/** `previous` is the question asked just before, so a follow-up can say "it". */
+export const askNotebook = (
+  notebookId: number,
+  question: string,
+  previous = "",
+): Promise<AskState> =>
+  post<AskState>(`/notebooks/${notebookId}/ask`, { question, previous });
+
+export async function renameDocument(id: number, filename: string): Promise<DocumentRow> {
+  return fetch(`/documents/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ filename }),
+  }).then(json<DocumentRow>);
+}
 
 export const fetchAsk = (jobId: string): Promise<AskState> =>
   fetch(`/asks/${jobId}`).then(json<AskState>);

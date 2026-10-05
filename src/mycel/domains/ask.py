@@ -35,10 +35,18 @@ OUT_OF_QUOTA = "Daily question limit reached. Try again tomorrow."
 BUSY = "Notebook is still processing documents."
 
 
-async def request_ask(owner_id: int, notebook_id: int, question: str) -> dict[str, Any]:
-    """Gates in order of cost. Returns a cached answer, or the queued job id."""
+async def request_ask(
+    owner_id: int, notebook_id: int, question: str, previous: str = ""
+) -> dict[str, Any]:
+    """Gates in order of cost. Returns a cached answer, or the queued job id.
+
+    `previous` is the question asked just before, if any. It is embedded with this one so
+    a follow-up like "what is it used for?" finds what "it" refers to; it is never shown
+    to the model, and it is part of the cache key because it changes what is found.
+    """
     settings = get_settings()
     question = question.strip()
+    previous = previous.strip()[: settings.ask_max_chars]
     if not question:
         raise NotebookError(422, "Ask a question.")
     if len(question) > settings.ask_max_chars:
@@ -52,7 +60,7 @@ async def request_ask(owner_id: int, notebook_id: int, question: str) -> dict[st
             raise NotebookError(409, BUSY)
         version = await repo.version(notebook_id)
 
-    cached = await answers.get(notebook_id, version, question)
+    cached = await answers.get(notebook_id, version, search_text(question, previous))
     if cached is not None:
         return {"cached": True, **cached}
 
@@ -65,6 +73,7 @@ async def request_ask(owner_id: int, notebook_id: int, question: str) -> dict[st
         payload={
             "notebook_id": notebook_id,
             "question": question,
+            "previous": previous,
             "user_id": owner_id,
             "version": version,
         },
@@ -85,9 +94,11 @@ async def run(job: Job) -> None:
     question = str(job.payload["question"])
     version = str(job.payload["version"])
 
-    hits = await vectors.search(notebook_id, question, settings.ask_top_k)
+    previous = str(job.payload.get("previous") or "")
+    query = search_text(question, previous)
+    hits = await vectors.search(notebook_id, query, settings.ask_top_k)
     if not hits or hits[0].score < settings.document_min_score:
-        await _finish(job, notebook_id, version, question, NOT_FOUND, [], cache=True)
+        await _finish(job, notebook_id, version, query, NOT_FOUND, [], cache=True)
         return
 
     async with session_scope() as session:
@@ -95,12 +106,12 @@ async def run(job: Job) -> None:
             [h.chunk_id for h in hits], owner_id
         )
     if not chunks:
-        await _finish(job, notebook_id, version, question, NOT_FOUND, [], cache=True)
+        await _finish(job, notebook_id, version, query, NOT_FOUND, [], cache=True)
         return
 
     labelled = {f"c{i}": c for i, c in enumerate(chunks, start=1)}
     if not await quota.reserve(owner_id, settings.ask_per_user_daily, settings.ask_system_daily):
-        await _finish(job, notebook_id, version, question, OUT_OF_QUOTA, [], cache=False)
+        await _finish(job, notebook_id, version, query, OUT_OF_QUOTA, [], cache=False)
         return
     try:
         answer = await _ask_model(job, owner_id, question, labelled)
@@ -115,7 +126,7 @@ async def run(job: Job) -> None:
         text, sources = checked.answer, [_source(label, labelled[label]) for label in checked.cited]
     if checked.dropped:
         log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
-    await _finish(job, notebook_id, version, question, text, sources, cache=True)
+    await _finish(job, notebook_id, version, query, text, sources, cache=True)
 
 
 async def record_failure(job: Job, error: str) -> None:
@@ -137,6 +148,11 @@ async def read(owner_id: int, job_id: str) -> dict[str, Any]:
         "sources": meta["sources"],
         "error": OUT_OF_QUOTA if result.error and "quota" in result.error.lower() else result.error,
     }
+
+
+def search_text(question: str, previous: str) -> str:
+    """What gets embedded: the previous question first, so a pronoun has something to point at."""
+    return f"{previous}\n{question}" if previous else question
 
 
 def render(question: str, labelled: dict[str, ChunkRow]) -> str:

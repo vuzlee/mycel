@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import {
   MAX_UPLOAD_BYTES,
   deleteDocument,
+  renameDocument,
   setDocumentEnabled,
   uploadDocument,
   type DocumentRow,
@@ -49,6 +50,17 @@ export function Documents({ notebookId, documents, onChange }: Props) {
         onChange();
       }
     }
+  };
+
+  const rename = async (doc: DocumentRow): Promise<void> => {
+    const next = window.prompt("Rename document", doc.filename)?.trim();
+    if (!next || next === doc.filename) return;
+    try {
+      await renameDocument(doc.id, next);
+    } catch (failure) {
+      setError((failure as Error).message);
+    }
+    onChange();
   };
 
   const toggle = async (doc: DocumentRow): Promise<void> => {
@@ -114,7 +126,13 @@ export function Documents({ notebookId, documents, onChange }: Props) {
           {documents.map((doc) => (
             <li key={doc.id} data-enabled={doc.enabled}>
               <div className="nb-name">
-                <span title={doc.filename}>{doc.filename}</span>
+                <button
+                  className="nb-rename"
+                  title="Rename"
+                  onClick={() => void rename(doc)}
+                >
+                  {doc.filename}
+                </button>
                 <small>
                   <Status doc={doc} />
                   {doc.pages ? ` · ${doc.pages} pages` : ""}

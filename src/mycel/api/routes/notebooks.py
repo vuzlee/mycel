@@ -5,7 +5,7 @@
     DELETE  /notebooks/{id}                 delete with every document
     POST    /notebooks/{id}/documents       upload one file
     GET     /notebooks/{id}/documents       list with status
-    PATCH   /documents/{id}                 enable / disable
+    PATCH   /documents/{id}                 enable / disable, or rename
     DELETE  /documents/{id}                 delete
     GET     /documents/{id}/source          presigned URL to the original
     GET     /chunks/{id}                    one passage, for a citation
@@ -55,8 +55,11 @@ class DocumentOut(BaseModel):
     pages: int | None
 
 
-class EnabledIn(BaseModel):
-    enabled: bool
+class DocumentPatch(BaseModel):
+    """One change at a time: switch it on or off, or rename it."""
+
+    enabled: bool | None = None
+    filename: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class SourceOut(BaseModel):
@@ -139,11 +142,18 @@ async def list_documents(notebook_id: int, me: Me) -> list[DocumentOut]:
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)
-async def set_enabled(document_id: int, body: EnabledIn, me: Me) -> DocumentOut:
+async def patch_document(document_id: int, body: DocumentPatch, me: Me) -> DocumentOut:
     try:
-        return _document(await service.set_enabled(me.id, document_id, body.enabled))
+        doc = None
+        if body.filename is not None:
+            doc = await service.rename(me.id, document_id, body.filename)
+        if body.enabled is not None:
+            doc = await service.set_enabled(me.id, document_id, body.enabled)
     except service.NotebookError as exc:
         raise _refused(exc) from exc
+    if doc is None:
+        raise HTTPException(422, "Nothing to change.")
+    return _document(doc)
 
 
 @router.delete("/documents/{document_id}", status_code=202)
@@ -181,6 +191,8 @@ async def read_chunk(chunk_id: int, me: Me) -> ChunkOut:
 
 class AskIn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    #: The question asked just before, so a follow-up can say "it". Optional.
+    previous: str = Field(default="", max_length=2000)
 
 
 class SourceRef(BaseModel):
@@ -209,7 +221,7 @@ class QuotaOut(BaseModel):
 @router.post("/notebooks/{notebook_id}/ask", response_model=AskOut, status_code=202)
 async def ask(notebook_id: int, body: AskIn, me: Me, response: Response) -> AskOut:
     try:
-        outcome = await ask_domain.request_ask(me.id, notebook_id, body.question)
+        outcome = await ask_domain.request_ask(me.id, notebook_id, body.question, body.previous)
     except service.NotebookError as exc:
         raise _refused(exc) from exc
     if outcome["cached"]:

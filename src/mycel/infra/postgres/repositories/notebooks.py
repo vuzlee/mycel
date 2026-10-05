@@ -213,6 +213,12 @@ class NotebookRepository:
             update(Document).where(Document.id == document_id).values(**values)
         )
 
+    async def rename(self, document_id: int, filename: str) -> None:
+        """The display name only; the object key in MinIO keeps the name it was uploaded with."""
+        await self._session.execute(
+            update(Document).where(Document.id == document_id).values(filename=filename)
+        )
+
     async def set_enabled(self, document_id: int, enabled: bool) -> None:
         await self._session.execute(
             update(Document)

@@ -128,6 +128,22 @@ async def upload(owner_id: int, notebook_id: int, file: Upload) -> DocumentRow:
     return doc
 
 
+async def rename(owner_id: int, document_id: int, filename: str) -> DocumentRow:
+    """A new display name. Search and citations show it at once; nothing is re-processed."""
+    name = _safe_name(filename)
+    if not name.strip():
+        raise NotebookError(422, "A document needs a name.")
+    async with session_scope() as session:
+        repo = NotebookRepository(session)
+        doc = await repo.owned_document(document_id, owner_id)
+        if doc is None or doc.status == DELETING:
+            raise _not_found()
+        await repo.rename(document_id, name)
+        updated = await repo.document(document_id)
+    assert updated is not None
+    return updated
+
+
 async def set_enabled(owner_id: int, document_id: int, enabled: bool) -> DocumentRow:
     """Postgres first, then the Qdrant payload. Vectors are never deleted here."""
     async with session_scope() as session:

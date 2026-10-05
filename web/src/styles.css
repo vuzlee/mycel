@@ -4459,6 +4459,20 @@ td[data-status="late"] {
   border-top: 1px solid var(--rule);
 }
 
+.nb-rename {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.nb-rename:hover {
+  text-decoration: underline dotted;
+}
+
+.nb-list li[data-enabled="false"] .nb-rename,
 .nb-list li[data-enabled="false"] .nb-name > span {
   color: var(--faint);
   text-decoration: line-through;
