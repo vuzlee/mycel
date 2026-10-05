@@ -51,15 +51,27 @@ jobs:
       - name: Lint
         run: helm lint deploy/helm/mycel -f deploy/helm/mycel/values-minikube.yaml
 
-      # No `-f values-minikube.yaml`: the defaults have to render on their own, or the
-      # first real environment inherits a chart that only works with a dev override.
+      # The stores host is the one value every environment must name; without it the chart
+      # refuses to render. That refusal is the guard, so check it holds.
+      - name: Refuses to render without a stores host
+        run: |
+          if helm template mycel deploy/helm/mycel --set image.tag=${{ github.sha }} > /dev/null 2>&1; then
+            echo "rendered with no externalStores.host"; exit 1
+          fi
+
+      # No `-f values-minikube.yaml`: apart from the host, the defaults have to render on
+      # their own, or the first real environment inherits a chart that only works with a dev override.
       - name: Renders on the defaults
-        run: helm template mycel deploy/helm/mycel --set image.tag=${{ github.sha }} > /dev/null
+        run: |
+          helm template mycel deploy/helm/mycel \
+            --set image.tag=${{ github.sha }} \
+            --set externalStores.host=stores.internal > /dev/null
 
       - name: Renders with measuring and logs on
         run: |
           helm template mycel deploy/helm/mycel \
             --set image.tag=${{ github.sha }} \
+            --set externalStores.host=stores.internal \
             --set monitoring.enabled=true > /tmp/rendered.yaml
 
       # The chart references a Secret by name and renders none. `helm template` producing
