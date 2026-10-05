@@ -40,7 +40,7 @@ spec:
           ports:
             - name: http
               containerPort: 8000
-          {{- include "mycel.envFrom" . | nindent 10 }}
+          {{- include "mycel.env" (dict "ctx" .) | nindent 10 }}
           # Liveness touches nothing outside the process. A liveness probe that asks the
           # database restarts healthy pods every time the database blinks — and restarting
           # the api does not fix a database.

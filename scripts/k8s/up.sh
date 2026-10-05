@@ -2,7 +2,7 @@
 #
 # The chart, on minikube.
 #
-#   scripts/stack.sh k8s up              three application pods
+#   scripts/stack.sh k8s up              four application pods: api, worker, ingest, scheduler
 #   scripts/stack.sh k8s up monitoring   ... and Prometheus, Loki, Promtail, Grafana
 #
 # THE STORES STAY OUTSIDE THE CLUSTER and this script starts them in compose. Postgres,
@@ -41,8 +41,11 @@ log "starting the stores in compose — they live outside the cluster on purpose
 docker compose up -d "${INFRA[@]}"
 wait_for_stores
 
-minikube image ls 2>/dev/null | grep -q 'mycel:dev' \
-  || die "mycel:dev is not on the node — scripts/stack.sh k8s build"
+images=$(minikube image ls 2>/dev/null)
+for image in mycel:dev mycel-ingest:dev; do
+  grep -qE "(^|/)$image\$" <<<"$images" \
+    || die "$image is not on the node — scripts/stack.sh k8s build"
+done
 
 "$ROOT/scripts/k8s/secret.sh"
 
@@ -53,13 +56,14 @@ $MONITORING && args+=(--set monitoring.enabled=true)
 log "helm ${args[*]:0:3}"
 helm "${args[@]}"
 
-# `--for=condition=Ready` on everything this release owns. The migration hook has already
-# run by the time helm returns, so a pod still not ready here is a pod that is actually
-# failing rather than one that has not been scheduled.
-log "waiting for the pods"
-kubectl wait --for=condition=Ready pod \
-  -l "app.kubernetes.io/instance=mycel" --timeout=180s \
-  || die "not every pod became ready — kubectl get pods, then kubectl logs <pod>"
+# Each Deployment's rollout, not every pod with the release label: a migration Job that
+# failed on an earlier attempt leaves its pods behind in Error, and they are never Ready.
+# Waiting on them times out over a release that is in fact running.
+log "waiting for the rollouts"
+for d in $(kubectl get deploy -l "app.kubernetes.io/instance=mycel" -o name); do
+  kubectl rollout status "$d" --timeout=300s \
+    || die "$d did not roll out — kubectl get pods, then kubectl logs <pod>"
+done
 
 echo
 exec "$ROOT/scripts/k8s/status.sh"

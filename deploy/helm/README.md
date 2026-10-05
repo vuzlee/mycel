@@ -15,25 +15,26 @@ deploy/helm/mycel/
   values.yaml             defaults — enough to run, right for no environment
   values-minikube.yaml    the one that is actually run
   templates/
-    _helpers.tpl          names, labels, the shared envFrom
+    _helpers.tpl          names, labels, the shared env and envFrom
     configmap.yaml        settings that are not keys
     secret.yaml           NOT a manifest — how to create the Secret, and why
     api/                  Deployment, Service, Ingress
     worker/               Deployment
     scheduler/            Deployment (always replicas: 1 — see below)
+    ingest/               Deployment, its own image with docling
     hooks/migrate.yaml    pre-install,pre-upgrade: alembic upgrade head
     monitoring/           Prometheus, Loki, Promtail, Grafana — off by default
   files/                  the three Grafana files, copied; files/README.md says why
 ```
 
-Seven manifests with monitoring off, twenty-six with it on. No HPA and no StatefulSet —
+Eight manifests with monitoring off, twenty-seven with it on. No HPA and no StatefulSet —
 see `deploy/kubernetes/README.md` for what each would cost and why neither is here.
 
 ## Measuring and logs
 
 `--set monitoring.enabled=true` adds Prometheus, Loki, Promtail and Grafana. Off by
 default, the way compose keeps them behind `profiles: [monitoring]`: without it the chart
-renders exactly the three application pods.
+renders exactly the four application pods.
 
 Prometheus asks the cluster which pods are alive rather than carrying a list of addresses,
 so a replaced pod is found on the next refresh and nobody edits anything. That is the one

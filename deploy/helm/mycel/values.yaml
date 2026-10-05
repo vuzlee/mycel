@@ -1,10 +1,10 @@
 # Defaults: enough to make the chart run, suited to no real environment.
 # Each environment overrides them with values-<env>.yaml.
 #
-# Four things this file used to declare and no longer does: Kafka, MinIO, an internal
-# Harbor registry, and autoscaling. The first two left docker-compose.yml long ago, and a
-# template that reads values for a system which does not exist renders a deployment of
-# nothing. Autoscaling is a decision for a cluster that has load.
+# Three things this file does not declare: Kafka, an internal Harbor registry, and
+# autoscaling. Kafka left docker-compose.yml long ago, and a template that reads values for
+# a system which does not exist renders a deployment of nothing. Autoscaling is a decision
+# for a cluster that has load. MinIO came back in 061 as a store outside the cluster.
 
 image:
   # ghcr.io at release time; on minikube the image is loaded into the node's own daemon,
@@ -35,8 +35,18 @@ scheduler:
     requests: {cpu: 100m, memory: 256Mi}
     limits: {memory: 512Mi}
 
-# The stores stay outside the cluster: Postgres, RabbitMQ and Redis run on the host under
-# docker-compose. StatefulSet + PVC is the painful part of Kubernetes and adds nothing to
+# Parses uploaded documents. Its own image: docling and its models are ~2.5 GB that no other
+# pod needs. One replica, because each holds 3-4 GB of native memory.
+ingest:
+  replicas: 1
+  image:
+    repository: mycel-ingest
+  resources:
+    requests: {cpu: 500m, memory: 2Gi}
+    limits: {memory: 5Gi}
+
+# The stores stay outside the cluster: Postgres, RabbitMQ, Redis, Qdrant, MinIO and the
+# LiteLLM gateway run on the host under docker-compose. StatefulSet + PVC is the painful part of Kubernetes and adds nothing to
 # what this chart is meant to prove.
 #
 # `host` is the address the pods use to reach them. It is EMPTY here on purpose: inside a
@@ -49,7 +59,7 @@ externalStores:
 # Values that are not keys. Anything that unlocks something lives in the Secret instead;
 # see secret.yaml for the split and why a URL counts as a key.
 config:
-  MYCEL_ENV: production
+  MYCEL_ENV: prod
   LOG_LEVEL: INFO
   DB_POOL_SIZE: "10"
   RESULT_TTL_SECONDS: "86400"

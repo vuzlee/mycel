@@ -40,5 +40,5 @@ spec:
           image: {{ include "mycel.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["alembic", "upgrade", "head"]
-          {{- include "mycel.envFrom" . | nindent 10 }}
+          {{- include "mycel.env" (dict "ctx" .) | nindent 10 }}
 {{- end }}

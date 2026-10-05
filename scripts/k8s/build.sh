@@ -14,9 +14,13 @@ need minikube
 
 TAG=${1:-dev}
 
-log "building mycel:$TAG"
-docker build --target app -t "mycel:$TAG" "$ROOT"
-
-log "loading it into minikube (this takes a minute)"
-minikube image load "mycel:$TAG"
-log "mycel:$TAG is on the node"
+# Two images from one Dockerfile: the app, and ingest with docling and its models baked in.
+# ingest is ~2.75 GB, so its first build and load take several minutes.
+for pair in "app:mycel" "ingest:mycel-ingest"; do
+  target=${pair%%:*} name=${pair#*:}
+  log "building $name:$TAG"
+  docker build --target "$target" -t "$name:$TAG" "$ROOT"
+  log "loading $name:$TAG into minikube"
+  minikube image load "$name:$TAG"
+done
+log "mycel:$TAG and mycel-ingest:$TAG are on the node"

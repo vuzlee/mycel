@@ -48,10 +48,8 @@ spec:
             # base value, unshifted, because the code does the shifting.
             - name: metrics
               containerPort: {{ add (.Values.config.METRICS_PORT | int) 1 }}
-          env:
-            # Outranks envFrom; see the worker's for why METRICS_HOST has to.
-            - {name: METRICS_HOST, value: "0.0.0.0"}
-          {{- include "mycel.envFrom" . | nindent 10 }}
+          # METRICS_HOST outranks envFrom; see the worker's for why it has to.
+          {{- include "mycel.env" (dict "ctx" . "metrics" true) | nindent 10 }}
           # Same reasoning as the worker's, on the shifted port.
           livenessProbe:
             httpGet: {path: /metrics, port: metrics}

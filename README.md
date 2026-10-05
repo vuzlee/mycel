@@ -121,8 +121,8 @@ The application is the same in all three; what differs is where it runs.
 
 ```bash
 scripts/stack.sh compose up monitoring   # image in containers, + Prometheus/Loki/Grafana
-scripts/stack.sh k8s build               # build and load the image into minikube
-scripts/stack.sh k8s up monitoring       # the chart, seven pods
+scripts/stack.sh k8s build               # build both images and load them into minikube
+scripts/stack.sh k8s up monitoring       # the chart, eight pods
 scripts/stack.sh k8s down --all          # uninstall, stop minikube, stop the stores
 ```
 

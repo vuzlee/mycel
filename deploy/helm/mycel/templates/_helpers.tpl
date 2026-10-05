@@ -60,3 +60,27 @@ envFrom:
   - secretRef:
       name: {{ .Values.secret.name }}
 {{- end -}}
+
+{{/*
+Where the stores outside the cluster are, as each container's own `env:`.
+
+Here and not in the ConfigMap, for the reason METRICS_HOST found: the Secret carries the
+whole of .env, where these three say localhost, and secretRef outranks configMapRef. Only
+`env:` outranks both. Inside a pod localhost is that pod, so a value that lost to .env would
+look correct and refuse every connection.
+
+`externalStores.host` must be set; the chart fails to render rather than deploy pods that
+reach themselves. Call with the metrics host when the container serves /metrics:
+  include "mycel.env" (dict "ctx" . "metrics" true)
+*/}}
+{{- define "mycel.env" -}}
+{{- $host := required "externalStores.host must name where the stores run" .ctx.Values.externalStores.host -}}
+env:
+  - {name: QDRANT_URL, value: {{ printf "http://%s:6333" $host | quote }}}
+  - {name: S3_ENDPOINT_URL, value: {{ printf "http://%s:9000" $host | quote }}}
+  - {name: LITELLM_BASE_URL, value: {{ printf "http://%s:4000" $host | quote }}}
+  {{- if .metrics }}
+  - {name: METRICS_HOST, value: "0.0.0.0"}
+  {{- end }}
+{{ include "mycel.envFrom" .ctx }}
+{{- end -}}

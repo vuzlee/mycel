@@ -1,0 +1,57 @@
+{{/*
+The ingest worker: parses uploaded documents with docling, embeds the passages, writes them
+to Qdrant and the original to MinIO.
+
+Its own image, not the app's: docling and its layout and table models add ~2.5 GB that
+nothing else needs. Its own queue, so a 100-page PDF never waits behind a chat turn or holds
+one up.
+
+One replica. docling holds 3-4 GB of native memory per process, and the queue's prefetch of
+one already gives each document a whole worker. More replicas is more RAM, not more speed,
+on a single-node cluster.
+
+Liveness on /metrics, at METRICS_PORT + 2 as `consumer.py` binds it for this queue. The
+initial delay is long: the first document loads docling's models before the loop answers.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-ingest
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingest
+spec:
+  replicas: {{ .Values.ingest.replicas }}
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "ingest") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: ingest
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      {{- end }}
+      # A document is acked only after it is written. Long enough to finish one.
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: ingest
+          image: {{ printf "%s:%s" .Values.ingest.image.repository (.Values.image.tag | default .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]
+          ports:
+            - name: metrics
+              containerPort: {{ add (.Values.config.METRICS_PORT | int) 2 }}
+          {{- include "mycel.env" (dict "ctx" . "metrics" true) | nindent 10 }}
+          livenessProbe:
+            httpGet: {path: /metrics, port: metrics}
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 4
+          resources:
+            {{- toYaml .Values.ingest.resources | nindent 12 }}
