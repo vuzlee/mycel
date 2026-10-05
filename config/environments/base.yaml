@@ -119,10 +119,10 @@ settings:
   ask_max_chars: 500
 
   # --- Mail out ---
-  # Without a host, `/auth/forgot` refuses rather than pretending to send.
-  smtp_host: ""
+  # Host, sender and login are per deployment and live in `.env` (SMTP_HOST, SMTP_FROM,
+  # SMTP_USERNAME, SMTP_PASSWORD). Without a host, `/auth/forgot` refuses rather than
+  # pretending to send.
   smtp_port: 587
-  smtp_from: ""
   smtp_starttls: true
 
   # --- Who may register ---

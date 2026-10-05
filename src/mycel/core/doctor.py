@@ -317,6 +317,17 @@ def _declared(env: Settings) -> list[Check]:
             else "not configured — read_mail is not offered",
         )
     )
+    mail_out = bool(env.smtp_host and env.smtp_from)
+    out.append(
+        Check(
+            "REGISTRATION",
+            "password reset",
+            State.OK if mail_out else State.OFF,
+            f"mail from {env.smtp_from} via {env.smtp_host}"
+            if mail_out
+            else "off — no SMTP, so a forgotten password cannot be reset",
+        )
+    )
     key = env.token_encryption_key
     configured = env.google_client_id and env.google_client_secret and key
     out.append(
