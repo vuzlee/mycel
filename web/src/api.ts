@@ -21,6 +21,8 @@ export interface ChatResult {
   error: string | null;
   conversation_id: number | null;
   question: string | null;
+  /** The passages a Knowledge answer cites. Empty for every other turn. */
+  sources: SourceRef[];
 }
 
 export interface User {
@@ -337,13 +339,18 @@ export async function disconnectJira(): Promise<void> {
  *
  *  Without a conversation this opens a thread; with one the question joins that thread
  *  and the server sends its earlier turns to the agent along with it. */
+/** The sources a person can pick for one turn. No chip means no tools at all. */
+export type Chip = "knowledge" | "web" | "jira" | "calendar" | "mail";
+
 export const askChat = (
   question: string,
   conversationId?: number,
+  chips: Chip[] = [],
 ): Promise<Accepted> =>
   post<Accepted>("/chat", {
     question,
     conversation_id: conversationId ?? null,
+    chips,
   });
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
@@ -377,24 +384,17 @@ export const fetchDashboard = (
 ): Promise<Dashboard> =>
   fetch(`/dashboard/${project}?days=${days}`).then(json<Dashboard>);
 
-// -- notebooks ----------------------------------------------------------------
+// -- documents (the Knowledge chip) -------------------------------------------
 
-export interface NotebookRow {
-  id: number;
-  name: string;
-  created_at: string;
-}
-
-/** `uploaded` and `parsing` lock the notebook against questions. */
-export type DocumentStatus = "uploaded" | "parsing" | "ready" | "failed";
+/** `uploaded` and `parsing` lock the knowledge base against questions. */
+export type DocumentState = "uploaded" | "parsing" | "ready" | "failed";
 
 export interface DocumentRow {
   id: number;
-  notebook_id: number;
   filename: string;
   mime: string;
   size: number;
-  status: DocumentStatus;
+  status: DocumentState;
   fail_reason: string | null;
   enabled: boolean;
   pages: number | null;
@@ -431,24 +431,20 @@ export interface Passage {
 
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
-export const fetchNotebooks = (): Promise<NotebookRow[]> =>
-  fetch("/notebooks").then(json<NotebookRow[]>);
+export const fetchDocuments = (): Promise<DocumentRow[]> =>
+  fetch("/documents").then(json<DocumentRow[]>);
 
-export const createNotebook = (name: string): Promise<NotebookRow> =>
-  post<NotebookRow>("/notebooks", { name });
-
-export async function deleteNotebook(id: number): Promise<void> {
-  const res = await fetch(`/notebooks/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await detail(res));
+/** What GET /documents/status sends on every change: the whole list, and whether
+ *  anything is still being processed. */
+export interface DocumentStatus {
+  busy: boolean;
+  documents: DocumentRow[];
 }
 
-export const fetchDocuments = (notebookId: number): Promise<DocumentRow[]> =>
-  fetch(`/notebooks/${notebookId}/documents`).then(json<DocumentRow[]>);
-
-export async function uploadDocument(notebookId: number, file: File): Promise<DocumentRow> {
+export async function uploadDocument(file: File): Promise<DocumentRow> {
   const body = new FormData();
   body.append("file", file);
-  return fetch(`/notebooks/${notebookId}/documents`, { method: "POST", body }).then(
+  return fetch("/documents", { method: "POST", body }).then(
     json<DocumentRow>,
   );
 }
@@ -458,6 +454,14 @@ export async function setDocumentEnabled(id: number, enabled: boolean): Promise<
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ enabled }),
+  }).then(json<DocumentRow>);
+}
+
+export async function renameDocument(id: number, filename: string): Promise<DocumentRow> {
+  return fetch(`/documents/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ filename }),
   }).then(json<DocumentRow>);
 }
 
@@ -473,23 +477,6 @@ export const fetchSourceUrl = (documentId: number): Promise<string> =>
 
 export const fetchPassage = (chunkId: number): Promise<Passage> =>
   fetch(`/chunks/${chunkId}`).then(json<Passage>);
-
-/** 202 queued, or 200 with the cached answer already in it. */
-/** `previous` is the question asked just before, so a follow-up can say "it". */
-export const askNotebook = (
-  notebookId: number,
-  question: string,
-  previous = "",
-): Promise<AskState> =>
-  post<AskState>(`/notebooks/${notebookId}/ask`, { question, previous });
-
-export async function renameDocument(id: number, filename: string): Promise<DocumentRow> {
-  return fetch(`/documents/${id}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ filename }),
-  }).then(json<DocumentRow>);
-}
 
 export const fetchAsk = (jobId: string): Promise<AskState> =>
   fetch(`/asks/${jobId}`).then(json<AskState>);

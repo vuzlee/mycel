@@ -10,6 +10,7 @@
  * has no gaps: its steps were numbered as they were stored.
  */
 
+import { CITING_AGENT, hideMarkers } from "../citations";
 import type { Item } from "../thread";
 import { Markdown } from "./Markdown";
 import { ThinkingBlock } from "./ThinkingBlock";
@@ -40,6 +41,8 @@ export function Steps({ items, gaps, liveSeq = null }: Props) {
       case "thinking":
         return <ThinkingBlock body={item.body} live={item.seq === liveSeq} />;
       case "text":
+        // A Knowledge answer streams without its markers; the checked answer replaces it.
+        if (item.agent === CITING_AGENT) return <Markdown body={hideMarkers(item.body)} />;
         return (
           <div>
             {item.agent !== "orchestrator" && <div className="agent-tag">{item.agent}</div>}

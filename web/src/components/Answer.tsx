@@ -13,21 +13,36 @@
  * trace is where it belongs.
  */
 
-import type { ChatResult } from "../api";
+import type { ChatResult, SourceRef } from "../api";
 import { Markdown } from "./Markdown";
 
 interface Props {
   result: ChatResult;
   /** True when the stream already showed this answer. */
   streamed?: boolean;
+  /** Opens a cited passage. */
+  onSource?: (source: SourceRef) => void;
 }
 
-export function Answer({ result, streamed }: Props) {
+export function Answer({ result, streamed, onSource }: Props) {
   if (!result.answer || streamed) return null;
 
   return (
     <section className="answer">
       <Markdown body={result.answer} />
+      {result.sources.length > 0 && (
+        <ol className="nb-sources">
+          {result.sources.map((s) => (
+            <li key={s.label}>
+              <button onClick={() => onSource?.(s)}>
+                <b>[{s.label}]</b> {s.filename}
+                {s.page ? `, page ${s.page}` : ""}
+                {s.section ? <small> · {s.section}</small> : null}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

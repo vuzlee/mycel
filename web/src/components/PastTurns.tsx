@@ -38,6 +38,7 @@ export function PastTurns({ turns }: Props) {
                 status: "done",
                 answer: turn.answer,
                 spent_usd: turn.spent_usd,
+                sources: [],
                 error: null,
                 conversation_id: null,
                 question: turn.question,

@@ -26,9 +26,21 @@ interface Props {
    *  rather than beside it: it is positioned against the body it maps, and it takes no
    *  column — a column would shove the thread off centre at the second question. */
   aside?: React.ReactNode;
+  /** A collapsible panel on the right, and the header button that opens it. */
+  panel?: React.ReactNode;
+  panelToggle?: React.ReactNode;
 }
 
-export function Shell({ current = null, scrollRef, jump, children, footer, aside }: Props) {
+export function Shell({
+  current = null,
+  scrollRef,
+  jump,
+  children,
+  footer,
+  aside,
+  panel,
+  panelToggle,
+}: Props) {
   const [menu, setMenu] = useState(false);
 
   return (
@@ -43,6 +55,7 @@ export function Shell({ current = null, scrollRef, jump, children, footer, aside
           >
             <Menu />
           </button>
+          {panelToggle && <div className="header-actions">{panelToggle}</div>}
         </header>
         <div className="scroll" ref={scrollRef}>
           {children}
@@ -55,6 +68,7 @@ export function Shell({ current = null, scrollRef, jump, children, footer, aside
         {aside}
         {footer}
       </main>
+      {panel}
     </div>
   );
 }

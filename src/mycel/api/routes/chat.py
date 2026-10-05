@@ -35,7 +35,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains.chat import ThreadNotFound, find_turn, request_chat
 from mycel.infra.postgres.repositories.app import TurnRow
-from mycel.infra.redis import results
+from mycel.infra.redis import citations, results
 from mycel.services.auth import Principal
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -99,6 +99,9 @@ class ChatResponse(BaseModel):
     error: str | None = None
     conversation_id: int | None = None
     question: str | None = None
+    #: The passages a Knowledge answer cites, so the page can open them. Empty otherwise,
+    #: and empty again once Redis has dropped them - the kept answer lists them in its text.
+    sources: list[dict[str, Any]] = []
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=AcceptedResponse)
@@ -196,9 +199,12 @@ async def get_chat(
             detail=f"no job {job_id}: no such run",
         )
 
+    cited = await citations.fetch(job_id)
+    sources = cited["sources"] if cited and cited.get("owner_id") == user.id else []
     return ChatResponse(
         job_id=job_id,
         conversation_id=kept.conversation_id if kept else None,
         question=kept.question if kept else None,
+        sources=sources,
         **state,
     )

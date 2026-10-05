@@ -19,6 +19,7 @@ from mycel.infra.postgres.repositories.documents import (
     DocumentRow,
 )
 from mycel.infra.postgres.session import session_scope
+from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.producer import publish
 
@@ -102,6 +103,7 @@ async def upload(owner_id: int, file: Upload) -> DocumentRow:
         doc = await repo.add_document(owner_id, filename, mime, len(file.data), sha)
         await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
 
+    await document_events.changed(owner_id)
     await publish(ingest_job(doc.id))
     return doc
 
@@ -119,6 +121,7 @@ async def rename(owner_id: int, document_id: int, filename: str) -> DocumentRow:
         await repo.rename(document_id, name)
         updated = await repo.document(document_id)
     assert updated is not None
+    await document_events.changed(owner_id)
     return updated
 
 
@@ -134,6 +137,7 @@ async def set_enabled(owner_id: int, document_id: int, enabled: bool) -> Documen
     async with session_scope() as session:
         updated = await DocumentRepository(session).document(document_id)
     assert updated is not None
+    await document_events.changed(owner_id)
     return updated
 
 
@@ -147,6 +151,7 @@ async def delete_document(owner_id: int, document_id: int) -> None:
         if doc is None:
             raise _not_found()
         await repo.set_status(document_id, DELETING)
+    await document_events.changed(owner_id)
     await publish(delete_job(document_id))
 
 

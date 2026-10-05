@@ -1,4 +1,7 @@
-/** One notebook's documents: drop files in, watch them get ready, switch them off, delete. */
+/**
+ * The user's documents, in a side panel: drop files in, watch them get ready, switch them
+ * off, rename, delete. The list itself is live from `useDocuments`; nothing here polls.
+ */
 
 import { useRef, useState } from "react";
 import {
@@ -9,7 +12,7 @@ import {
   uploadDocument,
   type DocumentRow,
 } from "../../api";
-import { Spinner, Trash, Upload } from "../icons";
+import { Close, Spinner, Trash, Upload } from "../icons";
 
 const ACCEPT = ".pdf,.docx,.md,.markdown";
 
@@ -21,13 +24,29 @@ const REASONS: Record<string, string> = {
   error: "processing failed",
 };
 
-interface Props {
-  notebookId: number;
-  documents: DocumentRow[];
-  onChange: () => void;
+/** Upload files, refusing anything over 2 MB before it is sent. Returns the errors. */
+export async function sendFiles(files: FileList | File[]): Promise<string[]> {
+  const errors: string[] = [];
+  for (const file of Array.from(files)) {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      errors.push(`${file.name}: files are limited to 2 MB.`);
+      continue;
+    }
+    try {
+      await uploadDocument(file);
+    } catch (failure) {
+      errors.push(`${file.name}: ${(failure as Error).message}`);
+    }
+  }
+  return errors;
 }
 
-export function Documents({ notebookId, documents, onChange }: Props) {
+interface Props {
+  documents: DocumentRow[];
+  onClose: () => void;
+}
+
+export function Documents({ documents, onClose }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,20 +54,12 @@ export function Documents({ notebookId, documents, onChange }: Props) {
 
   const send = async (files: FileList | File[]): Promise<void> => {
     setError(null);
-    for (const file of Array.from(files)) {
-      if (file.size > MAX_UPLOAD_BYTES) {
-        setError(`${file.name}: files are limited to 2 MB.`);
-        continue;
-      }
-      setSending((n) => n + 1);
-      try {
-        await uploadDocument(notebookId, file);
-      } catch (failure) {
-        setError(`${file.name}: ${(failure as Error).message}`);
-      } finally {
-        setSending((n) => n - 1);
-        onChange();
-      }
+    setSending((n) => n + 1);
+    try {
+      const errors = await sendFiles(files);
+      if (errors.length) setError(errors.join(" "));
+    } finally {
+      setSending((n) => n - 1);
     }
   };
 
@@ -60,7 +71,6 @@ export function Documents({ notebookId, documents, onChange }: Props) {
     } catch (failure) {
       setError((failure as Error).message);
     }
-    onChange();
   };
 
   const toggle = async (doc: DocumentRow): Promise<void> => {
@@ -69,7 +79,6 @@ export function Documents({ notebookId, documents, onChange }: Props) {
     } catch (failure) {
       setError((failure as Error).message);
     }
-    onChange();
   };
 
   const drop = async (doc: DocumentRow): Promise<void> => {
@@ -79,11 +88,16 @@ export function Documents({ notebookId, documents, onChange }: Props) {
     } catch (failure) {
       setError((failure as Error).message);
     }
-    onChange();
   };
 
   return (
-    <section className="nb-docs">
+    <aside className="kb-panel" aria-label="Your documents">
+      <header>
+        <h2>Knowledge</h2>
+        <button className="icon-button" onClick={onClose} aria-label="Close documents">
+          <Close />
+        </button>
+      </header>
       <button
         className="nb-drop"
         data-over={over}
@@ -161,7 +175,7 @@ export function Documents({ notebookId, documents, onChange }: Props) {
           ))}
         </ul>
       )}
-    </section>
+    </aside>
   );
 }
 

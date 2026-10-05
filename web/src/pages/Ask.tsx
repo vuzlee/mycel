@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Turn } from "../api";
+import type { Chip, SourceRef, Turn } from "../api";
 import { askChat, fetchTurns } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
@@ -27,11 +27,15 @@ import { Composer } from "../components/Composer";
 import { PastTurns } from "../components/PastTurns";
 import { Shell } from "../components/Shell";
 import { Thread } from "../components/Thread";
+import { Documents, sendFiles } from "../components/knowledge/Documents";
+import { SourcePanel } from "../components/knowledge/SourcePanel";
 import type { Topic } from "../components/Topics";
 import { Topics, anchorFor } from "../components/Topics";
-import { ArrowRight } from "../components/icons";
+import { ArrowRight, Notebook, Spinner } from "../components/icons";
+import { CITING_AGENT } from "../citations";
 import { useRun } from "../run";
 import { useThreads } from "../threads";
+import { useDocuments } from "../useDocuments";
 
 //: How far below the top of the body the question is parked. Flush against the edge reads
 //: as a page cut off rather than a turn begun. Same number as `.turn.user`'s
@@ -67,6 +71,10 @@ export function Ask() {
   const [seed, setSeed] = useState("");
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
+  const [chips, setChips] = useState<Chip[]>([]);
+  const [panel, setPanel] = useState(false);
+  const [source, setSource] = useState<SourceRef | null>(null);
+  const docs = useDocuments();
   // The scrolling body, as the observer in `Topics` needs it: a root, not a ref, because
   // it arrives one render after the first paint and the observer has to be rebuilt then.
   const [body, setBody] = useState<HTMLElement | null>(null);
@@ -145,7 +153,7 @@ export function Ask() {
       // The open thread by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
-      const { job_id, conversation_id } = await askChat(text, threadId ?? undefined);
+      const { job_id, conversation_id } = await askChat(text, threadId ?? undefined, chips);
       setAsked(text);
       setParams({ job: job_id, thread: String(conversation_id) });
       reload();
@@ -155,6 +163,11 @@ export function Ask() {
   };
 
   const failure = refused ?? run.failure;
+
+  // A Knowledge answer streamed with its markers hidden. Once it is done, the checked
+  // answer - with only the citations that held, and its sources - takes its place.
+  const knowledgeDone =
+    run.result?.status === "done" && run.items.some((i) => i.agent === CITING_AGENT);
 
   // A finished run moves its thread to the top of Recent. The sidebar is ordered by the
   // last thing written to a thread, and that write happens on the worker, minutes after
@@ -235,13 +248,35 @@ export function Ask() {
         setBody(node);
       }}
       aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
+      panel={panel ? <Documents documents={docs.documents} onClose={() => setPanel(false)} /> : null}
+      panelToggle={
+        <button
+          className="kb-toggle"
+          aria-pressed={panel}
+          onClick={() => setPanel((open) => !open)}
+          title="Your documents"
+        >
+          <Notebook />
+          Knowledge
+          {docs.busy && <Spinner size={11} />}
+        </button>
+      }
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       footer={
         <Composer
           busy={run.busy}
           seed={seed}
           handle={composer}
+          chips={chips}
+          onChips={setChips}
+          knowledgeLocked={docs.busy}
           onAsk={(text) => void ask(text)}
+          onDropFiles={(files) => {
+            setPanel(true);
+            void sendFiles(files).then((errors) => {
+              if (errors.length) setRefused(errors.join(" "));
+            });
+          }}
         />
       }
     >
@@ -250,14 +285,18 @@ export function Ask() {
           anchor={anchorFor(jobId)}
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
-          items={run.items}
+          items={knowledgeDone ? [] : run.items}
           gaps={run.gaps}
           liveSeq={run.liveSeq}
           failure={failure}
           pending={run.pending}
         >
           {run.result?.status === "done" && (
-            <Answer result={run.result} streamed={run.items.some((i) => i.kind === "text")} />
+            <Answer
+              result={run.result}
+              streamed={!knowledgeDone && run.items.some((i) => i.kind === "text")}
+              onSource={setSource}
+            />
           )}
         </Thread>
       ) : (
@@ -281,6 +320,7 @@ export function Ask() {
           </div>
         </div>
       )}
+      {source && <SourcePanel source={source} onClose={() => setSource(null)} />}
     </Shell>
   );
 }
