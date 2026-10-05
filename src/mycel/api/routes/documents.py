@@ -14,14 +14,18 @@
 Someone else's document or chunk is 404, never 403.
 """
 
+import json
+from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import current_user
 from mycel.domains import ask as ask_domain
 from mycel.infra.postgres.repositories.documents import DocumentRow
+from mycel.infra.redis import document_events
 from mycel.services import documents as service
 from mycel.services.auth import Principal
 
@@ -91,6 +95,36 @@ async def upload_document(me: Me, file: Annotated[UploadFile, File()]) -> Docume
 @router.get("/documents", response_model=list[DocumentOut])
 async def list_documents(me: Me) -> list[DocumentOut]:
     return [_document(d) for d in await service.list_documents(me.id)]
+
+
+@router.get("/documents/status")
+async def document_status(request: Request, me: Me) -> StreamingResponse:
+    """The user's document list, sent again whenever one of them changes state (SSE).
+
+    Each frame is the whole list plus `busy`: the page never merges, it replaces. A
+    keepalive goes out every 15 s so a proxy does not close a quiet connection.
+    """
+    return StreamingResponse(
+        _status_frames(request, me.id),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _status_frames(request: Request, owner_id: int) -> AsyncIterator[str]:
+    async def snapshot() -> str:
+        docs = [_document(d).model_dump() for d in await service.list_documents(owner_id)]
+        busy = any(d["status"] in ("uploaded", "parsing") for d in docs)
+        return f"data: {json.dumps({'busy': busy, 'documents': docs})}\n\n"
+
+    # Subscribed before the first snapshot, so a change between the two is not lost.
+    listener = await document_events.Listener(owner_id).open()
+    try:
+        yield await snapshot()
+        while not await request.is_disconnected():
+            yield await snapshot() if await listener.next(timeout_s=15) else ": keepalive\n\n"
+    finally:
+        await listener.close()
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)

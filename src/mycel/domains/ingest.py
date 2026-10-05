@@ -15,6 +15,7 @@ from mycel.infra.objects import buckets, files
 from mycel.infra.postgres.documents import DELETING, FAILED, READY
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.session import session_scope
+from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
@@ -39,6 +40,7 @@ async def run(job: Job) -> None:
             log.info("ingest skipped", extra={"document_id": document_id})
             return
         await repo.start_parsing(document_id)
+    await document_events.changed(doc.owner_id)
 
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / doc.filename
@@ -72,6 +74,7 @@ async def run(job: Job) -> None:
             [p.text for p in passages],
         )
         await repo.set_status(document_id, READY, pages=pages)
+    await document_events.changed(current.owner_id)
     log.info("document ready", extra={"document_id": document_id, "chunks": len(passages)})
 
 
@@ -87,6 +90,7 @@ async def delete(job: Job) -> None:
     await files.delete(buckets.documents(), doc.object_key)
     async with session_scope() as session:
         await DocumentRepository(session).delete_document(document_id)
+    await document_events.changed(doc.owner_id)
     log.info("document deleted", extra={"document_id": document_id})
 
 
@@ -116,6 +120,8 @@ async def _fail(document_id: int, reason: str) -> None:
         doc = await repo.document(document_id)
         if doc is not None and doc.status != DELETING:
             await repo.set_status(document_id, FAILED, reason=reason)
+    if doc is not None:
+        await document_events.changed(doc.owner_id)
     log.warning("document failed", extra={"document_id": document_id, "reason": reason})
 
 
