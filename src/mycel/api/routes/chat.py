@@ -29,6 +29,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from mycel.agents.core.chips import Chip
 from mycel.api.dependencies import current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
@@ -52,6 +53,13 @@ class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4000, description="What to find out.")
     conversation_id: int | None = Field(
         default=None, description="Continue this thread instead of opening a new one."
+    )
+    chips: list[Chip] | None = Field(
+        default=None,
+        description=(
+            "Sources picked for this turn; an empty list means no tools are offered. "
+            "Absent means the caller does not pick (an older client): every tool stays."
+        ),
     )
 
 
@@ -107,7 +115,12 @@ async def create_chat(
     exception for both cases so that a caller cannot learn which it was.
     """
     try:
-        job_id, thread_id = await request_chat(user.id, body.question, body.conversation_id)
+        job_id, thread_id = await request_chat(
+            user.id,
+            body.question,
+            body.conversation_id,
+            chips=[str(c) for c in body.chips] if body.chips is not None else None,
+        )
     except ThreadNotFound as missing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

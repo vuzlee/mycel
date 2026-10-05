@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
 from pydantic_ai import Agent
 
+from mycel.agents.core.chips import allowed
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.mcp.clients import build_toolsets
@@ -110,7 +111,12 @@ class BaseAgent(ABC, Generic[OutputT]):
             instructions=cls.instructions,
             retries=cfg.tool_retries,
             name=cls.name,
-            toolsets=[*cls.toolsets(), *build_toolsets(list(cfg.mcp_servers))],
+            # Every toolset is filtered by the turn's chips: a tool outside them is never
+            # sent, so the model cannot call it. See `chips.py`.
+            toolsets=[
+                ts.filtered(allowed)
+                for ts in [*cls.toolsets(), *build_toolsets(list(cfg.mcp_servers))]
+            ],
         )
         agent.output_validator(cls.validate_output)
         return agent

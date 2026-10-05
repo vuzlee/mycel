@@ -32,6 +32,7 @@ from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.agent.researcher import Researcher
 from mycel.agents.agent.summariser import Summariser
 from mycel.agents.core.base import BaseAgent
+from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.core.exceptions import ConfigError
@@ -76,6 +77,7 @@ def build_deps(
     budget: JobBudget | None = None,
     events: EventChannel | None = None,
     principal: Principal | None = None,
+    chips: "frozenset[Chip] | None" = None,
 ) -> MycelDeps:
     """Make the deps one job's runs share.
 
@@ -101,4 +103,5 @@ def build_deps(
         settings=settings or AgentSettings(),
         events=events or NullChannel(),
         principal=principal,
+        chips=chips,
     )

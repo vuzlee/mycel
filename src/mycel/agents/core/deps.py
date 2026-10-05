@@ -16,6 +16,7 @@ cannot drift out of sync with what actually happened.
 
 from dataclasses import dataclass, field, replace
 
+from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
@@ -39,6 +40,10 @@ class MycelDeps:
     #: team's data treats `None` as "granted nothing", so a path that forgets to pass a
     #: principal fails closed rather than opening the whole of gold.
     principal: Principal | None = None
+
+    #: The chips the person picked for this turn. `None` keeps every tool (scripts, tests,
+    #: scheduled work); an empty set is a person who picked none, and gets no tools.
+    chips: "frozenset[Chip] | None" = None
 
     # session: AsyncSession — added when infra/ lands. Deliberately absent from this
     # slice, which computes rather than queries.

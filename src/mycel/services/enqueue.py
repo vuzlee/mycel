@@ -14,7 +14,11 @@ from mycel.queue.producer import publish
 
 
 async def enqueue_chat(
-    question: str, conversation_id: int, history: str = "", user_id: int | None = None
+    question: str,
+    conversation_id: int,
+    history: str = "",
+    user_id: int | None = None,
+    chips: list[str] | None = None,
 ) -> str:
     """Queue a question and return the job id to poll with.
 
@@ -38,6 +42,7 @@ async def enqueue_chat(
             "conversation_id": conversation_id,
             "history": history,
             "user_id": user_id,
+            "chips": sorted(chips) if chips is not None else None,
         },
     )
     return await publish(job)

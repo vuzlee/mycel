@@ -69,7 +69,7 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
     """Make the chat domain accept a job or fail, with no broker anywhere in sight."""
 
     async def fake_request(
-        user_id: int, question: str, conversation_id: int | None = None
+        user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
     ) -> tuple[str, int]:
         if isinstance(result, Exception):
             raise result
@@ -236,7 +236,7 @@ class TestQueueingAQuestion:
         seen: list[int | None] = []
 
         async def fake_request(
-            user_id: int, question: str, conversation_id: int | None = None
+            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
         ) -> tuple[str, int]:
             seen.append(conversation_id)
             return "job-2", conversation_id or 99
@@ -449,7 +449,7 @@ class TestTheThingsThatFailSilently:
         release = threading.Event()
 
         async def first_waits(
-            user_id: int, question: str, conversation_id: int | None = None
+            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
         ) -> tuple[str, int]:
             if question == "slow":
                 started.set()
@@ -498,7 +498,7 @@ class TestTheThingsThatFailSilently:
         monkeypatch.setattr("mycel.api.app.setup_tracing", lambda cfg: provider)
 
         async def one_span(
-            user_id: int, question: str, conversation_id: int | None = None
+            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
         ) -> tuple[str, int]:
             with provider.get_tracer("test").start_as_current_span("publish"):
                 return "job-abc", 1

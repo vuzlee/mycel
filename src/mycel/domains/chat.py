@@ -25,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
+from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
@@ -64,7 +65,10 @@ class ThreadNotFound(Exception):
 
 
 async def request_chat(
-    user_id: int, question: str, conversation_id: int | None = None
+    user_id: int,
+    question: str,
+    conversation_id: int | None = None,
+    chips: list[str] | None = None,
 ) -> tuple[str, int]:
     """Queue a question and return the job id with the thread it landed in.
 
@@ -88,7 +92,7 @@ async def request_chat(
             thread = await _thread_of(repo, user_id, conversation_id)
             history = _recall(await repo.turns_for_conversation(thread.id))
 
-        job_id = await enqueue_chat(question, thread.id, history, user_id=user_id)
+        job_id = await enqueue_chat(question, thread.id, history, user_id=user_id, chips=chips)
         await repo.upsert_turn(thread.id, job_id, question, status="queued")
     return job_id, thread.id
 
@@ -224,6 +228,7 @@ async def _deps(
         budget=await budgets.load(job.job_id, ceiling),
         events=events,
         principal=principal,
+        chips=parse_chips(job.payload.get("chips")),
     )
 
 
