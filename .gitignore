@@ -35,17 +35,9 @@ web/dist/
 # One-off Jira maintenance scripts. Not part of the app.
 .jira/
 
-# Hand-run scratch scripts: real models, real money, no CI.
-scripts/smoke/
-
-# The maintainer's own tools: seeding and sprinting their Jira board, recording the README
-# demo, trying one document. Kept on their machine, not part of the repo.
-scripts/tools/seed_jira.py
-scripts/tools/_jira_auth.py
-scripts/tools/assign_sprint.py
-scripts/tools/record_demo.py
-scripts/tools/try_ask.py
-scripts/tools/try_ingest.py
+# The maintainer's own scripts: smoke runs on real models, their Jira board, the README
+# demo, trying one document. One folder, ignored whole, so nothing in the repo is half-kept.
+.local/
 
 # Coverage data, written by `pytest --cov`.
 .coverage
