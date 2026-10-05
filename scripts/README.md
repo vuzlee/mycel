@@ -7,8 +7,7 @@ dev/            app on the host, stores in compose
 compose/        everything in containers
 k8s/            the chart on minikube
 data/           talks to the data or the repo, not to a mode
-smoke/          hand-run, real models, real money, no CI
-tools/          one-off jobs: seed a board, grant a project, record a demo, try a document
+tools/          one-off jobs: grant a project, fetch the RAG corpus
 ```
 
 ## Why a directory per mode

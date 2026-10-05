@@ -139,9 +139,6 @@ open the app, account menu → Settings → **Connect Jira**. The first person t
 the one every background sync runs on; everyone else connects so that what they ask Mycel
 to write carries their own name.
 
-New Jira project? `scripts/tools/seed_jira.py` fills it with this repo's own history, so the first
-sync doesn't read an empty board. It runs on the syncer's consent too, so connect first.
-
 ## Config
 
 Secrets and per-machine settings live in `.env` (see `.env.example`). Everything versioned —

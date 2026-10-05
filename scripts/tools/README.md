@@ -6,18 +6,4 @@ by CI.
 | | |
 |---|---|
 | `grant_project.py` | gives someone a project — the first grant on a fresh deployment |
-| `record_demo.py` | drives the real app in a browser and records the README's demo |
-| `seed_jira.py` | fills an empty Jira project with this repo's own history |
-| `assign_sprint.py` | drags every non-epic board issue into a sprint |
-| `try_ingest.py` | uploads one real file and waits until it is ready |
-| `try_ask.py` | asks your documents one question — **one model call** unless cached |
-| `fetch_rag_corpus.py` | downloads the RAG benchmark corpus and checks every hash |
-
-**The two Jira ones need somebody to have connected Jira first.** Since batch 060 there is
-no deployment token: every call runs on one person's consent, and for a script with nobody
-signed in that is the syncer's. So the order is — bring the stack up, open Settings in the
-app, **Connect Jira**, then run the script. Until then they exit saying so.
-
-That is deliberate rather than an oversight to route around. `seed_jira.py` creates issues,
-and an issue created on a shared token carries the host's name whoever ran it — which Jira
-cannot correct afterwards.
+| `fetch_rag_corpus.py` | downloads the RAG benchmark corpus for `evals/rag` and checks every hash |

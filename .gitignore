@@ -36,7 +36,16 @@ web/dist/
 .jira/
 
 # Hand-run scratch scripts: real models, real money, no CI.
-scripts/smoke/try_*.py
+scripts/smoke/
+
+# The maintainer's own tools: seeding and sprinting their Jira board, recording the README
+# demo, trying one document. Kept on their machine, not part of the repo.
+scripts/tools/seed_jira.py
+scripts/tools/_jira_auth.py
+scripts/tools/assign_sprint.py
+scripts/tools/record_demo.py
+scripts/tools/try_ask.py
+scripts/tools/try_ingest.py
 
 # Coverage data, written by `pytest --cov`.
 .coverage
