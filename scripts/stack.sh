@@ -8,7 +8,6 @@
 #
 #   scripts/stack.sh doctor               what is configured, broken, or off on purpose
 #   scripts/stack.sh sync [--refetch]     one Jira sync now
-#   scripts/stack.sh grants               the two least-privilege roles
 #   scripts/stack.sh grafana-sync [--check]
 #
 # THE THREE MODES DIFFER IN WHERE THE APPLICATION RUNS, not in what it is:
@@ -20,7 +19,7 @@
 #            builds, rather than for writing code against.
 #   k8s      the chart on minikube. Stores stay OUTSIDE the cluster, in compose.
 #
-# `sync`, `grants` and `grafana-sync` take no mode: they talk to the data or the repo,
+# `sync` and `grafana-sync` take no mode: they talk to the data or the repo,
 # and both are the same whichever way the app is running.
 #
 # This file dispatches and nothing else. Each mode owns its own directory, so a change to
@@ -54,7 +53,6 @@ case "$mode" in
 
   doctor)       run "$HERE/data/doctor.sh" "$@" ;;
   sync)         run "$HERE/data/sync.sh" "$@" ;;
-  grants)       run "$HERE/data/grants.sh" "$@" ;;
   grafana-sync) run "$HERE/data/grafana-sync.sh" "$@" ;;
 
   # The old flat commands, which muscle memory and several READMEs still use.

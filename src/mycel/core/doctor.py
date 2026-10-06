@@ -96,7 +96,20 @@ async def _postgres(settings: Settings) -> str:
                 "where table_schema in ('bronze','silver','gold','app')"
             )
         )
-    return f"connected, {count} tables"
+        # Whether this role could drop the schema it reads. The owner can; mycel_app cannot.
+        owner = await session.scalar(
+            text(
+                "select count(*) from pg_tables where schemaname = 'gold' "
+                "and tableowner = current_user"
+            )
+        )
+        user = await session.scalar(text("select current_user"))
+    role = (
+        f"as {user}, which owns the schema — set MYCEL_APP_PASSWORD and connect as mycel_app"
+        if owner
+        else f"as {user}, rows only — no DDL"
+    )
+    return f"connected {role}; {count} tables"
 
 
 async def _rabbitmq(settings: Settings) -> str:

@@ -29,10 +29,16 @@ def _configure(connection: Connection) -> None:
     )
 
 
+def _url() -> str:
+    """The owner's URL: only the owner may change the schema. Falls back to the app's."""
+    settings = get_settings()
+    return settings.migration_database_url or settings.database_url
+
+
 def run_offline() -> None:
     """Emit SQL to stdout, for a DBA who applies migrations by hand."""
     context.configure(
-        url=get_settings().database_url,
+        url=_url(),
         target_metadata=target_metadata,
         include_schemas=True,
         literal_binds=True,
@@ -50,7 +56,7 @@ def _migrate(connection: Connection) -> None:
 async def run_online() -> None:
     """Apply migrations against a live database."""
     engine = async_engine_from_config(
-        {"sqlalchemy.url": async_dsn(get_settings().database_url)},
+        {"sqlalchemy.url": async_dsn(_url())},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

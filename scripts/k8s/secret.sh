@@ -28,7 +28,7 @@ tmp=$(mktemp)
 chmod 600 "$tmp"
 trap 'rm -f "$tmp"' EXIT
 
-sed -E "s#(DATABASE_URL|RABBITMQ_URL|REDIS_URL|REDIS_CACHE_URL)=(.*)localhost#\1=\2$HOST#" \
+sed -E "s#(MIGRATION_DATABASE_URL|DATABASE_URL|RABBITMQ_URL|REDIS_URL|REDIS_CACHE_URL)=(.*)localhost#\1=\2$HOST#" \
   "$ROOT/.env" > "$tmp"
 
 rewritten=$(grep -cE "^(DATABASE_URL|RABBITMQ_URL|REDIS_URL|REDIS_CACHE_URL)=.*$HOST" "$tmp" || true)

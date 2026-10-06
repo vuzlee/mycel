@@ -15,10 +15,10 @@ empty list, so a transaction that becomes the reader role without scoping itself
 rows at all. The other way round — unset meaning "everything" — would turn every forgotten
 scope into a silent leak, which is the failure this whole batch exists to remove.
 
-**A deployment that ran `migrations/grants.sql` needs one more thing from that file.** RLS
-is bypassed by the owner and nobody else, and there `mycel_app` is not the owner — so gold
-would read as empty for sync, the dashboard and the board alike. `grants.sql` gives
-`mycel_app` an unconditional read policy and membership of `mycel_reader`. The narrow role
+**A deployment where the app connects as `mycel_app` needs one more thing.** RLS is
+bypassed by the owner and nobody else, and `mycel_app` is not the owner — so gold would
+read as empty for sync, the dashboard and the board alike. Migration 0018 gives `mycel_app`
+an unconditional policy and membership of `mycel_reader`. The narrow role
 is the one the policy binds; the application role is unrestricted on purpose, because every
 other reader checks permission a layer up in `services/permission.py`.
 

@@ -57,7 +57,7 @@ wait.
 
 ## data/
 
-`doctor`, `sync`, `grants` and `grafana-sync` take no mode. They talk to the database or to the repo,
+`doctor`, `sync` and `grafana-sync` take no mode. They talk to the database or to the repo,
 and both are the same whichever way the app happens to be running.
 
 `doctor` is the first command somebody runs after cloning, so it has to work with **no

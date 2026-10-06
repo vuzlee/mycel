@@ -165,9 +165,10 @@ row-level security policy scoped to whoever asked — a query that names a proje
 not granted returns no rows rather than an error, which is also the refusal that gives away
 nothing about what exists.
 
-`scripts/stack.sh grants` splits the database into two roles once, after the migrations:
-`mycel_etl` writes bronze, silver and gold; `mycel_app` reads gold and owns `app`. It is a
-separate step rather than a migration because a role cannot take privileges from itself.
+The running app does not connect as the database owner. Set `MYCEL_APP_PASSWORD` and
+`MIGRATION_DATABASE_URL` (the owner), point `DATABASE_URL` at `mycel_app`, and migration
+0018 creates that role: it reads and writes rows and cannot create, alter or drop anything.
+Migrations alone run as the owner. Both steps happen inside `up`.
 
 ## What you can ask it
 
@@ -212,7 +213,7 @@ simply worse than last time. See [evals/](evals/README.md).
 src/mycel/     Source — one folder per layer
 web/           React + TypeScript, built into the image, served at /app
 config/        Per-environment, per-agent and per-source YAML
-migrations/    Alembic migrations, plus the grants split
+migrations/    Alembic migrations
 deploy/        OTel, Grafana, Helm, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 docs/          Design documentation

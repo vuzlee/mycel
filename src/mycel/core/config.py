@@ -202,9 +202,18 @@ class Settings(BaseSettings):
     # Infrastructure. The defaults are the throwaway local ones `docker-compose.yml`
     # brings up, so a dev machine needs neither variable set. Any deployment that is not
     # a laptop overrides both from the environment — there is no real password here.
-    #: Read by both the engine and alembic. Stored as the plain `postgresql://` form the
-    #: rest of the world writes; `postgres/engine.py` swaps in the async driver.
+    #: What the running app connects as. In a deployment this is `mycel_app`: it reads and
+    #: writes rows and cannot create, alter or drop anything, so a bug or an injection in
+    #: the app cannot take the schema with it. Plain `postgresql://` form;
+    #: `postgres/engine.py` swaps in the async driver.
     database_url: str = "postgresql://mycel:mycel@localhost:5433/mycel"
+    #: What migrations connect as: the database owner, who alone may change the schema.
+    #: Unset falls back to `database_url`, which is right for a dev machine and for tests,
+    #: where both are the owner.
+    migration_database_url: str | None = None
+    #: `mycel_app`'s password. Migration 0018 creates the role with it; unset, the role is
+    #: not created and the app keeps connecting as the owner.
+    mycel_app_password: SecretStr | None = None
     #: Pool size is per process. `api` runs N uvicorn workers and `worker` scales by
     #: consumer count, so the ceiling that matters is this times the process count.
     db_pool_size: int = 5
