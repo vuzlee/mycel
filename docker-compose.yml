@@ -156,10 +156,12 @@ services:
     environment:
       GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
       CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
-      CLAUDE_PROXY_BASE_URL: ${CLAUDE_PROXY_BASE_URL:-http://10.1.10.35:20128/v1}
+      CLAUDE_PROXY_BASE_URL: ${CLAUDE_PROXY_BASE_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_API_KEY:-sk-mycel-dev}
     volumes:
       - ./config/litellm/config.yaml:/app/config.yaml:ro
+      - ./config/litellm/models.yaml:/app/models.yaml:ro
       - ./config/litellm/entrypoint.sh:/app/entrypoint.sh:ro
       - ./config/litellm/mycel_callbacks.py:/app/mycel_callbacks.py:ro
     ports: ["4000:4000"]

@@ -76,6 +76,11 @@ async def read_recent(access_token: str, hours: int, limit: int) -> Mailbox:
 
 async def _get(client: "httpx2.AsyncClient", path: str, params: Any) -> dict[str, Any]:
     response = await client.get(f"{API}{path}", params=params)
+    if response.status_code == 403 and "SERVICE_DISABLED" in response.text:
+        raise SourceError(
+            "gmail: the Gmail API is not enabled for this deployment's Google project — "
+            "whoever runs it enables it in the Google Cloud console"
+        )
     if response.status_code in (401, 403):
         raise SourceError(
             "gmail: this Google account has not allowed Mycel to read mail — "

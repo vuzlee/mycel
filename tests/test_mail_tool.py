@@ -87,6 +87,10 @@ class FakeGmail:
             self.status_code = status
             self.body = body
 
+        @property
+        def text(self) -> str:
+            return str(self.body)
+
         def raise_for_status(self) -> None:
             return None
 
@@ -245,3 +249,16 @@ class TestWhenTheMailboxCannotBeRead:
 
         with pytest.raises(ToolFailed, match="connect Google again"):
             await read_mail(ctx, hours=24)
+
+    async def test_a_disabled_api_is_named_not_blamed_on_the_person(
+        self, read_mail: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch, connected: list[int]
+    ) -> None:
+        """Reconnecting cannot fix a project with the Gmail API off; saying so wastes a turn."""
+        fake = FakeGmail([], status=403)
+        original = FakeGmail._Response.json
+        monkeypatch.setattr(FakeGmail._Response, "text", property(lambda self: "SERVICE_DISABLED"))
+        monkeypatch.setattr(gmail.httpx2, "AsyncClient", fake.client)
+
+        with pytest.raises(ToolFailed, match="Gmail API is not enabled"):
+            await read_mail(ctx, hours=24)
+        assert original

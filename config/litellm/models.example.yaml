@@ -1,0 +1,20 @@
+# Copy to models.yaml (gitignored) and keep the providers you have. Each `model_name` is
+# what config/agents/*.yaml asks for as `cloud:<model_name>`. Keys come from the
+# environment as `os.environ/<NAME>`; put them in .env and pass them in docker-compose.yml.
+model_list:
+  # Anthropic directly.
+  - model_name: claude-sonnet-5
+    litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/ANTHROPIC_API_KEY}
+
+  # Google Gemini. Several keys under one name spread load and cool down a key out of quota.
+  - model_name: gemini-3.6-flash
+    litellm_params: {model: gemini/gemini-3.6-flash, api_key: os.environ/GEMINI_API_KEY_1}
+  - model_name: gemini-3.5-flash-lite
+    litellm_params: {model: gemini/gemini-3.5-flash-lite, api_key: os.environ/GEMINI_API_KEY_1}
+
+  # Any OpenAI-compatible endpoint: a proxy, vLLM, Ollama, a hosted gateway.
+  # - model_name: my-model
+  #   litellm_params:
+  #     model: openai/<the endpoint's own model id>
+  #     api_base: os.environ/MY_MODEL_BASE_URL
+  #     api_key: os.environ/MY_MODEL_API_KEY

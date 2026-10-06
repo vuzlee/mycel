@@ -52,7 +52,15 @@ def _resolve_test_dsn() -> str | None:
     `.env`; the database name is this suite's, always ending in `_test`. Unreachable server
     means the Postgres tests skip, which is right on a machine with no database.
     """
-    dsn = os.environ.get("DATABASE_URL") or dotenv_values(".env").get("DATABASE_URL")
+    # The owner, not the app role: the suite builds and drops its schemas, which is DDL,
+    # and a deployment's app role is the one thing that may not do that.
+    env = dotenv_values(".env")
+    dsn = (
+        os.environ.get("MIGRATION_DATABASE_URL")
+        or env.get("MIGRATION_DATABASE_URL")
+        or os.environ.get("DATABASE_URL")
+        or env.get("DATABASE_URL")
+    )
     if not dsn:
         return None
 
@@ -66,6 +74,8 @@ def _resolve_test_dsn() -> str | None:
 
 
 _TEST_DSN = _resolve_test_dsn()
+os.environ.pop("MIGRATION_DATABASE_URL", None)
+os.environ.pop("MYCEL_APP_PASSWORD", None)
 if _TEST_DSN:
     os.environ["DATABASE_URL"] = _TEST_DSN
 else:

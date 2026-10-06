@@ -53,3 +53,6 @@ assets/demo/
 
 # A timestamped file per retrieval run; the summary that matters goes in the batch note.
 evals/rag/results/retrieval-*.json
+
+# This deployment's models and providers; start from models.example.yaml.
+config/litellm/models.yaml

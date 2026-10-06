@@ -68,7 +68,13 @@ Each person's own calendar and mail.
    `<PUBLIC_BASE_URL>/auth/google/callback`.
 4. Into `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
-### 4. The rest of `.env`
+### 4. Models
+
+Copy `config/litellm/models.example.yaml` to `config/litellm/models.yaml` (not tracked) and
+keep the providers you have. Each `model_name` is what `config/agents/*.yaml` asks for as
+`cloud:<model_name>`. Put the keys it names in `.env`.
+
+### 5. The rest of `.env`
 
 | Key | What |
 |---|---|
