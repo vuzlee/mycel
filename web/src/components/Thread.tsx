@@ -6,7 +6,6 @@
 
 import type { Item } from "../thread";
 import { Steps } from "./Steps";
-import { Working } from "./Working";
 
 interface Props {
   /** The id the right-hand map scrolls to for this turn. */
@@ -14,7 +13,6 @@ interface Props {
   question: string | null;
   items: Item[];
   gaps: Map<number, number>;
-  liveSeq: number | null;
   failure: string | null;
   /** True until an answer or a failure is on screen — not merely until the stream shuts. */
   pending: boolean;
@@ -31,7 +29,6 @@ export function Thread({
   question,
   items,
   gaps,
-  liveSeq,
   failure,
   pending,
   children,
@@ -52,9 +49,8 @@ export function Thread({
           </div>
         )}
         <div className="turn items">
-          <Steps items={items} gaps={gaps} liveSeq={liveSeq} />
+          <Steps items={items} gaps={gaps} live={pending} />
         </div>
-        {pending && <Working items={items} />}
         {children}
         {failure && <p className="failure">{failure}</p>}
       </div>

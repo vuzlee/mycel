@@ -75,3 +75,9 @@ async def forget_thread(user_id: int, conversation_id: int) -> bool:
     async with session_scope() as session:
         repo = AppRepository(session)
         return await repo.delete_conversation(conversation_id, user_id)
+
+
+async def pin_thread(user_id: int, conversation_id: int, pinned: bool) -> bool:
+    """Pin or unpin one thread. False if it is not this person's, or not there."""
+    async with session_scope() as session:
+        return await AppRepository(session).pin_conversation(conversation_id, user_id, pinned)

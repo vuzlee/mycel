@@ -6,32 +6,33 @@
  */
 
 :root {
-  --ground: #faf9fc;
+  --mark-ink: #3d259d;
+  --ground: #f7f7fb;
   --surface: #ffffff;
-  --sunk: #f3f1f8;
-  --raised: #ffffff;
+  --sunk: #e7e4f1;
+  --raised: #fbfaff;
 
-  --ink: #17141f;
-  --ink-2: #453e56;
-  --muted: #6f6782;
-  --faint: #9d96ae;
+  --ink: #111116;
+  --ink-2: #3d3d4a;
+  --muted: #666675;
+  --faint: #9696a3;
 
-  --rule: #e7e3f0;
-  --rule-2: #d9d3e6;
+  --rule: #dddce8;
+  --rule-2: #c8c6d8;
 
-  --accent: #6e56cf;
-  --accent-hover: #654dc4;
+  --accent: #3d259d;
+  --accent-hover: #331f84;
   --accent-ink: #ffffff;
-  --accent-soft: #f4f0fe;
-  --accent-line: #d4cafe;
+  --accent-soft: #ede9fb;
+  --accent-line: #c2b8ea;
   /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
      a selection lands on are already tinted — the question bubble is `--accent-soft` —
      and a tint over a tint is not a mark. The pair is the one combination that reads on
      every background the app has. */
-  --select: #6e56cf;
+  --select: #3d259d;
   --select-ink: #ffffff;
   /* A cited quote, marked over text: the accent, thin enough to read through. */
-  --quote-mark: rgb(110 86 207 / 22%);
+  --quote-mark: rgb(61 37 157 / 20%);
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -93,27 +94,28 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground: #0b0910;
-    --surface: #131019;
-    --sunk: #0f0d15;
-    --raised: #1a1622;
+    --ground: #0d0e14;
+    --surface: #191a25;
+    --sunk: #1a1b27;
+    --raised: #232536;
 
-    --ink: #f0edf7;
-    --ink-2: #c5bed6;
-    --muted: #8f87a3;
-    --faint: #6b6380;
+    --ink: #f2f2f7;
+    --ink-2: #c9cad8;
+    --muted: #9293a6;
+    --faint: #686a7e;
 
-    --rule: #241f30;
-    --rule-2: #332c42;
+    --rule: #2a2c3d;
+    --rule-2: #3a3d52;
 
-    --accent: #baa7ff;
-    --accent-hover: #e2ddfe;
-    --accent-ink: #14101d;
-    --accent-soft: #291f43;
-    --accent-line: #473876;
-    --select: #baa7ff;
-    --select-ink: #14101d;
-    --quote-mark: rgb(186 167 255 / 30%);
+    --mark-ink: #d4c8ff;
+    --accent: #a593ff;
+    --accent-hover: #c6bbff;
+    --accent-ink: #0c0a18;
+    --accent-soft: #252047;
+    --accent-line: #4a4090;
+    --select: #a593ff;
+    --select-ink: #0c0a18;
+    --quote-mark: rgb(160 143 255 / 30%);
 
     --flag: #f090b4;
     --flag-soft: #2a1520;
@@ -137,27 +139,28 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #0b0910;
-  --surface: #131019;
-  --sunk: #0f0d15;
-  --raised: #1a1622;
+  --ground: #0d0e14;
+  --surface: #191a25;
+  --sunk: #1a1b27;
+  --raised: #232536;
 
-  --ink: #f0edf7;
-  --ink-2: #c5bed6;
-  --muted: #8f87a3;
-  --faint: #6b6380;
+  --ink: #f2f2f7;
+  --ink-2: #c9cad8;
+  --muted: #9293a6;
+  --faint: #686a7e;
 
-  --rule: #241f30;
-  --rule-2: #332c42;
+  --rule: #2a2c3d;
+  --rule-2: #3a3d52;
 
-  --accent: #baa7ff;
-  --accent-hover: #e2ddfe;
-  --accent-ink: #14101d;
-  --accent-soft: #291f43;
-  --accent-line: #473876;
-  --select: #baa7ff;
-  --select-ink: #14101d;
-  --quote-mark: rgb(186 167 255 / 30%);
+  --mark-ink: #d4c8ff;
+    --accent: #a593ff;
+  --accent-hover: #c6bbff;
+  --accent-ink: #0c0a18;
+  --accent-soft: #252047;
+  --accent-line: #4a4090;
+  --select: #a593ff;
+  --select-ink: #0c0a18;
+  --quote-mark: rgb(160 143 255 / 30%);
 
   --flag: #f090b4;
   --flag-soft: #2a1520;
@@ -302,9 +305,10 @@ a.brand:hover .mark {
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  background: linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #ff9ecd));
-  color: #fff;
-  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--mark-ink);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--mark-ink);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--accent) 45%, transparent);
 }
 
 .icon-button {
@@ -369,12 +373,12 @@ a.brand:hover .mark {
 }
 
 .board-link:hover {
-  background: var(--sunk);
+  background: color-mix(in oklab, var(--accent) 5%, var(--sunk));
   color: var(--ink);
 }
 
 .board-link[aria-current="true"] {
-  background: var(--accent-soft);
+  background: color-mix(in oklab, var(--accent) 10%, var(--sunk));
   color: var(--accent);
 }
 
@@ -382,12 +386,22 @@ a.brand:hover .mark {
   margin: 0 18px 8px;
 }
 
-.rail ol {
+/* Pinned and Recent scroll together, so a long pinned list never hides Recent. */
+.rail .threads {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.rail .threads h2 + ol,
+.rail .threads h2 + .empty {
+  margin-bottom: 14px;
+}
+
+.rail ol {
   margin: 0;
-  padding: 0 8px 20px;
+  padding: 0 8px;
   list-style: none;
 }
 
@@ -398,7 +412,7 @@ a.brand:hover .mark {
 .rail li > button {
   display: block;
   width: 100%;
-  padding: 8px 30px 8px 10px;
+  padding: 8px 54px 8px 10px;
   border-radius: var(--radius-sm);
   text-align: left;
   font-size: 13.5px;
@@ -411,21 +425,27 @@ a.brand:hover .mark {
 }
 
 .rail li > button:hover {
-  background: var(--surface);
+  background: color-mix(in oklab, var(--accent) 5%, var(--sunk));
   color: var(--ink);
 }
 
 .rail li > button[aria-current="true"] {
-  background: var(--accent-soft);
+  background: color-mix(in oklab, var(--accent) 10%, var(--sunk));
   color: var(--ink);
   font-weight: 500;
 }
 
-.rail li .drop {
+.rail li .row-actions {
   position: absolute;
   top: 50%;
   right: 6px;
   translate: 0 -50%;
+  display: flex;
+  gap: 2px;
+}
+
+.rail li .pin,
+.rail li .drop {
   width: 22px;
   height: 22px;
   display: grid;
@@ -436,9 +456,15 @@ a.brand:hover .mark {
   transition: opacity 0.14s ease, color 0.14s ease;
 }
 
+.rail li:hover .pin,
 .rail li:hover .drop,
+.rail li .pin:focus-visible,
 .rail li .drop:focus-visible {
   opacity: 1;
+}
+
+.rail li .pin:hover {
+  color: var(--accent);
 }
 
 .rail li .drop:hover {
@@ -735,48 +761,6 @@ a.brand:hover .mark {
   padding-right: 0;
 }
 
-.agent-tag {
-  display: inline-block;
-  margin-bottom: 5px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-/* ---------------------------------------------------------------- thinking */
-
-.thinking {
-  border-left: 2px solid var(--accent-line);
-  padding-left: 16px;
-}
-
-.thinking > summary,
-.tool > summary {
-  list-style: none;
-  cursor: pointer;
-}
-
-.thinking > summary::-webkit-details-marker,
-.tool > summary::-webkit-details-marker {
-  display: none;
-}
-
-.thinking > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  color: var(--muted);
-  transition: color 0.14s ease;
-}
-
-.thinking > summary:hover {
-  color: var(--accent);
-}
 
 .chevron {
   flex: none;
@@ -786,90 +770,6 @@ a.brand:hover .mark {
 
 details[open] > summary .chevron {
   rotate: 90deg;
-}
-
-.thinking .body {
-  margin-top: 10px;
-  font-size: 13.5px;
-  line-height: 1.75;
-  color: var(--muted);
-  white-space: pre-wrap;
-  max-width: 84ch;
-}
-
-/* ---------------------------------------------------------------- tool calls */
-
-.tool {
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
-  overflow: hidden;
-  transition: border-color 0.16s ease;
-}
-
-.tool:hover {
-  border-color: var(--rule-2);
-}
-
-.tool > summary {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 13px;
-  font-size: 13px;
-}
-
-/* Prose, not code: the row says what the run is doing, and a monospace face would read
-   as the name of the function it used to be. */
-.tool .name {
-  flex: 1;
-  min-width: 0;
-  color: var(--accent);
-  font-weight: 500;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.tool .working {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.tool .detail {
-  border-top: 1px solid var(--rule);
-  padding: 12px 13px;
-}
-
-.tool .detail .label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.tool pre {
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  background: var(--sunk);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.65;
-  color: var(--ink-2);
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 300px;
-  overflow: auto;
-}
-
-.tool pre:last-child {
-  margin-bottom: 0;
 }
 
 .nested {
@@ -1196,14 +1096,6 @@ details[open] > summary .chevron {
  * Three hyphae reaching out of a node, drawn in and retracted on a stagger. A spinner
  * would say "waiting"; a delegating run is searching, so the mark grows outward instead.
  */
-.working-line {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 18px 0 4px;
-  font-size: 13.5px;
-  color: var(--muted);
-}
 
 .grow {
   flex: none;
@@ -2621,8 +2513,10 @@ td[data-status="late"] {
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  background: linear-gradient(140deg, var(--accent), color-mix(in oklab, var(--accent) 55%, #ff9ecd));
-  color: #fff;
+  border: 1.5px solid var(--mark-ink);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--mark-ink);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--accent) 45%, transparent);
   font-size: 12px;
   font-weight: 600;
 }
@@ -4711,9 +4605,34 @@ td[data-status="late"] {
 
 /* ------------------------------------------------------------ chips + knowledge panel */
 
-/* The shell grows a third column when the knowledge panel is open. */
+/* The shell grows a third column when the knowledge panel is open; the column and the
+   panel move together, so it slides in from the right and back out. */
+:root {
+  --kb-w: 22rem;
+}
+
 .shell:has(> .kb-panel) {
-  grid-template-columns: var(--rail) minmax(0, 1fr) 22rem;
+  grid-template-columns: var(--rail) minmax(0, 1fr) 0px;
+  overflow: hidden;
+  transition: grid-template-columns 0.32s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.shell:has(> .kb-panel[data-open="true"]) {
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--kb-w);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell:has(> .kb-panel),
+  .kb-panel {
+    transition: none;
+  }
+}
+
+:root[data-kb-drag] .shell,
+:root[data-kb-drag] .kb-panel {
+  transition: none;
+  user-select: none;
+  cursor: col-resize;
 }
 
 .header-actions {
@@ -4739,14 +4658,38 @@ td[data-status="late"] {
 }
 
 .kb-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: var(--kb-w);
   min-height: 0;
   overflow-y: auto;
   padding: 16px;
   border-left: 1px solid var(--rule);
   background: var(--surface);
+  outline: none;
+  transform: translateX(0);
+  transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.2s ease;
+}
+
+.kb-panel[data-open="false"] {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kb-resize {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.kb-resize:hover,
+:root[data-kb-drag] .kb-resize {
+  background: var(--accent-line);
 }
 
 .kb-panel > header {
@@ -4792,42 +4735,6 @@ td[data-status="late"] {
   border: 1px solid var(--rule-2);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* A picked source: a highlighted pill inside the input. */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 10px;
-  border: 1px solid var(--accent-line);
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-
-.chip[data-dim="true"] {
-  opacity: 0.45;
-}
-
-.chip button {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  color: inherit;
-  line-height: 1;
-}
-
-.chip button:hover {
-  background: var(--accent-line);
-}
-
 .chip-menu {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -4844,8 +4751,9 @@ td[data-status="late"] {
 }
 
 .chip-menu button {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  column-gap: 6px;
   width: 100%;
   padding: 7px 10px;
   border-radius: var(--radius-sm);
@@ -4867,8 +4775,39 @@ td[data-status="late"] {
 }
 
 .chip-menu small {
+  grid-column: 2;
   font-size: 12px;
   color: var(--faint);
+}
+
+.chip-menu .tick {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--accent);
+}
+
+.add-source {
+  position: relative;
+}
+
+.add-source[data-on="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.source-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
 }
 
 .composer .hint.note {
@@ -4876,7 +4815,8 @@ td[data-status="late"] {
 }
 
 @media (max-width: 1100px) {
-  .shell:has(> .kb-panel) {
+  .shell:has(> .kb-panel),
+  .shell:has(> .kb-panel[data-open="true"]) {
     grid-template-columns: var(--rail) minmax(0, 1fr);
   }
 
@@ -4884,7 +4824,7 @@ td[data-status="late"] {
     position: fixed;
     inset: 0 0 0 auto;
     z-index: 30;
-    width: min(22rem, 100vw);
+    width: min(var(--kb-w), 100vw);
     box-shadow: var(--shadow-lg);
   }
 }
@@ -5033,3 +4973,164 @@ button.outline:hover {
 }
 .theme-picker.compact button svg { width: 14px; height: 14px; }
 .small { font-size: 12.5px; }
+
+/* ------------------------------------------------- trail: what a run did, folded */
+
+.trail > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  list-style: none;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.trail > summary::-webkit-details-marker,
+.trail .step > summary::-webkit-details-marker {
+  display: none;
+}
+
+.trail > summary:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.trail > summary b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.trail[data-live="true"] > summary b {
+  background: linear-gradient(90deg, var(--ink-2) 30%, var(--accent) 50%, var(--ink-2) 70%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+.trail .rest {
+  color: var(--accent);
+}
+
+.trail-meta {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
+.trail-meta:empty {
+  display: none;
+}
+
+.trail-steps {
+  margin: 6px 0 0 15px;
+  padding: 2px 0 2px 14px;
+  border-left: 1px solid var(--rule-2);
+  list-style: none;
+}
+
+.trail-steps.nested {
+  margin: 2px 0 4px 6px;
+}
+
+.step > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  list-style: none;
+  cursor: pointer;
+}
+
+.step > summary:hover {
+  background: var(--sunk);
+}
+
+.step .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.step .dot.think { border: 1px solid var(--faint); }
+.step .dot.tool { background: var(--accent); }
+.step .dot.say { background: var(--faint); }
+
+.step .what {
+  flex: none;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.step .peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.step .done {
+  flex: none;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.step-body {
+  margin: 4px 0 8px 14px;
+  font-size: 13px;
+}
+
+.step-body.thought {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 84ch;
+}
+
+.step-body .label {
+  display: block;
+  margin: 8px 0 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.step-body pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.json .j-key { color: var(--accent); }
+.json .j-str { color: var(--ink); }
+.json .j-num { color: var(--doing); }
+.json .j-lit { color: var(--late); }

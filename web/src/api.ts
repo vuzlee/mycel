@@ -38,6 +38,8 @@ export interface Thread {
   kind: string;
   title: string;
   created_at: string;
+  /** Kept at the top of the sidebar, above Recent. */
+  pinned: boolean;
   job_id: string | null;
   status: string | null;
 }
@@ -340,6 +342,15 @@ export const fetchTurns = (id: number): Promise<Turn[]> =>
 /** 204, no body. The runs under the thread go with it, in the database. */
 export async function forgetThread(id: number): Promise<void> {
   const res = await fetch(`/conversations/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await detail(res));
+}
+
+export async function pinThread(id: number, pinned: boolean): Promise<void> {
+  const res = await fetch(`/conversations/${id}/pin`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pinned }),
+  });
   if (!res.ok) throw new Error(await detail(res));
 }
 

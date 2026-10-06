@@ -9,7 +9,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { Thread } from "./api";
-import { Unauthorized, fetchThreads, forgetThread } from "./api";
+import { Unauthorized, fetchThreads, forgetThread, pinThread } from "./api";
 import { useAuth } from "./auth";
 
 interface ThreadsValue {
@@ -17,12 +17,15 @@ interface ThreadsValue {
   reload: () => void;
   /** Delete one thread, and every run under it. */
   forget: (id: number) => Promise<void>;
+  /** Keep one thread above Recent, or let it go back. */
+  pin: (id: number, pinned: boolean) => Promise<void>;
 }
 
 const Ctx = createContext<ThreadsValue>({
   threads: [],
   reload: () => {},
   forget: async () => {},
+  pin: async () => {},
 });
 
 export function ThreadsProvider({ children }: { children: ReactNode }) {
@@ -51,9 +54,16 @@ export function ThreadsProvider({ children }: { children: ReactNode }) {
     });
   }, [reload]);
 
+  // Flipped at once, like the delete; the server's order comes back with the reload.
+  const pin = useCallback(async (id: number, pinned: boolean): Promise<void> => {
+    setThreads((current) => current.map((t) => (t.id === id ? { ...t, pinned } : t)));
+    await pinThread(id, pinned).catch(() => {});
+    reload();
+  }, [reload]);
+
   useEffect(reload, [reload]);
 
-  return <Ctx.Provider value={{ threads, reload, forget }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ threads, reload, forget, pin }}>{children}</Ctx.Provider>;
 }
 
 export const useThreads = (): ThreadsValue => useContext(Ctx);

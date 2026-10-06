@@ -419,6 +419,7 @@ class Conversation(Base):
     kind: Mapped[str] = mapped_column(String(16))
     title: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    pinned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Turn(Base):

@@ -3,6 +3,7 @@
     GET  /projects       which projects have work in them, for the picker
     GET     /conversations             this person's threads, for the sidebar
     GET     /conversations/{id}/turns  every run in one thread, oldest first
+    PUT     /conversations/{id}/pin    pin or unpin one, so it stays at the top
     DELETE  /conversations/{id}        forget one, and every run under it
 
 Both are behind `current_user`: the second is by definition personal, and the first names
@@ -17,7 +18,13 @@ from pydantic import BaseModel
 
 from mycel.api.dependencies import current_user
 from mycel.domains.dashboard import known_projects
-from mycel.domains.threads import HISTORY_LIMIT, forget_thread, list_threads, thread_turns
+from mycel.domains.threads import (
+    HISTORY_LIMIT,
+    forget_thread,
+    list_threads,
+    pin_thread,
+    thread_turns,
+)
 from mycel.services.auth import Principal
 
 router = APIRouter(tags=["projects"])
@@ -35,6 +42,7 @@ class ThreadResponse(BaseModel):
     kind: str
     title: str
     created_at: datetime
+    pinned: bool = False
     job_id: str | None = None
     status: str | None = None
 
@@ -85,6 +93,7 @@ async def read_conversations(
             kind=t.conversation.kind,
             title=t.conversation.title,
             created_at=t.conversation.created_at,
+            pinned=t.conversation.pinned_at is not None,
             job_id=t.job_id,
             status=t.status,
         )
@@ -114,6 +123,20 @@ async def read_turns(
         )
         for turn in await thread_turns(user.id, conversation_id)
     ]
+
+
+class PinRequest(BaseModel):
+    pinned: bool
+
+
+@router.put("/conversations/{conversation_id}/pin", status_code=204)
+async def pin_conversation(
+    conversation_id: int, body: PinRequest, user: Annotated[Principal, Depends(current_user)]
+) -> Response:
+    """Pin or unpin a thread. 404 for "not yours" as well, same as the delete."""
+    if not await pin_thread(user.id, conversation_id, body.pinned):
+        raise HTTPException(status_code=404, detail="no such conversation")
+    return Response(status_code=204)
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)

@@ -3,7 +3,7 @@
  * off, rename, delete. The list itself is live from `useDocuments`; nothing here polls.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MAX_UPLOAD_BYTES,
   deleteDocument,
@@ -42,12 +42,62 @@ export async function sendFiles(files: FileList | File[]): Promise<string[]> {
 }
 
 interface Props {
+  open: boolean;
   documents: DocumentRow[];
   onClose: () => void;
 }
 
-export function Documents({ documents, onClose }: Props) {
+const WIDTH_KEY = "mycel.kb-width";
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 640;
+
+/** The panel's width lives in `--kb-w` on the root, so the shell's grid column follows it. */
+function setWidth(px: number): void {
+  const width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, px));
+  document.documentElement.style.setProperty("--kb-w", `${width}px`);
+  try {
+    localStorage.setItem(WIDTH_KEY, String(width));
+  } catch {
+    /* a remembered width is a convenience */
+  }
+}
+
+/** Drag the left edge to resize; the slide transition is off while dragging. */
+function useResize(panel: React.RefObject<HTMLElement>) {
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(WIDTH_KEY));
+      if (saved) setWidth(saved);
+    } catch {
+      /* default width */
+    }
+  }, []);
+
+  return (event: React.PointerEvent): void => {
+    event.preventDefault();
+    const root = document.documentElement;
+    root.dataset.kbDrag = "true";
+    const move = (e: PointerEvent): void => setWidth(window.innerWidth - e.clientX);
+    const stop = (): void => {
+      delete root.dataset.kbDrag;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    panel.current?.focus();
+  };
+}
+
+export function Documents({ open, documents, onClose }: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  const resize = useResize(panel);
+
+  // Closed, it stays mounted so it can slide out; inert keeps it out of the tab order.
+  useEffect(() => {
+    panel.current?.toggleAttribute("inert", !open);
+  }, [open]);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(0);
@@ -91,7 +141,20 @@ export function Documents({ documents, onClose }: Props) {
   };
 
   return (
-    <aside className="kb-panel" aria-label="Your documents">
+    <aside
+      ref={panel}
+      className="kb-panel"
+      data-open={open}
+      aria-label="Your documents"
+      tabIndex={-1}
+    >
+      <div
+        className="kb-resize"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize documents"
+        onPointerDown={resize}
+      />
       <header>
         <h2>Knowledge</h2>
         <button className="icon-button" onClick={onClose} aria-label="Close documents">

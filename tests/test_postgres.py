@@ -1173,6 +1173,32 @@ class TestTheSidebarFollowsTheLastThingSaid:
         rows = await repo.conversations_for(user.id)
         assert [row.id for row in rows] == [old.id, new.id]
 
+    async def test_a_pinned_thread_stays_on_top(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("pin@example.com", "x")
+        old = await repo.create_conversation(user.id, "chat", "pinned")
+        new = await repo.create_conversation(user.id, "chat", "newer")
+        await session.flush()
+        await self._stamp(session, "conversation", f"id = {old.id}", 1)
+        await self._stamp(session, "conversation", f"id = {new.id}", 2)
+
+        assert await repo.pin_conversation(old.id, user.id, True) is True
+        rows = await repo.conversations_for(user.id)
+        assert [row.id for row in rows] == [old.id, new.id]
+        assert rows[0].pinned_at is not None
+
+        await repo.pin_conversation(old.id, user.id, False)
+        rows = await repo.conversations_for(user.id)
+        assert [row.id for row in rows] == [new.id, old.id]
+
+    async def test_someone_elses_thread_cannot_be_pinned(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        mine = await repo.create_user("pin-mine@example.com", "x")
+        theirs = await repo.create_user("pin-theirs@example.com", "x")
+        thread = await repo.create_conversation(theirs.id, "chat", "not yours")
+
+        assert await repo.pin_conversation(thread.id, mine.id, True) is False
+
     async def test_a_thread_with_no_turns_still_sorts(self, session: AsyncSession) -> None:
         """`COALESCE` back to its own `created_at` — a thread opened and never answered
         still has to appear somewhere rather than fall out of the list."""

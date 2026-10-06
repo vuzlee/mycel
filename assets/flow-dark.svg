@@ -1,172 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1004" width="1200" height="1004"
-     role="img" aria-label="Mycel at a glance. Ingest: connectors pull each external platform into a bronze, silver and gold data lakehouse. Producer: a prompt goes through the API gateway and middleware onto a message broker. Consumer: a worker picks the job up and hands it to a multi-agent system, where an orchestrator delegates to peer agents; the agents call tools, which read gold, and MCP servers. The answer streams back to the prompt. Observability: traces, metrics and logs.">
-  <!-- High-level design. Components and their contracts — not modules, not folders, not
-       what is inside a component. docs/architecture.html is where the detail belongs.
-
-       Columns are named by role, which is what explains the shape: a producer and a
-       consumer either side of a broker. Each column reads top to bottom.
-
-       The orchestrator is an agent like its peers — it holds a different prompt and a
-       different set of tools, not a different kind of loop — so it is drawn inside the
-       multi-agent box rather than above it. Tools and MCP servers sit on one row beneath,
-       because they are the same thing to an agent: something it calls. MCP servers are
-       drawn unfilled, like external platforms, because they are somebody else's process.
-
-       No agent is named: the roster is prose, because prose is corrected in one pass and
-       a drawing is the last thing anyone remembers to redraw.
-
-       Grid, so a later edit does not re-derive it. Columns 1, 2 and 4 are 252 wide at
-       x = 24, 324, 924, with a 48 channel between them; the consumer column is 528 wide
-       because it holds two boxes on a row. Rows pitch 96 from y = 100; boxes are 56 tall.
-       A column's frame ends 24 below its last box. Every line stops 12 short of its
-       target and the triangle covers that 12, so the two always meet. -->
-  <g font-family="ui-sans-serif, system-ui, -apple-system, sans-serif">
-
-    <!-- ══ column 1 · ingest ═════════════════════════════════════════════════ -->
-    <rect x="24" y="36" width="252" height="564" rx="4" fill="none"
-          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
-    <text x="48" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="11.5" letter-spacing="1.2" fill="#847b9c">INGEST</text>
-
-    <rect x="48" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="150" y="134" font-size="16" fill="#f0edf7" text-anchor="middle">External Platforms</text>
-
-    <rect x="48" y="196" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="150" y="230" font-size="16" fill="#f0edf7" text-anchor="middle">Connectors</text>
-
-    <rect x="48" y="292" width="204" height="56" rx="2" fill="#25190f" stroke="#d29472" stroke-width="1.3"/>
-    <text x="150" y="326" font-size="16" fill="#d29472" text-anchor="middle">Bronze</text>
-
-    <rect x="48" y="388" width="204" height="56" rx="2" fill="#141b26" stroke="#92aee0" stroke-width="1.3"/>
-    <text x="150" y="422" font-size="16" fill="#92aee0" text-anchor="middle">Silver</text>
-
-    <rect x="48" y="484" width="204" height="56" rx="2" fill="#2a2111" stroke="#e0b955" stroke-width="1.6"/>
-    <text x="150" y="518" font-size="16" fill="#e0b955" text-anchor="middle">Gold</text>
-
-    <text x="48" y="574" font-size="12.5" fill="#847b9c">Data Lakehouse</text>
-
-    <!-- ══ column 2 · producer ═══════════════════════════════════════════════ -->
-    <rect x="324" y="36" width="252" height="432" rx="4" fill="none"
-          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
-    <text x="348" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="11.5" letter-spacing="1.2" fill="#847b9c">PRODUCER</text>
-
-    <rect x="348" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="450" y="134" font-size="16" fill="#f0edf7" text-anchor="middle">Prompt</text>
-
-    <rect x="348" y="196" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="450" y="230" font-size="16" fill="#f0edf7" text-anchor="middle">API Gateway</text>
-
-    <rect x="348" y="292" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="450" y="326" font-size="16" fill="#f0edf7" text-anchor="middle">Middleware</text>
-
-    <rect x="348" y="388" width="204" height="56" rx="2" fill="#1d1730" stroke="#b79cff" stroke-width="1.6"/>
-    <text x="450" y="422" font-size="16" fill="#b79cff" text-anchor="middle">Message Broker</text>
-
-    <!-- ══ column 4 · observability ══════════════════════════════════════════ -->
-    <rect x="924" y="36" width="252" height="340" rx="4" fill="none"
-          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
-    <text x="948" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="11.5" letter-spacing="1.2" fill="#847b9c">OBSERVABILITY</text>
-
-    <rect x="948" y="100" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="1050" y="134" font-size="16" fill="#f0edf7" text-anchor="middle">Traces</text>
-
-    <rect x="948" y="196" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="1050" y="230" font-size="16" fill="#f0edf7" text-anchor="middle">Metrics</text>
-
-    <rect x="948" y="292" width="204" height="56" rx="2" fill="#131019" stroke="#241f30"/>
-    <text x="1050" y="326" font-size="16" fill="#f0edf7" text-anchor="middle">Logs</text>
-
-    <!-- ══ column 3 · consumer ═══════════════════════════════════════════════ -->
-    <rect x="624" y="420" width="528" height="516" rx="4" fill="none"
-          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
-    <text x="648" y="456" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="11.5" letter-spacing="1.2" fill="#847b9c">CONSUMER</text>
-
-    <rect x="696" y="484" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
-    <text x="786" y="518" font-size="16" fill="#b79cff" text-anchor="middle">Worker</text>
-
-    <rect x="672" y="580" width="228" height="228" rx="4" fill="none"
-          stroke="#5d5479" stroke-width="1.3" stroke-dasharray="6 5"/>
-    <text x="696" y="608" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-          font-size="11.5" letter-spacing="1.2" fill="#847b9c">MULTI-AGENT SYSTEM</text>
-
-    <rect x="696" y="628" width="180" height="56" rx="2" fill="#1d1730" stroke="#b79cff" stroke-width="1.6"/>
-    <text x="786" y="662" font-size="16" fill="#b79cff" text-anchor="middle">Orchestrator</text>
-
-    <!-- Stacked, not side by side: the orchestrator is a peer that happens to fan out to
-         the others, and a vertical pair says that without needing a count. -->
-    <rect x="696" y="724" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
-    <text x="786" y="758" font-size="16" fill="#f0edf7" text-anchor="middle">Sub-agents</text>
-
-    <rect x="696" y="856" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
-    <text x="786" y="890" font-size="16" fill="#f0edf7" text-anchor="middle">Tools</text>
-
-    <!-- Same weight as Tools: to an agent both are simply something it calls, and a
-         second meaning on the same row would read as a second tier. -->
-    <rect x="912" y="856" width="180" height="56" rx="2" fill="#131019" stroke="#b79cff" stroke-width="1.3"/>
-    <text x="1002" y="890" font-size="16" fill="#f0edf7" text-anchor="middle">MCP Servers</text>
-
-    <!-- ══ arrows ════════════════════════════════════════════════════════════ -->
-
-    <!-- column 1, each arrow carrying the step it performs -->
-    <g fill="none" stroke="#d29472" stroke-width="1.3">
-      <path d="M150 156V184"/>
-      <path d="M150 252V280"/>
-    </g>
-    <g fill="#d29472">
-      <path d="M144 184 150 196 156 184z"/>
-      <path d="M144 280 150 292 156 280z"/>
-    </g>
-    <path d="M150 348V376" fill="none" stroke="#92aee0" stroke-width="1.3"/>
-    <path d="M144 376 150 388 156 376z" fill="#92aee0"/>
-    <path d="M150 444V472" fill="none" stroke="#e0b955" stroke-width="1.3"/>
-    <path d="M144 472 150 484 156 472z" fill="#e0b955"/>
-
-    <g font-size="13">
-      <text x="164" y="177" fill="#d29472">pull</text>
-      <text x="164" y="273" fill="#d29472">store raw</text>
-      <text x="164" y="369" fill="#92aee0">normalise</text>
-      <text x="164" y="465" fill="#e0b955">promote</text>
-    </g>
-
-    <!-- column 2, the hand-off across the channel, and the work inside the worker -->
-    <g fill="none" stroke="#b79cff" stroke-width="1.3">
-      <path d="M450 156V184"/>
-      <path d="M450 252V280"/>
-      <path d="M450 348V376"/>
-      <path d="M552 416H600V512H684"/>
-      <path d="M786 540V616"/>
-      <path d="M786 684V712"/>
-      <path d="M786 780V844"/>
-      <path d="M786 812H1002V844"/>
-    </g>
-    <g fill="#b79cff">
-      <path d="M444 184 450 196 456 184z"/>
-      <path d="M444 280 450 292 456 280z"/>
-      <path d="M444 376 450 388 456 376z"/>
-      <path d="M684 506 696 512 684 518z"/>
-      <path d="M780 616 786 628 792 616z"/>
-      <path d="M780 712 786 724 792 712z"/>
-      <path d="M780 844 786 856 792 844z"/>
-      <path d="M996 844 1002 856 1008 844z"/>
-    </g>
-    <text x="636" y="496" font-size="13" fill="#b79cff" text-anchor="middle">consume</text>
-    <text x="800" y="708" font-size="13" fill="#b79cff">delegate</text>
-
-    <!-- the only way into the data, along the floor below the first two columns -->
-    <path d="M210 540V884H684" fill="none" stroke="#e0b955" stroke-width="1.5"/>
-    <path d="M684 878 696 884 684 890z" fill="#e0b955"/>
-    <text x="440" y="876" font-size="13" fill="#e0b955" text-anchor="middle">read only</text>
-
-    <!-- the answer goes back the way it was asked -->
-    <g fill="none" stroke="#b79cff" stroke-width="1.3" stroke-dasharray="4 4" opacity="0.6">
-      <path d="M696 656H300V132H336"/>
-    </g>
-    <path d="M336 126 348 132 336 138z" fill="#b79cff" opacity="0.6"/>
-    <text x="498" y="648" font-size="13" fill="#b79cff" opacity="0.7" text-anchor="middle">stream</text>
-
-    <text x="600" y="978" font-size="12.5" fill="#847b9c" text-anchor="middle">every component emits a span, on one trace</text>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1045 700" width="1045" height="700" role="img" aria-label="Mycel high-level design"><style>svg{--bg:#0d0e14;--surface:#191a25;--sunk:#1a1b27;--zone:#14151f;--ink:#f2f2f7;--muted:#9293a6;--rule:#2a2c3d;--accent:#a593ff;--soft:#252047;--line:#4a4090;--x:#1b1e33;--xl:#363b66;--done:#b98cf0;--doing:#8f99f0;--flag:#f090b4}svg text{font-family:Inter,system-ui,sans-serif}.t{fill:var(--ink);font-size:13px;font-weight:600}.m{fill:var(--muted);font-size:11px}
+.zt{fill:var(--accent);font-size:11px;font-weight:700;letter-spacing:.08em}
+.z{fill:var(--zone);stroke:var(--rule)}.zx{fill:var(--x);stroke:var(--xl)}
+.n{fill:var(--surface);stroke:var(--line)}.n.x{stroke:var(--xl)}.ib{fill:var(--soft)}
+.ic{fill:none;stroke:var(--accent);stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}.dot{fill:var(--accent)}
+.e{stroke:var(--accent);stroke-width:1.8;fill:none;marker-end:url(#a)}.d{stroke:var(--done);stroke-width:1.3;fill:none;stroke-dasharray:4 4;marker-end:url(#b);opacity:.8}
+@keyframes f{to{stroke-dashoffset:-16}}.d{animation:f .9s linear infinite}</style><rect width="1045" height="700" rx="16" fill="#191a25"/><defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--done)"/></marker>
+<g id="user" transform="scale(1)"><circle class="ic" cx="16" cy="11" r="5"/><path class="ic" d="M6 28c0-6 4-9 10-9s10 3 10 9"/></g>
+<g id="srv"><rect class="ic" x="5" y="6" width="22" height="9" rx="2"/><rect class="ic" x="5" y="18" width="22" height="9" rx="2"/><circle class="dot" cx="10" cy="10.5" r="1.3"/><circle class="dot" cx="10" cy="22.5" r="1.3"/></g>
+<g id="db"><ellipse class="ic" cx="16" cy="8" rx="10" ry="3.5"/><path class="ic" d="M6 8v16c0 2 4.5 3.5 10 3.5s10-1.5 10-3.5V8M6 16c0 2 4.5 3.5 10 3.5s10-1.5 10-3.5"/></g>
+<g id="queue"><rect class="ic" x="4" y="10" width="24" height="12" rx="3"/><path class="ic" d="M10 10v12M16 10v12M22 10v12"/></g>
+<g id="bolt"><path class="ic" d="M18 4L8 18h7l-2 10 11-15h-7z"/></g>
+<g id="vec"><circle class="ic" cx="9" cy="22" r="2.5"/><circle class="ic" cx="23" cy="9" r="2.5"/><circle class="ic" cx="23" cy="23" r="2.5"/><circle class="ic" cx="11" cy="10" r="2.5"/><path class="ic" d="M11 20l10-9M11.5 22h9M13 12l8 9"/></g>
+<g id="bucket"><path class="ic" d="M6 9h20l-3 18H9z"/><ellipse class="ic" cx="16" cy="9" rx="10" ry="3"/></g>
+<g id="brain"><rect class="ic" x="9" y="9" width="14" height="14" rx="3"/><path class="ic" d="M13 5v4M19 5v4M13 23v4M19 23v4M5 13h4M5 19h4M23 13h4M23 19h4"/></g>
+<g id="chip"><rect class="ic" x="8" y="8" width="16" height="16" rx="2"/><rect class="ic" x="12" y="12" width="8" height="8"/><path class="ic" d="M12 4v4M20 4v4M12 24v4M20 24v4M4 12h4M4 20h4M24 12h4M24 20h4"/></g>
+<g id="cloud"><path class="ic" d="M10 24h13a5 5 0 0 0 0-10 7 7 0 0 0-13-1.5A6 6 0 0 0 10 24z"/></g>
+<g id="clock"><circle class="ic" cx="16" cy="16" r="10"/><path class="ic" d="M16 10v6l4 3"/></g>
+<g id="gear"><circle class="ic" cx="16" cy="16" r="4"/><path class="ic" d="M16 5v4M16 23v4M5 16h4M23 16h4M8.5 8.5l3 3M20.5 20.5l3 3M8.5 23.5l3-3M20.5 11.5l3-3"/></g>
+<g id="chart"><path class="ic" d="M5 27h22M9 23v-7M15 23V9M21 23v-5"/></g>
+<g id="doc"><path class="ic" d="M9 5h10l5 5v17H9z"/><path class="ic" d="M19 5v5h5M13 16h7M13 21h7"/></g>
+<g id="logs"><path class="ic" d="M6 8h20M6 14h14M6 20h20M6 26h10"/></g>
+<g id="mail"><rect class="ic" x="5" y="8" width="22" height="16" rx="2"/><path class="ic" d="M5 10l11 8 11-8"/></g>
+<g id="plug"><path class="ic" d="M12 5v6M20 5v6M9 11h14v5a7 7 0 0 1-14 0zM16 23v5"/></g>
+<g id="layers"><path class="ic" d="M16 5l11 6-11 6-11-6zM5 16l11 6 11-6M5 21l11 6 11-6"/></g>
+<g id="gw"><path class="ic" d="M5 16h7M20 16h7M12 9h8v14h-8z"/><path class="ic" d="M24 13l3 3-3 3"/></g>
+</defs><rect class="z zx" x="15" y="30" width="180" height="480" rx="14"/><text class="zt" x="29" y="52">EXTERNAL</text><rect class="z " x="215" y="30" width="180" height="480" rx="14"/><text class="zt" x="229" y="52">INGESTION</text><rect class="z " x="420" y="30" width="180" height="480" rx="14"/><text class="zt" x="434" y="52">SERVING</text><rect class="z " x="615" y="30" width="180" height="480" rx="14"/><text class="zt" x="629" y="52">LLM</text><rect class="z " x="845" y="30" width="180" height="480" rx="14"/><text class="zt" x="859" y="52">OBSERVABILITY</text><rect class="z " x="215" y="585" width="680" height="100" rx="14"/><text class="zt" x="229" y="607">DATA STORES</text><path class="e" d="M180 100H428"/><path class="e" d="M505 130V158"/><path class="e" d="M505 220V248"/><path class="e" d="M505 310V338"/><path class="e" d="M580 370H628"/><path class="e" d="M705 400V428"/><path class="e" d="M705 340V312"/><path class="e" d="M505 400V428"/><path class="e" d="M430 385H410V415H200V460H182"/><path class="d" d="M305 220V248"/><path class="d" d="M180 190H205V270H228"/><path class="d" d="M180 280H228"/><path class="d" d="M305 310V338"/><path class="d" d="M230 370H210V650H228"/><path class="d" d="M305 490V540H800V618"/><path class="d" d="M635 540V618"/><path class="d" d="M430 115H405V560H330V618"/><path class="d" d="M430 370H405"/><path class="d" d="M405 560H470V618"/><path class="d" d="M1010 190H1030V460H1012"/><path class="d" d="M935 310V428"/><g><rect class="n x" x="30" y="70" width="150" height="60" rx="10"/><rect class="ib" x="40" y="82" width="36" height="36" rx="8"/><use xlink:href="#user" x="42" y="84"/><text x="86" y="97" class="t">Users</text><text x="86" y="114" class="m">browser</text></g>
+<g><rect class="n x" x="30" y="160" width="150" height="60" rx="10"/><rect class="ib" x="40" y="172" width="36" height="36" rx="8"/><use xlink:href="#doc" x="42" y="174"/><text x="86" y="187" class="t">Jira</text><text x="86" y="204" class="m">OAuth per user</text></g>
+<g><rect class="n x" x="30" y="250" width="150" height="60" rx="10"/><rect class="ib" x="40" y="262" width="36" height="36" rx="8"/><use xlink:href="#mail" x="42" y="264"/><text x="86" y="277" class="t">Gmail</text><text x="86" y="294" class="m">OAuth per user</text></g>
+<g><rect class="n x" x="30" y="340" width="150" height="60" rx="10"/><rect class="ib" x="40" y="352" width="36" height="36" rx="8"/><use xlink:href="#clock" x="42" y="354"/><text x="86" y="367" class="t">Calendar</text><text x="86" y="384" class="m">OAuth per user</text></g>
+<g><rect class="n x" x="30" y="430" width="150" height="60" rx="10"/><rect class="ib" x="40" y="442" width="36" height="36" rx="8"/><use xlink:href="#plug" x="42" y="444"/><text x="86" y="457" class="t">MCP servers</text><text x="86" y="474" class="m">agent tools</text></g>
+<g><rect class="n" x="230" y="160" width="150" height="60" rx="10"/><rect class="ib" x="240" y="172" width="36" height="36" rx="8"/><use xlink:href="#clock" x="242" y="174"/><text x="286" y="187" class="t">Scheduler</text><text x="286" y="204" class="m">sync ticks</text></g>
+<g><rect class="n" x="230" y="250" width="150" height="60" rx="10"/><rect class="ib" x="240" y="262" width="36" height="36" rx="8"/><use xlink:href="#plug" x="242" y="264"/><text x="286" y="277" class="t">Connectors</text><text x="286" y="294" class="m">Jira · Gmail</text></g>
+<g><rect class="n" x="230" y="340" width="150" height="60" rx="10"/><rect class="ib" x="240" y="352" width="36" height="36" rx="8"/><use xlink:href="#layers" x="242" y="354"/><text x="286" y="367" class="t">ETL</text><text x="286" y="384" class="m" font-size="10">bronze·silver·gold</text></g>
+<g><rect class="n" x="230" y="430" width="150" height="60" rx="10"/><rect class="ib" x="240" y="442" width="36" height="36" rx="8"/><use xlink:href="#doc" x="242" y="444"/><text x="286" y="457" class="t">Ingest</text><text x="286" y="474" class="m">docs → chunks</text></g>
+<g><rect class="n" x="430" y="70" width="150" height="60" rx="10"/><rect class="ib" x="440" y="82" width="36" height="36" rx="8"/><use xlink:href="#srv" x="442" y="84"/><text x="486" y="97" class="t">API + Web UI</text><text x="486" y="114" class="m">FastAPI · React</text></g>
+<g><rect class="n" x="430" y="160" width="150" height="60" rx="10"/><rect class="ib" x="440" y="172" width="36" height="36" rx="8"/><use xlink:href="#queue" x="442" y="174"/><text x="486" y="187" class="t">RabbitMQ</text><text x="486" y="204" class="m">job broker</text></g>
+<g><rect class="n" x="430" y="250" width="150" height="60" rx="10"/><rect class="ib" x="440" y="262" width="36" height="36" rx="8"/><use xlink:href="#gear" x="442" y="264"/><text x="486" y="277" class="t">Worker</text><text x="486" y="294" class="m">orchestrator</text></g>
+<g><rect class="n" x="430" y="340" width="150" height="60" rx="10"/><rect class="ib" x="440" y="352" width="36" height="36" rx="8"/><use xlink:href="#brain" x="442" y="354"/><text x="486" y="367" class="t">Agents</text><text x="486" y="384" class="m">tools · RAG · MCP</text></g>
+<g><rect class="n" x="430" y="430" width="150" height="60" rx="10"/><rect class="ib" x="440" y="442" width="36" height="36" rx="8"/><use xlink:href="#mail" x="442" y="444"/><text x="486" y="457" class="t">Notify</text><text x="486" y="474" class="m">mail · calendar</text></g>
+<g><rect class="n x" x="630" y="250" width="150" height="60" rx="10"/><rect class="ib" x="640" y="262" width="36" height="36" rx="8"/><use xlink:href="#cloud" x="642" y="264"/><text x="686" y="277" class="t">Cloud LLMs</text><text x="686" y="294" class="m">Gemini, …</text></g>
+<g><rect class="n" x="630" y="340" width="150" height="60" rx="10"/><rect class="ib" x="640" y="352" width="36" height="36" rx="8"/><use xlink:href="#gw" x="642" y="354"/><text x="686" y="367" class="t">LiteLLM</text><text x="686" y="384" class="m">model gateway</text></g>
+<g><rect class="n" x="630" y="430" width="150" height="60" rx="10"/><rect class="ib" x="640" y="442" width="36" height="36" rx="8"/><use xlink:href="#chip" x="642" y="444"/><text x="686" y="457" class="t">vLLM</text><text x="686" y="474" class="m">local models</text></g>
+<g><rect class="n" x="860" y="160" width="150" height="60" rx="10"/><rect class="ib" x="870" y="172" width="36" height="36" rx="8"/><use xlink:href="#chart" x="872" y="174"/><text x="916" y="187" class="t">Prometheus</text><text x="916" y="204" class="m">metrics</text></g>
+<g><rect class="n" x="860" y="250" width="150" height="60" rx="10"/><rect class="ib" x="870" y="262" width="36" height="36" rx="8"/><use xlink:href="#logs" x="872" y="264"/><text x="916" y="277" class="t">Loki</text><text x="916" y="294" class="m">logs · promtail</text></g>
+<g><rect class="n" x="860" y="430" width="150" height="60" rx="10"/><rect class="ib" x="870" y="442" width="36" height="36" rx="8"/><use xlink:href="#chart" x="872" y="444"/><text x="916" y="457" class="t">Grafana</text><text x="916" y="474" class="m">dashboards</text></g>
+<g><rect class="n" x="230" y="620" width="150" height="60" rx="10"/><rect class="ib" x="240" y="632" width="36" height="36" rx="8"/><use xlink:href="#db" x="242" y="634"/><text x="286" y="647" class="t">Postgres</text><text x="286" y="664" class="m">app · lakehouse</text></g>
+<g><rect class="n" x="395" y="620" width="150" height="60" rx="10"/><rect class="ib" x="405" y="632" width="36" height="36" rx="8"/><use xlink:href="#bolt" x="407" y="634"/><text x="451" y="647" class="t">Redis</text><text x="451" y="664" class="m">cache · budget</text></g>
+<g><rect class="n" x="560" y="620" width="150" height="60" rx="10"/><rect class="ib" x="570" y="632" width="36" height="36" rx="8"/><use xlink:href="#vec" x="572" y="634"/><text x="616" y="647" class="t">Qdrant</text><text x="616" y="664" class="m">vectors</text></g>
+<g><rect class="n" x="725" y="620" width="150" height="60" rx="10"/><rect class="ib" x="735" y="632" width="36" height="36" rx="8"/><use xlink:href="#bucket" x="737" y="634"/><text x="781" y="647" class="t">MinIO</text><text x="781" y="664" class="m">raw objects</text></g><text class="m" x="200" y="93">ask</text><text class="m" x="590" y="363">prompt</text><text class="m" x="315" y="534">chunks · embeddings</text><text class="m" x="560" y="740">reads gold · threads · cache</text><text class="m" x="945" y="380">from all services</text></svg>

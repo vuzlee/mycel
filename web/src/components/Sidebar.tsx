@@ -16,12 +16,11 @@
  * history stays reachable on a phone rather than disappearing with the layout.
  */
 
-
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { Thread } from "../api";
 import { useThreads } from "../threads";
 import { Account } from "./Account";
-import { Bars, Close, Mycelium, Plus, Trash } from "./icons";
+import { Bars, Close, Mycelium, Pin, Plus, Trash } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -31,7 +30,9 @@ interface Props {
 }
 
 export function Sidebar({ current, open, onClose }: Props) {
-  const { threads, forget } = useThreads();
+  const { threads, forget, pin } = useThreads();
+  const pinned = threads.filter((t) => t.pinned);
+  const recent = threads.filter((t) => !t.pinned);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -44,7 +45,9 @@ export function Sidebar({ current, open, onClose }: Props) {
   // earlier turns blank out and reappear a second later. The row already knows its own id,
   // so it says it.
   const open_ = (thread: Thread): void => {
-    navigate(thread.job_id ? `/?job=${thread.job_id}&thread=${thread.id}` : "/");
+    navigate(
+      thread.job_id ? `/?job=${thread.job_id}&thread=${thread.id}` : "/",
+    );
     onClose();
   };
 
@@ -63,13 +66,22 @@ export function Sidebar({ current, open, onClose }: Props) {
           {/* The wordmark goes home, the way a wordmark does everywhere else. Signed in,
               `/home` is still worth reaching: it is where what this thing does is written
               down, and there is a way straight back from it. */}
-          <Link className="brand" to="/home" onClick={onClose} title="What Mycel is">
+          <Link
+            className="brand"
+            to="/home"
+            onClick={onClose}
+            title="What Mycel is"
+          >
             <span className="mark">
               <Mycelium size={15} />
             </span>
             Mycel
           </Link>
-          <button className="icon-button shut" onClick={onClose} aria-label="Close menu">
+          <button
+            className="icon-button shut"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
             <Close />
           </button>
         </header>
@@ -102,45 +114,97 @@ export function Sidebar({ current, open, onClose }: Props) {
           Dashboard
         </button>
 
-
-        <h2 className="label">Recent</h2>
-        {threads.length === 0 ? (
-          <p className="empty">Runs you start appear here, ready to reopen.</p>
-        ) : (
-          <ol>
-            {threads.map((thread) => (
-              <li key={thread.id}>
-                <button
-                  aria-current={thread.job_id !== null && thread.job_id === current}
-                  title={thread.title}
-                  onClick={() => open_(thread)}
-                >
-                  {thread.title}
-                  {/* A thread the worker never picked up is shown, not hidden: a queued
-                      run nobody is working on is exactly what someone needs to see. */}
-                  {thread.status !== null && thread.status !== "done" && (
-                    <span className="state">{thread.status}</span>
-                  )}
-                </button>
-                {/* Hidden until the row is hovered or the button is tabbed to: a delete
-                    sitting under every title, always lit, is a delete someone hits. */}
-                <button
-                  className="drop"
-                  title="Forget this thread"
-                  aria-label={`Forget ${thread.title}`}
-                  onClick={() => drop(thread)}
-                >
-                  <Trash />
-                </button>
-              </li>
-            ))}
-          </ol>
-        )}
+        <div className="threads">
+          {pinned.length > 0 && (
+            <>
+              <h2 className="label">Pinned</h2>
+              <ol>
+                {pinned.map((thread) => (
+                  <Row
+                    key={thread.id}
+                    thread={thread}
+                    current={current}
+                    onOpen={open_}
+                    onPin={pin}
+                    onDrop={drop}
+                  />
+                ))}
+              </ol>
+            </>
+          )}
+          <h2 className="label">Recent</h2>
+          {threads.length === 0 ? (
+            <p className="empty">
+              Runs you start appear here, ready to reopen.
+            </p>
+          ) : (
+            <ol>
+              {recent.map((thread) => (
+                <Row
+                  key={thread.id}
+                  thread={thread}
+                  current={current}
+                  onOpen={open_}
+                  onPin={pin}
+                  onDrop={drop}
+                />
+              ))}
+            </ol>
+          )}
+        </div>
 
         {/* The same menu the home page has, in the same shape: profile, settings, help,
             sign out. One component, so the account is never somewhere else. */}
         <Account where="rail" />
       </aside>
     </>
+  );
+}
+
+interface RowProps {
+  thread: Thread;
+  current: string | null;
+  onOpen: (thread: Thread) => void;
+  onPin: (id: number, pinned: boolean) => Promise<void>;
+  onDrop: (thread: Thread) => void;
+}
+
+function Row({ thread, current, onOpen, onPin, onDrop }: RowProps) {
+  return (
+    <li>
+      <button
+        aria-current={thread.job_id !== null && thread.job_id === current}
+        title={thread.title}
+        onClick={() => onOpen(thread)}
+      >
+        {thread.title}
+        {/* A thread the worker never picked up is shown, not hidden: a queued run nobody
+            is working on is exactly what someone needs to see. */}
+        {thread.status !== null && thread.status !== "done" && (
+          <span className="state">{thread.status}</span>
+        )}
+      </button>
+      {/* Hidden until the row is hovered or tabbed to: a delete sitting under every
+          title, always lit, is a delete someone hits. */}
+      <span className="row-actions">
+        <button
+          className="pin"
+          data-on={thread.pinned}
+          title={thread.pinned ? "Unpin" : "Pin to the top"}
+          aria-label={`${thread.pinned ? "Unpin" : "Pin"} ${thread.title}`}
+          onClick={() => void onPin(thread.id, !thread.pinned)}
+        >
+          <Pin />
+        </button>
+        <button
+          className="drop"
+          title="Forget this thread"
+          aria-label={`Forget ${thread.title}`}
+          onClick={() => onDrop(thread)}
+        >
+          <Trash />
+        </button>
+      </span>
+    </li>
   );
 }

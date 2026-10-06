@@ -16,6 +16,35 @@ if TYPE_CHECKING:
     from pydantic_ai.tools import ToolDefinition
 
 
+#: What each chip reaches, as the person reads it in a "turn this on" reply.
+REACHES: dict[str, str] = {
+    "jira": "your team's Jira",
+    "mail": "your mail",
+    "calendar": "your calendar",
+    "web": "the web",
+}
+
+
+def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
+    """This turn's note to the orchestrator: which sources are off, and what to say then.
+
+    Without it a run with no tools writes a heading and stops, and the page shows a title
+    over nothing.
+    """
+    if chips is None:
+        return ""
+    off = [label for key, label in REACHES.items() if key not in chips]
+    if not off:
+        return ""
+    return (
+        f"Switched off for this turn: {', '.join(off)}. If the question needs one of them, "
+        "call nothing and write no heading. Reply in one or two sentences: name the source "
+        "it needs, say it is switched off, and that it can be turned on from the sources "
+        "button next to the question box. If an agent reports that an account is not "
+        "connected, say so, and that it can be connected under Settings → Accounts."
+    )
+
+
 class Chip(StrEnum):
     KNOWLEDGE = "knowledge"
     WEB = "web"

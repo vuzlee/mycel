@@ -834,6 +834,21 @@ class TestTheLists:
 
         assert client.delete("/conversations/7").status_code == 404
 
+    def test_pinning_scopes_itself_to_the_caller(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[tuple[int, int, bool]] = []
+
+        async def fake_pin(user_id: int, conversation_id: int, pinned: bool) -> bool:
+            seen.append((user_id, conversation_id, pinned))
+            return conversation_id == 7
+
+        monkeypatch.setattr("mycel.api.routes.projects.pin_thread", fake_pin)
+
+        assert client.put("/conversations/7/pin", json={"pinned": True}).status_code == 204
+        assert client.put("/conversations/8/pin", json={"pinned": True}).status_code == 404
+        assert seen[0] == (SIGNED_IN.id, 7, True)
+
 
 class TestTheSinglePageApp:
     """A reload at a deep route must serve the page, not a 404.
@@ -881,6 +896,7 @@ class TestWhatNeedsALogin:
             ("get", "/projects", None),
             ("get", "/conversations", None),
             ("delete", "/conversations/1", None),
+            ("put", "/conversations/1/pin", {"pinned": True}),
         ],
     )
     def test_a_stranger_gets_401(

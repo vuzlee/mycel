@@ -33,10 +33,13 @@ export function Plus({ size = 14 }: IconProps) {
   );
 }
 
-export function ArrowUp({ size = 15 }: IconProps) {
+/** Two sliders: the sources a turn may use. */
+export function Sliders({ size = 14 }: IconProps) {
   return (
-    <svg {...base(size)} strokeWidth={1.8}>
-      <path d="M8 12.5v-9M4 7.5 8 3.5l4 4" />
+    <svg {...base(size)}>
+      <path d="M2.5 5h4M9.5 5h4M2.5 11h1.5M7 11h6.5" />
+      <circle cx="8" cy="5" r="1.5" />
+      <circle cx="5.5" cy="11" r="1.5" />
     </svg>
   );
 }
@@ -67,6 +70,15 @@ export function Spinner({ size = 12, className }: IconProps) {
   return (
     <svg {...base(size)} className={className} strokeWidth={2}>
       <path d="M8 1.8a6.2 6.2 0 1 1-4.4 1.8" />
+    </svg>
+  );
+}
+
+/** A pushpin: keep this thread on top. */
+export function Pin({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M6 2.5h4M6.6 2.5v3.6L4.5 8.6h7L9.4 6.1V2.5M8 8.6v4.9" />
     </svg>
   );
 }

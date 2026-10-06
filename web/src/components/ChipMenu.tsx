@@ -21,54 +21,34 @@ interface MenuProps {
   locked: Partial<Record<Chip, string>>;
   /** Narrows the list as `@` is typed. */
   filter?: string;
-  onPick: (chip: Chip) => void;
+  onToggle: (chip: Chip) => void;
 }
 
-export function ChipMenu({ picked, locked, filter = "", onPick }: MenuProps) {
-  const shown = CHIPS.filter(
-    (c) => !picked.includes(c.id) && c.label.toLowerCase().startsWith(filter.toLowerCase()),
-  );
+/** Every source with a tick; picking toggles it. The composer never changes size. */
+export function ChipMenu({ picked, locked, filter = "", onToggle }: MenuProps) {
+  const shown = CHIPS.filter((c) => c.label.toLowerCase().startsWith(filter.toLowerCase()));
   if (shown.length === 0) return null;
   return (
-    <ul className="chip-menu" role="listbox" aria-label="Sources">
-      {shown.map((chip) => (
-        <li key={chip.id}>
-          <button
-            type="button"
-            role="option"
-            aria-selected={false}
-            disabled={Boolean(locked[chip.id])}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onPick(chip.id)}
-          >
-            <b>{chip.label}</b>
-            <small>{locked[chip.id] ?? chip.hint}</small>
-          </button>
-        </li>
-      ))}
+    <ul className="chip-menu" role="listbox" aria-label="Sources" aria-multiselectable>
+      {shown.map((chip) => {
+        const on = picked.includes(chip.id);
+        return (
+          <li key={chip.id}>
+            <button
+              type="button"
+              role="option"
+              aria-selected={on}
+              disabled={Boolean(locked[chip.id]) && !on}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onToggle(chip.id)}
+            >
+              <span className="tick">{on ? "✓" : ""}</span>
+              <b>{chip.label}</b>
+              <small>{locked[chip.id] ?? chip.hint}</small>
+            </button>
+          </li>
+        );
+      })}
     </ul>
-  );
-}
-
-interface ChipsProps {
-  picked: Chip[];
-  dimmed: Partial<Record<Chip, string>>;
-  onRemove: (chip: Chip) => void;
-}
-
-/** The picked chips, highlighted inside the composer. */
-export function PickedChips({ picked, dimmed, onRemove }: ChipsProps) {
-  if (picked.length === 0) return null;
-  return (
-    <div className="chips">
-      {picked.map((id) => (
-        <span key={id} className="chip" data-dim={Boolean(dimmed[id])} title={dimmed[id]}>
-          {labelOf(id)}
-          <button type="button" aria-label={`Remove ${labelOf(id)}`} onClick={() => onRemove(id)}>
-            ×
-          </button>
-        </span>
-      ))}
-    </div>
   );
 }

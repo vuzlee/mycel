@@ -162,18 +162,18 @@ interface SettingsSection {
 
 const SECTIONS: SettingsSection[] = [
   {
-    id: "accounts",
-    label: "Accounts",
-    icon: <Person size={15} />,
-    hint: "The accounts Mycel reads and writes as you.",
-    render: () => <AccountsPage />,
-  },
-  {
     id: "appearance",
     label: "Appearance",
     icon: <Screen size={15} />,
     hint: "How it looks in this browser.",
     render: () => <AppearancePage />,
+  },
+  {
+    id: "accounts",
+    label: "Accounts",
+    icon: <Person size={15} />,
+    hint: "The accounts Mycel reads and writes as you.",
+    render: () => <AccountsPage />,
   },
 ];
 

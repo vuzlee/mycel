@@ -112,3 +112,32 @@ class TestKnowledgeSkipsTheOrchestrator:
         await chat.request_chat(7, "Late tickets?", chips=["jira"])
 
         assert queued == [("ask", ""), ("chat", ["jira"])]
+
+async def instructions_seen(chips: frozenset[Chip] | None) -> str:
+    """The orchestrator's instructions for one turn."""
+    seen: list[str] = []
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        seen.append(info.instructions or "")
+        return ModelResponse(parts=[TextPart("ok")])
+
+    agent = Orchestrator.build(AgentSettings(model_spec="cloud:x"))
+    deps = MycelDeps("j", JobBudget("j", Decimal("1")), chips=chips)
+    with agent.override(model=FunctionModel(respond)):
+        await agent.run("hi", deps=deps)
+    return seen[0]
+
+class TestASourceThatIsOff:
+    """Off means the model says so in a sentence, not a heading over nothing."""
+
+    async def test_the_orchestrator_is_told_which_sources_are_off(self) -> None:
+        text = await instructions_seen(frozenset({Chip.WEB}))
+        assert "Switched off for this turn: your team's Jira, your mail, your calendar." in text
+        assert "Settings → Accounts" in text
+
+    async def test_nothing_is_added_when_every_source_is_on(self) -> None:
+        on = frozenset({Chip.JIRA, Chip.MAIL, Chip.CALENDAR, Chip.WEB})
+        assert "Switched off" not in await instructions_seen(on)
+
+    async def test_nothing_is_added_when_nobody_chose(self) -> None:
+        assert "Switched off" not in await instructions_seen(None)

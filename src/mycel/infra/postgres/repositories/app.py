@@ -116,6 +116,7 @@ class ConversationRow:
     kind: str
     title: str
     created_at: datetime
+    pinned_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -456,8 +457,12 @@ class AppRepository:
         )
         if kind is not None:
             query = query.where(Conversation.kind == kind)
+        # Pinned first, newest pin on top; pins never fall off the end of the page.
         rows = await self._session.scalars(
-            query.order_by(func.coalesce(spoke.c.at, Conversation.created_at).desc()).limit(limit)
+            query.order_by(
+                Conversation.pinned_at.desc().nulls_last(),
+                func.coalesce(spoke.c.at, Conversation.created_at).desc(),
+            ).limit(limit)
         )
         return [_conversation(row) for row in rows]
 
@@ -467,6 +472,15 @@ class AppRepository:
             select(Conversation).where(Conversation.id == conversation_id)
         )
         return _conversation(row) if row else None
+
+    async def pin_conversation(self, conversation_id: int, user_id: int, pinned: bool) -> bool:
+        """Pin or unpin a thread. Scoped by `user_id` in the WHERE, like the delete."""
+        result = await self._session.execute(
+            update(Conversation)
+            .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
+            .values(pinned_at=func.now() if pinned else None)
+        )
+        return bool(getattr(result, "rowcount", 0))
 
     async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
         """Forget a thread, and every run under it.
@@ -594,6 +608,7 @@ def _conversation(row: Conversation) -> ConversationRow:
         kind=row.kind,
         title=row.title,
         created_at=row.created_at,
+        pinned_at=row.pinned_at,
     )
 
 

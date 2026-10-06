@@ -282,12 +282,11 @@ export function Ask() {
         topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined
       }
       panel={
-        panel ? (
-          <Documents
-            documents={docs.documents}
-            onClose={() => setPanel(false)}
-          />
-        ) : null
+        <Documents
+          open={panel}
+          documents={docs.documents}
+          onClose={() => setPanel(false)}
+        />
       }
       panelToggle={
         <button
@@ -329,7 +328,6 @@ export function Ask() {
           question={question}
           items={knowledgeDone ? [] : run.items}
           gaps={run.gaps}
-          liveSeq={run.liveSeq}
           failure={failure}
           pending={run.pending}
         >
