@@ -261,6 +261,7 @@ class Settings(BaseSettings):
     document_max_attempts: int = 3
     document_stuck_seconds: int = 600
     ingest_worker_max_jobs: int = 20
+    ingest_threads: int = 2
     document_min_score: float = 0.75
     ask_per_user_daily: int = 10
     ask_system_daily: int = 10

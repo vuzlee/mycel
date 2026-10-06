@@ -20,12 +20,18 @@ class ParseError(ValueError):
 
 @lru_cache(maxsize=1)
 def _converter() -> Any:
+    from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     options = PdfPipelineOptions(
-        do_ocr=False, do_table_structure=True, generate_picture_images=False
+        do_ocr=False,
+        do_table_structure=True,
+        generate_picture_images=False,
+        accelerator_options=AcceleratorOptions(
+            num_threads=get_settings().ingest_threads, device="cpu"
+        ),
     )
     return DocumentConverter(
         allowed_formats=[InputFormat.PDF, InputFormat.DOCX, InputFormat.MD],
