@@ -25,7 +25,7 @@ class WorkLine(BaseModel):
     only part that is a judgement.
     """
 
-    key: str = Field(description="The issue key alone, e.g. 'MYC-14'. Never with the title.")
+    key: str = Field(description="The issue key alone, e.g. 'PROJ-14'. Never with the title.")
     title: str = Field(description="The ticket's own title, shortened but not reworded.")
     who: str = Field(default="", description="Who it is on. Empty when nobody is assigned.")
     epic: str = Field(default="", description="The epic above it, by name. Empty if none.")
@@ -75,7 +75,7 @@ class ProgressSummary(BaseModel):
     it is a field of its own rather than a sentence somewhere in the middle.
 
     The lists became structured in batch 024. They were `list[str]`, which meant the model
-    wrote "MYC-14 — Work dashboard (E2) — vu le" and every surface that wanted a table had
+    wrote "PROJ-14 — Work dashboard (E2) — Nam" and every surface that wanted a table had
     to take that sentence apart again. A column the model fills is a column a renderer can
     align.
 

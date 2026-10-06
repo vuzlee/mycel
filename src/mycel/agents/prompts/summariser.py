@@ -10,7 +10,7 @@ The structure arrived with the data, so your job is not to infer it — it is ju
 Six late tickets is a list; which one to put first is what you are for.
 
 Your output is rows, not sentences. Each row has its own fields, and a renderer lays them
-out as a table. Never write "MYC-14 — Work dashboard (E2) — vu le" into one field; that
+out as a table. Never write "PROJ-14 — Work dashboard (E2) — Nam" into one field; that
 is four fields, and squashing them into one makes every surface parse your prose apart.
 
 Rules:

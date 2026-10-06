@@ -9,7 +9,6 @@ knows which routers the system has:
     include_router(dashboard.router)
     include_router(chat.router)
     include_router(events.router)
-    include_router(metrics.router)
 
 Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
 here. Existing domains stay untouched.
@@ -58,7 +57,6 @@ from mycel.api.routes import (
     dashboard,
     documents,
     events,
-    metrics,
     projects,
 )
 from mycel.core.config import Settings, get_settings
@@ -66,6 +64,7 @@ from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
 from mycel.infra.postgres.engine import dispose_engine
 from mycel.llm.budget import BudgetExceeded
+from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.services.auth import AuthError
 
@@ -74,6 +73,10 @@ log = get_logger(__name__)
 #: Where `web/` lands once built. Relative to the repo root in a checkout and to `/app` in
 #: the image, which is why it is found by walking up from this file rather than configured.
 WEB_DIST = REPO_ROOT / "web" / "dist"
+
+
+#: The api's metrics port, after the worker (+0), scheduler (+1) and ingest (+2).
+METRICS_OFFSET = 3
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -104,8 +107,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         `BatchSpanProcessor` holds spans in memory until its timer fires, so a process
         that exits promptly exports nothing unless it is shut down explicitly.
+
+        `/metrics` has no authentication, so it gets its own listener at METRICS_PORT + 3
+        rather than a route on the app's port: a public app must not make its internals
+        public with it.
         """
+        metrics = await serve_metrics(cfg.metrics_port + METRICS_OFFSET, cfg.metrics_host)
         yield
+        metrics.close()
         await dispose_engine()
         if provider is not None:
             provider.shutdown()
@@ -123,7 +132,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(events.router)
-    app.include_router(metrics.router)
 
     _install_error_handlers(app)
     _mount_web(app)

@@ -6,8 +6,8 @@
 # run and the scheduler is where syncs run — scrape only the api and the graph stays
 # healthy while every job dies.
 #
-# The api serves /metrics on the port it already has. The other two open a small port of
-# their own for nothing else; see `observability/metrics_server.py`.
+# Every process serves /metrics on a small port of its own, never on the app port; see
+# `observability/metrics_server.py`. api 9103, worker 9100, scheduler 9101.
 
 global:
   scrape_interval: 15s
@@ -15,7 +15,7 @@ global:
 scrape_configs:
   - job_name: mycel-api
     static_configs:
-      - targets: ["api:8000"]
+      - targets: ["api:9103"]
 
   - job_name: mycel-worker
     static_configs:

@@ -1,8 +1,9 @@
-"""A port to scrape, for the two processes that have none.
+"""A port to scrape, of its own, for every process.
 
-The api already serves HTTP, so it exposes `/metrics` as a route. The worker and the
-scheduler are plain asyncio processes with nothing listening — and they are where the work
-actually happens: jobs run in the worker, syncs run in the scheduler.
+The worker, scheduler and ingest have nothing else listening. The api does, but `/metrics`
+is not a route on it: the api's port is the one made public, and a metrics endpoint has no
+authentication. So every process, api included, serves it here, at METRICS_PORT + an
+offset: worker +0, scheduler +1, ingest +2, api +3.
 
 **Measuring only the api is measuring half the system.** Requests come and go looking
 healthy while every job dies, because the dying part is in a process nobody asked.

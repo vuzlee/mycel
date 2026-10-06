@@ -40,7 +40,10 @@ spec:
           ports:
             - name: http
               containerPort: 8000
-          {{- include "mycel.env" (dict "ctx" .) | nindent 10 }}
+            # /metrics lives on its own listener, never on the public port.
+            - name: metrics
+              containerPort: {{ add (.Values.config.METRICS_PORT | int) 3 }}
+          {{- include "mycel.env" (dict "ctx" . "metrics" true) | nindent 10 }}
           # Liveness touches nothing outside the process. A liveness probe that asks the
           # database restarts healthy pods every time the database blinks — and restarting
           # the api does not fix a database.

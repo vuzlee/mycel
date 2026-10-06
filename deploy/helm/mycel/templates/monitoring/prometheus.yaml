@@ -41,12 +41,12 @@ data:
             regex: {{ .Release.Name }}
           - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
             action: keep
-            regex: api|worker|scheduler
-          # The port to scrape is the one the pod declares as http or metrics. A pod that
-          # declares neither is dropped rather than scraped on a guessed port.
+            regex: api|worker|scheduler|ingest
+          # The port to scrape is the one the pod declares as metrics; the api's http port
+          # serves no /metrics. A pod that declares none is dropped, not guessed at.
           - source_labels: [__meta_kubernetes_pod_container_port_name]
             action: keep
-            regex: http|metrics
+            regex: metrics
           # Carry the component through as a label, so a graph can be split by which
           # process it came from. Prometheus drops every __meta_ label otherwise.
           - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]

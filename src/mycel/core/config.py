@@ -103,11 +103,6 @@ class Settings(BaseSettings):
     #: Authorization, with `{public_base_url}/auth/jira/callback` as a callback URL.
     jira_client_id: str | None = None
     jira_client_secret: SecretStr | None = None
-    #: Which custom field holds the sprint. Jira numbers custom fields per site, so
-    #: there is no id that is right everywhere — this default is Atlassian's usual one for
-    #: a cloud site, and a site that differs sets it rather than being unable to use the
-    #: feature. The sync asks for it by id and skips it silently when the site has none.
-    jira_sprint_field: str = "customfield_10020"
     #: Whether this deployment may write back to Jira. Off by default: reading someone's
     #: tracker is recoverable and commenting on fifty issues by mistake is not, so a write
     #: path that exists has to be switched on deliberately.

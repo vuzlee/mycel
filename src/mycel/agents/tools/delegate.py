@@ -101,7 +101,7 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
         """Summarise a project's recent progress: shipped, in flight, late, load per person.
 
         Args:
-            project: The project key, e.g. "MYC".
+            project: The project key, e.g. "PROJ".
             days: How far back the window reaches. Defaults to a week.
         """
         await _must_read(ctx, project)

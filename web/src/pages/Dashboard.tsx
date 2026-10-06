@@ -685,43 +685,46 @@ export function Dashboard() {
                   promised for this fortnight. Reuses the epic list's markup — same
                   question, same shape. The backlog is not a row here; see
                   `GoldRepository.count_by_sprint`. */}
-              <section className="block wide">
-                <Head
-                  label="Sprint progress"
-                  count={board.sprints.length}
-                  scope="whole project"
-                />
-                {board.sprints.length === 0 ? (
-                  <p className="empty">
-                    nothing is planned into a sprint on this board
-                  </p>
-                ) : (
-                  <ol className="epics">
-                    {board.sprints.map((sprint) => (
-                      <li key={sprint.sprint_id} data-status={TONE[sprint.state] ?? "todo"}>
-                        <div className="row">
-                          <span className="key">{sprint.state}</span>
-                          <span className="title">{sprint.name}</span>
-                          <span className="tally">
-                            {sprint.done}/{sprint.items}
-                          </span>
-                          <span className="pct">{sprint.percent}%</span>
-                        </div>
-                        <div
-                          className="track"
-                          role="img"
-                          aria-label={`${sprint.percent}% of ${sprint.items} done`}
+              {/* Shown only when the project uses sprints. A Kanban board has none, and
+                  an empty "Sprint progress" there reads as a fault, not as a choice. */}
+              {board.sprints.length > 0 && (
+                <section className="block wide">
+                  <Head
+                    label="Sprint progress"
+                    count={board.sprints.length}
+                    scope="whole project"
+                  />
+                  {
+                    <ol className="epics">
+                      {board.sprints.map((sprint) => (
+                        <li
+                          key={sprint.sprint_id}
+                          data-status={TONE[sprint.state] ?? "todo"}
                         >
-                          <span
-                            className="fill"
-                            style={{ width: `${sprint.percent}%` }}
-                          />
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </section>
+                          <div className="row">
+                            <span className="key">{sprint.state}</span>
+                            <span className="title">{sprint.name}</span>
+                            <span className="tally">
+                              {sprint.done}/{sprint.items}
+                            </span>
+                            <span className="pct">{sprint.percent}%</span>
+                          </div>
+                          <div
+                            className="track"
+                            role="img"
+                            aria-label={`${sprint.percent}% of ${sprint.items} done`}
+                          >
+                            <span
+                              className="fill"
+                              style={{ width: `${sprint.percent}%` }}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  }
+                </section>
+              )}
 
               {/* The level a plan is discussed at, which a flat list of tickets never is.
                   A bar rather than two numbers: "4 of 5" is arithmetic the reader has to

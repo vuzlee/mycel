@@ -17,6 +17,7 @@ a session one second past its expiry has to read as gone even when no sweeper ha
 """
 
 import hashlib
+import re
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -50,6 +51,12 @@ RESET_BYTES = 32
 _hasher = PasswordHasher()
 
 
+#: An address a reset link can reach: one `@`, something before it, a dot after it. Not
+#: RFC 5322 — that admits addresses no mail server delivers to — just enough that a typo
+#: like "nam" or "nam@acme" is refused at sign-up rather than discovered at reset.
+EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
 class AuthError(MycelError):
     """Registration or login refused. Carries no detail about which part was wrong."""
 
@@ -77,6 +84,8 @@ async def register(
     caller cannot get in through a door the first one locked.
     """
     email = _normalise(email)
+    if not EMAIL_SHAPE.fullmatch(email):
+        raise AuthError("that is not an email address")
     _check_allowed(email, invite_code)
     if len(password) < MIN_PASSWORD:
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")

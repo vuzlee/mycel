@@ -122,7 +122,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
         Args:
             kind: What to do — "comment", "move", "issue" or "project".
-            issue_key: Which issue, for "comment" and "move". For example MYC-12.
+            issue_key: Which issue, for "comment" and "move". For example PROJ-12.
             text: The comment, for "comment". The description, for "issue".
             to_status: The status to move to, for "move". Checked against the workflow
                 before you are given a draft, so a move the workflow forbids is refused

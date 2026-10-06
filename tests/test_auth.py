@@ -135,6 +135,15 @@ class TestRegistering:
         assert stored.password_hash.startswith("$argon2id$")
 
 
+class TestTheEmailShape:
+    """A reset link has to reach the address, so sign-up refuses what cannot be one."""
+
+    @pytest.mark.parametrize("bad", ["nam", "nam@acme", "@acme.com", "a b@acme.com"])
+    async def test_a_string_that_is_not_an_address_is_refused(self, bad: str) -> None:
+        with pytest.raises(auth.AuthError, match="not an email"):
+            await auth.register(None, bad, PASSWORD)  # type: ignore[arg-type]
+
+
 @needs_postgres
 class TestSigningIn:
     async def test_the_right_password_is_accepted(self, session: AsyncSession) -> None:

@@ -11,6 +11,7 @@ worth catching live in the fields Jira fills in its own way — an offset with n
 bare due date, an estimate that is only inside `timetracking`.
 """
 
+import copy
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -117,6 +118,17 @@ def _worklog(**kw: Any) -> WorklogRow:
     return WorklogRow(**{**fields, **kw})
 
 
+@pytest.fixture
+def no_sprint_field(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A site without sprints, so a search makes one call and these tests see only it."""
+
+    async def none(auth: jira.Auth) -> None:
+        return None
+
+    monkeypatch.setattr(jira, "sprint_field", none)
+
+
+@pytest.mark.usefixtures("no_sprint_field")
 class TestSearchingIssues:
     async def test_the_issues_come_back(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"issues": RECORDED["issues"]}))
@@ -161,6 +173,39 @@ class TestSearchingIssues:
     async def test_an_empty_project_is_not_an_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"issues": []}))
         assert await jira.search_issues(AUTH, "project = MYC") == []
+
+
+class TestTheSprintField:
+    """Found by Jira's schema type, so no site's custom field id is written down here."""
+
+    def _fields(self, *extra: dict[str, Any]) -> list[dict[str, Any]]:
+        return [{"id": "summary", "schema": {"type": "string"}}, *extra]
+
+    async def test_it_is_found_by_schema_whatever_its_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sprint = {"id": "customfield_12345", "schema": {"custom": jira.SPRINT_SCHEMA}}
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds(self._fields(sprint)))
+        assert await jira.sprint_field(AUTH) == "customfield_12345"
+
+    async def test_a_site_without_sprints_has_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds(self._fields()))
+        assert await jira.sprint_field(AUTH) is None
+
+    async def test_a_search_copies_it_to_a_plain_sprint_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def field(auth: jira.Auth) -> str:
+            return "customfield_99"
+
+        monkeypatch.setattr(jira, "sprint_field", field)
+        issue = copy.deepcopy(_issue("MYC-6"))
+        issue["fields"]["customfield_99"] = [{"id": 3, "name": "Sprint 3", "state": "active"}]
+        monkeypatch.setattr(httpx2, "AsyncClient", _responds({"issues": [issue]}))
+
+        found = await jira.search_issues(AUTH, "x")
+
+        assert found[0]["fields"]["sprint"][0]["name"] == "Sprint 3"
 
 
 class TestTheWorklogCall:
@@ -251,6 +296,7 @@ class TestWritingBack:
         assert [t["id"] for t in await jira.transitions_for(AUTH, "MYC-7")] == ["31"]
 
 
+@pytest.mark.usefixtures("no_sprint_field")
 class TestHowJiraFails:
     async def test_the_call_is_addressed_by_cloud_id_not_by_hostname(
         self, monkeypatch: pytest.MonkeyPatch
@@ -453,7 +499,7 @@ class TestNormalisingAnIssue:
         payload = _issue("MYC-7")
         fields = {
             **payload["fields"],
-            "customfield_10020": [{"id": 2, "name": "Sprint 0", "state": "ACTIVE"}],
+            "sprint": [{"id": 2, "name": "Sprint 0", "state": "ACTIVE"}],
         }
         row = from_jira_issue({**payload, "fields": fields}, PROJECT)
         assert row is not None
@@ -465,7 +511,7 @@ class TestNormalisingAnIssue:
         payload = _issue("MYC-7")
         fields = {
             **payload["fields"],
-            "customfield_10020": [
+            "sprint": [
                 {"id": 1, "name": "Sprint 0", "state": "closed"},
                 {"id": 2, "name": "Sprint 1", "state": "active"},
             ],

@@ -23,7 +23,6 @@ import type { Theme } from "../theme";
 import { useTheme } from "../theme";
 
 const REPO = "https://github.com/vuzlee/mycel";
-const CONTACT = "levu040102@gmail.com";
 
 /** The account, as the server knows it. The address cannot be changed — it is the
  *  identity — and the password can, which is why one of the two has a form. */
@@ -423,8 +422,7 @@ export function HelpPanel() {
           <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">
             the repository
           </a>
-          , or write to <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Replies are
-          from one person, so give it a day.
+          .
         </p>
       </section>
     </>

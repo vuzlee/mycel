@@ -97,26 +97,45 @@ class Auth:
     cloud_id: str
 
 
+#: Jira's schema type for its Sprint field. The field's id differs per site; its type does not.
+SPRINT_SCHEMA = "com.pyxis.greenhopper.jira:gh-sprint"
+
+
+async def sprint_field(auth: Auth) -> str | None:
+    """This site's Sprint field id, found by its schema, or None on a site without sprints."""
+    fields = await _request(auth, "GET", "/field", None)
+    for field in fields if isinstance(fields, list) else []:
+        if isinstance(field, dict) and (field.get("schema") or {}).get("custom") == SPRINT_SCHEMA:
+            return str(field["id"])
+    return None
+
+
 async def search_issues(auth: Auth, jql: str) -> list[dict[str, Any]]:
     """Every issue matching `jql`, following Jira's page token to the end.
 
     The caller writes the JQL because "which project, changed since when" is a question
     about the deployment, not about the transport.
+
+    The sprint, if the site has one, is copied to `fields["sprint"]` in each payload, so
+    nothing downstream has to know this site's custom field id.
     """
     issues: list[dict[str, Any]] = []
     token: str | None = None
+    sprint = await sprint_field(auth)
 
     while True:
-        # The sprint field is a custom field and its id differs per site, so it is
-        # appended from settings rather than living in FIELDS. Jira ignores an id the
-        # site does not have, which is what makes asking for it unconditionally safe.
-        fields = [*FIELDS, get_settings().jira_sprint_field]
+        fields = [*FIELDS, sprint] if sprint else list(FIELDS)
         body: dict[str, Any] = {"jql": jql, "fields": fields, "maxResults": PAGE}
         if token:
             body["nextPageToken"] = token
 
         page = await _call(auth, "POST", "/search/jql", body)
-        issues += [i for i in page.get("issues", []) if isinstance(i, dict)]
+        for issue in page.get("issues", []):
+            if not isinstance(issue, dict):
+                continue
+            if sprint and isinstance(issue.get("fields"), dict):
+                issue["fields"]["sprint"] = issue["fields"].get(sprint)
+            issues.append(issue)
 
         token = page.get("nextPageToken")
         if not token:
@@ -243,7 +262,10 @@ async def create_issue(
     if assignee_id:
         fields["assignee"] = {"id": assignee_id}
     if sprint_id is not None:
-        fields[get_settings().jira_sprint_field] = sprint_id
+        sprint = await sprint_field(auth)
+        if sprint is None:
+            raise NotWritten("jira: this site has no sprints to put the issue in")
+        fields[sprint] = sprint_id
 
     created = await _call(auth, "POST", "/issue", {"fields": fields})
     log.info("created jira issue", extra={"key": created.get("key"), "project": project})

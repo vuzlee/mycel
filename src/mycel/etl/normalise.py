@@ -69,7 +69,7 @@ def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None
             str((status.get("statusCategory") or {}).get("key", "")).lower(), "todo"
         ),
         priority=_priority(fields.get("priority")),
-        **_sprint(fields.get(get_settings().jira_sprint_field)),
+        **_sprint(fields.get("sprint")),
         assignee_account_id=assignee.get("accountId"),
         assignee_name=assignee.get("displayName"),
         original_estimate_seconds=_seconds(

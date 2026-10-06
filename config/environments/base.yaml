@@ -59,10 +59,6 @@ settings:
   public_base_url: http://localhost:8000
   sync_interval_seconds: 900
   jira_base_url: ""
-  # The custom field holding the sprint. There is no id right everywhere; this is
-  # Atlassian's usual one for a cloud site, and a site that differs sets it rather than
-  # losing the feature. The sync asks for it by id and skips it silently when absent.
-  jira_sprint_field: customfield_10020
   # Writing to Jira is off until a deployment arms it. On, and the write tools appear on
   # the analyst for anyone who has connected their own Jira account.
   jira_write_enabled: false

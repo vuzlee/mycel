@@ -44,6 +44,9 @@ services:
     env_file: .env
     environment:
       <<: *stores
+      # /metrics on its own port (9103), reachable on the compose network and not
+      # published: only 8000 is.
+      METRICS_HOST: "0.0.0.0"
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}

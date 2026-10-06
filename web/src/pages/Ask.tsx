@@ -17,10 +17,17 @@
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef, Turn } from "../api";
-import { askChat, fetchTurns } from "../api";
+import { askChat, fetchProjects, fetchTurns } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
@@ -47,11 +54,16 @@ const TOP_GAP = 24;
 // actually read — nobody opens the docs before typing a first question. Every screen the
 // app still has its own page for is reachable from here too: progress is the summariser,
 // the dashboard's numbers are the analyst writing its own SQL.
-const SEEDS = [
-  "How is MYC going this week?", // summariser — the progress summary
+//
+// The Jira seeds name the reader's own first project, and go when they can read none: a
+// seed for a project they cannot see is a button that answers "no access".
+const jiraSeeds = (project: string): string[] => [
+  `How is ${project} going this week?`, // summariser — the progress summary
   "What is late right now, and who is it with?", // analyst — the dashboard's own question
   "Who logged the most hours this month, and on what?", // analyst, through run_sql
   "Compare hours logged this month with last month.", // analyst — two windows, one query
+];
+const OTHER_SEEDS = [
   "Anything important in my mail today?", // researcher — read_mail(24)
   "What came in this week that I have not replied to?", // researcher — read_mail(168)
   "What changed in the Jira API this year?", // researcher — the web
@@ -69,6 +81,16 @@ export function Ask() {
   //: will keep.
   const [pastFor, setPastFor] = useState<string | null>(null);
   const [seed, setSeed] = useState("");
+  const [firstProject, setFirstProject] = useState<string | null>(null);
+  useEffect(() => {
+    void fetchProjects()
+      .then((ps) => setFirstProject(ps[0] ?? null))
+      .catch(() => setFirstProject(null));
+  }, []);
+  const seeds = useMemo(
+    () => [...(firstProject ? jiraSeeds(firstProject) : []), ...OTHER_SEEDS],
+    [firstProject],
+  );
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
   const [chips, setChips] = useState<Chip[]>([]);
@@ -91,7 +113,9 @@ export function Ask() {
   // you navigate, while the run needs a poll to come back — and it is the run, not the
   // sidebar, that knows the thread of a link naming a turn other than the latest.
   const fromUrl = params.get("thread");
-  const threadId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
+  const threadId = fromUrl
+    ? Number(fromUrl)
+    : (run.result?.conversation_id ?? null);
 
   // Everything this thread said before the run on screen. Turns are read from the kept
   // rows, not the stream: those runs are over, and a stream belongs to one run.
@@ -153,7 +177,11 @@ export function Ask() {
       // The open thread by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
-      const { job_id, conversation_id } = await askChat(text, threadId ?? undefined, chips);
+      const { job_id, conversation_id } = await askChat(
+        text,
+        threadId ?? undefined,
+        chips,
+      );
       setAsked(text);
       setParams({ job: job_id, thread: String(conversation_id) });
       reload();
@@ -167,7 +195,8 @@ export function Ask() {
   // A Knowledge answer streamed with its markers hidden. Once it is done, the checked
   // answer - with only the citations that held, and its sources - takes its place.
   const knowledgeDone =
-    run.result?.status === "done" && run.items.some((i) => i.agent === CITING_AGENT);
+    run.result?.status === "done" &&
+    run.items.some((i) => i.agent === CITING_AGENT);
 
   // A finished run moves its thread to the top of Recent. The sidebar is ordered by the
   // last thing written to a thread, and that write happens on the worker, minutes after
@@ -182,7 +211,6 @@ export function Ask() {
     refetched.current = jobId;
     reload();
   }, [jobId, settled, reload]);
-
 
   // Asking sends the view to the question just asked, and only then. One move per run, at
   // the moment there is a reason to move: the question goes to the top, the answer writes
@@ -233,7 +261,10 @@ export function Ask() {
     () =>
       jobId === null
         ? []
-        : [...past, ...(question !== null ? [{ job_id: jobId, question }] : [])].map((turn) => ({
+        : [
+            ...past,
+            ...(question !== null ? [{ job_id: jobId, question }] : []),
+          ].map((turn) => ({
             id: anchorFor(turn.job_id),
             label: label(turn.question),
           })),
@@ -247,8 +278,17 @@ export function Ask() {
         run.follow.ref(node);
         setBody(node);
       }}
-      aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
-      panel={panel ? <Documents documents={docs.documents} onClose={() => setPanel(false)} /> : null}
+      aside={
+        topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined
+      }
+      panel={
+        panel ? (
+          <Documents
+            documents={docs.documents}
+            onClose={() => setPanel(false)}
+          />
+        ) : null
+      }
       panelToggle={
         <button
           className="kb-toggle"
@@ -261,7 +301,9 @@ export function Ask() {
           {docs.busy && <Spinner size={11} />}
         </button>
       }
-      jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
+      jump={
+        jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined
+      }
       footer={
         <Composer
           busy={run.busy}
@@ -294,7 +336,9 @@ export function Ask() {
           {run.result?.status === "done" && (
             <Answer
               result={run.result}
-              streamed={!knowledgeDone && run.items.some((i) => i.kind === "text")}
+              streamed={
+                !knowledgeDone && run.items.some((i) => i.kind === "text")
+              }
               onSource={setSource}
             />
           )}
@@ -305,13 +349,13 @@ export function Ask() {
             Ask Mycel <em>anything</em>.
           </h1>
           <p>
-            Your team's week, the numbers, your mail, or anything outside. Read-only
-            &mdash; nothing you ask can change the work data.
+            Your team's week, the numbers, your mail, or anything outside.
+            Read-only &mdash; nothing you ask can change the work data.
           </p>
           {refused && <p className="failure">{refused}</p>}
           <span className="label">Try one</span>
           <div className="seeds">
-            {SEEDS.map((text) => (
+            {seeds.map((text) => (
               <button key={text} onClick={() => setSeed(text)}>
                 {text}
                 <ArrowRight />
@@ -320,7 +364,9 @@ export function Ask() {
           </div>
         </div>
       )}
-      {source && <SourcePanel source={source} onClose={() => setSource(null)} />}
+      {source && (
+        <SourcePanel source={source} onClose={() => setSource(null)} />
+      )}
     </Shell>
   );
 }

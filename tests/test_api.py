@@ -895,3 +895,9 @@ class TestWhatNeedsALogin:
         """A health check that needs a login is not a health check: a load balancer has
         no account, and a 401 reads as a healthy service to nothing at all."""
         assert stranger.get(path).status_code != 401
+
+
+class TestMetricsAreNotOnTheAppPort:
+    def test_the_public_port_does_not_serve_metrics(self, client: TestClient) -> None:
+        """No authentication on /metrics, so it lives on its own listener, never here."""
+        assert client.get("/metrics").status_code == 404
