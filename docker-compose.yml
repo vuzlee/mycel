@@ -156,7 +156,6 @@ services:
     environment:
       GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
       CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
-      CLAUDE_PROXY_BASE_URL: ${CLAUDE_PROXY_BASE_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_API_KEY:-sk-mycel-dev}
     volumes:
