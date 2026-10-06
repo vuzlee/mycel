@@ -33,11 +33,12 @@ https://github.com/user-attachments/assets/c8546f73-e6a8-4aca-abb1-08c07a849eb0
 
 Connectors land external platforms in a bronze, silver and gold lakehouse. A question goes
 over the API onto a broker; a worker picks it up and an orchestrator delegates to agents
-that read gold. Traces, metrics and logs run alongside the whole path.
+that read gold, while the worker streams its steps to the page through Redis. Langfuse
+traces every agent run; Prometheus, Loki and Grafana watch metrics and logs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <img src="assets/flow-light.svg" alt="High-level design: users, Jira, Gmail, Calendar and MCP servers outside; scheduler, connectors, ETL and ingest feed Postgres, Redis, Qdrant and MinIO; the API puts a question on RabbitMQ, a worker runs agents that call models through LiteLLM (cloud or vLLM); Prometheus, Loki and Grafana watch every service" width="100%">
+  <img src="assets/flow-light.svg" alt="High-level design: users, Jira, Gmail, Calendar and MCP servers outside; scheduler, connectors, ETL and ingest feed Postgres, Redis, Qdrant and MinIO; the API puts a question on RabbitMQ, a worker runs agents that call models through LiteLLM (cloud or vLLM), and search the web through Tavily; Langfuse traces every agent run; Prometheus, Promtail, Loki and Grafana watch every service" width="100%">
 </picture>
 
 Today the source is Jira; the source layer is pluggable. Reading and writing both run on
