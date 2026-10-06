@@ -157,6 +157,14 @@
   kind: prose
   reference: "When the heavy work need not run in the same process, for example no shared memory or variables; Celery runs it across processes and servers but needs a queue such as RabbitMQ or Redis."
 
+# MYC-108: AdaMax's caption on page 9 states its own defaults and once outranked this one.
+- id: a01
+  question: "What are Adam's default values for the step size, beta1, beta2 and epsilon?"
+  doc: adam.pdf
+  evidence: "Adam, our proposed algorithm for stochastic optimization"
+  kind: prose
+  reference: "Step size 0.001, beta1 0.9, beta2 0.999 and epsilon 1e-8 (AdaMax uses step size 0.002)."
+
 # No document answers these. They share vocabulary with the corpus on purpose, so search
 # returns something and the threshold has to tell them apart by score.
 - id: u01

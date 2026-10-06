@@ -9,6 +9,9 @@ documents:
   - name: rag.pdf
     url: https://arxiv.org/pdf/2005.11401v4
     sha256: 23e3249e9a1e75418d82efecab0ea8c4d033b89c93742f63208d47ce01f21233
+  - name: adam.pdf
+    url: https://arxiv.org/pdf/1412.6980v9
+    sha256: eab9c73ae2ceda884b94830bda99312254bac4806f6c9f045cbab90721ecda31
   - name: fastapi-dependencies.md
     url: https://raw.githubusercontent.com/fastapi/fastapi/5f9fc5c59a9bb54608aa35376715f3ba9708188e/docs/en/docs/tutorial/dependencies/index.md
     sha256: 83319cc87297bb0959c5721a112133e6a3cd19900163c348a8ee6cf4818cd21f
