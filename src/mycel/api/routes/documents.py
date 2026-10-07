@@ -27,7 +27,7 @@ from mycel.services.auth import Principal
 
 router = APIRouter(tags=["documents"])
 
-Me = Annotated[Principal, Depends(current_user)]
+User = Annotated[Principal, Depends(current_user)]
 
 
 class DocumentOut(BaseModel):
@@ -79,29 +79,29 @@ def _refused(exc: service.DocumentError) -> HTTPException:
 
 
 @router.post("/documents", response_model=DocumentOut, status_code=202)
-async def upload_document(me: Me, file: Annotated[UploadFile, File()]) -> DocumentOut:
+async def upload_document(user: User, file: Annotated[UploadFile, File()]) -> DocumentOut:
     data = await file.read(service.max_bytes() + 1)
     try:
-        doc = await service.upload(me.id, service.Upload(file.filename or "document", data))
+        doc = await service.upload(user.id, service.Upload(file.filename or "document", data))
     except service.DocumentError as exc:
         raise _refused(exc) from exc
     return _document(doc)
 
 
 @router.get("/documents", response_model=list[DocumentOut])
-async def list_documents(me: Me) -> list[DocumentOut]:
-    return [_document(d) for d in await service.list_documents(me.id)]
+async def list_documents(user: User) -> list[DocumentOut]:
+    return [_document(d) for d in await service.list_documents(user.id)]
 
 
 @router.get("/documents/status")
-async def document_status(request: Request, me: Me) -> StreamingResponse:
+async def document_status(request: Request, user: User) -> StreamingResponse:
     """The user's document list, sent again whenever one of them changes state (SSE).
 
     Each frame is the whole list plus `busy`: the page never merges, it replaces. A
     keepalive goes out every 15 s so a proxy does not close a quiet connection.
     """
     return StreamingResponse(
-        _status_frames(request, me.id),
+        _status_frames(request, user.id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -124,13 +124,13 @@ async def _status_frames(request: Request, user_id: int) -> AsyncIterator[str]:
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)
-async def patch_document(document_id: int, body: DocumentPatch, me: Me) -> DocumentOut:
+async def patch_document(document_id: int, body: DocumentPatch, user: User) -> DocumentOut:
     try:
         doc = None
         if body.filename is not None:
-            doc = await service.rename(me.id, document_id, body.filename)
+            doc = await service.rename(user.id, document_id, body.filename)
         if body.enabled is not None:
-            doc = await service.set_enabled(me.id, document_id, body.enabled)
+            doc = await service.set_enabled(user.id, document_id, body.enabled)
     except service.DocumentError as exc:
         raise _refused(exc) from exc
     if doc is None:
@@ -139,26 +139,26 @@ async def patch_document(document_id: int, body: DocumentPatch, me: Me) -> Docum
 
 
 @router.delete("/documents/{document_id}", status_code=202)
-async def delete_document(document_id: int, me: Me) -> Response:
+async def delete_document(document_id: int, user: User) -> Response:
     try:
-        await service.delete_document(me.id, document_id)
+        await service.delete_document(user.id, document_id)
     except service.DocumentError as exc:
         raise _refused(exc) from exc
     return Response(status_code=202)
 
 
 @router.get("/documents/{document_id}/source", response_model=SourceOut)
-async def document_source(document_id: int, me: Me) -> SourceOut:
+async def document_source(document_id: int, user: User) -> SourceOut:
     try:
-        return SourceOut(url=await service.source_url(me.id, document_id))
+        return SourceOut(url=await service.source_url(user.id, document_id))
     except service.DocumentError as exc:
         raise _refused(exc) from exc
 
 
 @router.get("/chunks/{chunk_id}", response_model=ChunkOut)
-async def read_chunk(chunk_id: int, me: Me) -> ChunkOut:
+async def read_chunk(chunk_id: int, user: User) -> ChunkOut:
     try:
-        c = await service.chunk(me.id, chunk_id)
+        c = await service.chunk(user.id, chunk_id)
     except service.DocumentError as exc:
         raise _refused(exc) from exc
     return ChunkOut(
