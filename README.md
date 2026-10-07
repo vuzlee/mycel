@@ -31,17 +31,26 @@ https://github.com/user-attachments/assets/c8546f73-e6a8-4aca-abb1-08c07a849eb0
 
 ## How it is put together
 
-Connectors land external platforms in a bronze, silver and gold lakehouse. A question goes
-over the API onto a broker; a worker picks it up and an orchestrator delegates to agents
-that read gold, while the worker streams its steps to the page through Redis. Langfuse
-traces every agent run; Prometheus, Loki and Grafana watch metrics and logs.
+Five columns, left to right:
+
+| Column | What lives there |
+|---|---|
+| **External** | users in a browser; Jira, Gmail and Calendar, each on its own OAuth per user; MCP servers and Tavily as agent tools |
+| **Ingestion** | the scheduler ticks connectors, which land Jira and Gmail in bronze; ETL refines bronze into silver and gold; Ingest turns uploaded files into chunks and embeddings |
+| **Serving** | the API puts a question on RabbitMQ; a worker runs the orchestrator, which delegates to agents; Notify sends mail and books calendar events |
+| **LLM** | every model call goes through LiteLLM, to a cloud model or a local vLLM |
+| **Observability** | Langfuse traces each agent run; Promtail ships logs to Loki, Prometheus scrapes metrics, Grafana shows both |
+
+Underneath sit the stores: Postgres (app data and the lakehouse), Redis (cache, budgets and
+the event stream a page watches while a run is going), Qdrant (vectors) and MinIO (uploaded
+files).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
   <img src="assets/flow-light.svg" alt="High-level design: users, Jira, Gmail, Calendar and MCP servers outside; scheduler, connectors, ETL and ingest feed Postgres, Redis, Qdrant and MinIO; the API puts a question on RabbitMQ, a worker runs agents that call models through LiteLLM (cloud or vLLM), and search the web through Tavily; Langfuse traces every agent run; Prometheus, Promtail, Loki and Grafana watch every service" width="100%">
 </picture>
 
-Today the source is Jira; the source layer is pluggable. Reading and writing both run on
+Today the sources are Jira and Gmail; the source layer is pluggable. Reading and writing both run on
 consent you give per account and can revoke — your Jira, your Google Calendar — and nothing
 is ever written until it has been read back to you for a yes. There is no shared token to
 write with: Jira records an author and cannot correct one afterwards, so a comment carries
@@ -72,7 +81,7 @@ data layer. Said here because the alternative is somebody finding out by deployi
 ```bash
 cp .env.example .env      # five lines to fill in; the rest already works
 scripts/stack.sh doctor   # says what is missing and what each absence costs
-scripts/stack.sh dev up   # containers, migrations, api, worker, scheduler
+scripts/stack.sh dev up   # containers, migrations, api, worker, ingest, scheduler
 ```
 
 `doctor` runs before anything is configured, which is the point of it: it tells a **broken**
@@ -105,7 +114,7 @@ waits until each service answers a real query rather than merely accepting TCP.
 
 ```bash
 scripts/stack.sh dev status      # what is running, where
-scripts/stack.sh dev logs api    # follow api · worker · scheduler
+scripts/stack.sh dev logs api    # follow api · worker · ingest · scheduler
 scripts/stack.sh dev down        # stop; named volumes keep the data
 scripts/stack.sh sync            # one Jira sync now, don't wait for the tick
 ```
@@ -127,13 +136,19 @@ scripts/stack.sh k8s up monitoring       # the chart, eight pods
 scripts/stack.sh k8s down --all          # uninstall, stop minikube, stop the stores
 ```
 
-**The stores never move.** Postgres, RabbitMQ and Redis run in compose in every mode,
+**The stores never move.** Postgres, RabbitMQ, Redis, Qdrant, MinIO and LiteLLM run in
+compose in every mode,
 including `k8s` — a StatefulSet with a volume claim is the painful part of Kubernetes and
 proves nothing the chart is meant to prove. The pods reach them at
 `host.minikube.internal`, because inside a pod `localhost` is that pod.
 
-All three host processes matter: no worker means `POST /reports` hands back a job id nobody
-picks up; no scheduler means nothing syncs until you run `sync` by hand.
+All four host processes matter: no worker means a question gets a job id nobody picks up;
+no ingest worker means uploaded files stay queued; no scheduler means nothing syncs until
+you run `sync` by hand.
+
+The ingest worker is capped, because docling will take every core and several GB for one
+PDF: 2 threads (`ingest_threads`), 2 cores and 4 GB (`INGEST_CPUS`, `INGEST_MEM`), and a
+lower CPU priority than everything else.
 
 **Setup is once, by an admin; use is one click per person.** The admin gives the sync its
 own Jira identity and registers the two OAuth apps — [docs/setup.md](docs/setup.md). Each
@@ -147,13 +162,17 @@ environments, agents, sources — is YAML under `config/`.
 
 | | |
 |---|---|
-| `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` | the three services |
-| `GEMINI_API_KEYS` | comma-separated — each key is its own account, so three keys are three free tiers |
-| `JOB_CEILING_USD` | spend ceiling for one queued job |
-| `JIRA_CLIENT_ID` · `JIRA_CLIENT_SECRET` | the tracker, read and written as whoever is asking |
-| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | the calendar; leave blank and it's simply off |
+| `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` · `S3_*` | the stores |
+| `GEMINI_API_KEYS` · `CLAUDE_API_KEYS` | model keys, comma-separated; which models exist is `config/litellm/models.yaml` |
+| `LITELLM_API_KEY` | the app's key to the gateway |
+| `JIRA_SERVICE_TOKEN` · `JIRA_CLOUD_ID` | the sync's own read-only identity |
+| `JIRA_CLIENT_ID` · `JIRA_CLIENT_SECRET` | "Connect Jira", read and written as whoever is asking |
+| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | "Connect Google": calendar and mail; blank and both are off |
 | `TOKEN_ENCRYPTION_KEY` | encrypts every stored refresh token, Jira's and Google's alike |
-| `QDRANT_URL` | search over tracked work; blank and the tool is never offered. Embeddings run on this machine, so there is no bill |
+| `REGISTRATION_INVITE_CODE` | blank means anyone who reaches the URL can sign up |
+| `SMTP_*` | password-reset mail |
+| `TAVILY_API_KEY` | web search for `researcher`; blank and the tool is off |
+| `LANGFUSE_PUBLIC_KEY` · `LANGFUSE_SECRET_KEY` | traces; blank and nothing is sent |
 
 Who reads which project is **Jira's answer, not a list kept here.** Each person connects
 Jira in Settings, and Mycel asks Jira which projects they may browse — on connect and after
@@ -179,11 +198,13 @@ Migrations alone run as the owner. Both steps happen inside `up`.
 - **"Who logged the most hours on bugs last month?"** — `analyst` writes its own SQL against
   gold and returns each figure with the query that produced it.
 - **"Any release notes from our vendor about this?"** — `researcher` searches the web and
-  reads the mailbox over IMAP, headers only.
+  reads your own Gmail through the account you connected, headers only.
 - **"What have I got this afternoon?"** — `researcher` reads your own calendar and answers
   with each event's link.
 - **"Book the review, 3pm tomorrow, half an hour"** — it reads the time back in words and
   books nothing until you agree.
+- **"What does the spec say about retries?"** — upload PDFs, Word or Markdown under
+  Knowledge; `answerer` replies from those passages only and cites each one.
 
 Two things are true by construction, not by prompt: `run_sql` runs inside
 `SET TRANSACTION READ ONLY`, so a question that would change work data is refused by
@@ -215,10 +236,11 @@ src/mycel/     Source — one folder per layer
 web/           React + TypeScript, built into the image, served at /app
 config/        Per-environment, per-agent and per-source YAML
 migrations/    Alembic migrations
-deploy/        OTel, Grafana, Helm, vLLM, deploy environments
+deploy/        Prometheus/Loki/Promtail, Grafana, Helm, vLLM, deploy environments
 evals/         Golden set for scoring report quality
 docs/          Design documentation
 assets/        Banner and diagram, hand-written SVG
+scripts/       stack.sh and one folder per run mode
 ```
 
 | | |
