@@ -37,6 +37,7 @@ more here than anywhere else, because a project created by mistake is often not 
 over the API at all.
 """
 
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
@@ -66,162 +67,162 @@ KINDS = ("comment", "move", "issue", "project")
 def build_toolset() -> FunctionToolset[MycelDeps]:
     """Writing to Jira, as a toolset an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
-
-    @toolset.tool(name="find_jira_user")
-    async def _find_jira_user(ctx: RunContext[MycelDeps], name: str) -> str:
-        """Find the people on this Jira site whose name or address matches.
-
-        Use it before drafting anything that assigns work. Two people often share a first
-        name; when more than one comes back, ask which one rather than picking.
-
-        Args:
-            name: Part of a name or an email address, as the person said it.
-        """
-        guard_repeat(ctx, "find_jira_user", threshold=ctx.deps.settings.repeat_threshold, name=name)
-        auth = await _auth(ctx.deps)
-        if auth is None:
-            return CONNECT
-
-        try:
-            found = await jira.find_users(auth, name)
-        except (SourceError, JiraAuthError) as exc:
-            raise ToolFailed("find_jira_user", str(exc)) from exc
-
-        people = [u for u in found if u.get("accountId")]
-        if not people:
-            return f"Nobody on this Jira site matches {name!r}."
-        lines = [f"{len(people)} match(es). Columns: name | account_id | active"]
-        lines += [
-            f"{u.get('displayName', '(no name)')} | {u['accountId']} | {u.get('active', True)}"
-            for u in people[:20]
-        ]
-        return "\n".join(lines)
-
-    @toolset.tool(name="draft_jira_write")
-    async def _draft_jira_write(
-        ctx: RunContext[MycelDeps],
-        kind: str,
-        issue_key: str | None = None,
-        text: str | None = None,
-        to_status: str | None = None,
-        project: str | None = None,
-        summary: str | None = None,
-        issue_type: str = "Task",
-        assignee_account_id: str | None = None,
-        project_name: str | None = None,
-    ) -> str:
-        """Work out a change to Jira and read it back. **This writes nothing to Jira.**
-
-        Show the person the sentence this returns, in full, and wait for them to agree.
-        Only then call `confirm_jira_write` with the draft id. If they correct anything,
-        draft again.
-
-        Args:
-            kind: What to do — "comment", "move", "issue" or "project".
-            issue_key: Which issue, for "comment" and "move". For example PROJ-12.
-            text: The comment, for "comment". The description, for "issue".
-            to_status: The status to move to, for "move". Checked against the workflow
-                before you are given a draft, so a move the workflow forbids is refused
-                here rather than after they have said yes.
-            project: The project key, for "issue" and "project".
-            summary: The title, for "issue" and "project".
-            issue_type: Task, Story, Bug or Epic. Task unless they said otherwise.
-            assignee_account_id: Who to assign it to, for "issue". An account id from
-                `find_jira_user`, never a name — a name is not something Jira can write.
-            project_name: Ignored except for "project", where it is the project's name and
-                `project` is its key.
-        """
-        guard_repeat(
-            ctx,
-            "draft_jira_write",
-            threshold=ctx.deps.settings.repeat_threshold,
-            kind=kind,
-            issue_key=issue_key,
-            summary=summary,
-        )
-        user_id = _whose(ctx.deps)
-        if user_id is None:
-            return CONNECT
-        if kind not in KINDS:
-            raise ModelRetry(f"kind must be one of {', '.join(KINDS)}.")
-
-        auth = await _auth(ctx.deps)
-        if auth is None:
-            return CONNECT
-
-        try:
-            spelled, payload = await _resolve(
-                auth,
-                user_id,
-                kind,
-                issue_key=issue_key,
-                text=text,
-                to_status=to_status,
-                project=project,
-                summary=summary,
-                issue_type=issue_type,
-                assignee_account_id=assignee_account_id,
-                project_name=project_name,
-            )
-        except (SourceError, JiraAuthError) as exc:
-            raise ToolFailed("draft_jira_write", str(exc)) from exc
-
-        draft = await drafts.put_jira(user_id, kind, spelled, payload)
-        return (
-            f"Nothing written yet. {spelled}\n"
-            f"Read that back and ask whether it is right. To do it, call "
-            f"confirm_jira_write with draft_id={draft.draft_id}."
-        )
-
-    @toolset.tool(name="confirm_jira_write")
-    async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
-        """Carry out a drafted change. Call this only after the person has agreed to it.
-
-        Args:
-            draft_id: The id `draft_jira_write` returned for the change they agreed to.
-        """
-        user_id = _whose(ctx.deps)
-        if user_id is None:
-            return CONNECT
-
-        draft = await drafts.take_jira(draft_id, user_id)
-        if draft is None:
-            # Not a retry: there is no argument the model can fix, and the draft it holds
-            # is gone. Drafting again is the way forward and the sentence says so.
-            return (
-                "That draft has expired or was already done. Nothing was written. "
-                "Draft it again if they still want it."
-            )
-
-        auth = await _auth(ctx.deps)
-        if auth is None:
-            return CONNECT
-
-        try:
-            done = await _apply(auth, draft)
-        except NotWritten as exc:
-            # Certain that nothing landed, so the draft can come back under its own id and
-            # a second yes is a retry. The id has to be IN THE SENTENCE: without it the
-            # model drafts afresh, which is the whole round the person already did.
-            await drafts.restore_jira(draft)
-            raise ToolFailed(
-                "confirm_jira_write",
-                f"{exc}. Nothing was written and the draft is still here — say so, and "
-                f"call confirm_jira_write with draft_id={draft.draft_id} to try again.",
-            ) from exc
-        except (SourceError, JiraAuthError) as exc:
-            # A timeout or a 5xx. The request may have landed and only the answer been
-            # lost, so the draft stays spent: offering a retry here offers to write twice.
-            raise ToolFailed(
-                "confirm_jira_write",
-                f"{exc}. It is not known whether this was written — say so and tell them "
-                f"to check Jira before trying again.",
-            ) from exc
-
-        log.info("jira write done", extra={"user_id": user_id, "kind": draft.kind})
-        return done
-
+    toolset.add_function(_find_jira_user, name="find_jira_user")
+    toolset.add_function(_draft_jira_write, name="draft_jira_write")
+    toolset.add_function(_confirm_jira_write, name="confirm_jira_write")
     return toolset
+
+
+async def _find_jira_user(ctx: RunContext[MycelDeps], name: str) -> str:
+    """Find the people on this Jira site whose name or address matches.
+
+    Use it before drafting anything that assigns work. Two people often share a first
+    name; when more than one comes back, ask which one rather than picking.
+
+    Args:
+        name: Part of a name or an email address, as the person said it.
+    """
+    guard_repeat(ctx, "find_jira_user", threshold=ctx.deps.settings.repeat_threshold, name=name)
+    auth = await _auth(ctx.deps)
+    if auth is None:
+        return CONNECT
+
+    try:
+        found = await jira.find_users(auth, name)
+    except (SourceError, JiraAuthError) as exc:
+        raise ToolFailed("find_jira_user", str(exc)) from exc
+
+    people = [u for u in found if u.get("accountId")]
+    if not people:
+        return f"Nobody on this Jira site matches {name!r}."
+    lines = [f"{len(people)} match(es). Columns: name | account_id | active"]
+    lines += [
+        f"{u.get('displayName', '(no name)')} | {u['accountId']} | {u.get('active', True)}"
+        for u in people[:20]
+    ]
+    return "\n".join(lines)
+
+
+async def _draft_jira_write(
+    ctx: RunContext[MycelDeps],
+    kind: str,
+    issue_key: str | None = None,
+    text: str | None = None,
+    to_status: str | None = None,
+    project: str | None = None,
+    summary: str | None = None,
+    issue_type: str = "Task",
+    assignee_account_id: str | None = None,
+    project_name: str | None = None,
+) -> str:
+    """Work out a change to Jira and read it back. **This writes nothing to Jira.**
+
+    Show the person the sentence this returns, in full, and wait for them to agree.
+    Only then call `confirm_jira_write` with the draft id. If they correct anything,
+    draft again.
+
+    Args:
+        kind: What to do — "comment", "move", "issue" or "project".
+        issue_key: Which issue, for "comment" and "move". For example PROJ-12.
+        text: The comment, for "comment". The description, for "issue".
+        to_status: The status to move to, for "move". Checked against the workflow
+            before you are given a draft, so a move the workflow forbids is refused
+            here rather than after they have said yes.
+        project: The project key, for "issue" and "project".
+        summary: The title, for "issue" and "project".
+        issue_type: Task, Story, Bug or Epic. Task unless they said otherwise.
+        assignee_account_id: Who to assign it to, for "issue". An account id from
+            `find_jira_user`, never a name — a name is not something Jira can write.
+        project_name: Ignored except for "project", where it is the project's name and
+            `project` is its key.
+    """
+    guard_repeat(
+        ctx,
+        "draft_jira_write",
+        threshold=ctx.deps.settings.repeat_threshold,
+        kind=kind,
+        issue_key=issue_key,
+        summary=summary,
+    )
+    user_id = _whose(ctx.deps)
+    if user_id is None:
+        return CONNECT
+    if kind not in KINDS:
+        raise ModelRetry(f"kind must be one of {', '.join(KINDS)}.")
+
+    auth = await _auth(ctx.deps)
+    if auth is None:
+        return CONNECT
+
+    try:
+        asked = Asked(
+            issue_key=issue_key,
+            text=text,
+            to_status=to_status,
+            project=project,
+            summary=summary,
+            issue_type=issue_type,
+            assignee_account_id=assignee_account_id,
+            project_name=project_name,
+        )
+        spelled, payload = await _resolve(auth, user_id, kind, asked)
+    except (SourceError, JiraAuthError) as exc:
+        raise ToolFailed("draft_jira_write", str(exc)) from exc
+
+    draft = await drafts.put_jira(user_id, kind, spelled, payload)
+    return (
+        f"Nothing written yet. {spelled}\n"
+        f"Read that back and ask whether it is right. To do it, call "
+        f"confirm_jira_write with draft_id={draft.draft_id}."
+    )
+
+
+async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
+    """Carry out a drafted change. Call this only after the person has agreed to it.
+
+    Args:
+        draft_id: The id `draft_jira_write` returned for the change they agreed to.
+    """
+    user_id = _whose(ctx.deps)
+    if user_id is None:
+        return CONNECT
+
+    draft = await drafts.take_jira(draft_id, user_id)
+    if draft is None:
+        # Not a retry: there is no argument the model can fix, and the draft it holds
+        # is gone. Drafting again is the way forward and the sentence says so.
+        return (
+            "That draft has expired or was already done. Nothing was written. "
+            "Draft it again if they still want it."
+        )
+
+    auth = await _auth(ctx.deps)
+    if auth is None:
+        return CONNECT
+
+    try:
+        done = await _apply(auth, draft)
+    except NotWritten as exc:
+        # Certain that nothing landed, so the draft can come back under its own id and
+        # a second yes is a retry. The id has to be IN THE SENTENCE: without it the
+        # model drafts afresh, which is the whole round the person already did.
+        await drafts.restore_jira(draft)
+        raise ToolFailed(
+            "confirm_jira_write",
+            f"{exc}. Nothing was written and the draft is still here — say so, and "
+            f"call confirm_jira_write with draft_id={draft.draft_id} to try again.",
+        ) from exc
+    except (SourceError, JiraAuthError) as exc:
+        # A timeout or a 5xx. The request may have landed and only the answer been
+        # lost, so the draft stays spent: offering a retry here offers to write twice.
+        raise ToolFailed(
+            "confirm_jira_write",
+            f"{exc}. It is not known whether this was written — say so and tell them "
+            f"to check Jira before trying again.",
+        ) from exc
+
+    log.info("jira write done", extra={"user_id": user_id, "kind": draft.kind})
+    return done
 
 
 def offered() -> bool:
@@ -237,19 +238,22 @@ def offered() -> bool:
     return configured() and get_settings().jira_write_enabled
 
 
+@dataclass(frozen=True, slots=True)
+class Asked:
+    """What the model passed to `draft_jira_write`, before anything is looked up."""
+
+    issue_key: str | None
+    text: str | None
+    to_status: str | None
+    project: str | None
+    summary: str | None
+    issue_type: str
+    assignee_account_id: str | None
+    project_name: str | None
+
+
 async def _resolve(
-    auth: jira.Auth,
-    user_id: int,
-    kind: str,
-    *,
-    issue_key: str | None,
-    text: str | None,
-    to_status: str | None,
-    project: str | None,
-    summary: str | None,
-    issue_type: str,
-    assignee_account_id: str | None,
-    project_name: str | None,
+    auth: jira.Auth, user_id: int, kind: str, asked: Asked
 ) -> tuple[str, dict[str, Any]]:
     """Turn what the model said into what will be written, and a sentence saying so.
 
@@ -257,47 +261,54 @@ async def _resolve(
     exactly what will be sent. A missing argument raises `ModelRetry`, which the model can
     act on; a lookup that fails raises `SourceError`, which it cannot.
     """
-    if kind == "comment":
-        key = _required(issue_key, "issue_key", "comment")
-        body = _required(text, "text", "comment")
-        return f"Comment on {key}: {body!r}", {"issue_key": key, "text": body}
+    return await _RESOLVERS[kind](auth, user_id, asked)
 
-    if kind == "move":
-        key = _required(issue_key, "issue_key", "move")
-        wanted = _required(to_status, "to_status", "move").strip()
-        # Checked now, not at confirm time: a move the workflow forbids should be refused
-        # before somebody agrees to it, and the list of what is allowed is what tells the
-        # model which name to use instead.
-        moves = await jira.transitions_for(auth, key)
-        allowed = [str(m.get("to", {}).get("name", "")) for m in moves]
-        if not any(name.lower() == wanted.lower() for name in allowed):
-            raise ModelRetry(
-                f"{key} cannot move to {wanted!r} from where it is. It can move to: "
-                f"{', '.join(allowed) or '(nothing)'}."
-            )
-        return f"Move {key} to {wanted}", {"issue_key": key, "to_status": wanted}
 
-    if kind == "issue":
-        proj = _required(project, "project", "issue").upper()
-        title = _required(summary, "summary", "issue")
-        who = "nobody"
-        if assignee_account_id:
-            # By name, never by id. The id is what Jira needs and the name is what a person
-            # can check, and a draft that reads back an id catches nothing.
-            who = await _name_of(auth, assignee_account_id)
-        spelled = f"Create a {issue_type} in {proj}: {title!r}, assigned to {who}" + (
-            f" — {text!r}" if text else ""
+async def _resolve_comment(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+    key = _required(a.issue_key, "issue_key", "comment")
+    body = _required(a.text, "text", "comment")
+    return f"Comment on {key}: {body!r}", {"issue_key": key, "text": body}
+
+
+async def _resolve_move(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+    key = _required(a.issue_key, "issue_key", "move")
+    wanted = _required(a.to_status, "to_status", "move").strip()
+    # Checked now, not at confirm time: a move the workflow forbids should be refused
+    # before somebody agrees to it, and the list of what is allowed is what tells the
+    # model which name to use instead.
+    moves = await jira.transitions_for(auth, key)
+    allowed = [str(m.get("to", {}).get("name", "")) for m in moves]
+    if not any(name.lower() == wanted.lower() for name in allowed):
+        raise ModelRetry(
+            f"{key} cannot move to {wanted!r} from where it is. It can move to: "
+            f"{', '.join(allowed) or '(nothing)'}."
         )
-        return spelled, {
-            "project": proj,
-            "kind": issue_type,
-            "summary": title,
-            "description": text,
-            "assignee_id": assignee_account_id,
-        }
+    return f"Move {key} to {wanted}", {"issue_key": key, "to_status": wanted}
 
-    key = _required(project, "project", "project").upper()
-    name = _required(project_name or summary, "project_name", "project")
+
+async def _resolve_issue(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+    proj = _required(a.project, "project", "issue").upper()
+    title = _required(a.summary, "summary", "issue")
+    who = "nobody"
+    if a.assignee_account_id:
+        # By name, never by id. The id is what Jira needs and the name is what a person
+        # can check, and a draft that reads back an id catches nothing.
+        who = await _name_of(auth, a.assignee_account_id)
+    spelled = f"Create a {a.issue_type} in {proj}: {title!r}, assigned to {who}" + (
+        f" — {a.text!r}" if a.text else ""
+    )
+    return spelled, {
+        "project": proj,
+        "kind": a.issue_type,
+        "summary": title,
+        "description": a.text,
+        "assignee_id": a.assignee_account_id,
+    }
+
+
+async def _resolve_project(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+    key = _required(a.project, "project", "project").upper()
+    name = _required(a.project_name or a.summary, "project_name", "project")
     # The lead is whoever consented, read from their own row rather than searched for: a
     # project must have one, and anyone else would be handed responsibility for a project
     # they did not create.
@@ -310,6 +321,14 @@ async def _resolve(
         f"at all — say so when you ask.",
         {"key": key, "name": name, "lead_account_id": row.account_id},
     )
+
+
+_RESOLVERS = {
+    "comment": _resolve_comment,
+    "move": _resolve_move,
+    "issue": _resolve_issue,
+    "project": _resolve_project,
+}
 
 
 async def _apply(auth: jira.Auth, draft: drafts.JiraDraft) -> str:
