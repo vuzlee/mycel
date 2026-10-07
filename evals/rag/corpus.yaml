@@ -1,4 +1,4 @@
-# Public English documents for the RAG benchmark (batch 063). Not committed: fetched by
+# Public English documents for the RAG benchmark. Not committed: fetched by
 # evals/rag/fetch_corpus.py and checked against these hashes. URLs are pinned to a commit
 # or an arXiv version so the bytes never change under the labels.
 
