@@ -277,11 +277,10 @@ async def _resolve_move(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, d
     # before somebody agrees to it, and the list of what is allowed is what tells the
     # model which name to use instead.
     moves = await jira.transitions_for(auth, key)
-    allowed = [str(m.get("to", {}).get("name", "")) for m in moves]
-    if not any(name.lower() == wanted.lower() for name in allowed):
+    if jira.find_transition(moves, wanted) is None:
         raise ModelRetry(
             f"{key} cannot move to {wanted!r} from where it is. It can move to: "
-            f"{', '.join(allowed) or '(nothing)'}."
+            f"{', '.join(jira.target_names(moves)) or '(nothing)'}."
         )
     return f"Move {key} to {wanted}", {"issue_key": key, "to_status": wanted}
 

@@ -28,12 +28,12 @@ import httpx2
 from mycel.core.config import get_settings, team_zone
 from mycel.core.logging import get_logger
 from mycel.services.google_oauth import GoogleError, token_for
+from mycel.sources import google_client
 
 API = "https://www.googleapis.com/calendar/v3"
 #: The person's own calendar, always. Reading any other one needs a calendar id nobody has
 #: typed in, and writing to one would be writing to somebody else's week.
 CALENDAR = "primary"
-HTTP_TIMEOUT_S = 15.0
 
 #: Enough to answer "what does this week look like" and stop well short of a year, which
 #: crosses the context window as cost rather than information.
@@ -122,9 +122,7 @@ async def _call(
     """
     token = await token_for(user_id)
     try:
-        async with httpx2.AsyncClient(
-            timeout=HTTP_TIMEOUT_S, headers={"authorization": f"Bearer {token}"}
-        ) as client:
+        async with google_client(token) as client:
             response = await client.request(method, f"{API}{path}", params=params, json=json)
             response.raise_for_status()
             payload = response.json()

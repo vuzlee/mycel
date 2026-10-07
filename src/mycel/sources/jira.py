@@ -220,14 +220,25 @@ async def transition(auth: Auth, key: str, to_status: str) -> None:
     transition that did not happen looks exactly like one that did, from the response.
     """
     _writable()
+    move = find_transition(await transitions_for(auth, key), to_status)
+    if move is None:
+        raise NotWritten(f"jira: {key} cannot move to {to_status!r} from where it is")
+    await _call(auth, "POST", f"/issue/{key}/transitions", {"transition": {"id": move["id"]}})
+    log.info("transitioned jira issue", extra={"key": key, "to": to_status})
+
+
+def target_names(moves: list[dict[str, Any]]) -> list[str]:
+    """The status names these transitions lead to, as Jira spells them."""
+    return [str(m.get("to", {}).get("name", "")) for m in moves]
+
+
+def find_transition(moves: list[dict[str, Any]], to_status: str) -> dict[str, Any] | None:
+    """The transition that reaches `to_status`, matched case-insensitively, or `None`."""
     wanted = to_status.strip().lower()
-    for move in await transitions_for(auth, key):
-        if str(move.get("to", {}).get("name", "")).lower() == wanted:
-            body = {"transition": {"id": move["id"]}}
-            await _call(auth, "POST", f"/issue/{key}/transitions", body)
-            log.info("transitioned jira issue", extra={"key": key, "to": to_status})
-            return
-    raise NotWritten(f"jira: {key} cannot move to {to_status!r} from where it is")
+    for move, name in zip(moves, target_names(moves), strict=True):
+        if name.lower() == wanted:
+            return move
+    return None
 
 
 async def create_issue(

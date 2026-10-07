@@ -19,12 +19,11 @@ from typing import Any
 import httpx2
 
 from mycel.core.logging import get_logger
-from mycel.sources import SourceError
+from mycel.sources import SourceError, google_client
 
 log = get_logger(__name__)
 
 API = "https://gmail.googleapis.com/gmail/v1/users/me"
-TIMEOUT_S = 20.0
 
 #: Read but never parsed for content. Anything else would be a body by another name.
 HEADERS = ("From", "Subject", "Date")
@@ -62,9 +61,7 @@ async def read_recent(access_token: str, hours: int, limit: int) -> Mailbox:
     since = datetime.now(UTC) - timedelta(hours=hours)
     query = f"after:{int(since.timestamp())}"
     try:
-        async with httpx2.AsyncClient(
-            timeout=TIMEOUT_S, headers={"authorization": f"Bearer {access_token}"}
-        ) as client:
+        async with google_client(access_token) as client:
             listed = await _get(client, "/messages", {"q": query, "maxResults": "500"})
             ids = [str(m["id"]) for m in listed.get("messages", []) if m.get("id")]
             headers = [h for h in [await _header(client, i) for i in ids[:limit]] if h]

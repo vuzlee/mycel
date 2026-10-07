@@ -6,7 +6,19 @@ raw records, write them down to `bronze`. No cleaning, no normalising — that i
 Adding a source = adding a file here, with no changes to existing code.
 """
 
+import httpx2
+
 from mycel.core.exceptions import MycelError
+
+#: One timeout for every Google API call, mail and calendar alike.
+GOOGLE_TIMEOUT_S = 20.0
+
+
+def google_client(token: str) -> httpx2.AsyncClient:
+    """An HTTP client carrying one person's Google access token."""
+    return httpx2.AsyncClient(
+        timeout=GOOGLE_TIMEOUT_S, headers={"authorization": f"Bearer {token}"}
+    )
 
 
 class SourceError(MycelError):
