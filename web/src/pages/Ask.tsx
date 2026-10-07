@@ -5,15 +5,16 @@
  * and reopen, and the sidebar reopens one by navigating rather than by lifting state up
  * through a router that is already carrying it.
  *
- * A thread is more than one turn since 031. `?thread=` rides beside `?job=`: the job is
- * the run being watched, the thread is what the next question joins. A reload with only
- * a job still works — the run itself names its thread.
+ * A conversation is more than one turn. `?conversation=` rides beside `?job=`: the job is the
+ * run being watched, the conversation is what the next question joins. `?thread=`, its old
+ * name, is still read so a saved link keeps working. A reload with only
+ * a job still works — the run itself names its conversation.
  *
  * Which means a reload arrives with a job and no question — the question was only ever
  * in this component's state. The stream does not carry it either: a stream is tool calls
- * and reasoning, not the prompt that started them. So the poll carries both: since 032
+ * and reasoning, not the prompt that started them. So the poll carries both:
  * `GET /chat/{id}` returns the run's own `question` and `conversation_id`, which the
- * sidebar cannot supply. A thread's title is the question that *opened* it, and its job
+ * sidebar cannot supply. A conversation's title is the question that *opened* it, and its job
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
@@ -33,15 +34,15 @@ import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
 import { PastTurns } from "../components/PastTurns";
 import { Shell } from "../components/Shell";
-import { Thread } from "../components/Thread";
+import { Conversation } from "../components/Conversation";
 import { Documents, sendFiles } from "../components/knowledge/Documents";
 import { SourcePanel } from "../components/knowledge/SourcePanel";
 import type { Topic } from "../components/Topics";
 import { Topics, anchorFor } from "../components/Topics";
 import { ArrowRight, Notebook, Spinner } from "../components/icons";
-import { useRun } from "../run";
-import { useThreads } from "../threads";
-import { useDocuments } from "../useDocuments";
+import { useRun } from "../hooks/useRun";
+import { useConversations } from "../context/ConversationsContext";
+import { useDocuments } from "../hooks/useDocuments";
 
 //: How far below the top of the body the question is parked. Flush against the edge reads
 //: as a page cut off rather than a turn begun. Same number as `.turn.user`'s
@@ -71,7 +72,7 @@ const OTHER_SEEDS = [
 export function Ask() {
   const [params, setParams] = useSearchParams();
   const jobId = params.get("job");
-  const { reload } = useThreads();
+  const { reload } = useConversations();
 
   const [asked, setAsked] = useState<string | null>(null);
   const [past, setPast] = useState<Turn[]>([]);
@@ -104,42 +105,42 @@ export function Ask() {
 
   // Arriving from the sidebar or a reloaded link: the question is not in this tab's
   // memory, and the stream does not carry it — a stream is tool calls, not the prompt.
-  // The run itself says what it was asked, which the thread cannot: a thread's title is
+  // The run itself says what it was asked, which the conversation cannot: a conversation's title is
   // the question that opened it, and captions every later turn wrongly.
   const question = asked ?? run.result?.question ?? null;
 
-  // The thread the next question joins. `?thread=` first because it is there the moment
+  // The conversation the next question joins. `?conversation=` first because it is there the moment
   // you navigate, while the run needs a poll to come back — and it is the run, not the
-  // sidebar, that knows the thread of a link naming a turn other than the latest.
-  const fromUrl = params.get("thread");
-  const threadId = fromUrl
+  // sidebar, that knows the conversation of a link naming a turn other than the latest.
+  const fromUrl = params.get("conversation") ?? params.get("thread");
+  const conversationId = fromUrl
     ? Number(fromUrl)
     : (run.result?.conversation_id ?? null);
 
-  // Everything this thread said before the run on screen. Turns are read from the kept
+  // Everything this conversation said before the run on screen. Turns are read from the kept
   // rows, not the stream: those runs are over, and a stream belongs to one run.
   //
-  // A null thread id is NOT an empty thread. It is the one moment before the page knows
-  // which thread it is on — a link carrying only `?job=` has to read the conversation off
+  // A null conversation id is NOT an empty conversation. It is the one moment before the page knows
+  // which conversation it is on — a link carrying only `?job=` has to read the conversation off
   // the run, and the run has to be fetched first. Clearing on null makes that moment
   // visible: the earlier turns vanish and come back when the poll lands. So nothing is
   // cleared until there is an answer to replace it with, and `startNew` does the clearing
   // for the case that really is empty, where it is a deliberate act rather than a gap.
   useEffect(() => {
-    // No thread means no history to wait for — the first question of a new one.
-    if (threadId === null) {
+    // No conversation means no history to wait for — the first question of a new one.
+    if (conversationId === null) {
       if (jobId !== null) setPastFor(jobId);
       return;
     }
     let live = true;
-    void fetchTurns(threadId)
+    void fetchTurns(conversationId)
       .then((turns) => {
         if (!live) return;
         setPast(turns.filter((turn) => turn.job_id !== jobId));
         setPastFor(jobId);
       })
       .catch(() => {
-        // Left as it was. A failed fetch says the network is unhappy, not that the thread
+        // Left as it was. A failed fetch says the network is unhappy, not that the conversation
         // has no history, and blanking on it would throw away rows that are still correct.
         // Marked settled all the same, or the scroll below waits for something that is not
         // coming and never happens at all.
@@ -148,7 +149,7 @@ export function Ask() {
     return () => {
       live = false;
     };
-  }, [threadId, jobId]);
+  }, [conversationId, jobId]);
 
   const startNew = useCallback(() => {
     setParams({}, { replace: false });
@@ -173,16 +174,16 @@ export function Ask() {
   const ask = async (text: string): Promise<void> => {
     setRefused(null);
     try {
-      // The open thread by default, a new one only when the reader asked for one with
+      // The open conversation by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
       const { job_id, conversation_id } = await askChat(
         text,
-        threadId ?? undefined,
+        conversationId ?? undefined,
         chips,
       );
       setAsked(text);
-      setParams({ job: job_id, thread: String(conversation_id) });
+      setParams({ job: job_id, conversation: String(conversation_id) });
       reload();
     } catch (error) {
       setRefused(error instanceof Error ? error.message : String(error));
@@ -195,8 +196,8 @@ export function Ask() {
   // answer - only the markers that held, and clickable sources - takes its place.
   const cited = run.result?.status === "done" && run.result.sources.length > 0;
 
-  // A finished run moves its thread to the top of Recent. The sidebar is ordered by the
-  // last thing written to a thread, and that write happens on the worker, minutes after
+  // A finished run moves its conversation to the top of Recent. The sidebar is ordered by the
+  // last thing written to a conversation, and that write happens on the worker, minutes after
   // the list was fetched — so the order on screen is stale until something asks again.
   // Keyed on the job so one refetch happens per run, not one per poll.
   const settled = run.result?.status;
@@ -319,7 +320,7 @@ export function Ask() {
       }
     >
       {jobId ? (
-        <Thread
+        <Conversation
           anchor={anchorFor(jobId)}
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
@@ -337,7 +338,7 @@ export function Ask() {
               onSource={setSource}
             />
           )}
-        </Thread>
+        </Conversation>
       ) : (
         <div className="blank">
           <h1>

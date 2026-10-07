@@ -8,38 +8,38 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import type { Thread } from "./api";
-import { Unauthorized, fetchThreads, forgetThread, pinThread } from "./api";
+import type { ConversationSummary } from "../api";
+import { Unauthorized, fetchConversations, forgetThread, pinThread } from "../api";
 import { useAuth } from "./auth";
 
-interface ThreadsValue {
-  threads: Thread[];
+interface ConversationsValue {
+  conversations: ConversationSummary[];
   reload: () => void;
-  /** Delete one thread, and every run under it. */
+  /** Delete one conversation, and every run under it. */
   forget: (id: number) => Promise<void>;
-  /** Keep one thread above Recent, or let it go back. */
+  /** Keep one conversation above Recent, or let it go back. */
   pin: (id: number, pinned: boolean) => Promise<void>;
 }
 
-const Ctx = createContext<ThreadsValue>({
-  threads: [],
+const Ctx = createContext<ConversationsValue>({
+  conversations: [],
   reload: () => {},
   forget: async () => {},
   pin: async () => {},
 });
 
-export function ThreadsProvider({ children }: { children: ReactNode }) {
-  // `forget` is taken below by the thread delete, and the auth one means something else.
+export function ConversationsProvider({ children }: { children: ReactNode }) {
+  // `forget` is taken below by the conversation delete, and the auth one means something else.
   const { user, forget: dropSession } = useAuth();
-  const [threads, setThreads] = useState<Thread[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
 
   const reload = useCallback(() => {
     if (!user) {
-      setThreads([]);
+      setConversations([]);
       return;
     }
-    void fetchThreads()
-      .then(setThreads)
+    void fetchConversations()
+      .then(setConversations)
       .catch((error: unknown) => {
         if (error instanceof Unauthorized) dropSession();
       });
@@ -48,7 +48,7 @@ export function ThreadsProvider({ children }: { children: ReactNode }) {
   // The row leaves the list before the server confirms. A delete that has to wait for a
   // round-trip feels broken on a slow link, and the failure case is a reload away.
   const forget = useCallback(async (id: number): Promise<void> => {
-    setThreads((current) => current.filter((thread) => thread.id !== id));
+    setConversations((current) => current.filter((conversation) => conversation.id !== id));
     await forgetThread(id).catch(() => {
       reload();
     });
@@ -56,14 +56,14 @@ export function ThreadsProvider({ children }: { children: ReactNode }) {
 
   // Flipped at once, like the delete; the server's order comes back with the reload.
   const pin = useCallback(async (id: number, pinned: boolean): Promise<void> => {
-    setThreads((current) => current.map((t) => (t.id === id ? { ...t, pinned } : t)));
+    setConversations((current) => current.map((t) => (t.id === id ? { ...t, pinned } : t)));
     await pinThread(id, pinned).catch(() => {});
     reload();
   }, [reload]);
 
   useEffect(reload, [reload]);
 
-  return <Ctx.Provider value={{ threads, reload, forget, pin }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ conversations, reload, forget, pin }}>{children}</Ctx.Provider>;
 }
 
-export const useThreads = (): ThreadsValue => useContext(Ctx);
+export const useConversations = (): ConversationsValue => useContext(Ctx);

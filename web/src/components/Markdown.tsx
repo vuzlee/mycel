@@ -15,7 +15,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 /** A table is wider than the prose it sits in, so it gets its own scroller rather than
- *  widening the thread or wrapping every cell to reading width. */
+ *  widening the conversation or wrapping every cell to reading width. */
 const COMPONENTS = {
   table: ({ children }: { children?: React.ReactNode }) => (
     <div className="table-scroll">

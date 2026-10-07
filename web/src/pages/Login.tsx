@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth";
+import { useAuth } from "../context/auth";
 import { Credentials } from "../components/Credentials";
 import { Mycelium } from "../components/icons";
 

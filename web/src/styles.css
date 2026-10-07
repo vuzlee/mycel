@@ -77,15 +77,15 @@
   --display: "Instrument Serif", Georgia, serif;
 
   --rail: 272px;
-  /* Two content widths, because there are two kinds of content. `--thread` is prose and
+  /* Two content widths, because there are two kinds of content. `--conversation` is prose and
      stops where a line stops being comfortable to read. `--board` is tables and figures,
      which are compared side by side and lose nothing by being wide — holding them at
      reading width is what left a wide screen mostly empty.
 
      A run is not only prose: tool arguments and their results are code, and code wrapped
-     at a paragraph's measure reads worse, not better. So `--thread` is set by the widest
-     thing in the thread rather than by the narrowest. */
-  --thread: 58rem;
+     at a paragraph's measure reads worse, not better. So `--conversation` is set by the widest
+     thing in the conversation rather than by the narrowest. */
+  --conversation: 58rem;
   --board: 78rem;
   --radius: 12px;
   --radius-sm: 8px;
@@ -386,15 +386,15 @@ a.brand:hover .mark {
 }
 
 /* Pinned and Recent scroll together, so a long pinned list never hides Recent. */
-.rail .threads {
+.rail .conversations {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-bottom: 20px;
 }
 
-.rail .threads h2 + ol,
-.rail .threads h2 + .empty {
+.rail .conversations h2 + ol,
+.rail .conversations h2 + .empty {
   margin-bottom: 14px;
 }
 
@@ -509,7 +509,7 @@ a.brand:hover .mark {
   min-height: 0;
   overflow-y: auto;
   /* Named so `.live` can size itself against this box. A percentage cannot: it resolves
-     against `.thread`, whose own height is `auto`, and an auto height gives a percentage
+     against `.conversation`, whose own height is `auto`, and an auto height gives a percentage
      nothing to resolve against. `cqh` resolves against the container, which is this. */
   container: body / size;
   scrollbar-width: thin;
@@ -526,8 +526,8 @@ a.brand:hover .mark {
   border-radius: 999px;
 }
 
-.thread {
-  max-width: var(--thread);
+.conversation {
+  max-width: var(--conversation);
   margin: 0 auto;
   padding: 36px 28px 48px;
   font-size: 15.5px;
@@ -542,7 +542,7 @@ a.brand:hover .mark {
 /* ---------------------------------------------------------------- messages */
 
 /* A turn that already finished, above the one being watched. Dimmed and separated so the
-   thread reads as history-then-now rather than as one long answer: the run on screen is
+   conversation reads as history-then-now rather than as one long answer: the run on screen is
    the one the page is still following, and it should be the one the eye lands on. */
 .past {
   scroll-margin-top: 24px;
@@ -577,10 +577,10 @@ a.brand:hover .mark {
 
    `min-height`, not `flex: 1`. Grow only divides what is left over, and when the turns
    above are taller than the screen there is nothing left over — which is the ordinary case,
-   reopening a thread and asking. A floor holds whether or not anything is above it: the
-   thread then overflows by the height of the history, which is exactly what should scroll.
+   reopening a conversation and asking. A floor holds whether or not anything is above it: the
+   conversation then overflows by the height of the history, which is exactly what should scroll.
 
-   The thread's own bottom padding is subtracted, or the floor and that padding would stack
+   The conversation's own bottom padding is subtracted, or the floor and that padding would stack
    into a screen that scrolls past the end of the answer by 48px of nothing. */
 .live {
   min-height: calc(100cqh - 48px);
@@ -799,7 +799,7 @@ details[open] > summary .chevron {
   border-top: 1px solid var(--rule);
 }
 
-/* Offered only while the bottom is off screen. Nothing scrolls the thread on its own
+/* Offered only while the bottom is off screen. Nothing scrolls the conversation on its own
    any more, so new work below the fold would otherwise be invisible. */
 .jump {
   position: absolute;
@@ -853,7 +853,7 @@ details[open] > summary .chevron {
 }
 
 .composer form {
-  max-width: var(--thread);
+  max-width: var(--conversation);
   margin: 0 auto;
   display: flex;
   gap: 10px;
@@ -924,7 +924,7 @@ details[open] > summary .chevron {
 }
 
 .composer .hint {
-  max-width: var(--thread);
+  max-width: var(--conversation);
   margin: 9px auto 0;
   font-family: var(--mono);
   font-size: 10.5px;
@@ -945,7 +945,7 @@ details[open] > summary .chevron {
   flex-direction: column;
   justify-content: center;
   min-height: 100%;
-  max-width: var(--thread);
+  max-width: var(--conversation);
   margin: 0 auto;
   padding: 40px 24px 64px;
 }
@@ -1173,7 +1173,7 @@ details[open] > summary .chevron {
   }
 }
 
-/* The rail is 272px and the thread is 58rem, so below roughly this the gutter left over
+/* The rail is 272px and the conversation is 58rem, so below roughly this the gutter left over
    is a few dozen pixels — too narrow for a label to be anything but an ellipsis. The map
    floats beside the prose or it does not appear; it has no second place to go. */
 @media (max-width: 1500px) {
@@ -1223,7 +1223,7 @@ details[open] > summary .chevron {
     display: inline-flex;
   }
 
-  .thread,
+  .conversation,
   .composer,
   .blank {
     padding-inline: 16px;
@@ -1244,12 +1244,12 @@ details[open] > summary .chevron {
 
 /* ---------------------------------------------------------------- topics */
 
-/* One entry per turn of the thread, floating in the gutter to the right of the prose.
+/* One entry per turn of the conversation, floating in the gutter to the right of the prose.
 
-   It takes no column. A column would push the thread off centre the moment a second
+   It takes no column. A column would push the conversation off centre the moment a second
    question is asked — the page would rearrange itself as a reward for continuing, which
    is the opposite of what a map is for. So it is absolutely positioned in the space the
-   centred thread already leaves empty, transparent, and out of the way: no panel, no
+   centred conversation already leaves empty, transparent, and out of the way: no panel, no
    border, no background. Nothing but the line and the words.
 
    Pointer events are off on the box and on again for the buttons, so the empty space it
@@ -1258,11 +1258,11 @@ details[open] > summary .chevron {
   position: absolute;
   z-index: 5;
   top: 50%;
-  /* Half of what the centred thread leaves over, minus a gutter each side. Written as
+  /* Half of what the centred conversation leaves over, minus a gutter each side. Written as
      the measurement rather than a guess, so it stays clear of the prose at every width
      between 1120px and a very wide monitor. */
   right: 20px;
-  width: min(168px, calc((100% - var(--thread)) / 2 - 40px));
+  width: min(168px, calc((100% - var(--conversation)) / 2 - 40px));
   transform: translateY(-50%);
   max-height: 60vh;
   overflow-y: auto;
@@ -1289,7 +1289,7 @@ details[open] > summary .chevron {
   list-style: none;
 }
 
-/* The line down the left is the thread itself: every entry sits on it, and the one you
+/* The line down the left is the conversation itself: every entry sits on it, and the one you
    are reading lights its own segment. A dot per row would be a second alphabet. */
 .topics li {
   border-left: 2px solid var(--rule-2);
@@ -1416,7 +1416,7 @@ details[open] > summary .chevron {
 }
 
 /* The gate's error sits between the fields and the button, where the card's own gap
-   already spaces it — the thread's 20px top margin would open a hole here. */
+   already spaces it — the conversation's 20px top margin would open a hole here. */
 .gate .failure {
   margin-top: 0;
 }
@@ -1490,7 +1490,7 @@ button.primary:disabled {
 
 /* The run's reasoning still reads at prose width, left-aligned under the picker rather
    than centred — a centred column inside a wide page reads as a second, floating page. */
-.page .thread {
+.page .conversation {
   margin-left: 0;
   padding-inline: 0;
 }
@@ -2854,7 +2854,7 @@ and which one is on is stated by the border rather than a dot: the
 /* ---------------------------------------------------------------- home */
 
 /* The one page that renders signed out, so it has no rail to sit beside and sets its own
-   measure. Wider than `--thread`: that width is for reading a run, and this is a page of
+   measure. Wider than `--conversation`: that width is for reading a run, and this is a page of
    blocks rather than a column of prose. */
 /* `min-height`, not the `height: 100%` the app shell wants: this is the one page taller
    than the viewport, and a fixed height would cut its background off at the fold. */

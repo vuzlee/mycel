@@ -8,8 +8,8 @@
  * closing it would move the page under them.
  */
 
-import type { Item, ToolItem } from "../thread";
-import { labelFor } from "../toolLabel";
+import type { Item, ToolItem } from "../lib/buildConversation";
+import { labelFor } from "../lib/toolLabel";
 import { Chevron, Mycelium, Spinner } from "./icons";
 import { Json } from "./Json";
 import { Markdown } from "./Markdown";

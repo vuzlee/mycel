@@ -13,8 +13,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../auth";
-import { useThreads } from "../threads";
+import { useAuth } from "../context/auth";
+import { useConversations } from "../context/ConversationsContext";
 import { Modal } from "./Modal";
 import { HelpPanel, ProfilePanel, SettingsPanel } from "./panels";
 import { Chevron, Gear, Person, Question, SignOut } from "./icons";
@@ -30,7 +30,7 @@ type Panel = "profile" | "settings" | "help" | "leaving";
 
 export function Account({ where }: Props) {
   const { user, signOut } = useAuth();
-  const { threads } = useThreads();
+  const { conversations } = useConversations();
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<Panel | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -119,7 +119,7 @@ export function Account({ where }: Props) {
 
       {panel === "profile" && (
         <Modal title="Profile" lede="The account these runs are kept under." onClose={shut}>
-          <ProfilePanel threads={threads} />
+          <ProfilePanel conversations={conversations} />
         </Modal>
       )}
 

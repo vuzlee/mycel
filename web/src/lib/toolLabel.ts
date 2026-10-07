@@ -1,7 +1,7 @@
 /**
  * What a tool call says it is doing.
  *
- * A row in a thread is read by someone waiting for an answer, not by someone debugging a
+ * A row in a conversation is read by someone waiting for an answer, not by someone debugging a
  * call, so it carries an activity rather than a function name. The table lives here and
  * not beside either caller because both the running line and the folded row ask the same
  * question, and two tables answering it would drift apart.

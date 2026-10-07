@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { labelFor } from "../toolLabel";
+import { labelFor } from "../lib/toolLabel";
 
 interface Scene {
   question: string;

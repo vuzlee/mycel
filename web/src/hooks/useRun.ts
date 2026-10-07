@@ -8,11 +8,11 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import type { ChatResult } from "./api";
-import { Unauthorized, fetchChat } from "./api";
-import { useAuth } from "./auth";
-import { buildThread } from "./thread";
-import type { Item } from "./thread";
+import type { ChatResult } from "../api";
+import { Unauthorized, fetchChat } from "../api";
+import { useAuth } from "../context/auth";
+import { buildConversation } from "../lib/buildConversation";
+import type { Item } from "../lib/buildConversation";
 import type { Follow } from "./useJobStream";
 import { useFollow, useJobStream } from "./useJobStream";
 
@@ -37,7 +37,7 @@ export function useRun(jobId: string | null): Run {
   const [result, setResult] = useState<ChatResult | null>(null);
 
   const stream = useJobStream(jobId);
-  const items = useMemo(() => buildThread(stream.events), [stream.events]);
+  const items = useMemo(() => buildConversation(stream.events), [stream.events]);
 
 
   useEffect(() => {

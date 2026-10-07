@@ -24,10 +24,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Dashboard as Board, Item } from "../api";
+import type { Dashboard as Board, WorkItem } from "../api";
 import { Unauthorized, fetchDashboard, fetchProjects } from "../api";
 import { Shell } from "../components/Shell";
-import { useAuth } from "../auth";
+import { useAuth } from "../context/auth";
 
 const WINDOWS = [1, 7, 14, 30];
 const EVERY_MS = 30_000;
@@ -608,7 +608,7 @@ export function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {board.overdue.map((item: Item) => (
+                      {board.overdue.map((item: WorkItem) => (
                         <tr key={item.issue_key}>
                           <td className="key" data-status="late">
                             {item.issue_key}

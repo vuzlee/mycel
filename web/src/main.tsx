@@ -22,7 +22,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider, useAuth } from "./auth";
+import { AuthProvider, useAuth } from "./context/auth";
 import { Ask } from "./pages/Ask";
 import { Dashboard } from "./pages/Dashboard";
 import { Home } from "./pages/Home";
@@ -30,7 +30,7 @@ import { Forgot } from "./pages/Forgot";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Reset } from "./pages/Reset";
-import { ThreadsProvider } from "./threads";
+import { ConversationsProvider } from "./context/ConversationsContext";
 import "./styles.css";
 
 /** The front door, which is two doors. A stranger at `/app` is asked what this is, not
@@ -55,7 +55,7 @@ function Root() {
   return (
     <BrowserRouter basename="/app">
       <AuthProvider>
-        <ThreadsProvider>
+        <ConversationsProvider>
           <Routes>
             <Route path="/home" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -67,7 +67,7 @@ function Root() {
             <Route path="/" element={<Front />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
-        </ThreadsProvider>
+        </ConversationsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

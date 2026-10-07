@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { register } from "../api";
-import { useAuth } from "../auth";
+import { useAuth } from "../context/auth";
 import { Credentials } from "../components/Credentials";
 import { Mycelium } from "../components/icons";
 
@@ -44,7 +44,7 @@ export function Register() {
 
         <h1>Create an account</h1>
         <p className="lede">
-          Your threads live under it, so they are still there on another machine
+          Your conversations live under it, so they are still there on another machine
           tomorrow.
         </p>
 

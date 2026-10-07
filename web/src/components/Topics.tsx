@@ -1,14 +1,14 @@
 /**
- * Where you are inside a long thread.
+ * Where you are inside a long conversation.
  *
- * A thread of one turn needs no map, so this appears at the second question and not
+ * A conversation of one turn needs no map, so this appears at the second question and not
  * before — a table of contents over a single heading is furniture.
  *
  * The label is the question itself, trimmed. Nothing asks a model to name a turn: the
  * question already is the name, it is free, it is never wrong, and a two-word label
  * written by a model is one more thing to store and to get stale.
  *
- * It floats in the gutter the centred thread leaves empty — no panel, no border, no
+ * It floats in the gutter the centred conversation leaves empty — no panel, no border, no
  * heading over it. A map that takes a column moves the prose the moment it appears, and
  * a box with a title is a second thing to read.
  *
@@ -69,7 +69,7 @@ export function Topics({ topics, root }: Props) {
   if (topics.length < 2) return null;
 
   return (
-    <nav className="topics" aria-label="Turns in this thread">
+    <nav className="topics" aria-label="Turns in this conversation">
       <ol>
         {topics.map((topic) => (
           <li key={topic.id}>

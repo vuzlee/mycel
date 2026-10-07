@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { DocumentRow, DocumentStatus } from "./api";
+import type { DocumentRow, DocumentStatus } from "../api";
 
 export interface Documents {
   documents: DocumentRow[];

@@ -74,7 +74,7 @@ export function Spinner({ size = 12, className }: IconProps) {
   );
 }
 
-/** A pushpin: keep this thread on top. */
+/** A pushpin: keep this conversation on top. */
 export function Pin({ size = 13 }: IconProps) {
   return (
     <svg {...base(size)}>

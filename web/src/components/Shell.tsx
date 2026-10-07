@@ -22,9 +22,9 @@ interface Props {
   children: React.ReactNode;
   /** Below the scroll area, outside it: the composer, where a page has one. */
   footer?: React.ReactNode;
-  /** The map of a long thread, floating in the gutter beside the prose. Inside `.main`
+  /** The map of a long conversation, floating in the gutter beside the prose. Inside `.main`
    *  rather than beside it: it is positioned against the body it maps, and it takes no
-   *  column — a column would shove the thread off centre at the second question. */
+   *  column — a column would shove the conversation off centre at the second question. */
   aside?: React.ReactNode;
   /** A collapsible panel on the right, and the header button that opens it. */
   panel?: React.ReactNode;

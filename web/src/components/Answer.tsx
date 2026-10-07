@@ -2,7 +2,7 @@
  * The kept answer, for a turn whose stream is over.
  *
  * The answer is markdown the model writes as free text, so it arrives on
- * the stream as `text` events and `Thread` has already rendered it in place, between the
+ * the stream as `text` events and `Conversation` has already rendered it in place, between the
  * tool calls that produced it. Rendering it again here would print it twice — so the body
  * is shown only when the stream carried none: a run reopened from a link, or one whose
  * events expired out of Redis.

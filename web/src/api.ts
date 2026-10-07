@@ -1,17 +1,17 @@
 /** Every HTTP call. The stream itself is `EventSource`, in `useJobStream`. */
 
-import type { SequencedEvent } from "./types";
+import type { SequencedEvent } from "./lib/types";
 
 export interface Accepted {
   job_id: string;
-  /** The thread this run landed in. Send it back to ask the next question into it. */
+  /** The conversation this run landed in. Send it back to ask the next question into it. */
   conversation_id: number;
   status: "accepted";
 }
 
-/** `conversation_id` and `question` belong to this run, not to its thread: a thread's
+/** `conversation_id` and `question` belong to this run, not to its conversation: a conversation's
  *  title is the question that opened it, which is the wrong caption for every later
- *  turn, and its latest job id is the wrong thread for a link naming an earlier one. */
+ *  turn, and its latest job id is the wrong conversation for a link naming an earlier one. */
 export interface ChatResult {
   job_id: string;
   status: "running" | "done" | "failed";
@@ -30,9 +30,9 @@ export interface User {
   email: string;
 }
 
-export interface Thread {
+export interface ConversationSummary {
   id: number;
-  /** `"chat"` for every thread. A string rather than that one literal
+  /** `"chat"` for every conversation. A string rather than that one literal
    *  because the column exists to grow a second kind, and a literal would make the day
    *  it does a type error instead of a new branch. */
   kind: string;
@@ -44,7 +44,7 @@ export interface Thread {
   status: string | null;
 }
 
-/** One run inside a thread, as the page replays it. `answer` is the same markdown
+/** One run inside a conversation, as the page replays it. `answer` is the same markdown
  *  `ChatResult.answer` carries, because it is the same stored text. */
 export interface Turn {
   job_id: string;
@@ -54,7 +54,7 @@ export interface Turn {
   spent_usd: string | null;
   error: string | null;
   /** The tool calls that turn made, in the same shape the stream sends — so a finished
-   *  turn replays through `buildThread`, not through a second builder. Null for a turn
+   *  turn replays through `buildConversation`, not through a second builder. Null for a turn
    *  that ran before the column existed, and for one that failed. */
   steps: SequencedEvent[] | null;
   created_at: string;
@@ -62,9 +62,9 @@ export interface Turn {
 
 /** One work item, as the page lists it. Seconds, because days are a display decision
  *  and this is the wire. */
-export interface Item {
+export interface WorkItem {
   issue_key: string;
-  /** `"chat"` for every thread. A string rather than that one literal
+  /** `"chat"` for every conversation. A string rather than that one literal
    *  because the column exists to grow a second kind, and a literal would make the day
    *  it does a type error instead of a new branch. */
   kind: string;
@@ -143,10 +143,10 @@ export interface Dashboard {
   /** Every sprint with work in it, newest first. Empty where the site uses none. */
   sprints: Sprint[];
   /** The last items to move, newest first. Whole project, not the window. */
-  recent: Item[];
+  recent: WorkItem[];
   /** Effort logged per day over the last twelve weeks. Days with none are absent. */
   calendar: DayEffort[];
-  overdue: Item[];
+  overdue: WorkItem[];
   assignees: Assignee[];
   epics: Epic[];
   effort_by_day: DayEffort[];
@@ -307,7 +307,7 @@ export type Chip = "knowledge" | "web" | "jira" | "calendar" | "mail";
 
 /** 202, not 200: the server took the work and has not done it.
  *
- *  Without a conversation this opens a thread; with one the question joins that thread
+ *  Without a conversation this opens a conversation; with one the question joins that conversation
  *  and the server sends its earlier turns to the agent along with it. */
 export const askChat = (
   question: string,
@@ -332,14 +332,14 @@ export async function fetchChat(jobId: string): Promise<ChatResult | null> {
 export const fetchProjects = (): Promise<string[]> =>
   fetch("/projects").then(json<string[]>);
 
-export const fetchThreads = (): Promise<Thread[]> =>
-  fetch("/conversations").then(json<Thread[]>);
+export const fetchConversations = (): Promise<ConversationSummary[]> =>
+  fetch("/conversations").then(json<ConversationSummary[]>);
 
-/** Every run in one thread, oldest first. What a thread said before this tab opened it. */
+/** Every run in one conversation, oldest first. What a conversation said before this tab opened it. */
 export const fetchTurns = (id: number): Promise<Turn[]> =>
   fetch(`/conversations/${id}/turns`).then(json<Turn[]>);
 
-/** 204, no body. The runs under the thread go with it, in the database. */
+/** 204, no body. The runs under the conversation go with it, in the database. */
 export async function forgetThread(id: number): Promise<void> {
   const res = await fetch(`/conversations/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error(await detail(res));

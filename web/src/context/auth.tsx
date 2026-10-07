@@ -14,8 +14,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { User } from "./api";
-import * as api from "./api";
+import type { User } from "../api";
+import * as api from "../api";
 
 interface AuthValue {
   user: User | null | undefined;

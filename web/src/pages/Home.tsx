@@ -21,12 +21,12 @@
  */
 
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth";
+import { useAuth } from "../context/auth";
 import { Account } from "../components/Account";
 import { Demo } from "../components/Demo";
 import { Flow } from "../components/Flow";
 import { ArrowRight, Mycelium } from "../components/icons";
-import { useReveal } from "../useReveal";
+import { useReveal } from "../hooks/useReveal";
 
 /** Where the source and the written docs live. The API serves `/app` and nothing else,
  *  so a link to `docs/` has to leave for the repository rather than pretend to be a
@@ -233,7 +233,7 @@ export function Home() {
           <>
             <h2>Start with this week.</h2>
             <p>
-              An account takes an email and a password. Your threads are kept
+              An account takes an email and a password. Your conversations are kept
               under it, so they are still there on another machine tomorrow.
             </p>
             <div className="both">

@@ -9,8 +9,8 @@
  * thinking, tool calls, a sub-agent's words — is the trail.
  */
 
-import { hideMarkers } from "../citations";
-import type { Item } from "../thread";
+import { hideMarkers } from "../lib/citations";
+import type { Item } from "../lib/buildConversation";
 import { Markdown } from "./Markdown";
 import { Trail } from "./Trail";
 

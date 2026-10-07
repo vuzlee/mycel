@@ -1,5 +1,5 @@
 /**
- * The turns of this thread that happened before the one being watched.
+ * The turns of this conversation that happened before the one being watched.
  *
  * Read from `app.turn`, not from the stream: a stream belongs to one run, and these runs
  * are over. A turn keeps its tool calls in the shape the stream sent them,
@@ -9,7 +9,7 @@
  */
 
 import type { Turn } from "../api";
-import { buildThread } from "../thread";
+import { buildConversation } from "../lib/buildConversation";
 import { Answer } from "./Answer";
 import { Steps } from "./Steps";
 import { anchorFor } from "./Topics";
@@ -28,7 +28,7 @@ export function PastTurns({ turns }: Props) {
           </div>
           {turn.steps && turn.steps.length > 0 && (
             <div className="turn items">
-              <Steps items={buildThread(turn.steps)} />
+              <Steps items={buildConversation(turn.steps)} />
             </div>
           )}
           {turn.status === "done" && turn.answer ? (

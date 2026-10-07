@@ -1,5 +1,5 @@
 /**
- * Turns a flat event list into the tree the thread renders.
+ * Turns a flat event list into the tree the conversation renders.
  *
  * Nesting is by `parent_tool_call_id`, never by arrival time. `next-slice.html` §05 is
  * explicit about why: ordering holds within one agent and never across two running in
@@ -52,7 +52,7 @@ export interface RunMarkItem {
 
 export type Item = ProseItem | ToolItem | RunMarkItem;
 
-export function buildThread(events: SequencedEvent[]): Item[] {
+export function buildConversation(events: SequencedEvent[]): Item[] {
   const root: Item[] = [];
   const byToolCall = new Map<string, ToolItem>();
 
@@ -101,7 +101,7 @@ export function buildThread(events: SequencedEvent[]): Item[] {
       continue;
     }
 
-    // run_started / run_finished at the top level are the thread's own boundaries and the
+    // run_started / run_finished at the top level are the conversation's own boundaries and the
     // header shows them. Nested ones say a sub-agent began or ended, which the tool call
     // already shows. Anything else is a type this build predates — skipped, not crashed.
   }

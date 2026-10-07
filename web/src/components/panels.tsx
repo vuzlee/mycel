@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { Thread } from "../api";
+import type { ConversationSummary } from "../api";
 import {
   changePassword,
   connectGoogle,
@@ -17,16 +17,16 @@ import {
   fetchGoogle,
   fetchJira,
 } from "../api";
-import { useAuth } from "../auth";
+import { useAuth } from "../context/auth";
 import { Board, Calendar, Moon, Person, Screen, Spinner, Sun } from "./icons";
-import type { Theme } from "../theme";
-import { useTheme } from "../theme";
+import type { Theme } from "../lib/theme";
+import { useTheme } from "../lib/theme";
 
 const REPO = "https://github.com/vuzlee/mycel";
 
 /** The account, as the server knows it. The address cannot be changed — it is the
  *  identity — and the password can, which is why one of the two has a form. */
-export function ProfilePanel({ threads }: { threads: Thread[] }) {
+export function ProfilePanel({ conversations }: { conversations: ConversationSummary[] }) {
   const { user } = useAuth();
   if (!user) return null;
 
@@ -45,7 +45,7 @@ export function ProfilePanel({ threads }: { threads: Thread[] }) {
       <dl className="facts">
         <div>
           <dt>Runs kept</dt>
-          <dd>{threads.length}</dd>
+          <dd>{conversations.length}</dd>
         </div>
         <div>
           <dt>Sign-in</dt>

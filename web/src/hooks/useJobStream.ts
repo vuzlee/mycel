@@ -11,8 +11,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SequencedEvent, StreamState } from "./types";
-import { RUN_FINISHED } from "./types";
+import type { SequencedEvent, StreamState } from "../lib/types";
+import { RUN_FINISHED } from "../lib/types";
 
 export interface Stream {
   events: SequencedEvent[];

@@ -4,7 +4,7 @@
  * The steps themselves render in `Steps`, which a finished turn reuses.
  */
 
-import type { Item } from "../thread";
+import type { Item } from "../lib/buildConversation";
 import { Steps } from "./Steps";
 
 interface Props {
@@ -19,12 +19,12 @@ interface Props {
   /** The kept answer. The same text the stream already showed, for a turn
    *  reopened after its stream was over. */
   children?: React.ReactNode;
-  /** Earlier turns of the same thread, already finished. Above the question on screen
+  /** Earlier turns of the same conversation, already finished. Above the question on screen
    *  because that is the order they were asked in. */
   before?: React.ReactNode;
 }
 
-export function Thread({
+export function Conversation({
   anchor,
   question,
   items,
@@ -35,7 +35,7 @@ export function Thread({
   before,
 }: Props) {
   return (
-    <div className="thread">
+    <div className="conversation">
       {before}
       {/* The turn on screen, as one block. It is one element rather than siblings so CSS can
           give it a floor of a viewport's height — without that floor there is nothing below
