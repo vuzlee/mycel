@@ -10,7 +10,6 @@ the windows, the grouping, and that `alembic upgrade head` builds what the model
 """
 
 import asyncio
-import os
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -20,7 +19,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect, text
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from mycel.etl.checks.work import CheckFailed
 from mycel.etl.normalise import JIRA
@@ -38,6 +37,7 @@ from mycel.infra.postgres.repositories.silver import SilverRepository
 from mycel.services.dashboard import RECENT_LIMIT, build_dashboard
 from mycel.services.gather import gather_progress
 from mycel.services.transform import TransformResult, transform
+from tests.fakes import DSN, SCHEMAS, needs_postgres
 
 
 class GoldRepository(GoldWrites, GoldStats):
@@ -50,41 +50,17 @@ class AppRepository(IdentityRepository, AccountRepository, ConversationRepositor
 
 pytestmark = pytest.mark.anyio
 
-DSN = os.environ.get("DATABASE_URL", "")
-needs_postgres = pytest.mark.skipif(not DSN, reason="no test database is reachable")
 
 # Every fixture below drops its schemas on teardown. `conftest` hands us a database whose
 # name ends in `_test`; this asserts it, so a stray DATABASE_URL can never wipe a real one.
 assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 PROJECT = "MYC"
-SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 async def _drop(conn: Any) -> None:
     for schema in SCHEMAS:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
-
-
-@pytest.fixture
-async def session() -> AsyncIterator[AsyncSession]:
-    """A schema built from the models, dropped again when the test ends.
-
-    Built with `create_all` rather than `alembic upgrade`, so a bug in the migration
-    cannot make these pass — `TestTheMigration` is what holds the two together.
-    """
-    engine = create_async_engine(async_dsn(DSN))
-    async with engine.begin() as conn:
-        for schema in SCHEMAS:
-            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-        await conn.run_sync(Base.metadata.create_all)
-    try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
-            yield db
-    finally:
-        async with engine.begin() as conn:
-            await _drop(conn)
-        await engine.dispose()
 
 
 @pytest.fixture

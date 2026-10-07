@@ -1,9 +1,21 @@
 """Small stand-ins shared by several test files."""
 
+import os
+from collections.abc import AsyncIterator
+
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from mycel.core.config import get_settings
+from mycel.infra.postgres.engine import async_dsn
+from mycel.infra.postgres.models import Base
 from mycel.sources import google_calendar
+
+#: The suite's own database, set by `conftest.py`. Empty means the Postgres tests skip.
+DSN = os.environ.get("DATABASE_URL", "")
+needs_postgres = pytest.mark.skipif(not DSN, reason="no test database is reachable")
+SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 class FakeRedis:
@@ -40,3 +52,25 @@ def google_token(monkeypatch: pytest.MonkeyPatch) -> None:
         return "access-token"
 
     monkeypatch.setattr(google_calendar, "token_for", _token)
+
+
+@pytest.fixture
+async def session() -> AsyncIterator[AsyncSession]:
+    """A schema built from the models, dropped again when the test ends.
+
+    Built with `create_all` rather than `alembic upgrade`, so a bug in a migration cannot
+    make these pass — `test_postgres.py`'s migration tests hold the two together.
+    """
+    engine = create_async_engine(async_dsn(DSN))
+    async with engine.begin() as conn:
+        for schema in SCHEMAS:
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
+            yield db
+    finally:
+        async with engine.begin() as conn:
+            for schema in SCHEMAS:
+                await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
+        await engine.dispose()

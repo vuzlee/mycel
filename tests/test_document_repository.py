@@ -1,44 +1,24 @@
 """Document SQL against a real Postgres: ownership, busy, chunk reads, the watchdog."""
 
 import os
-from collections.abc import AsyncIterator
 from datetime import timedelta
 
 import pytest
 from sqlalchemy import text, update
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres import documents as tables
-from mycel.infra.postgres.engine import async_dsn
-from mycel.infra.postgres.models import Base, Document
+from mycel.infra.postgres.models import Document
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.repositories.identity import IdentityRepository
+from tests.fakes import DSN
 
 pytestmark = [
     pytest.mark.anyio,
     pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="no test database"),
 ]
 
-DSN = os.environ.get("DATABASE_URL", "")
 assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
-SCHEMAS = ("bronze", "silver", "gold", "app")
-
-
-@pytest.fixture
-async def session() -> AsyncIterator[AsyncSession]:
-    engine = create_async_engine(async_dsn(DSN))
-    async with engine.begin() as conn:
-        for schema in SCHEMAS:
-            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-        await conn.run_sync(Base.metadata.create_all)
-    try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
-            yield db
-    finally:
-        async with engine.begin() as conn:
-            for schema in SCHEMAS:
-                await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
-        await engine.dispose()
 
 
 async def _owner(session: AsyncSession, email: str) -> int:

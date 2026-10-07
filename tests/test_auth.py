@@ -12,14 +12,13 @@ The questions here are the ones a login gets wrong quietly:
 """
 
 import asyncio
-import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from mycel.api import dependencies
 from mycel.api.app import create_app
@@ -30,35 +29,15 @@ from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.services import auth, permission
+from tests.fakes import DSN, SCHEMAS, needs_postgres
 
 pytestmark = pytest.mark.anyio
 
-DSN = os.environ.get("DATABASE_URL", "")
-needs_postgres = pytest.mark.skipif(not DSN, reason="no test database is reachable")
 
 assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
-SCHEMAS = ("bronze", "silver", "gold", "app")
 
 PASSWORD = "correct horse battery"
-
-
-@pytest.fixture
-async def session() -> AsyncIterator[AsyncSession]:
-    """A schema built from the models, dropped again when the test ends."""
-    engine = create_async_engine(async_dsn(DSN))
-    async with engine.begin() as conn:
-        for schema in SCHEMAS:
-            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-        await conn.run_sync(Base.metadata.create_all)
-    try:
-        async with async_sessionmaker(engine, expire_on_commit=False)() as db:
-            yield db
-    finally:
-        async with engine.begin() as conn:
-            for schema in SCHEMAS:
-                await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
-        await engine.dispose()
 
 
 @pytest.fixture
