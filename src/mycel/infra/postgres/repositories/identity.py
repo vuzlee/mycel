@@ -15,6 +15,7 @@ from mycel.infra.postgres.models import (
     Session,
     User,
 )
+from mycel.infra.postgres.repositories._result import rowcount
 
 
 @dataclass(frozen=True)
@@ -128,7 +129,7 @@ class IdentityRepository:
         if keep is not None:
             query = query.where(Session.id != keep)
         result = await self._session.execute(query)
-        return int(getattr(result, "rowcount", 0) or 0)
+        return rowcount(result)
 
     async def create_password_reset(
         self, user_id: int, token_hash: str, expires_at: datetime
@@ -156,12 +157,12 @@ class IdentityRepository:
             .where(PasswordReset.id == reset_id, PasswordReset.used_at.is_(None))
             .values(used_at=at)
         )
-        return int(getattr(result, "rowcount", 0) or 0)
+        return rowcount(result)
 
     async def delete_expired_sessions(self, now: datetime) -> int:
         """Sweep. Nothing depends on it running — expiry is checked on read."""
         result = await self._session.execute(delete(Session).where(Session.expires_at < now))
-        return int(getattr(result, "rowcount", 0) or 0)
+        return rowcount(result)
 
 
 def _user(row: User) -> UserRow:

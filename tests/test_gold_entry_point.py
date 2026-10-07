@@ -21,10 +21,11 @@ NOT_PERSON_FACING = {
     "services/gather.py",
     "infra/vectors/indexer.py",
     "infra/postgres/repositories/gold.py",
+    "infra/postgres/repositories/gold_stats.py",
 }
 
 GATES = ("require(", "readable(", "readable_projects(")
-GOLD = ("GoldRepository(", "gather_progress(", "build_dashboard(", "list_projects(")
+GOLD = ("GoldRepository(", "GoldStats(", "gather_progress(", "build_dashboard(", "list_projects(")
 
 
 def _person_facing_gold_readers() -> list[Path]:

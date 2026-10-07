@@ -14,6 +14,7 @@ from mycel.infra.postgres.models import (
     Membership,
     SyncState,
 )
+from mycel.infra.postgres.repositories._result import rowcount
 
 
 @dataclass(frozen=True)
@@ -126,7 +127,7 @@ class AccountRepository:
         result = await self._session.execute(
             delete(GoogleAccount).where(GoogleAccount.user_id == user_id)
         )
-        return bool(getattr(result, "rowcount", 0))
+        return bool(rowcount(result))
 
     async def upsert_jira_account(
         self,
@@ -214,7 +215,7 @@ class AccountRepository:
         result = await self._session.execute(
             delete(JiraAccount).where(JiraAccount.user_id == user_id)
         )
-        return bool(getattr(result, "rowcount", 0))
+        return bool(rowcount(result))
 
 
 def _google(row: GoogleAccount) -> GoogleAccountRow:

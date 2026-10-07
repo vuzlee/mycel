@@ -13,6 +13,7 @@ from mycel.infra.postgres.models import (
     Conversation,
     Turn,
 )
+from mycel.infra.postgres.repositories._result import rowcount
 
 
 @dataclass(frozen=True)
@@ -112,7 +113,7 @@ class ConversationRepository:
             .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
             .values(pinned_at=func.now() if pinned else None)
         )
-        return bool(getattr(result, "rowcount", 0))
+        return bool(rowcount(result))
 
     async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
         """Forget a thread, and every run under it.
@@ -126,7 +127,7 @@ class ConversationRepository:
                 Conversation.id == conversation_id, Conversation.user_id == user_id
             )
         )
-        return bool(getattr(result, "rowcount", 0))
+        return bool(rowcount(result))
 
     async def upsert_turn(
         self,

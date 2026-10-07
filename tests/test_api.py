@@ -28,12 +28,12 @@ from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.domains.threads import Thread
 from mycel.infra.postgres.repositories.conversations import ConversationRow, TurnRow
-from mycel.infra.postgres.repositories.gold import (
+from mycel.infra.postgres.repositories.gold import WorkItemRow
+from mycel.infra.postgres.repositories.gold_stats import (
     AssigneeLoad,
     DayEffort,
     KindTally,
     SprintTally,
-    WorkItemRow,
 )
 from mycel.infra.redis.results import JobResult
 from mycel.llm.budget import BudgetExceeded

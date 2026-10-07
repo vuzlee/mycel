@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.documents import DELETING, FAILED, IN_FLIGHT, PARSING, READY
 from mycel.infra.postgres.models import Chunk, Document
+from mycel.infra.postgres.repositories._result import rowcount
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,7 +196,7 @@ class DocumentRepository:
             )
             .values(status=FAILED, fail_reason="timeout", updated_at=func.now())
         )
-        return int(result.rowcount or 0)  # type: ignore[attr-defined]
+        return rowcount(result)
 
     # --- chunks ---
 

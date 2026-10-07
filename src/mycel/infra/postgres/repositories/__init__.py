@@ -1,4 +1,5 @@
-"""One repository per schema: `bronze.py`, `silver.py`, `gold.py`, `app.py`.
+"""One repository per schema: `bronze.py`, `silver.py`, `gold.py`, and `app` split three ways
+(`identity.py`, `accounts.py`, `conversations.py`) plus `documents.py`.
 
 Split by schema rather than by table, because access rules attach to the schema: `sources/`
 may only write bronze, `etl/` reads below and writes above, agents read gold only, and

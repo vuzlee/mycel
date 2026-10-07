@@ -26,12 +26,8 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.schemas import ProgressSummary
 from mycel.etl.normalise import JIRA
-from mycel.infra.postgres.repositories.gold import (
-    WORKDAY_SECONDS,
-    AssigneeLoad,
-    DayEffort,
-    WorkItemRow,
-)
+from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow
+from mycel.infra.postgres.repositories.gold_stats import AssigneeLoad, DayEffort
 from mycel.llm.budget import JobBudget
 from mycel.services.analyze import render
 from mycel.services.gather import ProgressWindow

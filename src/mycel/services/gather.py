@@ -22,12 +22,8 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.repositories.gold import (
-    AssigneeLoad,
-    DayEffort,
-    GoldRepository,
-    WorkItemRow,
-)
+from mycel.infra.postgres.repositories.gold import GoldRepository, WorkItemRow
+from mycel.infra.postgres.repositories.gold_stats import AssigneeLoad, DayEffort, GoldStats
 
 #: Most work items a prompt carries. Past this the oldest are dropped and the prompt says
 #: how many: a ceiling that is visible in the output is a limit, one that is not is a bug.
@@ -76,6 +72,7 @@ async def gather_progress(
 ) -> ProgressWindow:
     """One project's window, as the summariser will see it."""
     gold = GoldRepository(session)
+    stats = GoldStats(session)
 
     items = await gold.items_between(project, since, until)
     # The newest survive a truncation: a summary of this sprint that omits yesterday is
@@ -93,10 +90,10 @@ async def gather_progress(
         items=items,
         by_epic=by_epic,
         epic_titles={row.issue_key: row.title for row in parents},
-        totals=await gold.count_by_category(project, since, until),
-        by_assignee=await gold.load_by_assignee(project, since, until),
-        overdue=await gold.overdue(project, until),
-        effort_by_day=await gold.effort_by_day(project, since, until),
+        totals=await stats.count_by_category(project, since, until),
+        by_assignee=await stats.load_by_assignee(project, since, until),
+        overdue=await stats.overdue(project, until),
+        effort_by_day=await stats.effort_by_day(project, since, until),
         dropped=dropped,
         orphans=orphans,
     )

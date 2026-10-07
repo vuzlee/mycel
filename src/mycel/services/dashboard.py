@@ -1,6 +1,6 @@
 """Assemble one project's picture from gold.
 
-Reads only. Every count is produced by the database — see `GoldRepository.load_by_assignee`
+Reads only. Every count is produced by the database — see `GoldStats.load_by_assignee`
 for why that matters — and this layer only joins the answers together.
 
 It reuses `gather_progress` rather than querying gold itself. The dashboard and the report
@@ -13,13 +13,13 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.repositories.gold import (
+from mycel.infra.postgres.repositories.gold import GoldRepository, WorkItemRow
+from mycel.infra.postgres.repositories.gold_stats import (
     AssigneeLoad,
     DayEffort,
-    GoldRepository,
+    GoldStats,
     KindTally,
     SprintTally,
-    WorkItemRow,
 )
 from mycel.services.gather import gather_progress
 
@@ -83,7 +83,7 @@ class Dashboard:
     epics: list[EpicProgress]
     effort_by_day: list[DayEffort]
     #: Unfinished items by priority, whole project. Done work is excluded on purpose —
-    #: see `GoldRepository.count_by_priority`.
+    #: see `GoldStats.count_by_priority`.
     priorities: dict[str, int]
     #: What the project's work is made of, largest kind first. Whole project.
     kinds: list[KindTally]
@@ -91,7 +91,7 @@ class Dashboard:
     #: window with nothing in it reads as a dead project instead of a quiet fortnight.
     recent: list[WorkItemRow]
     #: Every sprint with work in it, newest first. Whole project, and the backlog is not
-    #: one of them — see `GoldRepository.count_by_sprint`. Empty on a site that does not
+    #: one of them — see `GoldStats.count_by_sprint`. Empty on a site that does not
     #: use sprints, which is an ordinary configuration and not a failure.
     sprints: list[SprintTally]
     #: Effort logged per day over `HEATMAP_DAYS`, oldest first, days with nothing left
@@ -112,6 +112,7 @@ async def build_dashboard(
     """The whole picture, from the same window the summariser is given."""
     window = await gather_progress(session, project, since, until)
     gold = GoldRepository(session)
+    stats = GoldStats(session)
 
     # Every epic, not only the ones with movement: an epic nobody has started is a row at
     # zero, and leaving it out is how a plan looks shorter than it is.
@@ -127,7 +128,7 @@ async def build_dashboard(
         since=window.since,
         until=window.until,
         totals=window.totals,
-        all_totals=await gold.totals_all_time(project),
+        all_totals=await stats.totals_all_time(project),
         overdue=window.overdue,
         assignees=window.by_assignee,
         epics=[
@@ -145,11 +146,11 @@ async def build_dashboard(
             for epic in epics
         ],
         effort_by_day=window.effort_by_day,
-        priorities=await gold.count_by_priority(project),
-        kinds=await gold.count_by_kind(project),
+        priorities=await stats.count_by_priority(project),
+        kinds=await stats.count_by_kind(project),
         recent=await gold.recently_updated(project, RECENT_LIMIT),
-        sprints=await gold.count_by_sprint(project),
-        calendar=await gold.effort_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
+        sprints=await stats.count_by_sprint(project),
+        calendar=await stats.effort_by_day(project, until - timedelta(days=HEATMAP_DAYS)),
     )
 
 

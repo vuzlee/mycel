@@ -30,17 +30,18 @@ from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.repositories.conversations import ConversationRepository
-from mycel.infra.postgres.repositories.gold import (
-    WORKDAY_SECONDS,
-    GoldRepository,
-    WorkItemRow,
-    WorklogRow,
-)
+from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow, WorklogRow
+from mycel.infra.postgres.repositories.gold import GoldRepository as GoldWrites
+from mycel.infra.postgres.repositories.gold_stats import GoldStats
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.repositories.silver import SilverRepository
 from mycel.services.dashboard import RECENT_LIMIT, build_dashboard
 from mycel.services.gather import gather_progress
 from mycel.services.transform import TransformResult, transform
+
+
+class GoldRepository(GoldWrites, GoldStats):
+    """Gold writes and counts on one session, so one test can write and then count."""
 
 
 class AppRepository(IdentityRepository, AccountRepository, ConversationRepository):
