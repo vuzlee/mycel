@@ -45,8 +45,8 @@ async def _owner(session: AsyncSession, email: str) -> int:
     return (await IdentityRepository(session).create_user(email, "x")).id
 
 
-async def _ready_doc(repo: DocumentRepository, owner_id: int, sha: str) -> int:
-    doc = await repo.add_document(owner_id, f"{sha}.pdf", "application/pdf", 10, sha)
+async def _ready_doc(repo: DocumentRepository, user_id: int, sha: str) -> int:
+    doc = await repo.add_document(user_id, f"{sha}.pdf", "application/pdf", 10, sha)
     await repo.replace_chunks(doc.id, [NewChunk(0, "text", "", 1, 1, 1)])
     await repo.set_status(doc.id, tables.READY)
     return doc.id

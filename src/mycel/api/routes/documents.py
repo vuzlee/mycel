@@ -107,14 +107,14 @@ async def document_status(request: Request, me: Me) -> StreamingResponse:
     )
 
 
-async def _status_frames(request: Request, owner_id: int) -> AsyncIterator[str]:
+async def _status_frames(request: Request, user_id: int) -> AsyncIterator[str]:
     async def snapshot() -> str:
-        docs = [_document(d).model_dump() for d in await service.list_documents(owner_id)]
+        docs = [_document(d).model_dump() for d in await service.list_documents(user_id)]
         busy = any(d["status"] in ("uploaded", "parsing") for d in docs)
         return f"data: {json.dumps({'busy': busy, 'documents': docs})}\n\n"
 
     # Subscribed before the first snapshot, so a change between the two is not lost.
-    listener = await document_events.Listener(owner_id).open()
+    listener = await document_events.Listener(user_id).open()
     try:
         yield await snapshot()
         while not await request.is_disconnected():

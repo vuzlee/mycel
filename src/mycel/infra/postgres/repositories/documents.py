@@ -16,7 +16,7 @@ from mycel.infra.postgres.repositories._result import rowcount
 @dataclass(frozen=True, slots=True)
 class DocumentRow:
     id: int
-    owner_id: int
+    user_id: int
     filename: str
     mime: str
     size: int
@@ -44,7 +44,7 @@ class NewChunk:
 class ChunkRow:
     id: int
     document_id: int
-    owner_id: int
+    user_id: int
     filename: str
     mime: str
     ord: int
@@ -60,25 +60,25 @@ class DocumentRepository:
 
     # --- the store ---
 
-    async def busy(self, owner_id: int) -> bool:
+    async def busy(self, user_id: int) -> bool:
         """A document is still being processed, so the knowledge base cannot be asked."""
-        return bool(await self.count_in_flight(owner_id))
+        return bool(await self.count_in_flight(user_id))
 
-    async def version(self, owner_id: int) -> str:
+    async def version(self, user_id: int) -> str:
         """Changes whenever any of the user's documents changes."""
         newest = await self._session.scalar(
-            select(func.max(Document.updated_at)).where(Document.owner_id == owner_id)
+            select(func.max(Document.updated_at)).where(Document.user_id == user_id)
         )
-        count = await self.count_documents(owner_id)
+        count = await self.count_documents(user_id)
         return f"{count}-{newest.timestamp() if newest else 0}"
 
     # --- documents ---
 
     async def add_document(
-        self, owner_id: int, filename: str, mime: str, size: int, sha256: str
+        self, user_id: int, filename: str, mime: str, size: int, sha256: str
     ) -> DocumentRow:
         row = Document(
-            owner_id=owner_id,
+            user_id=user_id,
             filename=filename,
             mime=mime,
             size=size,
@@ -90,15 +90,15 @@ class DocumentRepository:
         )
         self._session.add(row)
         await self._session.flush()
-        row.object_key = f"users/{owner_id}/{row.id}/{filename}"
+        row.object_key = f"users/{user_id}/{row.id}/{filename}"
         await self._session.flush()
         await self._session.refresh(row)
         return _document(row)
 
-    async def documents(self, owner_id: int) -> list[DocumentRow]:
+    async def documents(self, user_id: int) -> list[DocumentRow]:
         rows = await self._session.scalars(
             select(Document)
-            .where(Document.owner_id == owner_id, Document.status != DELETING)
+            .where(Document.user_id == user_id, Document.status != DELETING)
             .order_by(Document.id)
         )
         return [_document(r) for r in rows]
@@ -107,9 +107,9 @@ class DocumentRepository:
         row = await self._session.get(Document, document_id)
         return _document(row) if row else None
 
-    async def owned_document(self, document_id: int, owner_id: int) -> DocumentRow | None:
+    async def owned_document(self, document_id: int, user_id: int) -> DocumentRow | None:
         row = await self._session.scalar(
-            select(Document).where(Document.id == document_id, Document.owner_id == owner_id)
+            select(Document).where(Document.id == document_id, Document.user_id == user_id)
         )
         return _document(row) if row else None
 
@@ -120,19 +120,19 @@ class DocumentRepository:
         )
         return _document(row) if row else None
 
-    async def duplicate(self, owner_id: int, sha256: str) -> bool:
+    async def duplicate(self, user_id: int, sha256: str) -> bool:
         return bool(
             await self._count(
-                select(Document.id).where(Document.owner_id == owner_id, Document.sha256 == sha256)
+                select(Document.id).where(Document.user_id == user_id, Document.sha256 == sha256)
             )
         )
 
-    async def count_documents(self, owner_id: int) -> int:
-        return await self._count(select(Document.id).where(Document.owner_id == owner_id))
+    async def count_documents(self, user_id: int) -> int:
+        return await self._count(select(Document.id).where(Document.user_id == user_id))
 
-    async def count_in_flight(self, owner_id: int) -> int:
+    async def count_in_flight(self, user_id: int) -> int:
         return await self._count(
-            select(Document.id).where(Document.owner_id == owner_id, Document.status.in_(IN_FLIGHT))
+            select(Document.id).where(Document.user_id == user_id, Document.status.in_(IN_FLIGHT))
         )
 
     async def start_parsing(self, document_id: int) -> None:
@@ -222,7 +222,7 @@ class DocumentRepository:
     async def count_chunks(self, document_id: int) -> int:
         return await self._count(select(Chunk.id).where(Chunk.document_id == document_id))
 
-    async def readable_chunks(self, chunk_ids: Sequence[int], owner_id: int) -> list[ChunkRow]:
+    async def readable_chunks(self, chunk_ids: Sequence[int], user_id: int) -> list[ChunkRow]:
         """Chunks the owner may read right now: their document, ready and enabled."""
         if not chunk_ids:
             return []
@@ -231,7 +231,7 @@ class DocumentRepository:
             .join(Document, Document.id == Chunk.document_id)
             .where(
                 Chunk.id.in_(list(chunk_ids)),
-                Document.owner_id == owner_id,
+                Document.user_id == user_id,
                 Document.status == READY,
                 Document.enabled.is_(True),
             )
@@ -247,7 +247,7 @@ class DocumentRepository:
 def _document(row: Document) -> DocumentRow:
     return DocumentRow(
         row.id,
-        row.owner_id,
+        row.user_id,
         row.filename,
         row.mime,
         row.size,
@@ -266,7 +266,7 @@ def _chunk(row: Chunk, doc: Document) -> ChunkRow:
     return ChunkRow(
         row.id,
         row.document_id,
-        doc.owner_id,
+        doc.user_id,
         doc.filename,
         doc.mime,
         row.ord,

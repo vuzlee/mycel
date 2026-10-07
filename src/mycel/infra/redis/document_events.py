@@ -12,12 +12,12 @@ from typing import Any
 from mycel.infra.redis.client import get_client
 
 
-def _channel(owner_id: int) -> str:
-    return f"documents:{owner_id}"
+def _channel(user_id: int) -> str:
+    return f"documents:{user_id}"
 
 
-async def changed(owner_id: int) -> None:
-    await (await get_client()).publish(_channel(owner_id), "changed")
+async def changed(user_id: int) -> None:
+    await (await get_client()).publish(_channel(user_id), "changed")
 
 
 class Listener:
@@ -27,13 +27,13 @@ class Listener:
     gap is lost - the page would then show a document as processing until the next one.
     """
 
-    def __init__(self, owner_id: int) -> None:
-        self._owner_id = owner_id
+    def __init__(self, user_id: int) -> None:
+        self._user_id = user_id
         self._pubsub: Any = None
 
     async def open(self) -> "Listener":
         self._pubsub = (await get_client()).pubsub()
-        await self._pubsub.subscribe(_channel(self._owner_id))
+        await self._pubsub.subscribe(_channel(self._user_id))
         return self
 
     async def next(self, timeout_s: float) -> bool:
@@ -52,13 +52,13 @@ class Listener:
 
     async def close(self) -> None:
         if self._pubsub is not None:
-            await self._pubsub.unsubscribe(_channel(self._owner_id))
+            await self._pubsub.unsubscribe(_channel(self._user_id))
             await self._pubsub.aclose()
 
 
-async def listen(owner_id: int, timeout_s: float) -> AsyncIterator[bool]:
+async def listen(user_id: int, timeout_s: float) -> AsyncIterator[bool]:
     """Yields True when something changed, False when `timeout_s` passed in silence."""
-    listener = await Listener(owner_id).open()
+    listener = await Listener(user_id).open()
     try:
         while True:
             yield await listener.next(timeout_s)

@@ -23,13 +23,13 @@ def writer(instructions: str, models: tuple[str, ...]) -> str:
     return hashlib.sha256("\n".join((instructions, *models)).encode()).hexdigest()[:12]
 
 
-def _key(owner_id: int, version: str, writer: str, question: str) -> str:
+def _key(user_id: int, version: str, writer: str, question: str) -> str:
     digest = hashlib.sha256(normalise(question).encode()).hexdigest()[:32]
-    return f"answer:{owner_id}:{version}:{writer}:{digest}"
+    return f"answer:{user_id}:{version}:{writer}:{digest}"
 
 
-async def get(owner_id: int, version: str, writer: str, question: str) -> dict[str, Any] | None:
-    raw = await (await get_cache_client()).get(_key(owner_id, version, writer, question))
+async def get(user_id: int, version: str, writer: str, question: str) -> dict[str, Any] | None:
+    raw = await (await get_cache_client()).get(_key(user_id, version, writer, question))
     if raw is None:
         return None
     found: dict[str, Any] = json.loads(raw)
@@ -37,8 +37,8 @@ async def get(owner_id: int, version: str, writer: str, question: str) -> dict[s
 
 
 async def put(
-    owner_id: int, version: str, writer: str, question: str, result: dict[str, Any]
+    user_id: int, version: str, writer: str, question: str, result: dict[str, Any]
 ) -> None:
     await (await get_cache_client()).set(
-        _key(owner_id, version, writer, question), json.dumps(result), ex=TTL_SECONDS
+        _key(user_id, version, writer, question), json.dumps(result), ex=TTL_SECONDS
     )

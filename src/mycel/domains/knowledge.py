@@ -31,21 +31,21 @@ def search_text(question: str, previous: str) -> str:
     return f"{previous}\n{question}" if previous else question
 
 
-async def retrieve(owner_id: int, question: str, previous: str = "") -> Retrieved:
+async def retrieve(user_id: int, question: str, previous: str = "") -> Retrieved:
     settings = get_settings()
     query = search_text(question, previous.strip()[: settings.ask_max_chars])
     async with session_scope() as session:
         repo = DocumentRepository(session)
-        if await repo.busy(owner_id):
+        if await repo.busy(user_id):
             return Retrieved(version="", query=query, busy=True)
-        version = await repo.version(owner_id)
+        version = await repo.version(user_id)
 
-    hits = await vectors.search(owner_id, query, settings.ask_top_k)
+    hits = await vectors.search(user_id, query, settings.ask_top_k)
     if not hits or hits[0].score < settings.document_min_score:
         return Retrieved(version=version, query=query)
     async with session_scope() as session:
         chunks = await DocumentRepository(session).readable_chunks(
-            [h.chunk_id for h in hits], owner_id
+            [h.chunk_id for h in hits], user_id
         )
     labelled = {f"c{i}": c for i, c in enumerate(chunks, start=1)}
     return Retrieved(version=version, query=query, labelled=labelled)

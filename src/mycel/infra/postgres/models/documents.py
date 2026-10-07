@@ -22,14 +22,14 @@ from mycel.infra.postgres.models.base import APP, Base
 class Document(Base):
     __tablename__ = "document"
     __table_args__ = (
-        UniqueConstraint("owner_id", "sha256", name="uq_document_owner_sha256"),
-        Index("ix_document_owner_id", "owner_id"),
+        UniqueConstraint("user_id", "sha256", name="uq_document_user_sha256"),
+        Index("ix_document_user_id", "user_id"),
         Index("ix_document_status", "status"),
         {"schema": APP},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
     filename: Mapped[str] = mapped_column(String(255))
     mime: Mapped[str] = mapped_column(String(100))
     size: Mapped[int] = mapped_column(Integer)

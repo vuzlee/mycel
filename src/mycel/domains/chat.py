@@ -234,7 +234,7 @@ async def run(job: Job) -> None:
 async def _answer_without_model(
     job: Job,
     question: str,
-    owner_id: int,
+    user_id: int,
     chips: frozenset[Chip],
     found: knowledge.Retrieved,
 ) -> bool:
@@ -247,11 +247,11 @@ async def _answer_without_model(
         text, sources = knowledge.NOT_FOUND, []
     else:
         settings = AgentSettings.from_config(Orchestrator.name)
-        cached = await answers.get(owner_id, found.version, _writer(settings), found.query)
+        cached = await answers.get(user_id, found.version, _writer(settings), found.query)
         if cached is None:
             return False
         text, sources = cached["answer"], cached["sources"]
-    await citations.store(job.job_id, owner_id, sources)
+    await citations.store(job.job_id, user_id, sources)
     await _finish(job, text, question, Decimal("0"), [], sources)
     return True
 

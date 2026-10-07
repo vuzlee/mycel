@@ -69,18 +69,18 @@ def max_bytes() -> int:
     return get_settings().document_max_bytes
 
 
-async def list_documents(owner_id: int) -> list[DocumentRow]:
+async def list_documents(user_id: int) -> list[DocumentRow]:
     async with session_scope() as session:
-        return await DocumentRepository(session).documents(owner_id)
+        return await DocumentRepository(session).documents(user_id)
 
 
-async def busy(owner_id: int) -> bool:
+async def busy(user_id: int) -> bool:
     """Whether any of the user's documents is still being processed."""
     async with session_scope() as session:
-        return await DocumentRepository(session).busy(owner_id)
+        return await DocumentRepository(session).busy(user_id)
 
 
-async def upload(owner_id: int, file: Upload) -> DocumentRow:
+async def upload(user_id: int, file: Upload) -> DocumentRow:
     """Check, store the original, record it, queue the ingest job."""
     settings = get_settings()
     if len(file.data) > settings.document_max_bytes:
@@ -93,42 +93,42 @@ async def upload(owner_id: int, file: Upload) -> DocumentRow:
 
     async with session_scope() as session:
         repo = DocumentRepository(session)
-        if await repo.duplicate(owner_id, sha):
+        if await repo.duplicate(user_id, sha):
             raise DocumentError(409, "Already uploaded.")
-        if await repo.count_documents(owner_id) >= settings.documents_per_user:
+        if await repo.count_documents(user_id) >= settings.documents_per_user:
             raise DocumentError(409, "You have reached the document limit.")
-        if await repo.count_in_flight(owner_id) >= settings.documents_in_flight_per_user:
+        if await repo.count_in_flight(user_id) >= settings.documents_in_flight_per_user:
             raise DocumentError(429, "Too many documents are processing. Try again shortly.")
-        doc = await repo.add_document(owner_id, filename, mime, len(file.data), sha)
+        doc = await repo.add_document(user_id, filename, mime, len(file.data), sha)
         await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
 
-    await document_events.changed(owner_id)
+    await document_events.changed(user_id)
     await publish(ingest_job(doc.id))
     return doc
 
 
-async def rename(owner_id: int, document_id: int, filename: str) -> DocumentRow:
+async def rename(user_id: int, document_id: int, filename: str) -> DocumentRow:
     """A new display name. Search and citations show it at once; nothing is re-processed."""
     name = _safe_name(filename)
     if not name.strip():
         raise DocumentError(422, "A document needs a name.")
     async with session_scope() as session:
         repo = DocumentRepository(session)
-        doc = await repo.owned_document(document_id, owner_id)
+        doc = await repo.owned_document(document_id, user_id)
         if doc is None or doc.status == DELETING:
             raise _not_found()
         await repo.rename(document_id, name)
         updated = await repo.document(document_id)
     assert updated is not None
-    await document_events.changed(owner_id)
+    await document_events.changed(user_id)
     return updated
 
 
-async def set_enabled(owner_id: int, document_id: int, enabled: bool) -> DocumentRow:
+async def set_enabled(user_id: int, document_id: int, enabled: bool) -> DocumentRow:
     """Postgres first, then the Qdrant payload. Vectors are never deleted here."""
     async with session_scope() as session:
         repo = DocumentRepository(session)
-        doc = await repo.owned_document(document_id, owner_id)
+        doc = await repo.owned_document(document_id, user_id)
         if doc is None or doc.status == DELETING:
             raise _not_found()
         await repo.set_enabled(document_id, enabled)
@@ -136,33 +136,33 @@ async def set_enabled(owner_id: int, document_id: int, enabled: bool) -> Documen
     async with session_scope() as session:
         updated = await DocumentRepository(session).document(document_id)
     assert updated is not None
-    await document_events.changed(owner_id)
+    await document_events.changed(user_id)
     return updated
 
 
-async def delete_document(owner_id: int, document_id: int) -> None:
+async def delete_document(user_id: int, document_id: int) -> None:
     """Hidden from search at once; the worker removes points, file and row after."""
     async with session_scope() as session:
         repo = DocumentRepository(session)
-        doc = await repo.owned_document(document_id, owner_id)
+        doc = await repo.owned_document(document_id, user_id)
         if doc is None:
             raise _not_found()
         await repo.set_status(document_id, DELETING)
-    await document_events.changed(owner_id)
+    await document_events.changed(user_id)
     await publish(delete_job(document_id))
 
 
-async def source_url(owner_id: int, document_id: int) -> str:
+async def source_url(user_id: int, document_id: int) -> str:
     async with session_scope() as session:
-        doc = await DocumentRepository(session).owned_document(document_id, owner_id)
+        doc = await DocumentRepository(session).owned_document(document_id, user_id)
     if doc is None or doc.status == DELETING:
         raise _not_found()
     return await presign(buckets.documents(), doc.object_key)
 
 
-async def chunk(owner_id: int, chunk_id: int) -> ChunkRow:
+async def chunk(user_id: int, chunk_id: int) -> ChunkRow:
     async with session_scope() as session:
-        found = await DocumentRepository(session).readable_chunks([chunk_id], owner_id)
+        found = await DocumentRepository(session).readable_chunks([chunk_id], user_id)
     if not found:
         raise _not_found()
     return found[0]

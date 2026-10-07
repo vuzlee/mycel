@@ -1,6 +1,6 @@
 """Document passages in Qdrant: write, hide, delete, search. Filters run inside Qdrant.
 
-The payload carries ids and the `enabled` flag. `owner_id` keeps one user's passages out
+The payload carries ids and the `enabled` flag. `user_id` keeps one user's passages out
 of another's search; Postgres checks ownership again when the text is read.
 """
 
@@ -45,6 +45,10 @@ def _collection() -> collections.Collection:
     return collections.documents(get_settings().document_embedding_model)
 
 
+def collection_name() -> str:
+    return _collection().name
+
+
 async def ensure() -> str:
     """Create the collection and its payload indexes once per process."""
     global _ready
@@ -55,10 +59,10 @@ async def ensure() -> str:
     if not await qdrant.collection_exists(name):
         await qdrant.create_collection(name, vectors_config=_collection().params)
     # Re-declared on every start: creating an index that exists is a no-op, and an
-    # older collection may have no `owner_id` index yet.
+    # older collection may have no `user_id` index yet.
     await qdrant.create_payload_index(
         name,
-        "owner_id",
+        "user_id",
         field_schema=KeywordIndexParams(type=KeywordIndexType.KEYWORD, is_tenant=True),
     )
     await qdrant.create_payload_index(name, "document_id", PayloadSchemaType.KEYWORD)
@@ -73,7 +77,7 @@ async def embed_texts(texts: Sequence[str]) -> list[list[float]]:
 
 
 async def write(
-    owner_id: int,
+    user_id: int,
     document_id: int,
     enabled: bool,
     chunk_ids: Sequence[int],
@@ -89,7 +93,7 @@ async def write(
                 id=point_id(document_id, start + i),
                 vector=vector,
                 payload={
-                    "owner_id": str(owner_id),
+                    "user_id": str(user_id),
                     "document_id": str(document_id),
                     "chunk_id": chunk_ids[start + i],
                     "enabled": enabled,
@@ -116,7 +120,7 @@ async def count(document_id: int) -> int:
     return result.count
 
 
-async def search(owner_id: int, query: str, limit: int) -> list[Hit]:
+async def search(user_id: int, query: str, limit: int) -> list[Hit]:
     """The nearest enabled passages among one user's documents."""
     name = await ensure()
     vector = (await embed_texts([query]))[0]
@@ -125,7 +129,7 @@ async def search(owner_id: int, query: str, limit: int) -> list[Hit]:
         query=vector,
         query_filter=Filter(
             must=[
-                FieldCondition(key="owner_id", match=MatchValue(value=str(owner_id))),
+                FieldCondition(key="user_id", match=MatchValue(value=str(user_id))),
                 FieldCondition(key="enabled", match=MatchValue(value=True)),
             ]
         ),

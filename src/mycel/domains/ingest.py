@@ -37,7 +37,7 @@ async def run(job: Job) -> None:
             log.info("ingest skipped", extra={"document_id": document_id})
             return
         await repo.start_parsing(document_id)
-    await document_events.changed(doc.owner_id)
+    await document_events.changed(doc.user_id)
 
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / doc.filename
@@ -64,14 +64,14 @@ async def run(job: Job) -> None:
             ],
         )
         await vectors.write(
-            current.owner_id,
+            current.user_id,
             document_id,
             current.enabled,
             chunk_ids,
             [p.text for p in passages],
         )
         await repo.set_status(document_id, READY, pages=pages)
-    await document_events.changed(current.owner_id)
+    await document_events.changed(current.user_id)
     log.info("document ready", extra={"document_id": document_id, "chunks": len(passages)})
 
 
@@ -87,7 +87,7 @@ async def delete(job: Job) -> None:
     await files.delete(buckets.documents(), doc.object_key)
     async with session_scope() as session:
         await DocumentRepository(session).delete_document(document_id)
-    await document_events.changed(doc.owner_id)
+    await document_events.changed(doc.user_id)
     log.info("document deleted", extra={"document_id": document_id})
 
 
@@ -118,7 +118,7 @@ async def _fail(document_id: int, reason: str) -> None:
         if doc is not None and doc.status != DELETING:
             await repo.set_status(document_id, FAILED, reason=reason)
     if doc is not None:
-        await document_events.changed(doc.owner_id)
+        await document_events.changed(doc.user_id)
     log.warning("document failed", extra={"document_id": document_id, "reason": reason})
 
 

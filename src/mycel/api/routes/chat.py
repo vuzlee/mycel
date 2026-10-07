@@ -193,7 +193,7 @@ async def get_chat(
         )
 
     cited = await citations.fetch(job_id)
-    sources = cited["sources"] if cited and cited.get("owner_id") == user.id else []
+    sources = cited["sources"] if cited and cited.get("user_id") == user.id else []
     return ChatResponse(
         job_id=job_id,
         conversation_id=kept.conversation_id if kept else None,
