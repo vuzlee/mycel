@@ -53,7 +53,7 @@ class JsonFormatter(logging.Formatter):
             if ctx.is_valid:
                 payload["trace_id"] = format(ctx.trace_id, "032x")
                 payload["span_id"] = format(ctx.span_id, "016x")
-        except Exception:  # noqa: BLE001 - logging must not raise
+        except Exception:  # logging must not raise
             pass
 
         request_id = current_request_id.get()

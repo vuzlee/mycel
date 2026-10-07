@@ -237,7 +237,7 @@ async def _upstreams(settings: Settings) -> str:
             # provider key, so it cannot ask for more than that without spending one.
             try:
                 await client.get(f"{base.rstrip('/')}/models")
-            except Exception:  # noqa: BLE001 - no answer at all is the one failure
+            except Exception:  # no answer at all is the one failure
                 down.append(model)
     if down:
         raise RuntimeError(f"not answering: {', '.join(down)} — calls fall back")

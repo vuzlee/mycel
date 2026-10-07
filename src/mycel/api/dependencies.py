@@ -24,7 +24,6 @@ from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.agents.core.config import AgentSettings
-from mycel.core.config import Settings, get_settings
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import Principal, session_user
 
@@ -61,11 +60,6 @@ def get_agent_settings() -> AgentSettings:
     every request into file I/O for a value that cannot change without a restart.
     """
     return AgentSettings.from_config("orchestrator")
-
-
-def get_settings_dependency() -> Settings:
-    """Environment settings, for handlers that need them. Cached by `get_settings`."""
-    return get_settings()
 
 
 def reset_caches() -> None:

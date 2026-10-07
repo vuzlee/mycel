@@ -8,6 +8,7 @@ import asyncio
 import tempfile
 from datetime import timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
@@ -19,6 +20,9 @@ from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
+
+if TYPE_CHECKING:
+    from mycel.infra.documents.chunk import Passage
 
 log = get_logger(__name__)
 
@@ -125,12 +129,12 @@ async def _fail(document_id: int, reason: str) -> None:
     log.warning("document failed", extra={"document_id": document_id, "reason": reason})
 
 
-async def _parse_and_chunk(path: Path) -> tuple[int, list] | str:  # type: ignore[type-arg]
+async def _parse_and_chunk(path: Path) -> "tuple[int, list[Passage]] | str":
     """`(pages, passages)`, or the failure reason. CPU-bound, so off the event loop."""
     from mycel.infra.documents.chunk import passages
     from mycel.infra.documents.parse import ParseError, parse
 
-    def work() -> tuple[int, list] | str:  # type: ignore[type-arg]
+    def work() -> "tuple[int, list[Passage]] | str":
         try:
             doc = parse(path)
         except ParseError as exc:

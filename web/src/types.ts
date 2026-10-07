@@ -8,7 +8,6 @@ export interface SequencedEvent {
   parent_tool_call_id: string | null;
 }
 
-export const RUN_STARTED = "run_started";
 export const RUN_FINISHED = "run_finished";
 export const TEXT = "text";
 /** A piece of `TEXT`, arriving while the model writes. Merged into the same bubble. */

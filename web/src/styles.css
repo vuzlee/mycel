@@ -262,7 +262,6 @@ a {
   height: 100%;
 }
 
-
 /* ---------------------------------------------------------------- sidebar */
 
 .rail {
@@ -761,7 +760,6 @@ a.brand:hover .mark {
   padding-right: 0;
 }
 
-
 .chevron {
   flex: none;
   transition: rotate 0.16s ease;
@@ -1154,8 +1152,7 @@ details[open] > summary .chevron {
   }
 }
 
-/* Three dots typed out one at a time, so a long wait still looks alive. */
-.ellipsis::after {
+/* Three dots typed out one at a time {
   content: "";
   animation: dots 1.6s steps(4, jump-none) infinite;
 }
@@ -1324,36 +1321,6 @@ details[open] > summary .chevron {
 .topics button[aria-current="true"] {
   color: var(--ink);
   font-weight: 500;
-}
-
-/* ---------------------------------------------------------------- nav */
-
-.nav {
-  display: grid;
-  gap: 2px;
-  padding: 0 12px 14px;
-}
-
-.nav a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 13.5px;
-  transition: background 0.14s ease, color 0.14s ease;
-}
-
-.nav a:hover {
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.nav a.active {
-  background: var(--accent-soft);
-  color: var(--accent);
 }
 
 /* The state of a run that is not done, beside its title in the rail. */
@@ -2825,82 +2792,19 @@ td[data-status="late"] {
   color: var(--accent);
 }
 
-/* One of three, and which one is on is stated by the border rather than a dot: the
-   whole row is the target, so the whole row should show the choice. */
-.choice-list {
+/* One of three,
+and which one is on is stated by the border rather than a dot: the
+   whole row is the target {
   display: grid;
   gap: 8px;
 }
 
-.choice-list button {
-  display: grid;
-  gap: 3px;
-  padding: 12px 14px;
-  border: 1px solid var(--rule-2);
-  border-radius: var(--radius);
-  background: var(--surface);
-  text-align: left;
-  transition: border-color 0.14s ease, background 0.14s ease;
-}
-
-.choice-list button:hover {
-  border-color: var(--accent-line);
-}
-
-.choice-list button[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.choice-list b {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.choice-list .muted {
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
-/* Who may read a project. A row per person, with its own way out — a list where removal
-   lives in a separate menu is a list nobody prunes. */
-.members {
+/* Who may read a project. A row per person {
   display: grid;
   gap: 2px;
   margin: 0 0 16px;
   padding: 0;
   list-style: none;
-}
-
-.members li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 12px;
-  border: 1px solid var(--rule-2);
-  border-radius: var(--radius);
-  background: var(--surface);
-  font-size: 13.5px;
-}
-
-.members li.muted {
-  justify-content: flex-start;
-  border-style: dashed;
-  color: var(--muted);
-}
-
-.members .quiet {
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 12.5px;
-  color: var(--muted);
-  background: transparent;
-}
-
-.members .quiet:hover:not(:disabled) {
-  color: var(--flag);
-  background: var(--flag-soft);
 }
 
 .steps {
@@ -4153,7 +4057,6 @@ td[data-status="late"] {
     grid-template-columns: 1fr;
   }
 
-
 }
 
 @media (max-width: 760px) {
@@ -4207,7 +4110,7 @@ td[data-status="late"] {
   }
 }
 
-/* ------------------------------------------------------------ notebooks */
+/* ------------------------------------------------------------ knowledge */
 
 /* Two links share the rail's destination block; only the last keeps the gap below. */
 .board-link + .board-link {
@@ -4222,47 +4125,6 @@ td[data-status="late"] {
   align-items: start;
 }
 
-.nb-picker {
-  grid-row: 1 / span 2;
-  position: sticky;
-  top: 0;
-}
-
-.nb-picker ol {
-  margin: 10px 0 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.nb-picker li {
-  position: relative;
-}
-
-.nb-picker li > button:first-child {
-  display: block;
-  width: 100%;
-  padding: 8px 30px 8px 10px;
-  border-radius: var(--radius-sm);
-  text-align: left;
-  font-size: 13.5px;
-  color: var(--ink-2);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.nb-picker li > button:first-child:hover {
-  background: var(--sunk);
-  color: var(--ink);
-}
-
-.nb-picker li > button[aria-current="true"] {
-  background: var(--accent-soft);
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.nb-picker .drop,
 .nb-list .drop {
   width: 24px;
   height: 24px;
@@ -4273,49 +4135,8 @@ td[data-status="late"] {
   transition: color 0.14s ease, opacity 0.14s ease;
 }
 
-.nb-picker .drop {
-  position: absolute;
-  top: 50%;
-  right: 6px;
-  translate: 0 -50%;
-  opacity: 0;
-}
-
-.nb-picker li:hover .drop,
-.nb-picker .drop:focus-visible {
-  opacity: 1;
-}
-
-.nb-picker .drop:hover,
 .nb-list .drop:hover {
   color: var(--flag);
-}
-
-.nb-new {
-  display: flex;
-  gap: 6px;
-}
-
-.nb-head {
-  grid-column: 2 / span 2;
-}
-
-.nb-head h1 {
-  margin: 0;
-  font: 400 32px/1.15 var(--display);
-}
-
-.nb-none,
-.nb-banner {
-  grid-column: 2 / span 2;
-}
-
-.nb-docs,
-.nb-ask {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
 }
 
 .nb-drop {
@@ -4351,9 +4172,7 @@ td[data-status="late"] {
 }
 
 .nb-drop small,
-.nb-name small,
-.nb-meta,
-.nb-composer-foot small {
+.nb-name small {
   font-size: 12px;
   color: var(--faint);
 }
@@ -4479,32 +4298,6 @@ td[data-status="late"] {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.nb-answers {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.nb-answers article {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.nb-answers .prose {
-  font-size: 15px;
-}
-
-.nb-q {
-  align-self: flex-end;
-  max-width: 85%;
-  margin: 0;
-  padding: 9px 13px;
-  border-radius: var(--radius);
-  background: var(--sunk);
-  font-size: 14.5px;
-}
-
 .nb-sources {
   margin: 10px 0 0;
   padding: 8px 0 0;
@@ -4554,43 +4347,6 @@ td[data-status="late"] {
   text-decoration: underline;
 }
 
-.nb-composer {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid var(--rule-2);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
-}
-
-.nb-composer textarea {
-  width: 100%;
-  resize: none;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 14.5px;
-}
-
-.nb-composer textarea:focus {
-  outline: none;
-}
-
-.nb-composer-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.nb-composer .primary {
-  padding: 7px 9px;
-}
-
 .nb-passage {
   max-height: 50vh;
   overflow: auto;
@@ -4608,16 +4364,9 @@ td[data-status="late"] {
     grid-template-columns: 12rem minmax(0, 1fr);
   }
 
-  .nb-head,
-  .nb-none,
-  .nb-banner {
-    grid-column: 2;
-  }
+  
 
-  .nb-docs,
-  .nb-ask {
-    grid-column: 2;
-  }
+  
 }
 
 @media (max-width: 760px) {
@@ -4627,14 +4376,9 @@ td[data-status="late"] {
     padding: 20px 16px 40px;
   }
 
-  .nb-picker {
-    position: static;
-    width: 100%;
-  }
+  
 
-  .nb-picker .drop {
-    opacity: 1;
-  }
+  
 }
 
 /* ------------------------------------------------------------ chips + knowledge panel */
@@ -5006,7 +4750,6 @@ button.outline:hover {
   font-size: 13px;
 }
 .theme-picker.compact button svg { width: 14px; height: 14px; }
-.small { font-size: 12.5px; }
 
 /* ------------------------------------------------- trail: what a run did, folded */
 

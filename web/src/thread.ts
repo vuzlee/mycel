@@ -120,13 +120,3 @@ function siblingsFor(
   return parent ? parent.children : root;
 }
 
-/** The assistant's answer so far: top-level prose only, sub-agent chatter excluded.
- *
- *  The main path since batch 033 — the answer is the prose, and there is no structured
- *  output to read it off instead. */
-export function answerText(items: Item[]): string {
-  return items
-    .filter((item): item is ProseItem => item.kind === "text")
-    .map((item) => item.body)
-    .join("\n\n");
-}

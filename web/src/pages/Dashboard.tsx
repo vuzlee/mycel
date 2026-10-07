@@ -199,7 +199,6 @@ export function Dashboard() {
         else setProjects([]);
       });
     // Only on mount: re-picking a default every time the window changes would fight the URL.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

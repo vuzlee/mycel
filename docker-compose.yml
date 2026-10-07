@@ -27,7 +27,6 @@ services:
     ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./deploy/postgres:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mycel}"]
       interval: 5s

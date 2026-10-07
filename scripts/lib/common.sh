@@ -62,17 +62,6 @@ wait_for_stores() {
   wait_for minio    "curl -sf http://localhost:9000/minio/health/ready"
   wait_for litellm  "curl -sf http://localhost:4000/health/liveliness" 90
 }
-
-# Containers from before compose, started by name with `docker run`. They hold the same
-# ports and mount the same volumes, so compose cannot start its own beside them — and the
-# failure reads as a port conflict rather than as two stacks.
-check_legacy() {
-  local found=()
-  for c in mycel-pg mycel-redis mycel-rabbit; do
-    docker inspect -f '' "$c" >/dev/null 2>&1 && found+=("$c")
-  done
-  [[ ${#found[@]} -eq 0 ]] && return 0
-  die "these containers predate compose and hold the same ports: ${found[*]}
      The data is on the named volumes, which docker-compose.yml adopts, so removing
      the containers keeps every row:  docker rm -f ${found[*]}
      Then run this again."

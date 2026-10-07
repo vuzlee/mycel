@@ -8,10 +8,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+htmlcov/
+coverage.xml
 
 # Environment - never commit
 .env
-config/*-local.ini
+.env.bak.*
 
 # Local assistant/editor state, not part of the project
 .claude/
@@ -27,7 +29,6 @@ notes/
 # Frontend: installed, and built into the image.
 web/node_modules/
 web/dist/
-.env.bak.*
 
 # Host-process pids and logs from scripts/stack.sh
 .run/
@@ -41,6 +42,7 @@ web/dist/
 
 # Coverage data, written by `pytest --cov`.
 .coverage
+.coverage.*
 
 # Every still and take from a demo recording — working material. The one the README
 # shows is uploaded to GitHub's CDN by hand and lives at a user-attachments URL, so

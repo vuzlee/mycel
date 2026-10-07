@@ -402,9 +402,6 @@ export interface Passage {
 
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
-export const fetchDocuments = (): Promise<DocumentRow[]> =>
-  fetch("/documents").then(json<DocumentRow[]>);
-
 /** What GET /documents/status sends on every change: the whole list, and whether
  *  anything is still being processed. */
 export interface DocumentStatus {

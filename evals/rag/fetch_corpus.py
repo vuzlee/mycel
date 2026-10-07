@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-import httpx
+import httpx2
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -41,7 +41,7 @@ def fetch(directory: Path) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     entries = yaml.safe_load(CORPUS.read_text())["documents"]
     paths: list[Path] = []
-    with httpx.Client(follow_redirects=True, timeout=60) as client:
+    with httpx2.Client(follow_redirects=True, timeout=60) as client:
         for entry in entries:
             target = directory / entry["name"]
             response = client.get(entry["url"])

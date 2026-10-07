@@ -3,14 +3,6 @@
 #
 # `dev.yaml` and `prod.yaml`, beside this file, hold only what differs from it.
 
-database:
-  schema_bronze: bronze
-  schema_silver: silver
-  schema_gold: gold
-
-etl:
-  batch_size: 500
-
 agents:
   # Fallback for any agent that does not override the key in config/agents/<name>.yaml.
   defaults:
@@ -58,7 +50,6 @@ settings:
   # Google and the callback URL registered with Atlassian.
   public_base_url: http://localhost:8000
   sync_interval_seconds: 900
-  jira_base_url: ""
   # Writing to Jira is off until a deployment arms it. On, and the write tools appear on
   # the analyst for anyone who has connected their own Jira account.
   jira_write_enabled: false
@@ -100,7 +91,6 @@ settings:
   document_max_pages: 100
   documents_per_user: 200
   documents_in_flight_per_user: 5
-  document_max_attempts: 3
   document_stuck_seconds: 600
   # The ingest worker exits after this many documents; docling keeps native memory.
   ingest_worker_max_jobs: 20

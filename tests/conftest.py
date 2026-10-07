@@ -83,7 +83,7 @@ else:
 
 # Variables that would otherwise leak a developer's real environment into the tests. A
 # machine with a live GEMINI_API_KEYS must not behave differently from CI.
-_LEAKY_PREFIXES = ("MYCEL_", "GEMINI_", "OTEL_", "LOCAL_LLM_", "LOG_")
+_LEAKY_PREFIXES = ("MYCEL_", "GEMINI_", "OTEL_", "LOG_")
 
 
 @pytest.fixture

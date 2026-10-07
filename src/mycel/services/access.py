@@ -9,7 +9,7 @@ A person whose token no longer works keeps nothing. Failing closed is the only s
 reading of "we could not ask". A bug is not "could not ask": it raises.
 """
 
-import httpx
+import httpx2
 
 from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
@@ -26,7 +26,7 @@ async def refresh(user_id: int) -> frozenset[str]:
     try:
         token, cloud_id = await jira_oauth.token_for(user_id)
         projects = frozenset(await jira.browsable_projects(jira.Auth(token, cloud_id)))
-    except (MycelError, httpx.HTTPError):
+    except (MycelError, httpx2.HTTPError):
         log.warning(
             "could not read jira access; clearing it", extra={"user_id": user_id}, exc_info=True
         )

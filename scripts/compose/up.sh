@@ -16,7 +16,6 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 
 require_env
-check_legacy
 
 # `api` and `app` are two profiles for one thing — the api container carries `api`, the
 # worker and scheduler carry `app` — so both are always on. The rest are asked for.

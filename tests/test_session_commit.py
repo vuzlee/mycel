@@ -11,7 +11,7 @@ import threading
 import time
 from collections.abc import Iterator
 
-import httpx
+import httpx2
 import pytest
 import uvicorn
 from sqlalchemy import text
@@ -75,11 +75,11 @@ def server() -> Iterator[str]:
 
 def test_the_next_request_after_login_is_signed_in(server: str) -> None:
     email, password = "race@example.com", "correct horse battery"
-    httpx.post(f"{server}/auth/register", json={"email": email, "password": password})
+    httpx2.post(f"{server}/auth/register", json={"email": email, "password": password})
 
     signed_in = 0
     for _ in range(20):
-        with httpx.Client(base_url=server) as client:
+        with httpx2.Client(base_url=server) as client:
             client.post("/auth/login", json={"email": email, "password": password})
             signed_in += client.get("/auth/me").status_code == 200
 

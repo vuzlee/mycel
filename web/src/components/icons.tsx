@@ -164,23 +164,6 @@ export function Mycelium({ size = 19, className }: IconProps) {
   );
 }
 
-export function Chat({ size = 14 }: IconProps) {
-  return (
-    <svg {...base(size)}>
-      <path d="M13.5 8.5a4.5 4.5 0 0 1-4.5 4.5H5.5L2.5 15v-3.2A4.5 4.5 0 0 1 2.5 8V7a4.5 4.5 0 0 1 4.5-4.5h2A4.5 4.5 0 0 1 13.5 7Z" />
-    </svg>
-  );
-}
-
-export function Digest({ size = 14 }: IconProps) {
-  return (
-    <svg {...base(size)}>
-      <path d="M3.5 2.5h6l3 3v8a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z" />
-      <path d="M9.5 2.5v3h3M5.5 8.5h5M5.5 11h3" />
-    </svg>
-  );
-}
-
 export function Bars({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>
@@ -221,15 +204,6 @@ export function Question({ size = 14 }: IconProps) {
       <circle cx="8" cy="8" r="6.2" />
       <path d="M6.3 6.3a1.75 1.75 0 1 1 2.3 1.66c-.4.14-.6.5-.6.92v.3" />
       <path d="M8 11.7h.01" />
-    </svg>
-  );
-}
-
-export function Key({ size = 14 }: IconProps) {
-  return (
-    <svg {...base(size)}>
-      <circle cx="5.2" cy="10.8" r="2.8" />
-      <path d="M7.2 8.8 13 3m-1.7 1.7 1.4 1.4m-3 .3 1.4 1.4" />
     </svg>
   );
 }

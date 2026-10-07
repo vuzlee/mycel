@@ -12,7 +12,6 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 source "$ROOT/scripts/lib/hostproc.sh"
 
 require_env
-check_legacy
 
 log "starting containers: ${INFRA[*]}"
 docker compose up -d "${INFRA[@]}"

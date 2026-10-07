@@ -62,10 +62,6 @@ CONNECT = (
 #: strings, so they are the vocabulary of the tool rather than an internal enum.
 KINDS = ("comment", "move", "issue", "project")
 
-#: Jira's own default issue types on a scrum template. Anything else a site has defined
-#: still works — this is what the refusal names when the model sends nothing usable.
-KNOWN_TYPES = ("Task", "Story", "Bug", "Epic")
-
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
     """Writing to Jira, as a toolset an agent can be given."""

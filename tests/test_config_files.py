@@ -115,7 +115,7 @@ class TestTheRealConfigDir:
 
     def test_the_committed_config_loads(self) -> None:
         for env in ("dev", "prod"):
-            assert load_config(env)["etl"]["batch_size"] > 0
+            assert load_config(env)["agents"]["defaults"]["model_spec"]
 
     def test_the_analyst_file_is_valid(self) -> None:
         cfg = AgentSettings.from_config("analyst", env="prod")

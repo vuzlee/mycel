@@ -98,7 +98,7 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
         if retry.exhausted(message):
             await _record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
-    except Exception as exc:  # noqa: BLE001 - see the docstring: the loop must survive
+    except Exception as exc:  # the loop must survive; see the docstring
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
         await _record_failure(job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)

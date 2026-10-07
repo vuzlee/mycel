@@ -80,8 +80,4 @@ def _fields(row: Any) -> dict[str, Any]:
     `id` is the table's surrogate key and means nothing outside it — the natural key is
     what callers identify a row by, and it is already in the columns.
     """
-    return {
-        name: getattr(row, name)
-        for name in row.__table__.columns.keys()  # noqa: SIM118 — Column collection, not a dict
-        if name != "id"
-    }
+    return {name: getattr(row, name) for name in row.__table__.columns.keys() if name != "id"}

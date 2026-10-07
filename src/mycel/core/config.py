@@ -87,9 +87,6 @@ class Settings(BaseSettings):
 
     # Sources. A deployment syncs the providers it has credentials for; a missing token
     # is not an error until something actually asks that source for data.
-    #: Jira is the source of record for what the work *is*. The base url is not a secret:
-    #: the site is public and the consent is what is not.
-    jira_base_url: str | None = None
     #: The background sync's own identity: an Atlassian service account with Browse on
     #: the projects to sync, and its API token. Never a person's token — a sync that runs
     #: on someone stops when they leave. Every project it can browse is synced.
@@ -258,7 +255,6 @@ class Settings(BaseSettings):
     document_max_pages: int = 100
     documents_per_user: int = 200
     documents_in_flight_per_user: int = 5
-    document_max_attempts: int = 3
     document_stuck_seconds: int = 600
     ingest_worker_max_jobs: int = 20
     ingest_threads: int = 2

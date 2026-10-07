@@ -71,7 +71,6 @@ config:
   OTEL_CAPTURE_CONTENT: "false"
   LANGFUSE_BASE_URL: https://jp.cloud.langfuse.com
   METRICS_PORT: "9100"
-  JIRA_BASE_URL: ""
   PUBLIC_BASE_URL: ""
   GOOGLE_CLIENT_ID: ""
 

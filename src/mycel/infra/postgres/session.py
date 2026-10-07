@@ -29,9 +29,3 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
-
-
-async def get_session() -> AsyncIterator[AsyncSession]:
-    """FastAPI dependency: one session per request, with the same commit rule."""
-    async with session_scope() as session:
-        yield session

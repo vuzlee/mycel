@@ -40,7 +40,6 @@ def _issue(key: str) -> dict[str, Any]:
 
 
 def _settings(**kw: Any) -> Settings:
-    kw.setdefault("jira_base_url", "https://example.atlassian.net")
     return Settings(**kw)
 
 
