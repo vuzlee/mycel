@@ -18,7 +18,7 @@ from mycel.infra.postgres.repositories._result import rowcount
 
 @dataclass(frozen=True)
 class ConversationRow:
-    """One thread in the sidebar."""
+    """One conversation in the sidebar."""
 
     id: int
     user_id: int
@@ -54,7 +54,7 @@ class ConversationRepository:
         self._session = session
 
     async def create_conversation(self, user_id: int, kind: str, title: str) -> ConversationRow:
-        """Start a thread."""
+        """Start a conversation."""
         row = Conversation(user_id=user_id, kind=kind, title=title)
         self._session.add(row)
         await self._session.flush()
@@ -65,17 +65,17 @@ class ConversationRepository:
     ) -> list[ConversationRow]:
         """One person's sidebar, most recently spoken to first.
 
-        Ordered by the newest turn, not by when the thread was opened. A thread you went
+        Ordered by the newest turn, not by when the conversation was opened. A conversation you went
         back to this morning is the one you are working in, and ordering by `created_at`
-        buries it under every thread opened since — which is the opposite of what a
+        buries it under every conversation opened since — which is the opposite of what a
         history is for.
 
-        `COALESCE` because a thread with no turns still has to sort: it was opened and the
+        `COALESCE` because a conversation with no turns still has to sort: it was opened and the
         worker never wrote a row, and its own `created_at` is the only time it has.
 
         `updated_at` rather than `created_at`: a turn row is written when the question is
         queued and written again when the run ends, and it is the ending people watch for.
-        Ordering on the first write leaves a thread sitting where it was while its answer
+        Ordering on the first write leaves a conversation sitting where it was while its answer
         lands somewhere down the list.
         """
         spoke = (
@@ -100,14 +100,14 @@ class ConversationRepository:
         return [_conversation(row) for row in rows]
 
     async def conversation_by_id(self, conversation_id: int) -> ConversationRow | None:
-        """One thread, whoever owns it. The caller checks that it is theirs."""
+        """One conversation, whoever owns it. The caller checks that it is theirs."""
         row = await self._session.scalar(
             select(Conversation).where(Conversation.id == conversation_id)
         )
         return _conversation(row) if row else None
 
     async def pin_conversation(self, conversation_id: int, user_id: int, pinned: bool) -> bool:
-        """Pin or unpin a thread. Scoped by `user_id` in the WHERE, like the delete."""
+        """Pin or unpin a conversation. Scoped by `user_id` in the WHERE, like the delete."""
         result = await self._session.execute(
             update(Conversation)
             .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
@@ -116,7 +116,7 @@ class ConversationRepository:
         return bool(rowcount(result))
 
     async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
-        """Forget a thread, and every run under it.
+        """Forget a conversation, and every run under it.
 
         `user_id` is in the WHERE rather than checked by the caller: a delete that scopes
         itself cannot be made to delete someone else's row by a caller that forgot. The
@@ -181,7 +181,7 @@ class ConversationRepository:
         return _turn(row) if row else None
 
     async def turns_for_conversation(self, conversation_id: int) -> list[TurnRow]:
-        """Every turn in a thread, oldest first."""
+        """Every turn in a conversation, oldest first."""
         rows = await self._session.scalars(
             select(Turn).where(Turn.conversation_id == conversation_id).order_by(Turn.created_at)
         )

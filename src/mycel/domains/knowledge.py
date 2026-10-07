@@ -78,7 +78,7 @@ def source(label: str, chunk: ChunkRow) -> dict[str, Any]:
 
 
 def with_sources(text: str, sources: list[dict[str, Any]]) -> str:
-    """The kept answer, with its sources listed, so a reopened thread still shows them."""
+    """The kept answer, with its sources listed, so a reopened conversation still shows them."""
     if not sources:
         return text
     lines = [

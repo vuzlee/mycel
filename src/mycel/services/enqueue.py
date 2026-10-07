@@ -23,12 +23,12 @@ async def enqueue_chat(
 ) -> str:
     """Queue a question and return the job id to poll with.
 
-    `history` is the earlier turns of this thread, already trimmed by the domain. It rides
+    `history` is the earlier turns of this conversation, already trimmed by the domain. It rides
     in the payload rather than being read by the worker on purpose: the idempotency key
-    hashes the payload, so the same question asked twice at different points in a thread
+    hashes the payload, so the same question asked twice at different points in a conversation
     must differ here or the second job is dropped as a duplicate of the first.
 
-    `conversation_id` is in the payload rather than derived by the worker: the thread
+    `conversation_id` is in the payload rather than derived by the worker: the conversation
     exists before the job does, so a run that dies still has somewhere to be recorded.
 
     `user_id` rides along so the worker can rebuild who asked. It is in the payload, so it

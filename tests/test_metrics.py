@@ -25,7 +25,7 @@ from mycel.queue import context
 #: a series that never dies, and Prometheus holds every one of them in memory for as long
 #: as it runs.
 FORBIDDEN_LABELS = frozenset(
-    {"job_id", "thread_id", "conversation_id", "user_id", "issue_key", "request_id", "key"}
+    {"job_id", "conversation_id", "user_id", "issue_key", "request_id", "key"}
 )
 
 

@@ -1,4 +1,4 @@
-"""Which threads a person has.
+"""Which conversations a person has.
 
 The sidebar cannot show a history without knowing whose it is. A query, so it answers
 inside the request — same reason as `domains/dashboard`.
@@ -16,13 +16,13 @@ from mycel.infra.postgres.repositories.conversations import (
 )
 from mycel.infra.postgres.session import session_scope
 
-#: Most threads one sidebar shows. Beyond this the list is an archive, and an archive
+#: Most conversations one sidebar shows. Beyond this the list is an archive, and an archive
 #: needs paging rather than a longer page.
 HISTORY_LIMIT = 50
 
 
 @dataclass(frozen=True)
-class Thread:
+class ConversationSummary:
     """One conversation, with what its latest run produced."""
 
     conversation: ConversationRow
@@ -30,37 +30,37 @@ class Thread:
     status: str | None
 
 
-async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]:
+async def list_conversations(user_id: int, limit: int = HISTORY_LIMIT) -> list[ConversationSummary]:
     """One person's sidebar, newest first.
 
-    Each thread carries its latest job id so clicking one can reopen the run without a
-    second round-trip. A thread whose run never finished has `None` for both — it was
+    Each conversation carries its latest job id so clicking one can reopen the run without a
+    second round-trip. A conversation whose run never finished has `None` for both — it was
     queued and the worker never got to it, which the page should show as such rather
     than hide.
     """
     async with session_scope() as session:
         repo = ConversationRepository(session)
-        threads = []
+        summaries = []
         for conversation in await repo.conversations_for(user_id, limit=limit):
             turns = await repo.turns_for_conversation(conversation.id)
             latest = turns[-1] if turns else None
-            threads.append(
-                Thread(
+            summaries.append(
+                ConversationSummary(
                     conversation=conversation,
                     job_id=latest.job_id if latest else None,
                     status=latest.status if latest else None,
                 )
             )
-        return threads
+        return summaries
 
 
-async def thread_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
-    """Every run in one thread, oldest first. Empty if it is not this person's.
+async def conversation_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
+    """Every run in one conversation, oldest first. Empty if it is not this person's.
 
-    The page needs this because a thread is now more than one turn: `?job=` names the
+    The page needs this because a conversation is now more than one turn: `?job=` names the
     run being watched, and the turns before it were never in this tab's memory. Empty
-    rather than an exception for a thread that is not theirs — same answer as a thread
-    that is not there, for the same reason as `forget_thread`.
+    rather than an exception for a conversation that is not theirs — same answer as a conversation
+    that is not there, for the same reason as `forget_conversation`.
     """
     async with session_scope() as session:
         repo = ConversationRepository(session)
@@ -70,10 +70,10 @@ async def thread_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
         return await repo.turns_for_conversation(conversation_id)
 
 
-async def forget_thread(user_id: int, conversation_id: int) -> bool:
-    """Delete one thread and its runs. False if it is not this person's, or not there.
+async def forget_conversation(user_id: int, conversation_id: int) -> bool:
+    """Delete one conversation and its runs. False if it is not this person's, or not there.
 
-    The two cases are one answer on purpose: telling a caller that a thread exists but
+    The two cases are one answer on purpose: telling a caller that a conversation exists but
     belongs to someone else is telling them something they did not have.
     """
     async with session_scope() as session:
@@ -81,8 +81,8 @@ async def forget_thread(user_id: int, conversation_id: int) -> bool:
         return await repo.delete_conversation(conversation_id, user_id)
 
 
-async def pin_thread(user_id: int, conversation_id: int, pinned: bool) -> bool:
-    """Pin or unpin one thread. False if it is not this person's, or not there."""
+async def pin_conversation(user_id: int, conversation_id: int, pinned: bool) -> bool:
+    """Pin or unpin one conversation. False if it is not this person's, or not there."""
     async with session_scope() as session:
         return await ConversationRepository(session).pin_conversation(
             conversation_id, user_id, pinned

@@ -27,7 +27,7 @@ from mycel.agents.core.chips import Chip
 from mycel.api.dependencies import current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.domains.chat import ThreadNotFound, find_turn, request_chat
+from mycel.domains.chat import ConversationNotFound, find_turn, request_chat
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
 from mycel.services.auth import Principal
@@ -40,13 +40,13 @@ log = get_logger(__name__)
 class ChatRequest(BaseModel):
     """What a caller asks for.
 
-    Without `conversation_id` this is a first question and opens a thread. With one it is
-    a follow-up, and the earlier turns of that thread go to the agent with it.
+    Without `conversation_id` this is a first question and opens a conversation. With one it is
+    a follow-up, and the earlier turns of that conversation go to the agent with it.
     """
 
     question: str = Field(min_length=1, max_length=4000, description="What to find out.")
     conversation_id: int | None = Field(
-        default=None, description="Continue this thread instead of opening a new one."
+        default=None, description="Continue this conversation instead of opening a new one."
     )
     chips: list[Chip] | None = Field(
         default=None,
@@ -61,7 +61,7 @@ class AcceptedResponse(BaseModel):
     """The receipt for queued work. Deliberately not an answer.
 
     `conversation_id` comes back so the caller can ask the next question into the same
-    thread without first looking the thread up by the job id it just received.
+    conversation without first looking the conversation up by the job id it just received.
     """
 
     job_id: str
@@ -80,9 +80,9 @@ class ChatResponse(BaseModel):
     codebase, and serialising it through a float is how that care gets undone at the last
     step.
 
-    `conversation_id` and `question` describe the run itself, not the thread it sits in.
-    A page that read them off the thread would caption every turn with the first question
-    asked, and would lose the thread entirely for a link naming a middle run.
+    `conversation_id` and `question` describe the run itself, not the conversation it sits in.
+    A page that read them off the conversation would caption every turn with the first question
+    asked, and would lose the conversation entirely for a link naming a middle run.
     """
 
     job_id: str
@@ -107,23 +107,23 @@ async def create_chat(
     No `MycelDeps` and no budget here: the run happens in the worker, so the ceiling it
     bills against is the worker's (`job_ceiling_usd`), not the API's.
 
-    A thread that is not this caller's reads as 404, not 403: `ThreadNotFound` is one
+    A conversation that is not this caller's reads as 404, not 403: `ConversationNotFound` is one
     exception for both cases so that a caller cannot learn which it was.
     """
     try:
-        job_id, thread_id = await request_chat(
+        job_id, conversation_id = await request_chat(
             user.id,
             body.question,
             body.conversation_id,
             chips=[str(c) for c in body.chips] if body.chips is not None else None,
         )
-    except ThreadNotFound as missing:
+    except ConversationNotFound as missing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"no conversation {missing.args[0]}",
         ) from missing
-    log.info("chat queued", extra={"job_id": job_id, "conversation_id": thread_id})
-    return AcceptedResponse(job_id=job_id, conversation_id=thread_id)
+    log.info("chat queued", extra={"job_id": job_id, "conversation_id": conversation_id})
+    return AcceptedResponse(job_id=job_id, conversation_id=conversation_id)
 
 
 def _state_of(kept: TurnRow) -> Literal["running", "done", "failed"]:

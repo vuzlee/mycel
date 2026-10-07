@@ -1,7 +1,7 @@
-"""One person's threads, for the sidebar.
+"""One person's conversations, for the sidebar.
 
-    GET     /conversations             this person's threads, for the sidebar
-    GET     /conversations/{id}/turns  every run in one thread, oldest first
+    GET     /conversations             this person's conversations, for the sidebar
+    GET     /conversations/{id}/turns  every run in one conversation, oldest first
     PUT     /conversations/{id}/pin    pin or unpin one, so it stays at the top
     DELETE  /conversations/{id}        forget one, and every run under it
 
@@ -15,22 +15,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 
 from mycel.api.dependencies import current_user
-from mycel.domains.threads import (
-    HISTORY_LIMIT,
-    forget_thread,
-    list_threads,
-    pin_thread,
-    thread_turns,
-)
+from mycel.domains import conversations as domain
+from mycel.domains.conversations import HISTORY_LIMIT
 from mycel.services.auth import Principal
 
 router = APIRouter(tags=["conversations"])
 
 
-class ThreadResponse(BaseModel):
+class ConversationResponse(BaseModel):
     """One row in the sidebar.
 
-    `job_id` is null for a thread whose run has not produced anything yet. The page shows
+    `job_id` is null for a conversation whose run has not produced anything yet. The page shows
     that as a queued run rather than hiding the row — a job the worker never picked up is
     exactly what someone needs to see.
     """
@@ -45,7 +40,7 @@ class ThreadResponse(BaseModel):
 
 
 class TurnResponse(BaseModel):
-    """One run inside a thread, as the page replays it.
+    """One run inside a conversation, as the page replays it.
 
     `answer` comes back whole rather than summarised: it is markdown the page already
     knows how to render, and shortening it here would be a second opinion about the same
@@ -66,16 +61,16 @@ class TurnResponse(BaseModel):
     created_at: datetime
 
 
-@router.get("/conversations", response_model=list[ThreadResponse])
+@router.get("/conversations", response_model=list[ConversationResponse])
 async def read_conversations(
     user: Annotated[Principal, Depends(current_user)],
     limit: int = Query(default=HISTORY_LIMIT, ge=1, le=HISTORY_LIMIT),
-) -> list[ThreadResponse]:
-    """This person's threads, newest first. The sidebar, and it follows them to any
+) -> list[ConversationResponse]:
+    """This person's conversations, newest first. The sidebar, and it follows them to any
     browser — which is the whole reason `localStorage` stopped being where it lived."""
-    threads = await list_threads(user.id, limit)
+    summaries = await domain.list_conversations(user.id, limit)
     return [
-        ThreadResponse(
+        ConversationResponse(
             id=t.conversation.id,
             kind=t.conversation.kind,
             title=t.conversation.title,
@@ -84,7 +79,7 @@ async def read_conversations(
             job_id=t.job_id,
             status=t.status,
         )
-        for t in threads
+        for t in summaries
     ]
 
 
@@ -92,9 +87,9 @@ async def read_conversations(
 async def read_turns(
     conversation_id: int, user: Annotated[Principal, Depends(current_user)]
 ) -> list[TurnResponse]:
-    """Every run in one thread, oldest first.
+    """Every run in one conversation, oldest first.
 
-    An empty list for a thread that is not theirs, same as one with no runs yet. The
+    An empty list for a conversation that is not theirs, same as one with no runs yet. The
     distinction is the one thing someone walking ids would want, and no page needs it.
     """
     return [
@@ -108,7 +103,7 @@ async def read_turns(
             steps=turn.steps,
             created_at=turn.created_at,
         )
-        for turn in await thread_turns(user.id, conversation_id)
+        for turn in await domain.conversation_turns(user.id, conversation_id)
     ]
 
 
@@ -120,8 +115,8 @@ class PinRequest(BaseModel):
 async def pin_conversation(
     conversation_id: int, body: PinRequest, user: Annotated[Principal, Depends(current_user)]
 ) -> Response:
-    """Pin or unpin a thread. 404 for "not yours" as well, same as the delete."""
-    if not await pin_thread(user.id, conversation_id, body.pinned):
+    """Pin or unpin a conversation. 404 for "not yours" as well, same as the delete."""
+    if not await domain.pin_conversation(user.id, conversation_id, body.pinned):
         raise HTTPException(status_code=404, detail="no such conversation")
     return Response(status_code=204)
 
@@ -130,11 +125,11 @@ async def pin_conversation(
 async def delete_conversation(
     conversation_id: int, user: Annotated[Principal, Depends(current_user)]
 ) -> Response:
-    """Forget a thread. The turns under it go too, by cascade.
+    """Forget a conversation. The turns under it go too, by cascade.
 
-    404 covers both "no such thread" and "not yours": the difference is the one thing
+    404 covers both "no such conversation" and "not yours": the difference is the one thing
     someone probing ids would want to learn.
     """
-    if not await forget_thread(user.id, conversation_id):
+    if not await domain.forget_conversation(user.id, conversation_id):
         raise HTTPException(status_code=404, detail="no such conversation")
     return Response(status_code=204)

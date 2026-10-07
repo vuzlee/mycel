@@ -10,7 +10,7 @@ forever, so a new one arrives with the question it answers.
 **LABEL RULE — the one thing that must not be got wrong.**
 
     allowed      agent, model, status, layer, domain
-    never        job_id, thread_id, user_id, issue_key, or any other identifier
+    never        job_id, conversation_id, user_id, issue_key, or any other identifier
 
 Prometheus holds one time series per distinct combination of label values, in memory, for
 as long as the server runs. A counter labelled by `agent` x `model` x `status` is a few

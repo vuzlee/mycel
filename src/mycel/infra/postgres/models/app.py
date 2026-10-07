@@ -196,14 +196,13 @@ class SyncState(Base):
 
 
 class Conversation(Base):
-    """One thread in the sidebar, and the turns under it.
+    """One conversation in the sidebar, and the turns under it.
 
     Replaces the browser's `localStorage` list, which could not follow a user to a second
     machine and had no way to hold anything but a job id.
 
-    `kind` is `"chat"` for everything. Kept because a second kind of thread is cheaper to add to a
-    column that exists than to a table that
-    has to grow one.
+    `kind` is `"chat"` for everything. Kept because a second kind of conversation is cheaper
+    to add to a column that exists than to a table that has to grow one.
     """
 
     __tablename__ = "conversation"

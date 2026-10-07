@@ -50,7 +50,7 @@ from mycel.services.enqueue import enqueue_chat
 
 log = get_logger(__name__)
 
-#: How much of a question becomes the thread's title in the sidebar.
+#: How much of a question becomes the conversation's title in the sidebar.
 TITLE_CHARS = 80
 
 #: How many earlier turns a follow-up carries. A follow-up leans on what was just said,
@@ -63,10 +63,10 @@ HISTORY_TURNS = 6
 HISTORY_CHARS = 6000
 
 
-class ThreadNotFound(Exception):
+class ConversationNotFound(Exception):
     """The conversation asked for is not this person's, or not there.
 
-    One exception for both, on purpose: telling a caller a thread exists but belongs to
+    One exception for both, on purpose: telling a caller a conversation exists but belongs to
     someone else tells them something they did not have.
     """
 
@@ -77,36 +77,36 @@ async def request_chat(
     conversation_id: int | None = None,
     chips: list[str] | None = None,
 ) -> tuple[str, int]:
-    """Queue a question and return the job id with the thread it landed in.
+    """Queue a question and return the job id with the conversation it landed in.
 
-    With a `conversation_id` the question joins that thread and carries what it has said
-    so far; without one it opens a new thread, which is what a first question does.
+    With a `conversation_id` the question joins that conversation and carries what it has said
+    so far; without one it opens a new conversation, which is what a first question does.
 
     The history is read here and travels in the payload rather than being looked up by the
     worker. `idempotency_key` hashes kind plus payload, so the same words asked twice at
-    different points in a thread are different work and must hash differently — a worker
+    different points in a conversation are different work and must hash differently — a worker
     that re-read the history would make the second job a duplicate of the first and drop
     it.
     """
     async with session_scope() as session:
         repo = ConversationRepository(session)
         if conversation_id is None:
-            thread = await repo.create_conversation(
+            conversation = await repo.create_conversation(
                 user_id, kind="chat", title=question[:TITLE_CHARS]
             )
             history = ""
         else:
-            thread = await _thread_of(repo, user_id, conversation_id)
-            history = _recall(await repo.turns_for_conversation(thread.id))
+            conversation = await _conversation_of(repo, user_id, conversation_id)
+            history = _recall(await repo.turns_for_conversation(conversation.id))
 
         previous = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
-            previous = _last_question(await repo.turns_for_conversation(thread.id))
+            previous = _last_question(await repo.turns_for_conversation(conversation.id))
         job_id = await enqueue_chat(
-            question, thread.id, history, user_id=user_id, chips=chips, previous=previous
+            question, conversation.id, history, user_id=user_id, chips=chips, previous=previous
         )
-        await repo.upsert_turn(thread.id, job_id, question, status="queued")
-    return job_id, thread.id
+        await repo.upsert_turn(conversation.id, job_id, question, status="queued")
+    return job_id, conversation.id
 
 
 def _last_question(turns: list[TurnRow]) -> str:
@@ -114,18 +114,18 @@ def _last_question(turns: list[TurnRow]) -> str:
     return turns[-1].question if turns else ""
 
 
-async def _thread_of(
+async def _conversation_of(
     repo: ConversationRepository, user_id: int, conversation_id: int
 ) -> ConversationRow:
-    """The thread a follow-up names, once it is established that it is this person's."""
-    thread = await repo.conversation_by_id(conversation_id)
-    if thread is None or thread.user_id != user_id:
-        raise ThreadNotFound(conversation_id)
-    return thread
+    """The conversation a follow-up names, once it is established that it is this person's."""
+    conversation = await repo.conversation_by_id(conversation_id)
+    if conversation is None or conversation.user_id != user_id:
+        raise ConversationNotFound(conversation_id)
+    return conversation
 
 
 def _recall(turns: list[TurnRow]) -> str:
-    """Earlier turns of a thread, as text for the prompt.
+    """Earlier turns of a conversation, as text for the prompt.
 
     Text rather than `message_history`: the cap and the "omitted" line below are Mycel's
     decisions, and handing the framework a message list would give it the trimming.
@@ -332,7 +332,7 @@ async def _finish(
     """Write a finished run to both stores: Redis to be polled, Postgres to be kept.
 
     The steps go with the answer and only with it. A failed run leaves half a chain of
-    tool calls, which is something to read in the logs, not something a thread should
+    tool calls, which is something to read in the logs, not something a conversation should
     replay as if it were work done.
     """
     await results.store(job.job_id, answer, str(spent))
@@ -359,22 +359,22 @@ async def _record(
 
     A missing `conversation_id` is not worth failing a finished run over — the answer was
     produced, and Redis has it. It is logged instead, because it means a caller queued a
-    job without opening a thread for it.
+    job without opening a conversation for it.
 
-    Neither is a thread deleted while the job ran. The row this job wrote at queue time
+    Neither is a conversation deleted while the job ran. The row this job wrote at queue time
     went with it (`ON DELETE CASCADE`), so the upsert finds nothing to update and inserts,
     and the insert fails the foreign key. There is nowhere left to keep the run and nobody
-    left to read it: the thread is gone from the rail and from `/conversations`.
+    left to read it: the conversation is gone from the rail and from `/conversations`.
 
     Swallowed here rather than left to the consumer, because the consumer's last resort is
     to call `record_failure`, which lands in this same function against the same missing
-    thread — so the failure path raises too, the message is never acked, and one deleted
-    thread leaves a job unacked until the broker's `consumer_timeout` redelivers it to fail
+    conversation — so the failure path raises too, the message is never acked, and one deleted
+    conversation leaves a job unacked until the broker's `consumer_timeout` redelivers it to fail
     the same way again.
     """
     # Counted here rather than at each call site: this is the one function both the done
     # and the failed path go through, and it already has the word for which one it was.
-    # Before the early return, because a job with no thread still ended.
+    # Before the early return, because a job with no conversation still ended.
     jobs_total.labels(kind=str(job.kind), status=status).inc()
 
     conversation_id = int(str(job.payload.get("conversation_id", 0)))
@@ -395,7 +395,7 @@ async def _record(
             )
     except IntegrityError:
         log.warning(
-            "thread was deleted while the job ran; nothing to record against",
+            "conversation was deleted while the job ran; nothing to record against",
             extra={"job_id": job.job_id, "conversation_id": conversation_id},
         )
 

@@ -26,7 +26,7 @@ fails — which is the retry path `queue/retry.py` exists to run.
 
 Catching it too was a real outage: on 2026-09-24 a 503 inside the analyst came back as
 "the work data analysis service encountered a 503 error", the job was marked done, billed,
-written into the thread, and never retried. A crash is visible; that paragraph has to be
+written into the conversation, and never retried. A crash is visible; that paragraph has to be
 *read* to notice it says nothing.
 
 `BudgetExceeded` is deliberately not caught either: out of money is the end of the job, and

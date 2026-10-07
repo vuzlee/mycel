@@ -92,7 +92,7 @@ class TestKnowledgeGoesThroughTheOrchestrator:
             async def create_conversation(self, *a: object, **k: object) -> object:
                 return SimpleNamespace(id=1)
 
-            async def turns_for_conversation(self, thread_id: int) -> list[object]:
+            async def turns_for_conversation(self, conversation_id: int) -> list[object]:
                 return []
 
             async def upsert_turn(self, *a: object, **k: object) -> None: ...

@@ -26,7 +26,7 @@ from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
-from mycel.domains.threads import Thread
+from mycel.domains.conversations import ConversationSummary
 from mycel.infra.postgres.repositories.conversations import ConversationRow, TurnRow
 from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.infra.postgres.repositories.gold_stats import (
@@ -256,9 +256,9 @@ class TestQueueingAQuestion:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """404, not 403: which of the two it was is the one thing worth hiding."""
-        from mycel.domains.chat import ThreadNotFound
+        from mycel.domains.chat import ConversationNotFound
 
-        _queues(monkeypatch, ThreadNotFound(7))
+        _queues(monkeypatch, ConversationNotFound(7))
         response = client.post("/chat", json={"question": "and last week?", "conversation_id": 7})
 
         assert response.status_code == 404
@@ -759,10 +759,10 @@ class TestTheLists:
         """Whose sidebar it is comes from the session, never from the query string."""
         asked: list[int] = []
 
-        async def fake_threads(user_id: int, limit: int = 50) -> list[Thread]:
+        async def fake_conversations(user_id: int, limit: int = 50) -> list[ConversationSummary]:
             asked.append(user_id)
             return [
-                Thread(
+                ConversationSummary(
                     conversation=ConversationRow(
                         id=7,
                         user_id=user_id,
@@ -775,7 +775,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.api.routes.conversations.list_threads", fake_threads)
+        monkeypatch.setattr("mycel.domains.conversations.list_conversations", fake_conversations)
         body = client.get("/conversations").json()
 
         assert asked == [SIGNED_IN.id]
@@ -786,9 +786,9 @@ class TestTheLists:
     ) -> None:
         """A queued run the worker never picked up is the row someone most needs to see."""
 
-        async def fake_threads(user_id: int, limit: int = 50) -> list[Thread]:
+        async def fake_conversations(user_id: int, limit: int = 50) -> list[ConversationSummary]:
             return [
-                Thread(
+                ConversationSummary(
                     conversation=ConversationRow(
                         id=8,
                         user_id=user_id,
@@ -801,7 +801,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.api.routes.conversations.list_threads", fake_threads)
+        monkeypatch.setattr("mycel.domains.conversations.list_conversations", fake_conversations)
         body = client.get("/conversations").json()
 
         assert len(body) == 1 and body[0]["job_id"] is None
@@ -816,7 +816,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id))
             return True
 
-        monkeypatch.setattr("mycel.api.routes.conversations.forget_thread", fake_forget)
+        monkeypatch.setattr("mycel.domains.conversations.forget_conversation", fake_forget)
         response = client.delete("/conversations/7")
 
         assert response.status_code == 204
@@ -830,7 +830,7 @@ class TestTheLists:
         async def fake_forget(user_id: int, conversation_id: int) -> bool:
             return False
 
-        monkeypatch.setattr("mycel.api.routes.conversations.forget_thread", fake_forget)
+        monkeypatch.setattr("mycel.domains.conversations.forget_conversation", fake_forget)
 
         assert client.delete("/conversations/7").status_code == 404
 
@@ -843,7 +843,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id, pinned))
             return conversation_id == 7
 
-        monkeypatch.setattr("mycel.api.routes.conversations.pin_thread", fake_pin)
+        monkeypatch.setattr("mycel.domains.conversations.pin_conversation", fake_pin)
 
         assert client.put("/conversations/7/pin", json={"pinned": True}).status_code == 204
         assert client.put("/conversations/8/pin", json={"pinned": True}).status_code == 404
