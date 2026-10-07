@@ -27,11 +27,11 @@ under the same id, so a second yes is a retry rather than a whole new round. See
 `restore_jira`.
 """
 
-import json
 import secrets
-from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from mycel.infra.redis.client import get_client
 
@@ -40,14 +40,15 @@ from mycel.infra.redis.client import get_client
 DRAFT_TTL_S = 600
 
 
-@dataclass(frozen=True)
-class Draft:
+class Draft(BaseModel):
     """A proposed event, as it waits to be agreed to.
 
     Carries `user_id` so confirmation cannot cross accounts: the id is a random string that
     travels through a prompt, and the only thing that should be able to spend it is the
     person whose calendar it was drafted against.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     draft_id: str
     user_id: int
@@ -66,7 +67,7 @@ async def put(user_id: int, summary: str, starts_at: datetime, ends_at: datetime
         ends_at=ends_at,
     )
     client = await get_client()
-    await client.set(_key(draft.draft_id), _dump(draft), ex=DRAFT_TTL_S)
+    await client.set(_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
     return draft
 
 
@@ -81,7 +82,7 @@ async def take(draft_id: str, user_id: int) -> Draft | None:
     raw = await client.getdel(_key(draft_id))
     if raw is None:
         return None
-    draft = _load(raw)
+    draft = Draft.model_validate_json(raw)
     if draft.user_id != user_id:
         return None
     return draft
@@ -91,30 +92,7 @@ def _key(draft_id: str) -> str:
     return f"mycel:draft:event:{draft_id}"
 
 
-def _dump(draft: Draft) -> str:
-    return json.dumps(
-        {
-            **asdict(draft),
-            "starts_at": draft.starts_at.isoformat(),
-            "ends_at": draft.ends_at.isoformat(),
-        }
-    )
-
-
-def _load(raw: "bytes | str") -> Draft:
-    """The client decodes responses, but its type says it may not — see `client.py`."""
-    data = json.loads(raw)
-    return Draft(
-        draft_id=data["draft_id"],
-        user_id=int(data["user_id"]),
-        summary=data["summary"],
-        starts_at=datetime.fromisoformat(data["starts_at"]),
-        ends_at=datetime.fromisoformat(data["ends_at"]),
-    )
-
-
-@dataclass(frozen=True)
-class JiraDraft:
+class JiraDraft(BaseModel):
     """A proposed write to Jira, as it waits to be agreed to.
 
     One shape for all four writes rather than four dataclasses: what differs between them
@@ -125,6 +103,8 @@ class JiraDraft:
     Carries `user_id` for the reason the event draft does — the id travels through a prompt,
     and the only person who may spend it is the one it was drafted for.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     draft_id: str
     user_id: int
@@ -147,7 +127,7 @@ async def put_jira(user_id: int, kind: str, spelled: str, payload: dict[str, Any
         payload=payload,
     )
     client = await get_client()
-    await client.set(_jira_key(draft.draft_id), json.dumps(asdict(draft)), ex=DRAFT_TTL_S)
+    await client.set(_jira_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
     return draft
 
 
@@ -162,14 +142,7 @@ async def take_jira(draft_id: str, user_id: int) -> JiraDraft | None:
     raw = await client.getdel(_jira_key(draft_id))
     if raw is None:
         return None
-    data = json.loads(raw)
-    draft = JiraDraft(
-        draft_id=data["draft_id"],
-        user_id=int(data["user_id"]),
-        kind=data["kind"],
-        spelled=data["spelled"],
-        payload=data["payload"],
-    )
+    draft = JiraDraft.model_validate_json(raw)
     return draft if draft.user_id == user_id else None
 
 
@@ -190,7 +163,7 @@ async def restore_jira(draft: JiraDraft) -> None:
     the first place — long enough to answer, short enough that an abandoned one is gone.
     """
     client = await get_client()
-    await client.set(_jira_key(draft.draft_id), json.dumps(asdict(draft)), ex=DRAFT_TTL_S)
+    await client.set(_jira_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
 
 
 def _jira_key(draft_id: str) -> str:
