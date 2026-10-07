@@ -32,7 +32,7 @@ import httpx2
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.app import AppRepository, JiraAccountRow
+from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis.client import get_client
 from mycel.services.tokens import TokenUnreadable, key_set, seal, unseal
@@ -234,7 +234,7 @@ async def _access_for(user_id: int) -> str:
     leaves a dead token in the row — the sync stops a few hours later, silently.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         row = await repo.jira_account_locked(user_id)
         if row is None:
             raise NotConnected("no Jira account is connected; connect one in settings")
@@ -249,7 +249,7 @@ async def connect(state: str, code: str) -> JiraAccountRow:
     user_id = await spend_state(state)
     grant = await exchange(code)
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         await repo.upsert_jira_account(
             user_id,
             grant.account_id,
@@ -267,7 +267,7 @@ async def connect(state: str, code: str) -> JiraAccountRow:
 async def connected(user_id: int) -> JiraAccountRow | None:
     """What this person has attached, for the settings screen. `None` is normal."""
     async with session_scope() as session:
-        return await AppRepository(session).jira_account(user_id)
+        return await AccountRepository(session).jira_account(user_id)
 
 
 async def disconnect(user_id: int) -> bool:
@@ -278,7 +278,7 @@ async def disconnect(user_id: int) -> bool:
     asked for; the settings screen says where to finish the job.
     """
     async with session_scope() as session:
-        return await AppRepository(session).delete_jira_account(user_id)
+        return await AccountRepository(session).delete_jira_account(user_id)
 
 
 async def token_for(user_id: int) -> tuple[str, str]:

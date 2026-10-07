@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mycel.core.config import get_settings
 from mycel.core.exceptions import MycelError
 from mycel.infra import smtp
-from mycel.infra.postgres.repositories.app import AppRepository, UserRow
+from mycel.infra.postgres.repositories.identity import IdentityRepository, UserRow
 
 #: How long a session lives without being renewed. Two weeks: long enough that a person
 #: using this daily is never asked again, short enough that a forgotten laptop expires.
@@ -90,7 +90,7 @@ async def register(
     if len(password) < MIN_PASSWORD:
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")
 
-    repo = AppRepository(session)
+    repo = IdentityRepository(session)
     try:
         user = await repo.create_user(email, _hasher.hash(password))
     except IntegrityError:
@@ -106,7 +106,7 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Prin
     even when nobody was found: telling the two apart, in the message or in how long the
     answer takes, turns this endpoint into a list of who has an account.
     """
-    user = await AppRepository(session).user_by_email(_normalise(email))
+    user = await IdentityRepository(session).user_by_email(_normalise(email))
     stored = user.password_hash if user else _hasher.hash("no such user")
 
     try:
@@ -120,7 +120,7 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Prin
     if _hasher.check_needs_rehash(user.password_hash):
         # The cost parameters moved on since this hash was made. Rehash now, while the
         # plaintext is in hand — there is no other moment when it will be.
-        await AppRepository(session).set_password_hash(user.id, _hasher.hash(password))
+        await IdentityRepository(session).set_password_hash(user.id, _hasher.hash(password))
     return _principal(user)
 
 
@@ -128,13 +128,13 @@ async def open_session(session: AsyncSession, user_id: int) -> tuple[str, dateti
     """Start a session and return the cookie value and when it stops working."""
     token = secrets.token_hex(TOKEN_BYTES)
     expires_at = datetime.now(UTC) + SESSION_TTL
-    await AppRepository(session).create_session(token, user_id, expires_at)
+    await IdentityRepository(session).create_session(token, user_id, expires_at)
     return token, expires_at
 
 
 async def close_session(session: AsyncSession, token: str) -> None:
     """Log out. Deleting a token that is already gone is not an error."""
-    await AppRepository(session).delete_session(token)
+    await IdentityRepository(session).delete_session(token)
 
 
 async def session_user(session: AsyncSession, token: str) -> Principal | None:
@@ -143,7 +143,7 @@ async def session_user(session: AsyncSession, token: str) -> Principal | None:
     Expired reads as absent, and the expired row is deleted on the way past: the cookie is
     dead either way, and leaving the row behind means a sweeper has to exist.
     """
-    repo = AppRepository(session)
+    repo = IdentityRepository(session)
     row = await repo.session_by_id(token)
     if row is None:
         return None
@@ -175,7 +175,7 @@ async def change_password(
     because the reason to change a password is that someone else may know the old one — and
     a session already open does not care what the password is now.
     """
-    repo = AppRepository(session)
+    repo = IdentityRepository(session)
     user = await repo.user_by_id(user_id)
     if user is None:
         raise AuthError("wrong password")
@@ -202,14 +202,14 @@ async def begin_password_reset(session: AsyncSession, email: str) -> None:
     The link is stored as a hash. It is a password while it lives, and a database that can
     be read must not be a list of ways in.
     """
-    user = await AppRepository(session).user_by_email(_normalise(email))
+    user = await IdentityRepository(session).user_by_email(_normalise(email))
     if user is None:
         return
 
     token = secrets.token_urlsafe(RESET_BYTES)
     settings = get_settings()
     expires_at = datetime.now(UTC) + timedelta(seconds=settings.password_reset_ttl_seconds)
-    await AppRepository(session).create_password_reset(user.id, _digest(token), expires_at)
+    await IdentityRepository(session).create_password_reset(user.id, _digest(token), expires_at)
 
     minutes = settings.password_reset_ttl_seconds // 60
     link = f"{settings.public_base_url}/app/reset?token={token}"
@@ -232,7 +232,7 @@ async def reset_password(session: AsyncSession, token: str, new_password: str) -
     if len(new_password) < MIN_PASSWORD:
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")
 
-    repo = AppRepository(session)
+    repo = IdentityRepository(session)
     row = await repo.password_reset_by_hash(_digest(token))
     if row is None or row.used_at is not None or row.expires_at <= datetime.now(UTC):
         raise AuthError("that reset link is no longer usable")
@@ -278,7 +278,7 @@ async def sweep_expired_sessions(session: AsyncSession) -> int:
     on the way past. It exists so a row nobody ever reads again does not sit in the table
     forever, which is the only way `app.session` grows without bound.
     """
-    return await AppRepository(session).delete_expired_sessions(datetime.now(UTC))
+    return await IdentityRepository(session).delete_expired_sessions(datetime.now(UTC))
 
 
 def _normalise(email: str) -> str:

@@ -33,7 +33,12 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains import knowledge
 from mycel.events.channel import EventChannel, RecordingChannel
-from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, TurnRow
+from mycel.infra.postgres.repositories.conversations import (
+    ConversationRepository,
+    ConversationRow,
+    TurnRow,
+)
+from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import answers, budgets, citations, results
 from mycel.infra.redis.streams import RedisEventChannel
@@ -84,7 +89,7 @@ async def request_chat(
     it.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = ConversationRepository(session)
         if conversation_id is None:
             thread = await repo.create_conversation(
                 user_id, kind="chat", title=question[:TITLE_CHARS]
@@ -109,7 +114,9 @@ def _last_question(turns: list[TurnRow]) -> str:
     return turns[-1].question if turns else ""
 
 
-async def _thread_of(repo: AppRepository, user_id: int, conversation_id: int) -> ConversationRow:
+async def _thread_of(
+    repo: ConversationRepository, user_id: int, conversation_id: int
+) -> ConversationRow:
     """The thread a follow-up names, once it is established that it is this person's."""
     thread = await repo.conversation_by_id(conversation_id)
     if thread is None or thread.user_id != user_id:
@@ -156,7 +163,7 @@ async def find_turn(job_id: str) -> TurnRow | None:
     opened next week opens rather than 404s.
     """
     async with session_scope() as session:
-        return await AppRepository(session).turn_by_job_id(job_id)
+        return await ConversationRepository(session).turn_by_job_id(job_id)
 
 
 async def run(job: Job) -> None:
@@ -284,7 +291,7 @@ async def _who_asked(job: Job) -> Principal:
     if not isinstance(user_id, int):
         raise ValueError("chat job has no user_id; it predates per-user jobs and cannot be run")
     async with session_scope() as session:
-        user = await AppRepository(session).user_by_id(user_id)
+        user = await IdentityRepository(session).user_by_id(user_id)
     if user is None:
         raise ValueError(f"chat job belongs to user {user_id}, who no longer exists")
     return Principal(id=user.id, email=user.email)
@@ -376,7 +383,7 @@ async def _record(
         return
     try:
         async with session_scope() as session:
-            await AppRepository(session).upsert_turn(
+            await ConversationRepository(session).upsert_turn(
                 conversation_id,
                 job.job_id,
                 question or str(job.payload.get("question", "")),

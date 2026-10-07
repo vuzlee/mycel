@@ -13,7 +13,7 @@ import httpx2
 
 from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.services import jira_oauth
 from mycel.sources import jira
@@ -32,14 +32,14 @@ async def refresh(user_id: int) -> frozenset[str]:
         )
         projects = frozenset()
     async with session_scope() as session:
-        await AppRepository(session).replace_projects(user_id, projects)
+        await AccountRepository(session).replace_projects(user_id, projects)
     return projects
 
 
 async def refresh_everyone() -> int:
     """Refresh every connected person. Returns how many were refreshed."""
     async with session_scope() as session:
-        users = await AppRepository(session).jira_connected_users()
+        users = await AccountRepository(session).jira_connected_users()
     for user_id in users:
         await refresh(user_id)
     return len(users)

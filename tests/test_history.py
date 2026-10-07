@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from mycel.domains.chat import HISTORY_CHARS, HISTORY_TURNS, _recall, run
-from mycel.infra.postgres.repositories.app import TurnRow
+from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.queue.job import Job, JobKind
 from mycel.services.auth import Principal
 

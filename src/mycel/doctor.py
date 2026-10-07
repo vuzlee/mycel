@@ -181,7 +181,7 @@ async def _jira(settings: Settings) -> str:
     token says nothing about whether the background reads can run. Free: one project list.
     """
     from mycel.domains.sync import service_auth
-    from mycel.infra.postgres.repositories.app import AppRepository
+    from mycel.infra.postgres.repositories.accounts import AccountRepository
     from mycel.infra.postgres.session import session_scope
     from mycel.sources import jira
 
@@ -191,7 +191,7 @@ async def _jira(settings: Settings) -> str:
             "the service account can browse no project — add it to each project as Viewer"
         )
     async with session_scope() as session:
-        state = await AppRepository(session).sync_state()
+        state = await AccountRepository(session).sync_state()
     last = state.last_success_at.strftime("%Y-%m-%d %H:%M") if state.last_success_at else "never"
     if state.last_error and (
         state.last_success_at is None

@@ -27,7 +27,8 @@ from mycel.api.dependencies import SESSION_COOKIE
 from mycel.core.config import Settings, get_settings
 from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
-from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.accounts import AccountRepository
+from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.services import auth, permission
 
 pytestmark = pytest.mark.anyio
@@ -128,7 +129,7 @@ class TestRegistering:
     async def test_the_plaintext_is_never_stored(self, session: AsyncSession) -> None:
         """The one thing that must be true of every row in this table."""
         user = await auth.register(session, "c@example.com", PASSWORD)
-        stored = await AppRepository(session).user_by_id(user.id)
+        stored = await IdentityRepository(session).user_by_id(user.id)
 
         assert stored is not None
         assert PASSWORD not in stored.password_hash
@@ -178,7 +179,7 @@ class TestSessions:
         expiry must be dead even though no sweeper has run."""
         user = await auth.register(session, "g@example.com", PASSWORD)
         past = datetime.now(UTC) - timedelta(seconds=1)
-        await AppRepository(session).create_session("expired-token", user.id, past)
+        await IdentityRepository(session).create_session("expired-token", user.id, past)
 
         assert await auth.session_user(session, "expired-token") is None
 
@@ -186,10 +187,10 @@ class TestSessions:
         """Otherwise a sweeper has to exist for the table not to grow forever."""
         user = await auth.register(session, "h@example.com", PASSWORD)
         past = datetime.now(UTC) - timedelta(seconds=1)
-        await AppRepository(session).create_session("dead-token", user.id, past)
+        await IdentityRepository(session).create_session("dead-token", user.id, past)
 
         await auth.session_user(session, "dead-token")
-        assert await AppRepository(session).session_by_id("dead-token") is None
+        assert await IdentityRepository(session).session_by_id("dead-token") is None
 
     async def test_logging_out_kills_the_token(self, session: AsyncSession) -> None:
         user = await auth.register(session, "i@example.com", PASSWORD)
@@ -353,7 +354,7 @@ class TestSweepingSessions:
         user = await auth.register(session, "sw@example.com", PASSWORD)
         live, _ = await auth.open_session(session, user.id)
         past = datetime.now(UTC) - timedelta(seconds=1)
-        await AppRepository(session).create_session("stale", user.id, past)
+        await IdentityRepository(session).create_session("stale", user.id, past)
 
         assert await auth.sweep_expired_sessions(session) == 1
         assert await auth.session_user(session, live) == user
@@ -415,14 +416,14 @@ class TestMembership:
     async def test_jira_s_answer_becomes_the_access(self, session: AsyncSession) -> None:
         user = await auth.register(session, "mem2@example.com", PASSWORD)
 
-        await AppRepository(session).replace_projects(user.id, ["MYC", "OPS"])
+        await AccountRepository(session).replace_projects(user.id, ["MYC", "OPS"])
 
-        assert await AppRepository(session).projects_for(user.id) == frozenset({"MYC", "OPS"})
+        assert await AccountRepository(session).projects_for(user.id) == frozenset({"MYC", "OPS"})
 
     async def test_a_project_lost_in_jira_is_lost_here(self, session: AsyncSession) -> None:
         """Replaced, never merged: a merge would only ever add."""
         user = await auth.register(session, "mem3@example.com", PASSWORD)
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         await repo.replace_projects(user.id, ["MYC", "OPS"])
 
         await repo.replace_projects(user.id, ["OPS"])
@@ -431,7 +432,7 @@ class TestMembership:
 
     async def test_nothing_from_jira_means_nothing_here(self, session: AsyncSession) -> None:
         user = await auth.register(session, "mem4@example.com", PASSWORD)
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         await repo.replace_projects(user.id, ["MYC"])
 
         await repo.replace_projects(user.id, [])
@@ -441,9 +442,9 @@ class TestMembership:
     async def test_one_person_s_access_is_not_another_s(self, session: AsyncSession) -> None:
         one = await auth.register(session, "mem6@example.com", PASSWORD)
         two = await auth.register(session, "mem7@example.com", PASSWORD)
-        await AppRepository(session).replace_projects(one.id, ["MYC"])
+        await AccountRepository(session).replace_projects(one.id, ["MYC"])
 
-        assert await AppRepository(session).projects_for(two.id) == frozenset()
+        assert await AccountRepository(session).projects_for(two.id) == frozenset()
 
 
 @needs_postgres

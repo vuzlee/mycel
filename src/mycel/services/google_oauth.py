@@ -32,7 +32,7 @@ import httpx2
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.app import AppRepository, GoogleAccountRow
+from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis.client import get_client
 from mycel.services.tokens import TokenUnreadable, key_set, seal
@@ -212,7 +212,7 @@ async def connect(state: str, code: str) -> GoogleAccountRow:
     user_id = await spend_state(state)
     grant = await exchange(code)
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         await repo.upsert_google_account(
             user_id, grant.email, seal(grant.refresh_token), grant.scope
         )
@@ -225,7 +225,7 @@ async def connect(state: str, code: str) -> GoogleAccountRow:
 async def connected(user_id: int) -> GoogleAccountRow | None:
     """What this person has attached, for the settings screen. `None` is normal."""
     async with session_scope() as session:
-        return await AppRepository(session).google_account(user_id)
+        return await AccountRepository(session).google_account(user_id)
 
 
 async def disconnect(user_id: int) -> bool:
@@ -235,7 +235,7 @@ async def disconnect(user_id: int) -> bool:
     person who asked to disconnect must end up disconnected whether or not Google answered.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = AccountRepository(session)
         row = await repo.google_account(user_id)
         if row is None:
             return False

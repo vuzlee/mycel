@@ -27,7 +27,7 @@ def _setup(monkeypatch: pytest.MonkeyPatch, error: Exception) -> list[frozenset[
         yield None
 
     monkeypatch.setattr(jira_oauth, "token_for", token_for)
-    monkeypatch.setattr(access, "AppRepository", Repo)
+    monkeypatch.setattr(access, "AccountRepository", Repo)
     monkeypatch.setattr(access, "session_scope", scope)
     return written
 

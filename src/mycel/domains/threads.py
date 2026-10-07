@@ -9,7 +9,11 @@ Jira became the source: it is a gold question now, and it belongs beside the oth
 
 from dataclasses import dataclass
 
-from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, TurnRow
+from mycel.infra.postgres.repositories.conversations import (
+    ConversationRepository,
+    ConversationRow,
+    TurnRow,
+)
 from mycel.infra.postgres.session import session_scope
 
 #: Most threads one sidebar shows. Beyond this the list is an archive, and an archive
@@ -35,7 +39,7 @@ async def list_threads(user_id: int, limit: int = HISTORY_LIMIT) -> list[Thread]
     than hide.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = ConversationRepository(session)
         threads = []
         for conversation in await repo.conversations_for(user_id, limit=limit):
             turns = await repo.turns_for_conversation(conversation.id)
@@ -59,7 +63,7 @@ async def thread_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
     that is not there, for the same reason as `forget_thread`.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = ConversationRepository(session)
         conversation = await repo.conversation_by_id(conversation_id)
         if conversation is None or conversation.user_id != user_id:
             return []
@@ -73,11 +77,13 @@ async def forget_thread(user_id: int, conversation_id: int) -> bool:
     belongs to someone else is telling them something they did not have.
     """
     async with session_scope() as session:
-        repo = AppRepository(session)
+        repo = ConversationRepository(session)
         return await repo.delete_conversation(conversation_id, user_id)
 
 
 async def pin_thread(user_id: int, conversation_id: int, pinned: bool) -> bool:
     """Pin or unpin one thread. False if it is not this person's, or not there."""
     async with session_scope() as session:
-        return await AppRepository(session).pin_conversation(conversation_id, user_id, pinned)
+        return await ConversationRepository(session).pin_conversation(
+            conversation_id, user_id, pinned
+        )

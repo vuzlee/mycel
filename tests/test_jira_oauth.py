@@ -295,7 +295,7 @@ class TestARotatedTokenIsKept:
         async def _scope() -> AsyncIterator[None]:
             yield None
 
-        monkeypatch.setattr(oauth, "AppRepository", Repo)
+        monkeypatch.setattr(oauth, "AccountRepository", Repo)
         monkeypatch.setattr(oauth, "session_scope", _scope)
         monkeypatch.setattr(
             httpx2,
@@ -324,7 +324,7 @@ class TestARotatedTokenIsKept:
         async def _scope() -> AsyncIterator[None]:
             yield None
 
-        monkeypatch.setattr(oauth, "AppRepository", Repo)
+        monkeypatch.setattr(oauth, "AccountRepository", Repo)
         monkeypatch.setattr(oauth, "session_scope", _scope)
         monkeypatch.setattr(
             httpx2, "AsyncClient", _routes({"/oauth/token": {"access_token": "at"}})

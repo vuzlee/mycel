@@ -148,7 +148,7 @@ async def _no_session() -> AsyncIterator[None]:
 
 
 class _GoneThread:
-    """An `AppRepository` whose conversation has been deleted underneath it."""
+    """A `ConversationRepository` whose conversation has been deleted underneath it."""
 
     def __init__(self, session: Any) -> None:
         pass
@@ -298,7 +298,7 @@ class TestFailures:
         """
         _runs(monkeypatch, _ANSWER)
         monkeypatch.setattr(chat_domain, "session_scope", _no_session)
-        monkeypatch.setattr(chat_domain, "AppRepository", _GoneThread)
+        monkeypatch.setattr(chat_domain, "ConversationRepository", _GoneThread)
 
         job = Job(
             kind=JobKind.CHAT,

@@ -27,7 +27,7 @@ from mycel.api.middleware import HEADER
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.domains.threads import Thread
-from mycel.infra.postgres.repositories.app import ConversationRow, TurnRow
+from mycel.infra.postgres.repositories.conversations import ConversationRow, TurnRow
 from mycel.infra.postgres.repositories.gold import (
     AssigneeLoad,
     DayEffort,

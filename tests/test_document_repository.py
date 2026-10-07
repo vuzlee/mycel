@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from mycel.infra.postgres import documents as tables
 from mycel.infra.postgres.engine import async_dsn
 from mycel.infra.postgres.models import Base, Document
-from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
+from mycel.infra.postgres.repositories.identity import IdentityRepository
 
 pytestmark = [
     pytest.mark.anyio,
@@ -42,7 +42,7 @@ async def session() -> AsyncIterator[AsyncSession]:
 
 
 async def _owner(session: AsyncSession, email: str) -> int:
-    return (await AppRepository(session).create_user(email, "x")).id
+    return (await IdentityRepository(session).create_user(email, "x")).id
 
 
 async def _ready_doc(repo: DocumentRepository, owner_id: int, sha: str) -> int:

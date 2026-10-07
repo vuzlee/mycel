@@ -101,7 +101,7 @@ class TestKnowledgeGoesThroughTheOrchestrator:
         async def scope():  # type: ignore[no-untyped-def]
             yield None
 
-        monkeypatch.setattr(chat, "AppRepository", Repo)
+        monkeypatch.setattr(chat, "ConversationRepository", Repo)
         monkeypatch.setattr(chat, "session_scope", scope)
         monkeypatch.setattr(chat, "enqueue_chat", plain)
 

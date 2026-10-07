@@ -13,7 +13,7 @@ here grants by hand. The absent case is the closed one on purpose.
 a person-facing route reads gold another way.
 """
 
-from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import Principal
 
@@ -30,7 +30,7 @@ async def readable_projects(user: Principal) -> frozenset[str]:
     Callers with a list ask this once instead.
     """
     async with session_scope() as session:
-        return await AppRepository(session).projects_for(user.id)
+        return await AccountRepository(session).projects_for(user.id)
 
 
 class NotReadable(Exception):

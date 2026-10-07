@@ -28,7 +28,7 @@ from mycel.api.dependencies import current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains.chat import ThreadNotFound, find_turn, request_chat
-from mycel.infra.postgres.repositories.app import TurnRow
+from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
 from mycel.services.auth import Principal
 

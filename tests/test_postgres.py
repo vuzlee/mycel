@@ -27,18 +27,25 @@ from mycel.etl.normalise import JIRA
 from mycel.infra.postgres.engine import async_dsn, dispose_engine
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.models import Base
-from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
+from mycel.infra.postgres.repositories.conversations import ConversationRepository
 from mycel.infra.postgres.repositories.gold import (
     WORKDAY_SECONDS,
     GoldRepository,
     WorkItemRow,
     WorklogRow,
 )
+from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.repositories.silver import SilverRepository
 from mycel.services.dashboard import RECENT_LIMIT, build_dashboard
 from mycel.services.gather import gather_progress
 from mycel.services.transform import TransformResult, transform
+
+
+class AppRepository(IdentityRepository, AccountRepository, ConversationRepository):
+    """All three `app` repositories on one session, so one test can mix them."""
+
 
 pytestmark = pytest.mark.anyio
 

@@ -27,7 +27,7 @@ from datetime import UTC, datetime
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.app import AppRepository
+from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.repositories.gold import GoldRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.vectors.client import configured as vectors_configured
@@ -154,7 +154,7 @@ async def _record(error: str | None = None) -> None:
     """Stamp this run in `app.sync_state`. Best-effort: a stamp must not fail a sync."""
     try:
         async with session_scope() as session:
-            await AppRepository(session).record_sync(datetime.now(UTC), error)
+            await AccountRepository(session).record_sync(datetime.now(UTC), error)
     except Exception:
         log.warning("could not record the sync run", exc_info=True)
 
