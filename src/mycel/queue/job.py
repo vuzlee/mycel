@@ -37,7 +37,6 @@ class JobKind(StrEnum):
 
     CHAT = "chat"
     INGEST = "ingest"
-    ASK = "ask"
     DELETE_DOCUMENT = "delete_document"
 
 

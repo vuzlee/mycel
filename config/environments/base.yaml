@@ -110,8 +110,6 @@ settings:
   # Measured in batch 063: answerable 0.805-0.926, off topic 0.67-0.72.
   document_min_score: 0.75
   # Gemini calls for notebook questions. The free tier is ~20 a day for the whole system.
-  ask_per_user_daily: 10
-  ask_system_daily: 10
   ask_top_k: 5
   ask_max_chars: 500
 

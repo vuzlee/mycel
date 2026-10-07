@@ -1,14 +1,15 @@
-"""A structured answer streams its text field, so a Knowledge answer appears as it is written."""
+"""A structured answer streams its text field, so long text appears as it is written."""
 
 import json
 from collections.abc import AsyncIterator
 from decimal import Decimal
 
 import pytest
+from pydantic import BaseModel
+from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
-from mycel.agents.agent.answerer import Answerer
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
@@ -18,11 +19,12 @@ from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
 
-BODY = {
-    "answer": "BERT masks 15% of tokens [c1].",
-    "citations": [{"id": "c1", "quote": "masks 15%"}],
-    "answered": True,
-}
+BODY = {"answer": "BERT masks 15% of tokens.", "answered": True}
+
+
+class Answer(BaseModel):
+    answer: str
+    answered: bool
 
 
 class Collect:
@@ -49,7 +51,7 @@ async def _stream(
 
 async def _run(field: str | None) -> Collect:
     cfg = AgentSettings(model_spec="cloud:x")
-    agent = Answerer.build(cfg)
+    agent = Agent(output_type=Answer, deps_type=MycelDeps)
     channel = Collect()
     deps = MycelDeps("j", JobBudget("j", Decimal("1")), settings=cfg, events=channel)
     with agent.override(model=FunctionModel(_respond, stream_function=_stream)):

@@ -59,7 +59,5 @@ def threshold(results: Sequence[Ranked], keep: float = 0.95) -> tuple[float, int
     allowed_to_lose = int(len(answerable) * (1 - keep))
     cut = answerable[allowed_to_lose]
     kept = sum(1 for s in answerable if s >= cut)
-    blocked = sum(
-        1 for r in results if r.evidence is None and r.scores and r.scores[0] < cut
-    )
+    blocked = sum(1 for r in results if r.evidence is None and r.scores and r.scores[0] < cut)
     return cut, kept, blocked

@@ -69,23 +69,21 @@ class TestParsing:
         assert tools_for(frozenset({Chip.KNOWLEDGE})) == frozenset()
 
 
-class TestKnowledgeSkipsTheOrchestrator:
-    """A Knowledge turn is queued as an ask job: one model call, no orchestrator."""
+class TestKnowledgeGoesThroughTheOrchestrator:
+    """A Knowledge turn is a chat job like any other, carrying the previous question."""
 
-    async def test_a_knowledge_turn_is_queued_as_ask(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_a_knowledge_turn_is_queued_as_chat(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from contextlib import asynccontextmanager
         from types import SimpleNamespace
 
         from mycel.domains import chat
 
-        queued: list[tuple[str, object]] = []
-
-        async def knowledge(question: str, thread: int, previous: str, user_id: int) -> str:
-            queued.append(("ask", previous))
-            return "job-k"
+        queued: list[tuple[object, object]] = []
 
         async def plain(*args: object, **kwargs: object) -> str:
-            queued.append(("chat", kwargs.get("chips")))
+            queued.append((kwargs.get("chips"), kwargs.get("previous")))
             return "job-c"
 
         class Repo:
@@ -105,13 +103,13 @@ class TestKnowledgeSkipsTheOrchestrator:
 
         monkeypatch.setattr(chat, "AppRepository", Repo)
         monkeypatch.setattr(chat, "session_scope", scope)
-        monkeypatch.setattr(chat, "enqueue_knowledge", knowledge)
         monkeypatch.setattr(chat, "enqueue_chat", plain)
 
         await chat.request_chat(7, "What is BERT?", chips=["knowledge"])
         await chat.request_chat(7, "Late tickets?", chips=["jira"])
 
-        assert queued == [("ask", ""), ("chat", ["jira"])]
+        assert queued == [(["knowledge"], ""), (["jira"], "")]
+
 
 async def instructions_seen(chips: frozenset[Chip] | None) -> str:
     """The orchestrator's instructions for one turn."""
@@ -126,6 +124,7 @@ async def instructions_seen(chips: frozenset[Chip] | None) -> str:
     with agent.override(model=FunctionModel(respond)):
         await agent.run("hi", deps=deps)
     return seen[0]
+
 
 class TestASourceThatIsOff:
     """Off means the model says so in a sentence, not a heading over nothing."""

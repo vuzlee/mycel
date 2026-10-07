@@ -391,15 +391,6 @@ export interface SourceRef {
   quote?: string;
 }
 
-export interface AskState {
-  status: "queued" | "running" | "done" | "failed";
-  job_id: string | null;
-  answer: string | null;
-  sources: SourceRef[];
-  error: string | null;
-  cached: boolean;
-}
-
 export interface Passage {
   id: number;
   document_id: number;
@@ -457,11 +448,3 @@ export const fetchSourceUrl = (documentId: number): Promise<string> =>
 
 export const fetchPassage = (chunkId: number): Promise<Passage> =>
   fetch(`/chunks/${chunkId}`).then(json<Passage>);
-
-export const fetchAsk = (jobId: string): Promise<AskState> =>
-  fetch(`/asks/${jobId}`).then(json<AskState>);
-
-export const fetchAskQuota = (): Promise<number> =>
-  fetch("/asks/quota")
-    .then(json<{ remaining: number }>)
-    .then((found) => found.remaining);

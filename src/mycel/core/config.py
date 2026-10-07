@@ -263,8 +263,6 @@ class Settings(BaseSettings):
     ingest_worker_max_jobs: int = 20
     ingest_threads: int = 2
     document_min_score: float = 0.75
-    ask_per_user_daily: int = 10
-    ask_system_daily: int = 10
     ask_top_k: int = 5
     ask_max_chars: int = 500
     #: Most one queued job may spend. The HTTP layer has its own ceiling in

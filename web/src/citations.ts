@@ -1,5 +1,5 @@
 /**
- * Citation markers while a Knowledge answer streams.
+ * Citation markers while an answer streams.
  *
  * The model writes `[c2]` after a claim, and the server only knows which markers are real
  * once the answer is finished and checked. So every marker is hidden while the text
@@ -14,6 +14,3 @@ const PARTIAL = /\[(c\d*)?$/;
 export function hideMarkers(text: string): string {
   return text.replace(MARKER, "").replace(PARTIAL, "");
 }
-
-/** The agent whose streamed text carries citation markers. */
-export const CITING_AGENT = "answerer";

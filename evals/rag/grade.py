@@ -74,8 +74,8 @@ async def grade_one(q: dict[str, Any], answer: dict[str, Any]) -> dict[str, Any]
     if not answer.get("answered") or not answer.get("answer"):
         return {**base, "grade": "wrong", "reason": "declined to answer", "model": False}
 
-    # The answerer's model and fallbacks: a grade is one more call on the same gateway.
-    cfg = AgentSettings.from_config("answerer")
+    # The orchestrator's model and fallbacks: a grade is one more call on the same gateway.
+    cfg = AgentSettings.from_config("orchestrator")
     deps = build_deps(f"grade-{q['id']}", ceiling_usd="1.00", settings=cfg)
     prompt = (
         f"Question: {q['question']}\n\nReference answer: {q['reference']}\n\n"

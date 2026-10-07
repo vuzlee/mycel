@@ -54,8 +54,8 @@ class Chip(StrEnum):
 
 
 #: Which tools each chip opens, at every level: the specialist an orchestrator may call,
-#: and the tools that specialist may then use. Knowledge is absent: it never reaches the
-#: orchestrator, `domains/ask.py` answers it directly.
+#: and the tools that specialist may then use. Knowledge is absent: it opens no tool, its
+#: passages are put in the prompt by `domains/knowledge.py`.
 TOOLS: dict[Chip, frozenset[str]] = {
     Chip.WEB: frozenset({"researcher", "web_search"}),
     Chip.MAIL: frozenset({"researcher", "read_mail"}),

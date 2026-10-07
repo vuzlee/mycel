@@ -83,13 +83,15 @@ async def ask(
         hits = await vectors.search(EVAL_OWNER_ID, str(q["question"]), TOP_K)
         latencies.append(time.monotonic() - started)
         answerable = q.get("answerable") is not False
-        results.append(Ranked(
-            question_id=str(q["id"]),
-            evidence=str(q["evidence"]) if answerable else None,
-            doc=str(q["doc"]) if answerable else None,
-            passages=[lookup[h.chunk_id] for h in hits],
-            scores=[h.score for h in hits],
-        ))
+        results.append(
+            Ranked(
+                question_id=str(q["id"]),
+                evidence=str(q["evidence"]) if answerable else None,
+                doc=str(q["doc"]) if answerable else None,
+                passages=[lookup[h.chunk_id] for h in hits],
+                scores=[h.score for h in hits],
+            )
+        )
     return results, latencies
 
 

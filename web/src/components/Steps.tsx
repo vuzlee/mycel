@@ -9,7 +9,7 @@
  * thinking, tool calls, a sub-agent's words — is the trail.
  */
 
-import { CITING_AGENT, hideMarkers } from "../citations";
+import { hideMarkers } from "../citations";
 import type { Item } from "../thread";
 import { Markdown } from "./Markdown";
 import { Trail } from "./Trail";
@@ -23,7 +23,7 @@ interface Props {
 }
 
 const isAnswer = (item: Item): boolean =>
-  item.kind === "text" && (item.agent === "orchestrator" || item.agent === CITING_AGENT);
+  item.kind === "text" && item.agent === "orchestrator";
 
 export function Steps({ items, gaps, live = false }: Props) {
   const answer = items.filter(isAnswer);
@@ -34,7 +34,7 @@ export function Steps({ items, gaps, live = false }: Props) {
         item.kind === "text" ? (
           <Markdown
             key={item.seq}
-            body={item.agent === CITING_AGENT ? hideMarkers(item.body) : item.body}
+            body={hideMarkers(item.body)}
           />
         ) : null,
       )}

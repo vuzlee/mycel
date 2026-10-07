@@ -39,7 +39,6 @@ import { SourcePanel } from "../components/knowledge/SourcePanel";
 import type { Topic } from "../components/Topics";
 import { Topics, anchorFor } from "../components/Topics";
 import { ArrowRight, Notebook, Spinner } from "../components/icons";
-import { CITING_AGENT } from "../citations";
 import { useRun } from "../run";
 import { useThreads } from "../threads";
 import { useDocuments } from "../useDocuments";
@@ -192,11 +191,9 @@ export function Ask() {
 
   const failure = refused ?? run.failure;
 
-  // A Knowledge answer streamed with its markers hidden. Once it is done, the checked
-  // answer - with only the citations that held, and its sources - takes its place.
-  const knowledgeDone =
-    run.result?.status === "done" &&
-    run.items.some((i) => i.agent === CITING_AGENT);
+  // An answer with sources streamed with its markers hidden. Once it is done, the checked
+  // answer - only the markers that held, and clickable sources - takes its place.
+  const cited = run.result?.status === "done" && run.result.sources.length > 0;
 
   // A finished run moves its thread to the top of Recent. The sidebar is ordered by the
   // last thing written to a thread, and that write happens on the worker, minutes after
@@ -326,7 +323,7 @@ export function Ask() {
           anchor={anchorFor(jobId)}
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
-          items={knowledgeDone ? [] : run.items}
+          items={cited ? run.items.filter((i) => i.kind !== "text" || i.agent !== "orchestrator") : run.items}
           gaps={run.gaps}
           failure={failure}
           pending={run.pending}
@@ -335,7 +332,7 @@ export function Ask() {
             <Answer
               result={run.result}
               streamed={
-                !knowledgeDone && run.items.some((i) => i.kind === "text")
+                !cited && run.items.some((i) => i.kind === "text")
               }
               onSource={setSource}
             />

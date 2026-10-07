@@ -27,7 +27,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from mycel.agents.agent.analyst import Analyst
-from mycel.agents.agent.answerer import Answerer
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.agent.researcher import Researcher
 from mycel.agents.agent.summariser import Summariser
@@ -46,7 +45,6 @@ if TYPE_CHECKING:
 
 _DECLARED: tuple[type[BaseAgent[Any]], ...] = (
     Analyst,
-    Answerer,
     Orchestrator,
     Researcher,
     Summariser,

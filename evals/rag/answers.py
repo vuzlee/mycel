@@ -2,10 +2,9 @@
 
     uv run python -m evals.rag.answers [--limit N]
 
-Runs the real 062 path (search, layer-two filter skipped, one Gemini call, citation
-check) for every question. Each result is saved as it lands, so a run stopped by the
-daily quota resumes the next day without repeating a call. Bypasses the app's quota:
-this is a person spending their own calls on purpose.
+Runs the app's Knowledge path (search, passages in `<documents>`, one orchestrator call
+with only the Knowledge chip, marker check) for every question. Each result is saved as
+it lands, so a run stopped by a daily quota resumes without repeating a call.
 """
 
 import argparse
@@ -16,12 +15,13 @@ from typing import Any
 
 from evals.rag import retrieval
 from evals.rag.metrics import normalise
-from mycel.agents.agent.answerer import Answerer
+from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
+from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
-from mycel.domains.ask import render
+from mycel.domains.knowledge import render
 from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors import documents as vectors
 from mycel.services.citations import check
@@ -35,9 +35,7 @@ def done_ids() -> set[str]:
     return {json.loads(line)["id"] for line in STATE.read_text().splitlines() if line.strip()}
 
 
-async def answer_one(
-    q: dict[str, Any], lookup: dict[int, tuple[str, str]]
-) -> dict[str, Any]:
+async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> dict[str, Any]:
     settings = get_settings()
     hits = await vectors.search(retrieval.EVAL_OWNER_ID, str(q["question"]), settings.ask_top_k)
     base = {"id": q["id"], "answerable": q.get("answerable") is not False}
@@ -45,29 +43,41 @@ async def answer_one(
         return {**base, "gemini": False, "answered": False, "cited": [], "grounded": False}
 
     labelled = {
-        f"c{i}": ChunkRow(h.chunk_id, h.document_id, 0, lookup[h.chunk_id][0], "", 0,
-                          lookup[h.chunk_id][1], "", None)
+        f"c{i}": ChunkRow(
+            h.chunk_id,
+            h.document_id,
+            0,
+            lookup[h.chunk_id][0],
+            "",
+            0,
+            lookup[h.chunk_id][1],
+            "",
+            None,
+        )
         for i, h in enumerate(hits, start=1)
     }
-    cfg = AgentSettings.from_config(Answerer.name)
-    deps = build_deps(f"eval-{q['id']}", ceiling_usd="1.00", settings=cfg)
-    answer = await runner.run(Answerer.build(cfg), render(str(q["question"]), labelled), deps)
-    checked = check(answer, {label: c.text for label, c in labelled.items()})
+    cfg = AgentSettings.from_config(Orchestrator.name)
+    deps = build_deps(
+        f"eval-{q['id']}", ceiling_usd="1.00", settings=cfg, chips=frozenset({Chip.KNOWLEDGE})
+    )
+    prompt = f"{render(labelled)}\n\n{q['question']}"
+    answer = await runner.run(Orchestrator.build(cfg), prompt, deps)
+    checked = check(answer, list(labelled))
 
     evidence = q.get("evidence")
     hit_labels = [
-        label for label, c in labelled.items()
+        label
+        for label, c in labelled.items()
         if evidence and c.filename == q["doc"] and normalise(str(evidence)) in normalise(c.text)
     ]
     return {
         **base,
         "gemini": True,
-        "answered": answer.answered,
+        "answered": bool(checked.cited),
         "cited": checked.cited,
         "dropped": checked.dropped,
         "grounded": bool(set(checked.cited) & set(hit_labels)),
         "answer": checked.answer,
-        "quotes": {c.id: c.quote for c in answer.citations},
     }
 
 
@@ -104,8 +114,10 @@ async def main_async(limit: int) -> int:
                 break
             with STATE.open("a") as out:
                 out.write(json.dumps(row) + "\n")
-            print(f"  {row['id']}: answered={row['answered']} cited={row['cited']} "
-                  f"grounded={row['grounded']}")
+            print(
+                f"  {row['id']}: answered={row['answered']} cited={row['cited']} "
+                f"grounded={row['grounded']}"
+            )
     finally:
         await retrieval.cleanup(len(names))
 

@@ -32,15 +32,17 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.domains import knowledge
 from mycel.events.channel import EventChannel, RecordingChannel
 from mycel.infra.postgres.repositories.app import AppRepository, ConversationRow, TurnRow
 from mycel.infra.postgres.session import session_scope
-from mycel.infra.redis import budgets, results
+from mycel.infra.redis import answers, budgets, citations, results
 from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
 from mycel.services.auth import Principal
-from mycel.services.enqueue import enqueue_chat, enqueue_knowledge
+from mycel.services.citations import check
+from mycel.services.enqueue import enqueue_chat
 
 log = get_logger(__name__)
 
@@ -93,11 +95,12 @@ async def request_chat(
             thread = await _thread_of(repo, user_id, conversation_id)
             history = _recall(await repo.turns_for_conversation(thread.id))
 
+        previous = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
             previous = _last_question(await repo.turns_for_conversation(thread.id))
-            job_id = await enqueue_knowledge(question, thread.id, previous, user_id)
-        else:
-            job_id = await enqueue_chat(question, thread.id, history, user_id=user_id, chips=chips)
+        job_id = await enqueue_chat(
+            question, thread.id, history, user_id=user_id, chips=chips, previous=previous
+        )
         await repo.upsert_turn(thread.id, job_id, question, status="queued")
     return job_id, thread.id
 
@@ -170,11 +173,24 @@ async def run(job: Job) -> None:
     if not question:
         raise ValueError("chat job has no question")
     history = str(job.payload.get("history", "")).strip()
+    principal = await _who_asked(job)
+    chips = parse_chips(job.payload.get("chips"))
+
+    found: knowledge.Retrieved | None = None
+    if chips is not None and Chip.KNOWLEDGE in chips:
+        found = await knowledge.retrieve(
+            principal.id, question, str(job.payload.get("previous", ""))
+        )
+        if await _answer_without_model(job, question, principal.id, chips, found):
+            return
+
     prompt = f"{history}\n\nThe question now:\n{question}" if history else question
+    if found is not None and found.labelled:
+        prompt = f"{knowledge.render(found.labelled)}\n\n{prompt}"
 
     settings = AgentSettings.from_config(Orchestrator.name)
     recorder = RecordingChannel(RedisEventChannel(job.job_id))
-    deps = await _deps(job, settings, recorder, await _who_asked(job))
+    deps = await _deps(job, settings, recorder, principal, chips)
     _log_start(job, settings, deps)
     try:
         answer = await runner.run(Orchestrator.build(settings), prompt, deps)
@@ -186,7 +202,19 @@ async def run(job: Job) -> None:
             "tool calls past the ceiling were not kept",
             extra={"job_id": job.job_id, "dropped": recorder.dropped},
         )
-    await _finish(job, answer, question, deps.budget.spent_usd, recorder.steps)
+    sources: list[dict[str, Any]] = []
+    if found is not None:
+        answer, sources = _cite(job, answer, found)
+        if chips == frozenset({Chip.KNOWLEDGE}):
+            await answers.put(
+                principal.id,
+                found.version,
+                _writer(settings),
+                found.query,
+                {"answer": answer, "sources": sources},
+            )
+    await citations.store(job.job_id, principal.id, sources)
+    await _finish(job, answer, question, deps.budget.spent_usd, recorder.steps, sources)
     log.info(
         "job finished",
         extra={
@@ -197,17 +225,51 @@ async def run(job: Job) -> None:
     )
 
 
+async def _answer_without_model(
+    job: Job,
+    question: str,
+    owner_id: int,
+    chips: frozenset[Chip],
+    found: knowledge.Retrieved,
+) -> bool:
+    """A Knowledge-only turn the documents settle alone: busy, nothing found, or cached."""
+    if chips != frozenset({Chip.KNOWLEDGE}):
+        return False
+    if found.busy:
+        text, sources = knowledge.BUSY, list[dict[str, Any]]()
+    elif not found.labelled:
+        text, sources = knowledge.NOT_FOUND, []
+    else:
+        settings = AgentSettings.from_config(Orchestrator.name)
+        cached = await answers.get(owner_id, found.version, _writer(settings), found.query)
+        if cached is None:
+            return False
+        text, sources = cached["answer"], cached["sources"]
+    await citations.store(job.job_id, owner_id, sources)
+    await _finish(job, text, question, Decimal("0"), [], sources)
+    return True
+
+
+def _writer(settings: AgentSettings) -> str:
+    """What a cached Knowledge answer depends on besides the documents: prompt and models."""
+    return answers.writer(
+        Orchestrator.instructions, (settings.model_spec, *settings.fallback_specs)
+    )
+
+
+def _cite(job: Job, answer: str, found: knowledge.Retrieved) -> tuple[str, list[dict[str, Any]]]:
+    """Strip markers for passages not sent; the rest become the turn's sources."""
+    checked = check(answer, list(found.labelled))
+    if checked.dropped:
+        log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
+    sources = [knowledge.source(label, found.labelled[label]) for label in checked.cited]
+    return checked.answer, sources
+
+
 async def record_failure(job: Job, error: str) -> None:
     """Mark a job as not coming back, in both places it is written."""
     await results.store_failure(job.job_id, error)
     await _record(job, status="failed", error=error[:500])
-
-
-async def record_turn(
-    job: Job, status: str, answer: str | None = None, error: str | None = None
-) -> None:
-    """Keep a turn another domain ran (a Knowledge answer) in its thread, like a chat turn."""
-    await _record(job, status=status, answer=answer, error=error)
 
 
 async def _who_asked(job: Job) -> Principal:
@@ -230,7 +292,11 @@ async def _who_asked(job: Job) -> Principal:
 
 
 async def _deps(
-    job: Job, settings: AgentSettings, events: EventChannel, principal: Principal
+    job: Job,
+    settings: AgentSettings,
+    events: EventChannel,
+    principal: Principal,
+    chips: frozenset[Chip] | None,
 ) -> MycelDeps:
     """What one attempt runs with.
 
@@ -245,12 +311,17 @@ async def _deps(
         budget=await budgets.load(job.job_id, ceiling),
         events=events,
         principal=principal,
-        chips=parse_chips(job.payload.get("chips")),
+        chips=chips,
     )
 
 
 async def _finish(
-    job: Job, answer: str, question: str, spent: Decimal, steps: list[dict[str, Any]]
+    job: Job,
+    answer: str,
+    question: str,
+    spent: Decimal,
+    steps: list[dict[str, Any]],
+    sources: list[dict[str, Any]] | None = None,
 ) -> None:
     """Write a finished run to both stores: Redis to be polled, Postgres to be kept.
 
@@ -263,7 +334,7 @@ async def _finish(
         job,
         status="done",
         question=question,
-        answer=answer,
+        answer=knowledge.with_sources(answer, sources or []),
         spent_usd=spent,
         steps=steps or None,
     )

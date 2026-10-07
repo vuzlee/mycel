@@ -1,8 +1,0 @@
-# Notebook answers (batch 062). One call per question, no tools, structured output.
-# Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
-model_spec: cloud:claude-sonnet-5
-tool_calls_limit: 0
-# A second provider: if Claude is unreachable or out of quota, Gemini answers instead.
-fallback_specs:
-  - cloud:gemini-3.5-flash-lite
-  - cloud:gemini-3.6-flash

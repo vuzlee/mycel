@@ -1,4 +1,4 @@
-"""A user's documents, and asking them (the Knowledge chip).
+"""A user's documents, which the Knowledge chip reads.
 
     POST    /documents                      upload one file
     GET     /documents                      list mine, with status
@@ -7,9 +7,6 @@
     DELETE  /documents/{id}                 delete
     GET     /documents/{id}/source          presigned URL to the original
     GET     /chunks/{id}                    one passage, for a citation
-    POST    /knowledge/ask                  ask a question (202, or 200 when cached)
-    GET     /asks/{job_id}                  the answer and its sources
-    GET     /asks/quota                     questions left today
 
 Someone else's document or chunk is 404, never 403.
 """
@@ -23,7 +20,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import current_user
-from mycel.domains import ask as ask_domain
 from mycel.infra.postgres.repositories.documents import DocumentRow
 from mycel.infra.redis import document_events
 from mycel.services import documents as service
@@ -173,60 +169,3 @@ async def read_chunk(chunk_id: int, me: Me) -> ChunkOut:
         section_path=c.section_path,
         page_start=c.page_start,
     )
-
-
-class AskIn(BaseModel):
-    question: str = Field(min_length=1, max_length=2000)
-    #: The question asked just before, so a follow-up can say "it". Optional.
-    previous: str = Field(default="", max_length=2000)
-
-
-class SourceRef(BaseModel):
-    label: str
-    chunk_id: int
-    document_id: int
-    filename: str
-    mime: str
-    page: int | None
-    section: str
-
-
-class AskOut(BaseModel):
-    status: str
-    job_id: str | None = None
-    answer: str | None = None
-    sources: list[SourceRef] = []
-    error: str | None = None
-    cached: bool = False
-
-
-class QuotaOut(BaseModel):
-    remaining: int
-
-
-@router.post("/knowledge/ask", response_model=AskOut, status_code=202)
-async def ask(body: AskIn, me: Me, response: Response) -> AskOut:
-    try:
-        outcome = await ask_domain.request_ask(me.id, body.question, body.previous)
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
-    if outcome["cached"]:
-        response.status_code = 200
-        return AskOut(
-            status="done", answer=outcome["answer"], sources=outcome["sources"], cached=True
-        )
-    return AskOut(status="queued", job_id=outcome["job_id"])
-
-
-@router.get("/asks/quota", response_model=QuotaOut)
-async def ask_quota(me: Me) -> QuotaOut:
-    return QuotaOut(remaining=await ask_domain.remaining(me.id))
-
-
-@router.get("/asks/{job_id}", response_model=AskOut)
-async def ask_result(job_id: str, me: Me) -> AskOut:
-    try:
-        state = await ask_domain.read(me.id, job_id)
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
-    return AskOut(job_id=job_id, **state)
