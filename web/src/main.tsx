@@ -1,12 +1,12 @@
 /**
- * Seven routes, and no gate left.
+ * Eight routes, and no gate left.
  *
  * `basename="/app"` because that is where the API mounts the build; the dev server uses
  * the same base, so a path written here means the same thing in both.
  *
- * `/home`, `/login` and `/register` are open. Batch 027 deleted `/reports` and
- * `/dashboard` — the only two guarded routes — so `Gate` went with them. Batch 040 brings
- * `/dashboard` back and keeps `Gate` gone: `Board` is four lines waiting on the same one
+ * `/home`, `/login` and `/register` are open. Deleting `/reports` and
+ * `/dashboard` — the only two guarded routes — took `Gate` with them. `/dashboard` came
+ * back and keeps `Gate` gone: `Board` is four lines waiting on the same one
  * `me()` call `Front` already waits on, and a shared wrapper for two callers that differ
  * in where they send a stranger is a component whose whole body is a prop.
  *

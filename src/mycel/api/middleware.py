@@ -52,9 +52,8 @@ class RequestIdMiddleware:
     """Give every request an id, put it where the logger finds it, send it back.
 
     Pure ASGI rather than `BaseHTTPMiddleware`, for the reason in this module's docstring:
-    that one buffers the response body, which would stall the SSE stream that batch 005
-    adds. Getting this wrong fails silently — tokens simply arrive in one lump at the end —
-    so it is written the safe way now, while there is nothing to break.
+    that one buffers the response body, which would stall the SSE stream. Getting this
+    wrong fails silently — tokens simply arrive in one lump at the end.
     """
 
     def __init__(self, app: ASGIApp) -> None:

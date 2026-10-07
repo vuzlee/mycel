@@ -14,7 +14,7 @@ comes back as text the orchestrator writes around. A `TransportError` — nothin
 spends money the job does not have. Both sides are pinned here, in one class, because the
 bug they guard against is the boundary moving.
 
-Since batch 033 the output is a plain `str`, so a model's turn ends with a `TextPart`
+The output is a plain `str`, so a model's turn ends with a `TextPart`
 rather than a `final_result` tool call. That is the point of the change and not an
 incidental one: prose arrives on the stream as it is written, and a tool call does not.
 """
@@ -231,8 +231,7 @@ class TestTheSummariserTool:
     """The one delegated tool that does not forward a question.
 
     It takes `project` and `days` and builds the prompt itself, because the summariser's
-    prompt is what batches 017 and 024 tuned. Letting the orchestrator write that prompt
-    would throw both away and re-open the faults they closed.
+    prompt is tuned. Letting the orchestrator write that prompt would throw the tuning away.
     """
 
     async def test_it_builds_the_prompt_from_the_window_it_was_given(
@@ -279,8 +278,8 @@ class TestTheSummariserTool:
     async def test_a_project_the_asker_was_not_granted_is_never_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The fault batch 055 closed: the tool took a project name from the model and
-        read it. `gather_progress` must not be reached at all — a refusal produced after
+        """A project name from the model is checked against the grant before any
+        read. `gather_progress` must not be reached at all — a refusal produced after
         the read is a refusal that already loaded the data."""
         reached = []
         monkeypatch.setattr(delegate, "gather_progress", lambda *a, **k: reached.append(a))

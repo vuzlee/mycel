@@ -29,9 +29,7 @@ class JobKind(StrEnum):
     An enum rather than a free string: a typo in a routing key is a message that sits in a
     queue nobody consumes, which looks exactly like a slow worker.
 
-    One member since batch 033, when the product became one chat box: `summary` had its own
-    endpoint, and the capability is now reachable as a tool the orchestrator calls. Kept as
-    an enum because the value is baked into `idempotency_key`, and a second kind of work is
+    Kept as an enum because the value is baked into `idempotency_key`, and a second kind of work is
     a member here rather than a string at every call site.
     """
 

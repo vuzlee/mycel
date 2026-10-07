@@ -1031,8 +1031,8 @@ pre .c { color: var(--ink-faint); }
         <li><b>What it buys:</b> a place for the difference when a second tracker arrives.</li>
         <li><b>What it costs:</b> every sync writes each row twice.</li>
       </ul>
-      <p><b><code>silver.message</code> was dropped by migration 0005.</b> Empty since batch 016
-      removed its source. An unwritten table beside a live layer is a standing question about
+      <p><b><code>silver.message</code> was dropped by migration 0005.</b> Empty since its
+      source was removed. An unwritten table beside a live layer is a standing question about
       which of the two is real.</p>
     </div>
   </section>
@@ -1049,7 +1049,7 @@ pre .c { color: var(--ink-faint); }
       <div class="dict-head">
         <span class="dict-name">gold.work_item</span>
         <p>One issue, one row. A <b>contract</b>: adding a column is free, changing what an
-        existing column means takes two releases, because the report, the dashboard and the
+        existing column means takes two releases, because the chat agents, the dashboard and the
         calendar writer all read it.</p>
       </div>
 
@@ -1116,7 +1116,7 @@ pre .c { color: var(--ink-faint); }
         <span class="col-n">status</span>
         <span class="col-t">varchar(64)</span>
         <span class="col-d">The site's <b>own</b> name for the status, untranslated. A team that
-        calls it "Đang review" should read that word in its report.
+        calls it "Đang review" should read that word in its answer.
         <span class="ex">In Progress · Đang review</span></span>
       </div>
 
@@ -1269,7 +1269,7 @@ pre .c { color: var(--ink-faint); }
         <span class="col-d"><b>The one time field that can be back-dated honestly.</b> The person
         logging declares "these hours were Tuesday" and Jira records exactly that — unlike created
         dates and status transitions, which are stamped at the moment of the API call. Everything
-        time-shaped in a report goes through this column.</span>
+        time-shaped in an answer goes through this column.</span>
       </div>
 
       <div class="col">
@@ -1318,10 +1318,10 @@ pre .c { color: var(--ink-faint); }
     <p class="path-note">
       Four tables from migration <code>0002</code>: <code>app.user</code> and
       <code>app.session</code> for who is signed in, <code>app.conversation</code> and
-      <code>app.report</code> for what they have run. A report's <code>body</code> is
-      <code>jsonb</code> — that is what lets an agent's output schema change without a
-      migration, and it is exactly why batch 017 could replace the summary's shape without
-      touching this table.
+      <code>app.turn</code> for what they have asked. Migration <code>0006</code> renamed
+      <code>app.report</code> to <code>app.turn</code> and replaced its <code>jsonb</code>
+      <code>body</code> with <code>answer text</code>: every run is a chat answer in markdown
+      now, so there is no output schema left to store.
     </p>
 
     <div class="callout">
@@ -1384,33 +1384,33 @@ pre .c { color: var(--ink-faint); }
 
     <div class="dict" data-tone="app">
       <div class="dict-head">
-        <span class="dict-name">app.conversation · app.report</span>
+        <span class="dict-name">app.conversation · app.turn</span>
         <p>One thread in the sidebar, and one finished run kept beside it.</p>
       </div>
 
       <div class="col">
         <span class="col-n">conversation.kind</span>
         <span class="col-t">varchar(16)</span>
-        <span class="col-d">Separates the two product surfaces — a free-form chat and a
-        progress summary. Different pages, and only one of them has a chat to speak of.</span>
+        <span class="col-d"><code>"chat"</code> for every thread. Kept as a column so a second
+        kind is a new value, not a migration.</span>
       </div>
 
       <div class="col" data-key="fk">
-        <span class="col-n">report.conversation_id</span>
+        <span class="col-n">turn.conversation_id</span>
         <span class="col-t">int · on delete cascade</span>
         <span class="col-d">Forgetting a thread in the sidebar forgets every run under it.
         The cascade is why <code>DELETE /conversations/{id}</code> needs no second step.</span>
       </div>
 
       <div class="col" data-key="nk">
-        <span class="col-n">report.job_id</span>
+        <span class="col-n">turn.job_id</span>
         <span class="col-t">varchar(64) · unique</span>
         <span class="col-d">A redelivered job updates its row instead of writing a second
         one.</span>
       </div>
 
       <div class="col">
-        <span class="col-n">report.spent_usd</span>
+        <span class="col-n">turn.spent_usd</span>
         <span class="col-t">numeric(12,6)</span>
         <span class="col-d">Not a float. These numbers are added up and reported; binary
         floating point does not hold a decimal value exactly.</span>
@@ -1418,7 +1418,7 @@ pre .c { color: var(--ink-faint); }
     </div>
 
     <div class="callout">
-      <p><b>Redis and <code>app.report</code> coexist.</b> Redis holds a result for
+      <p><b>Redis and <code>app.turn</code> coexist.</b> Redis holds a result for
       <code>result_ttl_seconds</code> so a second process can read it — a holding area, always
       described as one. This is the record. Redis answers <em>is it done yet</em>; this answers
       <em>what did we produce last week</em>.</p>

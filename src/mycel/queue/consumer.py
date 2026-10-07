@@ -107,9 +107,8 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
 async def _run(job: Job) -> None:
     """Hand the job to the domain that knows what its kind means.
 
-    One line on purpose. Until batch 013 this function built the orchestrator, seeded its
-    budget and stored its result — the order of steps for one kind of work, written in the
-    transport layer, where a second kind would have meant a second copy of it.
+    One line per kind on purpose. The order of steps for a kind of work belongs to its
+    domain; written here, in the transport layer, each kind would need its own copy.
     """
     if job.kind is JobKind.INGEST:
         await ingest_domain.run(job)

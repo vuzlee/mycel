@@ -4,7 +4,7 @@ Two halves, and the first is the one that matters. The agent has no tools and ma
 call, so almost nothing about it can go wrong that is not already about the text handed
 to it — a fact missing from `render` is a fact the model cannot have.
 
-Since batch 017 that text is built from work items rather than from tagged messages, so
+That text is built from work items, so
 what these tests pin is that the structure arrives *with* the data: keys, estimates,
 what is past due. The model's job is which of them to mention first.
 

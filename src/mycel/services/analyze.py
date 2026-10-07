@@ -4,9 +4,8 @@ The boundary between a query result and a prompt. `gather.py` reads the database
 renders what it read — so the agent module stays a prompt and a schema, and nothing under
 `agents/` ever imports a service.
 
-Rendering only, since batch 033. This module used to run the summariser as well, for an
-endpoint that no longer exists; the agent is now reached as a tool, and `delegate.py` calls
-`render` on its way there.
+Rendering only. The summariser is reached as a tool, and `delegate.py` calls `render` on
+its way there.
 """
 
 from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow

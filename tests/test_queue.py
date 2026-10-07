@@ -10,7 +10,7 @@ busy worker rather than a spinning one.
 cannot tell the truth about routing, and skips when there is none.
 
 The agent is faked at `domains/chat.runner.run` rather than at the consumer, because
-batch 013 moved what a job *means* into the domain: the consumer now receives, dispatches
+what a job *means* lives in the domain: the consumer now receives, dispatches
 and acks, and that is all it is tested for here.
 """
 

@@ -18,7 +18,7 @@ scrape_configs:
         target_label: container
     pipeline_stages:
       # App logs are JSON already carrying trace_id — extract it so you can jump
-      # straight from a log line to the trace in Tempo.
+      # straight from a log line to the trace in Langfuse.
       - json:
           expressions:
             level: level

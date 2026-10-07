@@ -1,8 +1,7 @@
 """Ask something, and come back for the answer.
 
-Batch 003 ran the orchestrator inside the request and returned its output. That proved an
-HTTP request could reach the agent layer with its trace intact, and it was known to be
-wrong for production: a run takes minutes, and every proxy in front of this times out long
+The orchestrator does not run inside the request: a run takes minutes, and every proxy in front of
+this times out long
 before one finishes.
 
 So this is two endpoints rather than one:
@@ -14,13 +13,8 @@ So this is two endpoints rather than one:
 done it. A caller that treats 202 as "here is your answer" fails on the empty body rather
 than silently reading a half-answer.
 
-The path said `/reports` until batch 033. That was the name from when the app had a button
-per capability; the orchestrator has routed a question to whichever specialist covers it
-since 026, and there has been one chat box since 027.
-
 Redis answers the poll while a run is in flight, and `app.turn` answers it afterwards. The
-TTL that used to make a job id good for an hour stopped mattering in batch 012: the run is
-written to both, so the fallback is a row, not a 404.
+run is written to both, so once the Redis TTL expires the fallback is a row, not a 404.
 """
 
 from datetime import UTC, datetime
@@ -78,8 +72,7 @@ class AcceptedResponse(BaseModel):
 class ChatResponse(BaseModel):
     """A job's state, and what it produced once there is something.
 
-    `answer` is markdown. It was a union of two schemas until batch 033, when the
-    orchestrator stopped filling one: a chatbot picks the shape its answer deserves — a
+    `answer` is markdown rather than a schema: a chatbot picks the shape its answer deserves — a
     table where the data has columns, a sentence where it does not — and a schema had to
     pick for it.
 

@@ -79,8 +79,8 @@ class AgentSettings:
     mcp_servers: tuple[str, ...] = ()
 
     # Models to try, in order, when `model_spec` is unreachable — a provider outage, not a
-    # spent quota. Empty means one model and no second chance, which is what every agent
-    # had before batch 056. See `model_builder.py` for which failures move down the list:
+    # spent quota. Empty means one model and no second chance. See `model_builder.py` for which
+    # failures move down the list:
     # a 5xx does, a 429 does not, because rotating the key is the answer to a 429 and
     # falling to another model would spend a second quota while the ring still has keys.
     fallback_specs: tuple[str, ...] = ()

@@ -5,8 +5,8 @@ Revises: 0011
 
 `run_sql` hands the model a `SELECT` against `gold.work_item` and runs whatever comes back.
 Until now that read every project in the database, whoever was asking — the permission
-check that `POST /reports/summary` used to do had no counterpart in a tool, and batch 033
-made the tool the only way in.
+check that `POST /reports/summary` used to do had no counterpart in a tool, and the tool
+is now the only way in.
 
 IT CANNOT BE FIXED BY READING THE SQL. A project can be named in a join, a CTE, a subquery,
 or not named at all by `SELECT *`. A pattern that catches today's phrasings is a pattern

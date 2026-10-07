@@ -9,8 +9,8 @@ base url, so a deployment sets two keys and stops thinking about it.
 
 **HTTP/protobuf, not gRPC.** Langfuse Cloud accepts OTLP over HTTP only. The endpoint is
 a full path (`/api/public/otel/v1/traces`), not a host, and authentication is Basic auth
-over the project's key pair rather than a bearer token — both are unlike the collector
-this module used to talk to, and both are silent when wrong: the exporter keeps batching
+over the project's key pair rather than a bearer token — both are unlike a plain OTLP
+collector, and both are silent when wrong: the exporter keeps batching
 and the UI simply stays empty.
 
 **Span content is opt-in here, though the library opts in for you.** pydantic-ai's

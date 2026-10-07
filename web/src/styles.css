@@ -32,7 +32,7 @@
   --select: #6e56cf;
   --select-ink: #ffffff;
   /* A cited quote, marked over text: the accent, thin enough to read through. */
-  --quote-mark: rgb(61 37 157 / 20%);
+  --quote-mark: rgb(110 86 207 / 20%);
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -115,7 +115,7 @@
     --accent-line: #473876;
     --select: #baa7ff;
     --select-ink: #14101d;
-    --quote-mark: rgb(160 143 255 / 30%);
+    --quote-mark: rgb(186 167 255 / 30%);
 
     --flag: #f090b4;
     --flag-soft: #2a1520;
@@ -160,7 +160,7 @@
   --accent-line: #473876;
   --select: #baa7ff;
   --select-ink: #14101d;
-  --quote-mark: rgb(160 143 255 / 30%);
+  --quote-mark: rgb(186 167 255 / 30%);
 
   --flag: #f090b4;
   --flag-soft: #2a1520;
@@ -628,7 +628,7 @@ a.brand:hover .mark {
   }
 }
 
-/* Markdown, since batch 033: the model picks the shape and this styles whatever it picked.
+/* Markdown: the model picks the shape and this styles whatever it picked.
    `white-space` is back to normal — the line breaks are the markdown's now, and
    pre-wrap would double every blank line between paragraphs. */
 .prose {

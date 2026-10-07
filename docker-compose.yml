@@ -1,5 +1,5 @@
 # Full dev stack: app + databases + observability.
-# Prod uses this same file with a prebuilt image instead of building in place.
+# Every app service builds in place; the published images come from release.yml.
 
 # Where the stores are, for every application container. .env names them at localhost,
 # which is right for `dev` mode on the host and wrong inside a container, where localhost
@@ -33,7 +33,7 @@ services:
       retries: 10
 
   # In development the API runs on the host (`uvicorn --reload`), so it stays out of the
-  # default `up`: docker compose --profile api up -d builds and runs it like prod does.
+  # default `up`: docker compose --profile api up -d builds and runs it in a container.
   api:
     build: {context: ., target: app}
     profiles: [api]
@@ -74,7 +74,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
-  # Runs background jobs: sync, transform, report generation.
+  # Runs background jobs: sync, transform, chat turns.
   # --scale worker=N works without a ceiling here: RabbitMQ hands each message to one
   # consumer, so workers share a queue rather than being capped by a partition count.
   worker:
@@ -108,7 +108,7 @@ services:
       minio: {condition: service_healthy}
 
   # --- Job queue ---
-  # RabbitMQ rather than Kafka: a few reports an hour do not need a JVM, a partitioned
+  # RabbitMQ rather than Kafka: a few chat turns an hour do not need a JVM, a partitioned
   # log or replay. What they do need is one consumer per message, redelivery on crash and
   # a dead-letter queue, which is exactly what a broker gives. Retry/backoff is a
   # dead-letter exchange with a TTL, not a chain of retry topics.

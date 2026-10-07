@@ -1,7 +1,7 @@
 """The HTTP shell: assembly, the request id, and how errors come back.
 
-No model is ever called here — `conftest.py` forbids it, and since batch 004 the model
-would run in another process anyway. The queue and the result store are stubbed, because
+No model is ever called here — `conftest.py` forbids it, and the model would
+run in another process anyway. The queue and the result store are stubbed, because
 what these tests are about is the shell: that a request is accepted without waiting, that
 failures map to the right status, and that the request id survives the trip.
 
@@ -204,7 +204,7 @@ class TestRequestId:
 
 
 class TestQueueingAQuestion:
-    """202 and a job id, in milliseconds. The batch 003 endpoint ran the work inline."""
+    """202 and a job id, in milliseconds."""
 
     def test_a_request_is_accepted_rather_than_answered(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -234,7 +234,7 @@ class TestQueueingAQuestion:
     ) -> None:
         """The conversation the caller asked for comes back, not a fresh one.
 
-        This is the whole of batch 031 at the HTTP edge: without the field a second
+        Without the field a second
         question opened a second thread, and the page had no way to say otherwise.
         """
         seen: list[int | None] = []
@@ -426,12 +426,12 @@ class TestErrorsComeBackAsThemselves:
 
 
 class TestTheThingsThatFailSilently:
-    """Two properties that no ordinary test touches, both warned about in batch 003.
+    """Two properties that no ordinary test touches, neither caught by an ordinary test.
 
     Neither shows up as a wrong answer. The first shows up as a server that handles one
     request at a time under load; the second as two disconnected trees in Langfuse.
 
-    The trace one matters more since batch 004, not less: the span the worker restores
+    The trace one matters most: the span the worker restores
     from the message headers attaches to the span this test is checking exists.
     """
 
@@ -481,7 +481,7 @@ class TestTheThingsThatFailSilently:
     ) -> None:
         """One trace, not two.
 
-        This is the risk named in the batch note: HTTP spans and agent spans landing in
+        HTTP spans and agent spans landing in
         separate trees makes the work done in `73b8b17` worthless, and nothing else in the
         suite would notice. Checked by recording spans in memory rather than exporting.
         """
@@ -664,7 +664,7 @@ class TestTheBoard:
 
         assert body["effort_by_day"] == [{"day": "2026-09-18", "seconds": 5 * 3600}]
 
-    def test_the_three_blocks_batch_040_added_reach_the_page(
+    def test_priority_kind_and_activity_reach_the_page(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Priority, kind and the feed. The feed carries `updated_at`, which is what makes

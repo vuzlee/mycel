@@ -7,7 +7,7 @@ The three application processes run as pods. The stores do not.
 | | Runs on | Used for |
 |---|---|---|
 | `docker-compose.yml` | a developer's machine | writing code, debugging, the stores |
-| `deploy/helm/` | minikube today, a real cluster later | proving the chart, then staging |
+| `deploy/helm/` | minikube today, a real cluster later | proving the chart |
 
 Two files, the **same image** and the same environment variables. There is no
 `if env == "prod"` branch in the code — only a different `values-<env>.yaml`.

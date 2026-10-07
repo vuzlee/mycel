@@ -53,7 +53,7 @@ class TurnResponse(BaseModel):
 
     `steps` is the tool calls that turn made, in the same shape the live stream sends —
     so the page replays a finished turn with the builder it already has. Null for a turn
-    that ran before batch 037, and for one that failed.
+    recorded without steps, and for one that failed.
     """
 
     job_id: str

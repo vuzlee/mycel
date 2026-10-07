@@ -23,9 +23,7 @@ class BronzeRepository:
     async def save_issues(self, issues: Sequence[dict[str, Any]]) -> int:
         """Store issues under Jira's own `id`.
 
-        Overwrite rather than skip, which is the opposite of what the Telegram connector
-        did and for a concrete reason: a Telegram update is an event and arriving twice
-        does not make the second copy truer, but a Jira issue is a *record* and a second
+        Overwrite rather than skip: a Jira issue is a *record* and a second
         fetch is a later, better version of it.
         """
         rows = [

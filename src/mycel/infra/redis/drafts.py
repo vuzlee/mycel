@@ -11,12 +11,12 @@ person's phone. So `draft_event` writes nothing, reads the time back in words, a
 — there is nothing to keep, nothing to report on, and nothing to migrate. Ten minutes is how
 long "yes" stays a plausible answer to a question that was asked one turn ago.
 
-The draft id travels through the conversation's own message history, which has carried tool
-results since batch 032, so the model reads it back with no new machinery. It is spent on
+The draft id travels through the conversation's own message history, which carries tool
+results, so the model reads it back with no new machinery. It is spent on
 confirmation, so an enthusiastic "yes, do it" twice over books one meeting.
 
-**Two kinds since batch 060, and the second is a Jira write.** The argument carried over
-unchanged: "assign it to Nam" is a name the model turns into an account id, and a wrong one
+**Two kinds, and the second is a Jira write.** The same argument holds: "assign it to Nam" is a name
+the model turns into an account id, and a wrong one
 is almost always the *wrong person* rather than a malformed id — two people share a name, or
 one has left. So the write is read back by full name and nothing reaches Jira until someone
 says yes. Each kind has its own key prefix and its own `put`/`take` pair, so a draft of one

@@ -4,12 +4,9 @@ Two calls, and both run as the person asking: `list_events` for "what have I got
 afternoon", `create_event` for "book that". Authorisation is `services/google_oauth.py`'s
 and nothing here ever sees a refresh token.
 
-**This replaced a one-way sync, and the sync is gone.** Until batch 051 the file mirrored
-Jira due dates onto a calendar of the deployment's own, on a timer, with a service account
-— and nothing ever called it. A timer has nobody signed in, which is the only reason a
-service account was needed; a question has the asker right there, so the reason went with
-the timer. "What is due this week" is now asked of `summariser`, which has read Jira since
-batch 017 and needs no event to answer it.
+**No sync, no service account.** A question has the asker right there, so every call runs
+on their token. "What is due this week" is asked of `summariser`, which reads Jira and
+needs no event to answer it.
 
 **`timeZone` is sent with every `dateTime`, in both directions.** Without it Google falls
 back to the calendar's own default, so a deployment on a UTC host books every meeting seven

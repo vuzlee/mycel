@@ -5,7 +5,7 @@
 # The one mode where a code change is visible without a rebuild, which is why it is the
 # default and why `up` starts no app profile in compose.
 #
-# The worker is not optional. Without it `POST /reports` returns a job id for work nobody
+# The worker is not optional. Without it `POST /chat` returns a job id for work nobody
 # picks up — which looks like a slow model rather than a missing process.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"

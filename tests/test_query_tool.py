@@ -265,7 +265,7 @@ class TestAgainstTheDatabase(_AgainstTheDatabase):
 
 @needs_postgres
 class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
-    """The fault batch 055 closed, and the reason the filter is not in Python."""
+    """Only granted projects are read, and the filter lives in SQL, not Python."""
 
     async def _two_projects(self) -> None:
         await self._seed("MYC", "MYC-7")

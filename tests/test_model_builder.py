@@ -120,9 +120,9 @@ class TestFallbackChain:
 class TestWhenTheWholeChainFails:
     """`FallbackModel` raises a `FallbackExceptionGroup`, which is not a `ModelAPIError`.
 
-    Left untranslated it would walk straight past the clause batch 054 added and arrive at
+    Left untranslated it would walk straight past the model-error clause and arrive at
     `tools/delegate.py` as an ordinary exception — narrated as prose, billed, marked done.
-    That is the exact failure 054 closed, re-opened by a different exception class.
+    That is the model-error failure, re-opened by a different exception class.
     """
 
     def test_it_becomes_a_transport_error_so_the_job_is_retried(self) -> None:

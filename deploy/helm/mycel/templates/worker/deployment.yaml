@@ -2,10 +2,10 @@
 The worker. Scales freely: RabbitMQ hands each message to one consumer, so workers share
 a queue rather than being capped by a partition count.
 
-A liveness probe on /metrics, and no readiness probe. 057 left both off and recorded it as
-debt; 058 builds the thing that asks /metrics and settles the question.
+A liveness probe on /metrics, and no readiness probe. Both were once left off and recorded
+as debt; the metrics server is the thing that asks /metrics and settles the question.
 
-057 was right that a partly hung process still answers /metrics. But a process killed for
+It is true that a partly hung process still answers /metrics. But a process killed for
 memory, or deadlocked in its whole loop, does not — and that is the half kubelet can catch.
 The other half, a port open while no job runs, no probe can catch: from outside it is
 indistinguishable from an idle worker, and it belongs to an alert on the failed-job count.

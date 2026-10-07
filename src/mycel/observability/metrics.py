@@ -26,8 +26,8 @@ global `REGISTRY`, and the collector objects below register themselves into it a
 That makes importing this module twice an error rather than a silent double count — which
 is the behaviour we want, and why nothing here builds a metric lazily inside a function.
 
-Exposed over HTTP by `observability/metrics_server.py` in the worker and the scheduler,
-and by a route in the api, which already has a port.
+Exposed over HTTP by `observability/metrics_server.py` on a port of its own per process,
+never the app port: worker `metrics_port`, scheduler +1, ingest +2, api +3.
 """
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest

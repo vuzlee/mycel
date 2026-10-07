@@ -76,5 +76,5 @@ jobs:
       - name: Build
         run: npm run build
 
-# No eval job: evals call real models, cost quota, and need the LiteLLM gateway and a LAN
-# proxy CI cannot reach. They are run by hand and announced first - see evals/README.md.
+# No eval job: evals call real models, cost quota, and need the LiteLLM gateway, a model
+# gateway CI cannot reach. They are run by hand and announced first - see evals/README.md.

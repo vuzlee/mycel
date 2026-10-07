@@ -68,8 +68,8 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
-#: Libraries that log a full request URL at INFO. Telegram puts the bot token in the
-#: path, so that line writes a live credential to stdout. Raised to WARNING rather than
+#: Libraries that log a full request URL at INFO. A URL can carry a token or a key, so
+#: that line can write a live credential to stdout. Raised to WARNING rather than
 #: filtered, because a failing request is still worth seeing.
 _QUIET = ("httpx", "httpx2", "httpcore")
 

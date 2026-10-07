@@ -226,7 +226,7 @@ or Redis skip without them; the rest run straight after `uv sync`. Two guards in
 `tests/conftest.py` make the suite safe anywhere: the DSN must end in `_test`, and
 `ALLOW_MODEL_REQUESTS = False` turns any real provider call into an error.
 
-Evals are not tests — tests catch broken code, evals catch a report that has no error and is
+Evals are not tests — tests catch broken code, evals catch an answer that has no error and is
 simply worse than last time. See [evals/](evals/README.md).
 
 ## Where things are
@@ -237,7 +237,7 @@ web/           React + TypeScript, built into the image, served at /app
 config/        Per-environment, per-agent and per-source YAML
 migrations/    Alembic migrations
 deploy/        Prometheus/Loki/Promtail, Grafana, Helm, vLLM, deploy environments
-evals/         Golden set for scoring report quality
+evals/         Golden set for scoring answer quality
 docs/          Design documentation
 assets/        Banner and diagram, hand-written SVG
 scripts/       stack.sh and one folder per run mode
@@ -246,7 +246,7 @@ scripts/       stack.sh and one folder per run mode
 | | |
 |---|---|
 | **[docs/architecture.html](docs/architecture.html)** | How the system is put together — read this first |
-| **[docs/using-mycel.html](docs/using-mycel.html)** | Sign up, connect Jira, read the report |
+| **[docs/using-mycel.html](docs/using-mycel.html)** | Sign up, connect Jira, ask in chat |
 | [docs/database.html](docs/database.html) | Schemas, tables, every column, with diagrams |
-| [deploy/envs/](deploy/envs/README.md) | Environment variables, staging and prod |
+| [deploy/envs/](deploy/envs/README.md) | Environment variables, dev and minikube |
 | [deploy/inference/](deploy/inference/README.md) | Hardware constraints for the local model |

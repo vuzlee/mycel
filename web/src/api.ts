@@ -32,7 +32,7 @@ export interface User {
 
 export interface Thread {
   id: number;
-  /** `"chat"` for every thread since batch 033. A string rather than that one literal
+  /** `"chat"` for every thread. A string rather than that one literal
    *  because the column exists to grow a second kind, and a literal would make the day
    *  it does a type error instead of a new branch. */
   kind: string;
@@ -64,7 +64,7 @@ export interface Turn {
  *  and this is the wire. */
 export interface Item {
   issue_key: string;
-  /** `"chat"` for every thread since batch 033. A string rather than that one literal
+  /** `"chat"` for every thread. A string rather than that one literal
    *  because the column exists to grow a second kind, and a literal would make the day
    *  it does a type error instead of a new branch. */
   kind: string;
@@ -302,13 +302,13 @@ export async function disconnectJira(): Promise<void> {
 
 // -- work -------------------------------------------------------------------
 
+/** The sources a person can pick for one turn. No chip means no tools at all. */
+export type Chip = "knowledge" | "web" | "jira" | "calendar" | "mail";
+
 /** 202, not 200: the server took the work and has not done it.
  *
  *  Without a conversation this opens a thread; with one the question joins that thread
  *  and the server sends its earlier turns to the agent along with it. */
-/** The sources a person can pick for one turn. No chip means no tools at all. */
-export type Chip = "knowledge" | "web" | "jira" | "calendar" | "mail";
-
 export const askChat = (
   question: string,
   conversationId?: number,

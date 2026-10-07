@@ -8,10 +8,8 @@
  * Consecutive `text` and `thinking` events from the same agent are merged: a model streams
  * prose in pieces, and one bubble per piece is unreadable.
  *
- * Nothing is filtered out any more. Until batch 033 the orchestrator returned through
- * pydantic-ai's `final_result` tool, and that one call had to be hidden — its args were
- * the answer, and showing them printed the conclusion twice, once as JSON. A free-text
- * answer arrives as `text` events instead, so every tool call left is work the run did.
+ * Nothing is filtered out: the answer arrives as `text` events, so every tool call left
+ * is work the run did.
  */
 
 import type { SequencedEvent } from "./types";

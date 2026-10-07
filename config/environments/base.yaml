@@ -97,7 +97,7 @@ settings:
   # CPU threads docling may use per document. Its default is 4.
   ingest_threads: 2
   # Below this top score a question is off topic for the notebook and Gemini is not called.
-  # Measured in batch 063: answerable 0.805-0.926, off topic 0.67-0.72.
+  # Measured: answerable 0.805-0.926, off topic 0.67-0.72.
   document_min_score: 0.75
   # Gemini calls for notebook questions. The free tier is ~20 a day for the whole system.
   ask_top_k: 5
@@ -123,7 +123,7 @@ settings:
   otel_exporter_otlp_endpoint: ""
   # Prompts and answers into the span. REAL USER DATA LEAVES THE MACHINE — dev only.
   otel_capture_content: false
-  langfuse_base_url: https://jp.cloud.langfuse.com
+  langfuse_base_url: https://cloud.langfuse.com
   # /metrics has no authentication, so what it binds to is what keeps it private.
   metrics_host: 127.0.0.1
   metrics_port: 9100

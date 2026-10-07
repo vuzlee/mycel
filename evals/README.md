@@ -1,6 +1,6 @@
 # Evals
 
-Tests catch broken code. Evals catch broken **quality** — a report with no syntax error that
+Tests catch broken code. Evals catch broken **quality** — an answer with no syntax error that
 is simply worse than the last one. Without evals, changing a prompt is guesswork.
 
 ## Golden set
@@ -28,7 +28,7 @@ is not a matter of taste.
 ## Running them
 
 Evals are **not in CI**. Every case is a real model call through the LiteLLM gateway, and
-the primary model sits behind a LAN proxy CI cannot reach. Run them by hand, and say how
+the primary model sits behind a model gateway CI cannot reach. Run them by hand, and say how
 many calls before you do:
 
 | Command | Model calls | Measures |

@@ -6,8 +6,8 @@ borrowing layer depend on where an agent module happens to live. An output type 
 outside its own agent ever names stays beside that agent, next to the prompt that produces
 it.
 
-The orchestrator is no longer here. Its output became markdown in batch 033 — a chatbot
-answers in whatever shape the question deserves, and `Report{findings, gaps}` forced every
+The orchestrator has no schema here. Its output is markdown — a chatbot answers in
+whatever shape the question deserves, and a `Report{findings, gaps}` would force every
 answer into one list. A `str` needs no schema, which is why this module now describes only
 the summariser's rows.
 """
@@ -74,9 +74,9 @@ class ProgressSummary(BaseModel):
     paragraph makes the reader find them. `at_risk` is the one the meeting exists for, so
     it is a field of its own rather than a sentence somewhere in the middle.
 
-    The lists became structured in batch 024. They were `list[str]`, which meant the model
-    wrote "PROJ-14 — Work dashboard (E2) — Nam" and every surface that wanted a table had
-    to take that sentence apart again. A column the model fills is a column a renderer can
+    The lists are structured rather than `list[str]`, which would have the model write
+    "PROJ-14 — Work dashboard (E2) — Nam" and every surface that wanted a table take that
+    sentence apart again. A column the model fills is a column a renderer can
     align.
 
     Still rows even though the orchestrator now answers in markdown: this is what the

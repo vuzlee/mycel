@@ -204,6 +204,7 @@ class TestNullChannelIsTheDefault:
     async def test_a_run_without_a_listener_publishes_nowhere(self) -> None:
         """A script or a test must not need Redis to run an agent."""
         deps = MycelDeps(job_id="j", budget=JobBudget("j", Decimal("1.00")))
+        assert isinstance(deps.events, NullChannel)
         await RunEmitter(deps, "analyst", None).emit("text", text="hi")
 
 
@@ -402,7 +403,7 @@ class TestSseFrames:
 
 
 class TestAFinishedRunDoesNotBlock:
-    """A run whose stream is gone but whose answer is kept (MYC-61).
+    """A run whose stream is gone but whose answer is kept.
 
     Redis holds the stream under a TTL and loses it outright on restart; `app.turn` holds
     the answer. Without the short circuit the client subscribes to a key nothing will ever
@@ -437,7 +438,7 @@ class TestAFinishedRunDoesNotBlock:
     async def test_a_run_that_just_finished_still_replays_its_tool_calls(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The record alone is not enough to close on (MYC-63).
+        """The record alone is not enough to close on.
 
         A finished run has a turn row within milliseconds, and its stream is still there. A
         reader opening the page a moment later has to see the calls the run made — closing
@@ -488,7 +489,7 @@ class TestAQueuedRunIsNotMistakenForAFinishedOne:
 
 
 class TestATurnKeepsItsToolCalls:
-    """What `app.turn.steps` gets, so a reopened thread is not an empty middle (MYC-41)."""
+    """What `app.turn.steps` gets, so a reopened thread is not an empty middle."""
 
     async def test_everything_still_reaches_the_stream(self) -> None:
         """The recorder wraps, it does not replace: a page watching live loses nothing."""

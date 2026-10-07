@@ -12,9 +12,9 @@ expected rather than a smell: with one source, "clean as Jira gave it" and "what
 needs" are the same set of columns. The two diverge when a second tracker lands, or when
 gold grows a precomputed table — and the route has to exist before either can use it.
 
-`silver.message` is dropped. It was built when Telegram was the source, batch 016 removed
-that source, and nothing has written to it since. Batch 016 kept it on the grounds that it
-was source-agnostic; that reasoning stops holding the moment silver has a live occupant,
+`silver.message` is dropped. It was built for a source that has since been removed, and
+nothing has written to it since. It was kept on the grounds that it was source-agnostic;
+that reasoning stops holding the moment silver has a live occupant,
 because an empty table from a removed source sitting beside it is exactly the "which layer
 is real" question this revision closes.
 

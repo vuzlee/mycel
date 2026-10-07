@@ -412,12 +412,12 @@ go out to a calendar.</p>
 
 <h2 data-n="01">Before anything: is the stack up?</h2>
 
-<pre>scripts/stack.sh up      <span class="c"># containers, migrations, api, worker, scheduler</span>
-scripts/stack.sh status  <span class="c"># what is running, and the links</span></pre>
+<pre>scripts/stack.sh dev up      <span class="c"># containers, migrations, api, worker, scheduler</span>
+scripts/stack.sh dev status  <span class="c"># what is running, and the links</span></pre>
 
 <p><code>up</code> is idempotent: it starts what is down and leaves what is up. What you
 want to see from <code>status</code> is every row <b>running</b> — especially
-<code>worker</code>. Without the worker both report endpoints hand back a job id for work
+<code>worker</code>. Without the worker <code>POST /chat</code> hands back a job id for work
 nobody ever picks up, which on screen looks exactly like a slow model.</p>
 
 <div class="warn">
@@ -549,12 +549,10 @@ one sync by hand:</p>
 
 <p>It prints how many issues it pulled. A sync only asks for what moved — the JQL carries
 <code>updated &gt;=</code> the last high-water mark — so a quiet quarter of an hour
-legitimately pulls zero. Zero when something <i>did</i> move means one of three things, in
+legitimately pulls zero. Zero when something <i>did</i> move means one of two things, in
 the order worth checking:</p>
 
 <ul>
-  <li><b><code>JIRA_PROJECT_KEY</code> is the wrong key.</b> It is the prefix on the issue
-  keys, <code>MYC</code>, not the project's display name.</li>
   <li><b>The account the token belongs to cannot see that project.</b> The sync sees exactly
   what that person sees when they log in.</li>
   <li><b>The token expired.</b> One year, silently. The log line says <code>401</code>.</li>
@@ -565,7 +563,7 @@ the order worth checking:</p>
 <p>Ask for them. <a href="http://localhost:8000/app">/app</a> takes &ldquo;what is late
 right now&rdquo; or &ldquo;compare hours logged this month with last&rdquo; and the
 <b>analyst</b> writes its own SQL against the work data, returning each figure with the
-query that produced it. There was a dashboard page until batch 027; it answered in
+query that produced it. There used to be a dashboard page that answered in
 milliseconds and could only answer the six questions it was built for.</p>
 
 <p>The six are worth knowing anyway, because they are the ones that are easy to read under
@@ -617,16 +615,16 @@ than no count.</p>
 up and has not synced yet is a normal state and the agent says so rather than inventing a
 number.</p>
 
-<h2 data-n="07">Run a progress report</h2>
+<h2 data-n="07">Ask for a progress summary</h2>
 
 <p>Ask for one: &ldquo;how is MYC going this week&rdquo;. The orchestrator hands it to the
 <b>summariser</b>, which takes the project key and the window out of your sentence. There
-was a form for this until batch 027, with a project picker and a day count; a sentence
+used to be a form for this, with a project picker and a day count; a sentence
 carries both and does not have to be found first.</p>
 
 <div class="step">
   <h3 data-n="01">It comes back immediately with a job id</h3>
-  <p>That is a receipt, not a report: a run takes minutes and every proxy in front of the
+  <p>That is a receipt, not an answer: a run takes minutes and every proxy in front of the
   API would time out waiting. The work happens in the worker process.</p>
 </div>
 
@@ -680,7 +678,7 @@ stop.</p>
 <div class="note">
   <p><b>It is still there tomorrow.</b> Every run is written twice — to Redis, which knows
   a run is still in flight and forgets it after an hour, and to Postgres, which is the
-  record. Reopening a report from the rail next week reads the second one.</p>
+  record. Reopening a thread from the rail next week reads the second one.</p>
 </div>
 
 <h2 data-n="08">Your calendar, in the same box</h2>
@@ -733,7 +731,7 @@ TOKEN_ENCRYPTION_KEY=…</pre>
 
 <p><a href="http://localhost:8000/app">/app</a> is the whole app. Ask a question in plain
 language; an orchestrator reads it and delegates. There is nowhere else to go, which is
-the point of batch 027 &mdash; you no longer have to know which page a question belongs to
+the point &mdash; you no longer have to know which page a question belongs to
 before you can ask it.</p>
 
 <table>
@@ -796,7 +794,7 @@ read-back.</p>
   passed. Sign in again.</td></tr>
   <tr><td>Empty project dropdown</td><td>Nothing has synced yet.
   <code>scripts/stack.sh sync</code>, then check its log line.</td></tr>
-  <tr><td>Sync pulls zero issues</td><td>Wrong <code>JIRA_PROJECT_KEY</code>, a project the
+  <tr><td>Sync pulls zero issues</td><td>A project the
   token's account cannot see, or a token that turned one year old.</td></tr>
   <tr><td>Estimated is zero for everyone</td><td>The tickets carry no original estimate.
   Mycel reports the field, it does not invent it.</td></tr>
@@ -805,7 +803,7 @@ read-back.</p>
   <tr><td>Calendar events never appear</td><td>The calendar is not shared with the service
   account's email address.</td></tr>
   <tr><td>A run is queued and never moves</td><td>The worker is not running.
-  <code>scripts/stack.sh status</code>, then <code>logs worker</code>.</td></tr>
+  <code>scripts/stack.sh dev status</code>, then <code>dev logs worker</code>.</td></tr>
   <tr><td>A run fails part-way</td><td>Usually the model provider — a free-tier quota or
   a missing key in <code>.env</code>. The failure reason is shown on the run.</td></tr>
   <tr><td><code>api</code> reads <code>foreign</code></td><td>A stale process on port
@@ -814,7 +812,7 @@ read-back.</p>
 
 <h2 data-n="11">The short version</h2>
 
-<pre>scripts/stack.sh up
+<pre>scripts/stack.sh dev up
 <span class="c"># open /app/login, create an account</span>
 <span class="c"># in Jira: move a ticket, log an hour, set a due date</span>
 scripts/stack.sh sync

@@ -630,13 +630,13 @@ footer {
     <p class="hero-lede">
       A multi-agent system that answers questions about scattered data from one box.
       Named after <em>mycelium</em> — the underground fungal network connecting a whole forest: running
-      in the background, quietly gathering data, and only then surfacing as a report.
+      in the background, quietly gathering data, and only then surfacing as an answer.
     </p>
     <div class="hero-meta">
       <span><b>Storage</b> PostgreSQL · 3 schema</span>
       <span><b>LLM</b> vLLM 3B local + cloud</span>
       <span><b>Runtime</b> Python 3.11 · Docker</span>
-      <span><b>Observability</b> OTel → Langfuse Cloud</span>
+      <span><b>Observability</b> OTLP → Langfuse Cloud</span>
     </div>
 
     <nav class="toc">
@@ -652,7 +652,7 @@ footer {
   <div class="part" id="p1">
     <span class="part-num">Part 1</span>
     <h2 class="part-title">The idea</h2>
-    <p class="part-blurb">Data from scattered sources flows one way through four layers and ends as a report. Understand this part and you understand what the system does.</p>
+    <p class="part-blurb">Data from scattered sources flows one way through four layers and ends as an answer. Understand this part and you understand what the system does.</p>
   </div>
   <section id="s01">
     <div class="section-head">
@@ -810,14 +810,14 @@ footer {
             <text x="770" y="202" font-size="8" fill="var(--ink-faint)">orchestrator merges the results</text>
           </g>
 
-          <!-- agents -> reports -->
+          <!-- agents -> chat -->
           <path d="M 829 224 L 829 258" stroke="var(--gold)" stroke-width="1.6"
                 fill="none" marker-end="url(#ar-gold)"/>
 
           <rect x="742" y="258" width="174" height="56" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="758" y="280" font-family="var(--mono)" font-size="12"
-                fill="var(--ink)">reports/</text>
+                fill="var(--ink)">domains/chat.py</text>
           <text x="758" y="299" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">answers · summaries</text>
 
@@ -837,7 +837,7 @@ footer {
           <text x="232" y="497" font-family="var(--mono)" font-size="12"
                 fill="var(--ink)">api/</text>
           <text x="232" y="515" font-family="var(--sans)" font-size="9.5"
-                fill="var(--ink-soft)">manual trigger · read reports</text>
+                fill="var(--ink-soft)">ask · read answers</text>
 
           <rect x="408" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
@@ -862,7 +862,7 @@ footer {
           <text x="128" y="431" font-family="var(--mono)" font-size="9.5"
                 fill="var(--ink-faint)">triggers sync + transform</text>
           <text x="470" y="443" font-family="var(--mono)" font-size="9.5"
-                fill="var(--ink-faint)">report request</text>
+                fill="var(--ink-faint)">chat request</text>
 
           <!-- observability collection -->
           <path d="M 758 476 L 758 330" stroke="var(--accent)" stroke-width="1"
@@ -927,7 +927,7 @@ footer {
         <em>the question</em> changes.</p>
         <dl>
           <dt>written by</dt><dd>etl/promote.py</dd>
-          <dt>read by</dt><dd>agents/ · reports/</dd>
+          <dt>read by</dt><dd>agents/ · domains/</dd>
           <dt>type</dt><dd>query tables</dd>
         </dl>
       </article>
@@ -1004,21 +1004,21 @@ footer {
           <text x="840" y="134" font-family="var(--mono)" font-size="10"
                 letter-spacing="1.5" fill="var(--accent)" text-anchor="end">ONE ROUTE MODULE + ONE DOMAIN MODULE PER DOMAIN</text>
 
-          <!-- report domain -->
+          <!-- chat domain -->
           <rect x="160" y="174" width="300" height="76" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.3"/>
           <text x="176" y="194" font-family="var(--mono)" font-size="11.5"
-                fill="var(--gold)">report</text>
+                fill="var(--gold)">chat</text>
           <rect x="176" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
           <text x="186" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--ink)">routes/reports.py</text>
+                fill="var(--ink)">routes/chat.py</text>
           <text x="186" y="231" font-family="var(--sans)" font-size="8.5"
                 fill="var(--ink-faint)">receive · validate</text>
           <rect x="316" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="326" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--accent)">domains/report.py</text>
+                fill="var(--accent)">domains/chat.py</text>
           <text x="326" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -1030,7 +1030,7 @@ footer {
           <rect x="484" y="174" width="300" height="76" rx="2"
                 fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.3"/>
           <text x="500" y="194" font-family="var(--mono)" font-size="11.5"
-                fill="var(--silver)">sync — not built, batch 007</text>
+                fill="var(--silver)">sync — no route, scheduler only</text>
           <rect x="500" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
           <text x="510" y="217" font-family="var(--mono)" font-size="10"
@@ -1107,7 +1107,7 @@ footer {
 
             <rect x="496" y="364" width="164" height="32" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="578" y="384" fill="var(--ink)">reports/</text>
+            <text x="578" y="384" fill="var(--ink)">domains/chat.py</text>
 
             <rect x="676" y="364" width="164" height="32" rx="2"
                   fill="var(--bronze-wash)" stroke="var(--bronze)"/>
@@ -1138,9 +1138,9 @@ footer {
       <figcaption>
 A domain is a pair: one route module, one domain module. HTTP types stop at the route, so the
         same domain module is what <code>scheduler/</code> and any script call — the dashed arrow.
-Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard</code>
-        and <code>threads</code>. <code>dashboard</code> lost its route in batch 027 and is
-        reached only through <code>/projects</code> now &mdash; kept because its queries are
+The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</code>, <code>sync</code>,
+        <code>dashboard</code> and <code>threads</code>. <code>dashboard</code> is
+        reached through <code>/dashboard</code> and <code>/projects</code> &mdash; kept because its queries are
         a verified read of gold. <code>auth</code> is the exception — it is a route plus a
         service, with no domain module, because signing in chains nothing.
       </figcaption>
@@ -1176,7 +1176,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <td class="no">Chain other services together — that is the domain module's job</td>
         </tr>
         <tr class="tone-gold">
-          <td class="who">etl/ agents/ reports/</td>
+          <td class="who">etl/ agents/</td>
           <td>The heavy lifting: transforms, reasoning, artifact building</td>
           <td class="no">Read the HTTP request · write SQL by hand</td>
         </tr>
@@ -1190,9 +1190,9 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
     <p class="path-note">
       <b>How a domain module differs from a service:</b> the domain is the <em>chain</em>, a service
-      is a <em>link</em>. <code>domains/report.py</code> calls, in order,
-      <code>permission</code> → <code>enqueue</code> → <code>gather</code> →
-      <code>analyze</code> → <code>render</code>.
+      is a <em>link</em>. <code>domains/chat.py</code> queues the question through
+      <code>enqueue</code>, then the worker runs the orchestrator and stores the answer in
+      <code>app.turn</code>.
       <code>domains/sync.py</code> calls <code>fetch</code> →
       <code>transform</code> → <code>check</code>. Services are reused by both;
       a service itself does not know which chain it is in.
@@ -1201,9 +1201,9 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
   <section id="s07">
     <div class="section-head">
       <p class="eyebrow">2.2 · The life of a request</p>
-      <h2>From the button press to the finished report</h2>
+      <h2>From the question to the stored answer</h2>
       <p>
-        Producing a report takes minutes and will sometimes fail halfway. So the API does not run it —
+        Answering a question takes minutes and will sometimes fail halfway. So the API does not run it —
         it pushes the work onto the queue and returns immediately. The whole path is <em>one</em> trace.
       </p>
     </div>
@@ -1211,7 +1211,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="The life of a report request: the report domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits the work across specialist agents, which query gold and call models through the llm layer, and the results are built into a report and stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
+             aria-label="The life of a chat request: the chat domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits the work across specialist agents, which query gold and call models through the llm layer, and the answer is stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
           <defs>
             <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1224,7 +1224,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
                   fill="var(--surface)" stroke="var(--line)"/>
             <text x="79" y="75" fill="var(--ink)">domain</text>
             <text x="79" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">report domain</text>
+                  fill="var(--ink-soft)">chat domain</text>
 
             <rect x="182" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
@@ -1246,9 +1246,9 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
             <rect x="680" y="56" width="126" height="44" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="743" y="75" fill="var(--ink)">reports</text>
+            <text x="743" y="75" fill="var(--ink)">answer</text>
             <text x="743" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">build the artifact</text>
+                  fill="var(--ink-soft)">markdown + citations</text>
 
             <rect x="846" y="56" width="78" height="44" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.6"/>
@@ -1301,7 +1301,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <figcaption>
         Every model call is a span in that same trace, with the tokens and the model used.
-        When a report is slow or unexpectedly expensive, opening the trace shows which step caused it.
+        When an answer is slow or unexpectedly expensive, opening the trace shows which step caused it.
       </figcaption>
     </figure>
   </section>
@@ -1382,7 +1382,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by reports; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
+             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by domains; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1417,7 +1417,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
 
             <rect x="780" y="112" width="104" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="832" y="136" fill="var(--ink)">reports</text>
+            <text x="832" y="136" fill="var(--ink)">events</text>
 
             <rect x="628" y="30" width="256" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
@@ -1500,15 +1500,15 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the deployment&rsquo;s mailbox over IMAP (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
+        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the asker&rsquo;s own Gmail through the Gmail API on their OAuth token (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
-        <span class="tree-note">The shared foundation for <code>agents/</code> alone, with no business logic: the agent loop, <code>streaming/</code>, <code>hooks</code> (attach traces · log usage · add to budget), <code>guards</code>, <code>integrations/mcp</code>.</span>
+        <span class="tree-note">The shared foundation for <code>agents/</code> alone, with no business logic: the agent loop (<code>runner</code>), <code>emit</code> for run events, <code>chips</code>, <code>guards</code>, <code>model_builder</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>observability/</span>
-        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus. Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
+        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus and <code>metrics_server</code> serves <code>/metrics</code> on each process&rsquo;s own port (worker 9100, scheduler 9101, ingest 9102, api 9103). Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
       </div>
       <div class="tree-row is-epic">
         <span class="tree-path">E2 · Entrypoints</span>
@@ -1560,7 +1560,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>infra/objects/</span>
-        <span class="tree-note">Docstring only, and deliberately so: large files over an S3 API, with Postgres holding the metadata and the bucket the content. MinIO was dropped from compose &mdash; a report is markdown, which is a <code>TEXT</code> column. The file records why it would come back, and how.</span>
+        <span class="tree-note">Uploaded documents over an S3 API (MinIO in compose), with Postgres holding the metadata and the bucket the content.</span>
       </div>
       <div class="tree-row" data-tone="silver">
         <span class="tree-path"><span class="dim">├─ </span>etl/</span>
@@ -1584,15 +1584,15 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>events/</span>
-        <span class="tree-note">The run narration: one event per step, published to a Redis Stream so <code>/events</code> can replay it as SSE. Separate from logs — logs are for operators, these are for the person watching a report being written.</span>
+        <span class="tree-note">The run narration: one event per step, published to a Redis Stream so <code>/events</code> can replay it as SSE. Separate from logs — logs are for operators, these are for the person watching an answer being written.</span>
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>domains/</span>
         <span class="tree-note"><b>The business chains, one module per domain, none of them aware of HTTP.</b> Adding a domain = one module here and one under <code>api/routes/</code>, with existing domains untouched.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>domains/report.py</span>
-        <span class="tree-note">Request a report, read what became of it. Queues the job and reads the result back out of <code>app.report</code>.</span>
+        <span class="tree-path"><span class="dim">│  ├─ </span>domains/chat.py</span>
+        <span class="tree-note">Ask a question, read what became of it. Queues the job and reads the answer back out of <code>app.turn</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>domains/sync.py</span>
@@ -1600,19 +1600,15 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  ├─ </span>domains/dashboard.py</span>
-        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. Batch 027 deleted the page and the route above it; <code>known_projects</code> is the part still called. A query, so it answers inside the request rather than queueing.</span>
+        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. <code>/dashboard</code> and <code>/projects</code> call it. A query, so it answers inside the request rather than queueing.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>domains/threads.py</span>
         <span class="tree-note">Whose sidebar history this is. <code>GET /conversations</code> reads it, so the list follows a person to any browser — which is why it stopped living in <code>localStorage</code>. <code>DELETE /conversations/{id}</code> forgets one, scoped by <code>user_id</code> in the WHERE rather than by a check the caller could skip.</span>
       </div>
       <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>reports/</span>
-        <span class="tree-note">Builds the final artifacts from agent output: prose and data tables.</span>
-      </div>
-      <div class="tree-row">
         <span class="tree-path"><span class="dim">└─ </span>notify/</span>
-        <span class="tree-note">Outside this system: one person's Google Calendar, read and written on their own consent, and the mailbox read over IMAP. Both optional, and a deployment without either runs unchanged.</span>
+        <span class="tree-note">Outside this system: one person's Google Calendar, read and written on their own consent, and their mailbox read through the Gmail API, each on that person&rsquo;s own OAuth consent. Both optional, and a deployment without either runs unchanged.</span>
       </div>
 
       <div class="tree-row is-head">
@@ -1626,11 +1622,11 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path">evals/</span>
-        <span class="tree-note">The golden set that scores report quality. A prompt or model change that drops the score blocks the merge.</span>
+        <span class="tree-note">The golden set that scores answer quality. Run by hand before a prompt or model change merges; CI cannot reach the model gateway.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Infrastructure config: <code>otel/</code>, <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code> · <code>argocd/</code> · <code>registry/</code>.</span>
+        <span class="tree-note">Infrastructure config: <code>otel/</code> (Prometheus, Loki, Promtail config), <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
@@ -1646,7 +1642,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </div>
       <div class="tree-row">
         <span class="tree-path">tests/</span>
-        <span class="tree-note">Code tests, mirroring the structure of <code>src/mycel/</code>. Report quality is <code>evals/</code>&rsquo;s job.</span>
+        <span class="tree-note">Code tests, mirroring the structure of <code>src/mycel/</code>. Answer quality is <code>evals/</code>&rsquo;s job.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">scripts/</span>
@@ -1667,7 +1663,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 400" role="img"
-             aria-label="Mycel's AI layer: the orchestrator takes a report request and splits it across specialist agents; agents call tools to query gold; every model call goes through the llm module, where the router chooses between vLLM running locally for high-volume work and a cloud API for the final reasoning; cache and budget sit on the path; evals score the results against a golden set.">
+             aria-label="Mycel's AI layer: the orchestrator takes a chat request and splits it across specialist agents; agents call tools to query gold; every model call goes through the llm module, where the router chooses between vLLM running locally for high-volume work and a cloud API for the final reasoning; cache and budget sit on the path; evals score the results against a golden set.">
           <defs>
             <marker id="ai-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1805,7 +1801,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <text x="576" y="268" font-family="var(--sans)" font-size="11"
                 fill="var(--ink)">The final reasoning:</text>
           <text x="576" y="286" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">synthesising sources · writing the report</text>
+                fill="var(--ink-soft)">synthesising sources · writing the answer</text>
           <text x="576" y="304" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">decisions needing lots of context</text>
 
@@ -1866,7 +1862,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       <article class="op">
         <span class="op-svc">rabbitmq</span>
         <span class="op-role">Job queue &middot; required</span>
-        <p>A task queue, not a log: retry and dead-lettering are broker features here rather than something to build. Chosen over Kafka, whose JVM costs ~1.2&nbsp;GiB for a few reports an hour.</p>
+        <p>A task queue, not a log: retry and dead-lettering are broker features here rather than something to build. Chosen over Kafka, whose JVM costs ~1.2&nbsp;GiB for a few chat turns an hour.</p>
       </article>
       <article class="op">
         <span class="op-svc">redis</span>
@@ -1891,7 +1887,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       <article class="op">
         <span class="op-svc">api</span>
         <span class="op-role">Front door &middot; <code>--profile api</code></span>
-        <p>In dev, uvicorn runs on the host instead: reload is faster. It stays in compose for production.</p>
+        <p>In dev, uvicorn runs on the host instead: reload is faster. It stays in compose to run it in a container.</p>
       </article>
       <article class="op">
         <span class="op-svc">vllm</span>
@@ -1901,14 +1897,13 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       <article class="op">
         <span class="op-svc">prometheus &middot; grafana<br>loki &middot; promtail</span>
         <span class="op-role">Observability &middot; <code>--profile monitoring</code></span>
-        <p>The app exposes no <code>/metrics</code> yet, so switching them on would show empty dashboards. On one machine <code>docker logs</code> answers the same questions.</p>
+        <p>Every process serves <code>/metrics</code> on its own port: worker 9100, scheduler 9101, ingest 9102, api 9103.</p>
       </article>
     </div>
 
     <p class="path-note">
       Traces do <b>not</b> go through a local collector. The app ships OTLP straight to Langfuse
-      Cloud, which understands agents and tool calls &mdash; Grafana sees only anonymous spans. Tempo
-      and the collector were dropped along with the trace backend they fed.
+      Cloud, which understands agents and tool calls &mdash; Grafana sees only anonymous spans.
     </p>
   </section>
 
@@ -1966,17 +1961,18 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
   <section id="s10">
     <div class="section-head">
       <p class="eyebrow">4.2 · From dev machine to cluster</p>
-      <h2>One image, three environments</h2>
+      <h2>Two images, one environment</h2>
       <p>
-        CI builds the image <em>once</em>, tagged by commit SHA. Staging and prod pull that exact
-        image and run it — no rebuild, so there is no “works on my machine”.
+        CI builds two images <em>once</em>, tagged by commit SHA, and pushes them to Docker Hub:
+        <code>&lt;user&gt;/mycel</code> and <code>&lt;user&gt;/mycel-ingest</code>. There is no staging and
+        no prod; CI renders the Helm chart rather than deploying it.
       </p>
     </div>
 
     <figure>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's path to production: a developer pushes code, CI runs lint, type checks, migrations and tests, and runs the golden-set evals when the pull request touches prompts or the llm layer; merging to main has CI build one image tagged by commit SHA and push it to the registry; staging and then prod pull that image, run migrations first and only then swap containers; rollback is going back to the previous SHA tag.">
+             aria-label="Mycel's path to production: a developer pushes code, CI runs lint, type checks, migrations and tests, while the golden-set evals are run by hand; merging to main has CI build two images tagged by commit SHA, push them to Docker Hub and render the Helm chart; on a cluster, migrations run first and only then containers swap; rollback is going back to the previous SHA tag.">
           <defs>
             <marker id="sh-ar" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -2004,7 +2000,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           </g>
           <line x1="196" y1="138" x2="380" y2="138" stroke="var(--line)"/>
           <text x="196" y="158" font-family="var(--sans)" font-size="10.5"
-                fill="var(--accent)">evals — on prompt / llm change</text>
+                fill="var(--accent)">evals — by hand, not in CI</text>
 
           <!-- build -->
           <rect x="436" y="86" width="180" height="44" rx="2"
@@ -2029,20 +2025,20 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <text x="414" y="100" font-family="var(--mono)" font-size="9"
                 fill="var(--ink-faint)" text-anchor="middle">merge</text>
 
-          <!-- staging + prod -->
+          <!-- docker hub + chart -->
           <rect x="656" y="182" width="268" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
           <text x="672" y="201" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">staging</text>
+                fill="var(--ink)">docker hub</text>
           <text x="672" y="217" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-soft)">anonymised data · its own rate-limited key</text>
+                fill="var(--ink-soft)">&lt;user&gt;/mycel · &lt;user&gt;/mycel-ingest</text>
 
           <rect x="656" y="240" width="268" height="44" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
           <text x="672" y="259" font-family="var(--mono)" font-size="11.5"
-                fill="var(--gold)">prod</text>
+                fill="var(--gold)">helm chart</text>
           <text x="672" y="275" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-soft)">postgres with backups</text>
+                fill="var(--ink-soft)">rendered in CI · installed by hand</text>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
              marker-end="url(#sh-ar)">
@@ -2059,12 +2055,12 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
                 letter-spacing="1.4" fill="var(--accent)">DEPLOY ORDER — NEVER CHANGES</text>
 
           <g font-family="var(--mono)" font-size="10.5" fill="var(--ink)">
-            <text x="36" y="230">1 · compose pull</text>
+            <text x="36" y="230">1 · image by SHA</text>
             <text x="36" y="250">2 · alembic upgrade head</text>
-            <text x="36" y="270">3 · compose up -d</text>
+            <text x="36" y="270">3 · swap the pods</text>
           </g>
           <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
-            <text x="230" y="230">pull the image by SHA</text>
+            <text x="230" y="230">tag = commit SHA</text>
             <text x="230" y="250">migrations run before the new code</text>
             <text x="230" y="270">only then swap containers</text>
           </g>
@@ -2104,23 +2100,17 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
           <td>local vLLM if there is a GPU</td>
           <td>Runs from source, hot reload</td>
         </tr>
-        <tr>
-          <td class="who">staging</td>
-          <td>Anonymised</td>
-          <td>Cloud, its own rate-limited key</td>
-          <td>Same image as prod, different environment variables</td>
-        </tr>
         <tr class="tone-gold">
-          <td class="who">prod</td>
-          <td>Real, postgres with backups</td>
-          <td>Cloud, key production</td>
-          <td>Only deploys SHA tags that passed staging</td>
+          <td class="who">dev, on minikube</td>
+          <td>The same compose stores, at <code>host.minikube.internal</code></td>
+          <td>Cloud, through the LiteLLM gateway</td>
+          <td>The built images, installed with <code>helm upgrade --install</code></td>
         </tr>
       </tbody>
     </table>
 
     <p>
-      All three environments run <em>the same image</em>. Every difference is an environment variable:
+      Both run <em>the same images</em>. Every difference is an environment variable:
       the DB connection string, API keys, whether <code>vllm</code> is enabled. Secrets are always read from
       env — never from a committed <code>config/</code>.
     </p>
@@ -2136,8 +2126,8 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         environment variables — there is no <code>if env == "prod"</code> branch in the code.
       </p>
       <p>
-        <b>Seven manifests, three pods, on minikube.</b> The chart renders <code>api</code>,
-        <code>worker</code> and <code>scheduler</code> plus a ConfigMap, a Service, an Ingress and a
+        <b>Four app pods, on minikube.</b> The chart renders <code>api</code>,
+        <code>worker</code>, <code>scheduler</code> and <code>ingest</code> plus a ConfigMap, a Service, an Ingress and a
         migration hook. Postgres, RabbitMQ and Redis stay <em>outside</em> the cluster, reached at
         <code>host.minikube.internal</code>. Four things this section used to promise are deliberately
         not built: Argo CD, Harbor, autoscaling, and <code>StatefulSet</code> for the stores. Each is
@@ -2176,7 +2166,7 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr class="tone-gold">
           <td class="who">Reproducible deploys</td>
-          <td><b>Helm</b> — a versioned chart; the same chart + <code>values-prod.yaml</code> gives the same result</td>
+          <td><b>Helm</b> — a versioned chart; the same chart + the same values gives the same result</td>
           <td><code>version</code> is the chart's, <code>appVersion</code> is the image's commit SHA. Rolling back the chart does not roll back the code</td>
         </tr>
         <tr class="tone-gold">
@@ -2202,9 +2192,8 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
     </p>
 
     <p>
-      <b><code>worker</code> and <code>scheduler</code> have no probe at all.</b> They serve no HTTP, and
-      <code>/metrics</code> is not readiness — a process can serve metrics while doing no work.
-      That is open debt.
+      <b><code>worker</code>, <code>scheduler</code> and <code>ingest</code> have a liveness probe on <code>/metrics</code> and no readiness probe.</b> They serve no
+      requests, and <code>/metrics</code> is not readiness — a process can serve metrics while doing no work.
     </p>
 
     <p>
@@ -2270,20 +2259,20 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr>
           <td class="who">docker compose · observability</td>
-          <td>Running: postgres, rabbitmq, redis, qdrant. Behind a profile: api, vllm, prometheus, loki, promtail, grafana. Dropped: kafka (JVM), minio (a report is markdown)</td>
+          <td>Running: postgres, rabbitmq, redis, qdrant, minio. Behind a profile: api, vllm, prometheus, loki, promtail, grafana. Dropped: kafka (JVM)</td>
         </tr>
         <tr>
           <td class="who">CI · build image</td>
           <td>Workflows exist: lint, type check, migrations, tests; builds an image tagged by SHA</td>
         </tr>
-        <tr class="tone-bronze">
+        <tr>
           <td class="who">Helm chart on minikube</td>
-          <td class="no">Only <code>values</code>, <code>Application</code> and the decision docs. <code>deploy/helm/*/templates/</code> holds a README and nothing else, and there is no cluster to deploy to</td>
+          <td>Built — four app pods (api, worker, scheduler, ingest) and a migration hook; CI renders it. There is no cluster beyond minikube to deploy to</td>
         </tr>
         <tr>
           <td class="who">sources/ — Jira</td>
           <td>Built — <code>search_issues</code> and <code>issue_worklogs</code> run against a
-            real site. <b>Read-only:</b> nothing in this repo writes back to Jira</td>
+            real site. <b>Writes are off</b> unless <code>JIRA_WRITE_ENABLED</code> turns them on</td>
         </tr>
         <tr>
           <td class="who">etl/ — bronze → silver → gold</td>
@@ -2291,18 +2280,18 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
             <code>services/transform.py</code> under an advisory lock</td>
         </tr>
         <tr>
-          <td class="who">agents/ · reports/</td>
-          <td>Built — orchestrator, analyst, researcher (web + mail), summariser; a report is rendered in
-            <code>services/render.py</code> and kept in <code>app.report</code></td>
+          <td class="who">agents/ · chat</td>
+          <td>Built — orchestrator, analyst, researcher (web + mail), summariser; an answer is markdown kept in
+            <code>app.turn</code></td>
         </tr>
         <tr>
           <td class="who">app/ — sign-in and Ask</td>
-          <td>Built — Argon2id, an opaque session cookie. One screen since batch 027:
-            the report and dashboard pages went once an agent could answer both</td>
+          <td>Built — Argon2id, an opaque session cookie. Chat is the main screen;
+            the old report page went once an agent could answer it</td>
         </tr>
         <tr class="tone-bronze">
           <td class="who">sources/ — anything but Jira</td>
-          <td class="no">Slack, Gmail and Confluence are still intentions. The
+          <td class="no">Slack and Confluence are still intentions; Gmail is read live per user, not synced. The
             <code>source</code> column already leaves room for them</td>
         </tr>
         <tr class="tone-bronze">
@@ -2312,16 +2301,15 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
         </tr>
         <tr class="tone-bronze">
           <td class="who">Vector search · librarian</td>
-          <td class="no"><code>infra/vectors/</code> has no caller. Batches 008 and 009</td>
+          <td class="no"><code>infra/vectors/</code> backs <code>rag_search</code> over uploaded documents</td>
         </tr>
         <tr class="tone-bronze">
-          <td class="who">Object storage · LLM cache · metrics</td>
-          <td class="no"><code>infra/objects/</code>, <code>llm/cache.py</code> and
-            <code>observability/metrics.py</code> are written and have no caller</td>
+          <td class="who">LLM cache</td>
+          <td class="no"><code>llm/cache.py</code> is written and has no caller</td>
         </tr>
         <tr class="tone-bronze">
           <td class="who">evals/ — golden set</td>
-          <td class="no">The skeleton and the merge-blocking rule exist. <code>evals/golden/</code> is empty</td>
+          <td class="no">Six cases in <code>evals/golden/</code>, run by hand — not in CI</td>
         </tr>
         <tr class="tone-bronze">
           <td class="who">Model local 3B</td>
@@ -2360,11 +2348,11 @@ Four domains are built: <code>report</code>, <code>sync</code>, <code>dashboard<
       </li>
       <li>
         <strong>Changing a prompt means running the evals</strong>
-        <span>A worse report does not turn a test red. Only the golden set catches it.</span>
+        <span>A worse answer does not turn a test red. Only the golden set catches it.</span>
       </li>
       <li>
         <strong>Thin routes, thick domains</strong>
-        <span>If <code>api/</code> could be deleted entirely and <code>scheduler</code> would still produce reports, the layers are in the right place.</span>
+        <span>If <code>api/</code> could be deleted entirely and <code>scheduler</code> would still sync and answer, the layers are in the right place.</span>
       </li>
       <li>
         <strong>One image for every environment</strong>

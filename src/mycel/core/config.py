@@ -111,9 +111,8 @@ class Settings(BaseSettings):
     #: the consent screen asks for `manage:jira-project` as well; off, and it never does.
     jira_allow_create_project: bool = False
 
-    # Outputs. One-way and optional: a deployment with nothing configured still works, and
-    # `notify/` logs a missing credential rather than failing the job that produced the
-    # thing it was going to send.
+    # Outputs. Optional: a deployment with nothing configured still works, and a feature
+    # that needs a missing credential refuses when used.
     #: Where a link out of this deployment points. Nothing has no page to be relative to,
     #: so this is the only place the deployment's own address is written down.
     public_base_url: str = "http://localhost:8000"
@@ -130,8 +129,7 @@ class Settings(BaseSettings):
     #: No default and no fallback to plaintext — a refresh token opens one person's account
     #: for as long as they leave it alone, so a deployment without this key refuses to
     #: connect an account rather than keeping one readably. Named for what it does rather
-    #: than for one of its two users: it was `GOOGLE_TOKEN_KEY` until batch 060 gave it a
-    #: second.
+    #: than for one of its two users.
     token_encryption_key: SecretStr | None = None
     #: Seconds between scheduled syncs. Jira keeps its history, so this is a freshness
     #: knob rather than a deadline — nothing is lost by syncing late.
@@ -184,15 +182,16 @@ class Settings(BaseSettings):
     otel_service_name: str = "mycel"
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
-    langfuse_base_url: str = "https://jp.cloud.langfuse.com"
+    langfuse_base_url: str = "https://cloud.langfuse.com"
     #: Whether a span carries the prompt sent and the text returned, as well as the model,
     #: tokens and cost it always carries. Off by default because turning it on sends real
     #: user data to a third party: the question somebody typed, and the internal figures
     #: that came back. On in development, where reading the SQL an agent wrote is the
     #: whole point of having a trace; off in production unless somebody has decided.
     otel_capture_content: bool = False
-    #: Where `/metrics` listens in the worker and the scheduler. The api serves it on the
-    #: port it already has. Loopback by default: the endpoint has no authentication, so
+    #: Where `/metrics` listens. Each process has its own port, never the app port:
+    #: worker `metrics_port`, scheduler +1, ingest +2, api +3. Loopback by default: the endpoint has
+    #: no authentication, so
     #: the interface it binds to is the only thing making it private.
     metrics_host: str = "127.0.0.1"
     metrics_port: int = 9100

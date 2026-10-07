@@ -1,17 +1,16 @@
 """The chat domain: ask something, and let a worker answer it.
 
 One kind of work lands here — a question for the orchestrator, which routes it to whichever
-specialist covers it and writes up what comes back. Until batch 033 there was a second,
-`summary`, with its own endpoint and its own agent; the orchestrator reaches the summariser
-as a tool, so the endpoint was a second way to the same capability and went.
+specialist covers it and writes up what comes back. The summariser has no endpoint of its
+own; the orchestrator reaches it as a tool.
 
 The work is split across two processes, and the split is visible in the two halves of this
 module. `request_chat` returns as soon as the job is queued, because a run takes minutes;
 `run` is what the worker calls when it picks the job up.
 
-**The worker calls this, not an agent.** Before batch 013 `queue/consumer.py` built and ran
-the orchestrator itself, which put the order of steps in the transport layer. The consumer
-now receives, dispatches here, and acks; what a job *means* is this module's business.
+**The worker calls this, not an agent.** Building the orchestrator in `queue/consumer.py`
+would put the order of steps in the transport layer. The consumer receives, dispatches
+here, and acks; what a job *means* is this module's business.
 
 Every run is written twice: to Redis so a poller can see it finish, and to `app.turn` so it
 is still there next week. `infra/redis/results.py` calls itself a holding area rather than
@@ -166,8 +165,8 @@ async def run(job: Job) -> None:
     Raises on anything that goes wrong: the consumer owns the retry decision, and a domain
     that swallowed the failure would take that decision away from it.
 
-    No dispatch on `job.kind` since batch 033 — there is one kind. The `if` came back every
-    time a kind was added and is not worth keeping empty for the next one.
+    No dispatch on `job.kind` — there is one kind, and an empty `if` is not worth keeping
+    for the next one.
     """
     question = str(job.payload.get("question", "")).strip()
     if not question:
@@ -275,15 +274,15 @@ async def record_failure(job: Job, error: str) -> None:
 async def _who_asked(job: Job) -> Principal:
     """The person this job belongs to, read back out of the payload.
 
-    Raises rather than falling back to `None`. A job with no `user_id` is one queued before
-    batch 055 — still in flight or sitting in the DLQ at deploy time — and running it would
+    Raises rather than falling back to `None`. A job with no `user_id` is one queued by an
+    older release — still in flight or sitting in the DLQ at deploy time — and running it would
     run it as nobody. `None` means "granted nothing" everywhere else, so it would not leak;
     it would produce an answer that says it could see no data, which reads as the data
     being gone. Failing is the honest outcome and the queue can retry it after a requeue.
     """
     user_id = job.payload.get("user_id")
     if not isinstance(user_id, int):
-        raise ValueError("chat job has no user_id; it predates batch 055 and cannot be run")
+        raise ValueError("chat job has no user_id; it predates per-user jobs and cannot be run")
     async with session_scope() as session:
         user = await AppRepository(session).user_by_id(user_id)
     if user is None:

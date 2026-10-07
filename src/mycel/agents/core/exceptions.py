@@ -150,8 +150,8 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
     except FallbackExceptionGroup as exc:
         # Every model in the chain failed. This arrives as a group rather than as a
         # `ModelAPIError`, so without this clause it would sail past the one below and
-        # reach `tools/delegate.py` as an ordinary exception — the exact shape batch 054
-        # closed, where nothing was reached and the job was written up as an answer.
+        # reach `tools/delegate.py` as an ordinary exception, where nothing was reached and the job
+        # was written up as an answer.
         raise _all_models_failed(model_spec, exc) from exc
     except UsageLimitExceeded as exc:
         raise RunawayStopped(f"{model_spec}: {exc}") from exc

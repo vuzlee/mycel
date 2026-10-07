@@ -95,7 +95,7 @@ class TestDeps:
 
 
 class TestPricingFromTheTable:
-    """MYC-102: pydantic-ai cannot price a model named by the gateway, so the job budget
+    """pydantic-ai cannot price a model named by the gateway, so the job budget
     falls back to the per-million-token table in config."""
 
     def test_a_listed_model_is_priced_per_million_tokens(self) -> None:

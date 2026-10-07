@@ -18,8 +18,8 @@ a project never grants the right to. Asking for everything up front, in case, is
 consent screen comes to describe an app that does not exist.
 
 The shape of the consent round — `state` in Redis with a TTL and spent on first use, the
-token exchange, the Fernet-sealed refresh token — is `services/google_oauth.py`'s, written
-in batch 051. This is the second provider through it rather than a second design.
+token exchange, the Fernet-sealed refresh token — is `services/google_oauth.py`'s.
+This is the second provider through it rather than a second design.
 """
 
 import secrets

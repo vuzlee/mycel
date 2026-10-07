@@ -65,12 +65,12 @@ class TestCountIdenticalCalls:
 class TestGuardRepeat:
     def test_first_call_passes(self) -> None:
         ctx = _Ctx([])
-        guard_repeat(ctx, "growth", previous=1, current=2)  # type: ignore[arg-type]
+        assert guard_repeat(ctx, "growth", previous=1, current=2) is None  # type: ignore[arg-type,func-returns-value]
 
     def test_different_arguments_never_trip(self) -> None:
         """Calling the same tool with new inputs is the normal case, not a loop."""
         ctx = _Ctx([_call("growth", previous=1, current=2)])
-        guard_repeat(ctx, "growth", previous=3, current=4)  # type: ignore[arg-type]
+        assert guard_repeat(ctx, "growth", previous=3, current=4) is None  # type: ignore[arg-type,func-returns-value]
 
     def test_repeat_at_threshold_asks_the_model_to_stop(self) -> None:
         """First a warning in words — often enough to break the loop on its own."""
@@ -88,7 +88,8 @@ class TestGuardRepeat:
 
     def test_threshold_is_configurable(self) -> None:
         ctx = _Ctx([_call("growth", previous=1, current=2)] * 3)
-        guard_repeat(ctx, "growth", threshold=5, previous=1, current=2)  # type: ignore[arg-type]
+        result = guard_repeat(ctx, "growth", threshold=5, previous=1, current=2)  # type: ignore[arg-type,func-returns-value]
+        assert result is None
 
     def test_message_tells_the_model_what_to_do(self) -> None:
         """The retry text is a prompt; it has to be an instruction, not a complaint."""

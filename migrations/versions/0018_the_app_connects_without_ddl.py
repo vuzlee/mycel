@@ -13,6 +13,9 @@ Runs as the owner (`MIGRATION_DATABASE_URL`), which is why it can be a migration
 a hand-run script: there is no step to forget. Unset `MYCEL_APP_PASSWORD` and it does
 nothing, leaving a dev machine on the owner. The earlier three-role design (`grants.sql`,
 `mycel_etl`) never had code that connected as `mycel_etl`, and is removed.
+
+`downgrade` drops only the gold policies. The role `mycel_app` and its grants stay;
+drop them by hand if the app should connect as the owner again.
 """
 
 import os
@@ -32,6 +35,7 @@ SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 def _password() -> str | None:
+    """Through Settings, so `.env` counts: scripts run alembic without exporting it."""
     secret = get_settings().mycel_app_password
     return secret.get_secret_value() if secret else os.environ.get("MYCEL_APP_PASSWORD")
 

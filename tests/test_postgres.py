@@ -193,8 +193,7 @@ class TestBronzeRepository:
         assert stored == payload
 
     async def test_the_same_issue_twice_overwrites(self, session: AsyncSession) -> None:
-        """The opposite of the Telegram connector, and for a reason: an update is an event
-        and arriving twice does not make the second copy truer, but an issue is a record
+        """Unlike an event, which arriving twice does not make truer, an issue is a record
         and a second fetch is a later, better version of it."""
         repo = BronzeRepository(session)
         await repo.save_issues([_payload()])
@@ -822,7 +821,7 @@ class TestTheDashboard:
 
 
 @needs_postgres
-class TestTheThreeBlocksBatch040Added:
+class TestPriorityKindAndActivity:
     """Priority, kind and the activity feed. All three are whole-project on purpose."""
 
     async def test_priorities_count_only_unfinished_work(self, session: AsyncSession) -> None:
@@ -1048,7 +1047,7 @@ class TestTheHeatmap:
 @needs_postgres
 class TestATurnKeepsItsToolCalls:
     """`app.turn.steps`, so a thread reopened after the stream expired is not an empty
-    middle (MYC-41)."""
+    middle."""
 
     async def test_the_steps_come_back_as_they_were_written(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
@@ -1108,7 +1107,7 @@ class TestForgettingAThread:
 
 @needs_postgres
 class TestTheSidebarFollowsTheLastThingSaid:
-    """Order by the newest turn, not by when the thread was opened (MYC-67).
+    """Order by the newest turn, not by when the thread was opened.
 
     The thread you went back to is the one you are working in. Ordering by `created_at`
     buries it under every thread opened since, which is the opposite of what a history is
@@ -1131,7 +1130,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
         )
 
     async def test_a_finished_run_lifts_its_thread(self, session: AsyncSession) -> None:
-        """The second write of a turn moves the thread (MYC-65).
+        """The second write of a turn moves the thread.
 
         A turn is written when the question is queued and again when the run ends. Ordering
         on `created_at` reads the first write only, so a thread whose answer arrives last

@@ -67,8 +67,12 @@ class TestEnabled:
 
 def test_instrumenting_agents_is_safe_to_repeat() -> None:
     """Called on every setup, and agents are built on demand afterwards."""
+    from pydantic_ai import Agent
+    from pydantic_ai.models.instrumented import InstrumentationSettings
+
     tracing.instrument_agents()
     tracing.instrument_agents()
+    assert isinstance(Agent._instrument_default, InstrumentationSettings)
 
 
 class TestWhereSpansGo:

@@ -1,10 +1,6 @@
 """The calendar transport: reading one person's week, and writing one event to it.
 
-Batch 051 turned this file inside out. It used to test a one-way sync that mirrored Jira due
-dates onto a calendar the deployment owned, on a timer, with a service account — and nothing
-ever called it. Eight tests about idempotent event ids went with it.
-
-What is worth pinning now is narrower and sharper:
+What is worth pinning:
 
 **`timeZone` on every `dateTime`.** Drop it and Google falls back to the calendar's default,
 so a UTC host books every meeting seven hours off — silently, in the right format, at the

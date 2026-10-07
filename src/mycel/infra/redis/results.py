@@ -1,15 +1,13 @@
 """Where a finished job's answer waits until somebody asks for it.
 
-**This is a holding area, not a record.** Batch 004 moved the work into a second process,
-which immediately raises a question that process boundary does not answer: the worker has
-the answer and the caller has only a job id. Redis with a TTL closes that gap without
-deciding anything about the data layer, which is a later branch — `infra/` is still
-stubs, and designing the turn table here would mean designing it twice.
+**This is a holding area, not a record.** The work runs in a second process: the worker
+has the answer and the caller has only a job id. Redis with a TTL closes that gap; the
+record is `app.turn`.
 
 What that buys, and what it costs:
 
-  + no migration, no schema, nothing to undo when the real store arrives
-  + already in `docker-compose.yml`, and batch 005 wants Redis anyway
+  + no migration, no schema
+  + already in `docker-compose.yml`, and the stream uses Redis anyway
   - an answer vanishes after `result_ttl_seconds`
   - a Redis restart loses every result, which is why nothing here is treated as a record
     of what was produced
@@ -34,10 +32,8 @@ log = get_logger(__name__)
 class JobResult(BaseModel):
     """What a caller gets back when polling for a job.
 
-    `answer` is markdown the orchestrator wrote. It was a `dict` of structured output until
-    batch 033, and a plain one rather than a typed `Report` so that this module — which
-    moves bytes between processes — would not have to know the agent layer's schema. The
-    concern stands and the answer to it got simpler: a string needs no schema at all.
+    `answer` is markdown the orchestrator wrote. A string, so this module — which moves
+    bytes between processes — never has to know the agent layer's schema.
     """
 
     job_id: str

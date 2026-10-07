@@ -5,16 +5,14 @@ the id the API hands back is the id the worker writes under, that a thread opene
 time is the thread the answer lands in, and that `GET /chat/{job_id}` reads back what a
 different process wrote.
 
-Needs all three services, and skips without them:
+A chat question goes in, and its answer comes back from the worker. Needs all three
+services, and skips without them:
 
-    docker run -d --name mycel-test-pg    -p 5433:5432 -e POSTGRES_USER=pg \\
-        -e POSTGRES_PASSWORD=pg -e POSTGRES_DB=mycel postgres:16-alpine
-    docker run -d --name mycel-test-rabbit -p 5673:5672 rabbitmq:3-alpine
-    docker run -d --name mycel-test-redis  -p 6380:6379 redis:7-alpine
+    docker compose up -d postgres rabbitmq redis
 
-    DATABASE_URL=postgresql://pg:pg@localhost:5433/mycel \\
-    RABBITMQ_URL=amqp://guest:guest@localhost:5673/ \\
-    REDIS_URL=redis://localhost:6380/0 uv run pytest tests/test_end_to_end.py
+    DATABASE_URL=postgresql://mycel:$POSTGRES_PASSWORD@localhost:5433/mycel \\
+    RABBITMQ_URL=amqp://guest:guest@localhost:5672/ \\
+    REDIS_URL=redis://localhost:6379/0 uv run pytest tests/test_end_to_end.py
 
 The model is the one thing still stubbed. It is also the only piece that is not a join:
 what the agent answers is `evals/`, and paying a provider per CI run to learn that a

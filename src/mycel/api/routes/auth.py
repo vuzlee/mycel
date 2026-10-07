@@ -143,8 +143,8 @@ async def change_password(
     """Change the password. The current one is required even though the cookie is valid.
 
     Every other session of this user ends; this one survives, so the person doing it is not
-    logged out of the tab they are typing in. There is no forgotten-password flow: a reset
-    link needs somewhere to send mail, and nothing in `notify/` sends any.
+    logged out of the tab they are typing in. A forgotten password is `/auth/forgot` and
+    `/auth/reset` below.
     """
     ended = await auth.change_password(
         session, user.id, body.current_password, body.new_password, keep_token=mycel_session
@@ -320,8 +320,8 @@ async def jira_callback(
         return _back(f"jira_error={error or 'cancelled'}")
     try:
         row = await jira_oauth.connect(state, code)
-    except Exception as exc:
-        log.warning("jira connect failed", extra={"detail": str(exc)})
+    except Exception as exc:  # any failure must still redirect to a readable page
+        log.warning("jira connect failed", extra={"detail": str(exc)}, exc_info=True)
         return _back("jira_error=failed")
     # Access at once rather than at the next sync: connecting is what the person did to see
     # their projects, and fifteen minutes of an empty app would read as a broken connect.

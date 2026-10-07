@@ -184,7 +184,7 @@ class TestTheGateway:
 
 
 class TestTheUpstreams:
-    """MYC-103: the gateway can be up while the LAN proxy behind it is down."""
+    """The gateway can be up while the LAN proxy behind it is down."""
 
     def _info(self, *pairs: tuple[str, str | None]) -> dict[str, object]:
         return {

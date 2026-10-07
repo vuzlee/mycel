@@ -4,9 +4,9 @@ One key, two providers. A refresh token — Google's or Atlassian's — opens on
 account until they revoke it, so the only thing Postgres ever holds is a ciphertext and a
 database dump is not a list of accounts.
 
-**`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`.** The old name was right while the
-calendar was the only thing stored; batch 060 adds Jira to the same column shape and the
-same key, and a name that says Google about an Atlassian token is a name that sends the
+**`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`.** Google and Jira tokens share the
+same column shape and the same key, and a name that says Google about an Atlassian token is a name
+that sends the
 next reader looking in the wrong file.
 
 Rotating the key makes every stored token unreadable, which from the person's side is the

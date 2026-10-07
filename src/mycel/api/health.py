@@ -37,8 +37,8 @@ async def ready(response: Response) -> dict[str, str]:
     try:
         async with session_scope() as session:
             await session.execute(text("SELECT 1"))
-    except Exception as exc:
-        log.warning("readiness failed", extra={"error": str(exc)})
+    except Exception as exc:  # any failure means not ready; the status code says so
+        log.warning("readiness failed", extra={"error": str(exc), "error_type": type(exc).__name__})
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unavailable", "database": "unreachable"}
     return {"status": "ok", "database": "ok"}

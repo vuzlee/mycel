@@ -4,16 +4,16 @@ Revision ID: 0006
 Revises: 0005
 
 `/reports` was the name from when the app had a button per capability: one for a report,
-one for progress, one for the dashboard. Since batch 026 the orchestrator routes a question
-to whichever specialist covers it, and since 027 there is one chat box. The table outlived
-the product it was named for.
+one for progress, one for the dashboard. The orchestrator now routes a question to
+whichever specialist covers it, and there is one chat box. The table outlived the product
+it was named for.
 
-`turn` is not a new word. The HTTP layer has said it since batch 031 — `GET
+`turn` is not a new word. The HTTP layer already says it — `GET
 /conversations/{id}/turns` returns `TurnResponse` — so this is the storage layer catching
 up to a name already chosen, not a name invented here.
 
 **`body JSONB` becomes `answer TEXT`, and that is a drop, not a cast.** The orchestrator's
-output stopped being a schema in this batch: it writes markdown, and JSONB was only there
+output stopped being a schema: it writes markdown, and JSONB was only there
 so a finding could grow an attribute without a migration. There is no cast from
 `{"findings": [...], "gaps": [...]}` to the prose a model would have written for the same
 question, and inventing one would put made-up text in a column that is supposed to hold

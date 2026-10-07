@@ -1,7 +1,7 @@
 """One person's standing permission to reach Jira as themselves, and what guards it.
 
-The consent round is `services/google_oauth.py`'s, written in batch 051 and used a second
-time here. So what is pinned is what is *different* about Jira, which is four things:
+The consent round is `services/google_oauth.py`'s, reused here. So what is pinned is
+what is *different* about Jira, which is four things:
 
 **The argument for per-person consent is authorship, not security.** Reading on a shared
 token was fine; writing on one puts the host's name on every comment, and Jira cannot

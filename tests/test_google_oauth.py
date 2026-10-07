@@ -9,7 +9,7 @@ happens is a test that a database dump is not a list of calendars.
 
 **A half-configured deployment counts as unconfigured.** A client with no encryption key
 would connect an account and store the token readably, which is worse than refusing. The
-key is `TOKEN_ENCRYPTION_KEY` since batch 060, shared with Jira — one key, two providers.
+key is `TOKEN_ENCRYPTION_KEY`, shared with Jira — one key, two providers.
 
 **`state` is spent once.** The callback arrives as a redirect, so the value nobody saw is the
 only thing tying it to the person who started it, and a url in a history file must not be

@@ -59,9 +59,8 @@ async def refetch_jira() -> SyncResult:
 
     Needed whenever a FIELD is added rather than a row: the watermark is the newest
     `fetched_at` in bronze, so adding to the fields a sync asks for moves nothing — no
-    issue is re-read, and bronze cannot replay a field it was never given. Priority hit
-    this in batch 041 and sprint hit it in the same batch, which is twice too often for a
-    hand-written one-off script.
+    issue is re-read, and bronze cannot replay a field it was never given. Priority and
+    sprint both hit this, which is twice too often for a hand-written one-off script.
 
     Not on a schedule and not the ordinary path: this reads every issue in the project on
     every call. It is a migration step for the data, run once after a field is added.
@@ -88,11 +87,9 @@ async def refetch_jira() -> SyncResult:
 async def sync_jira() -> SyncResult:
     """Fetch, then transform what the fetch brought in.
 
-    Two transactions rather than one. With Telegram this was forced — an acknowledged
-    update is dropped by the provider, so a rollback lost it permanently. Jira keeps its
-    history and a failed fetch can simply be re-run, so the constraint no longer binds;
-    the split stays because the reason it is *good* never depended on that. A failed
-    transform must leave bronze intact, or the replay it exists for has nothing to replay.
+    Two transactions rather than one. Jira keeps its history, so a failed fetch can
+    simply be re-run; the split is there because a failed transform must leave bronze intact, or the
+    replay it exists for has nothing to replay.
     """
     started = time.monotonic()
     try:
@@ -171,8 +168,7 @@ async def _index_gold() -> int:
 
     **A failure here does not fail the sync.** Gold is already written and correct; a search
     index one tick behind is a degraded search, while a sync that reports failure is a
-    scheduler retrying work it has already done. That is the argument `notify/` makes for
-    never raising out of a side effect.
+    scheduler retrying work it has already done.
 
     Only what moved is embedded — `index_items` compares each row’s `updated_at` against
     what Qdrant holds — so a quiet tick costs one query and no model time.

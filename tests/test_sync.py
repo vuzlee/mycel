@@ -317,7 +317,7 @@ class TestHowJiraFails:
         assert seen == ["https://api.atlassian.com/ex/jira/cloud-1/rest/api/3/search/jql"]
 
     async def test_the_grant_rides_as_a_bearer_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Not basic auth. The whole batch rests on a call carrying one person's grant."""
+        """Not basic auth. Jira sync rests on a call carrying one person's grant."""
         seen: dict[str, str] = {}
 
         def handler(request: httpx2.Request) -> httpx2.Response:

@@ -9,7 +9,7 @@ from mycel.core.config import Settings, get_settings
 def test_defaults_need_no_environment() -> None:
     """A bare process must still produce usable settings — no credential required.
 
-    `otel_enabled` is deliberately not asserted here: since batch 059 it comes from
+    `otel_enabled` is deliberately not asserted here: it comes from
     `config/environments/`, where dev turns it on and prod leaves it off. Asserting one
     value would be asserting which environment the test happens to run in.
     """
@@ -50,8 +50,7 @@ def test_secret_is_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Named on a field that still exists. `extra="ignore"` means a variable with no field
     behind it never reaches the repr at all, so this test would pass for the wrong reason
-    the day the field it names is deleted — which is exactly what batch 060 did to
-    `JIRA_API_TOKEN`.
+    the day the field it names is deleted.
     """
     monkeypatch.setenv("JIRA_CLIENT_SECRET", "sk-do-not-leak")
     assert "jira_client_secret" in repr(Settings())
@@ -69,7 +68,7 @@ def test_provider_keys_never_reach_the_app(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 class TestWhereSettingsComeFrom:
-    """Four sources, and the order between them is the whole of batch 059.
+    """Four sources, and the order between them is what is tested.
 
         class default  <  config/environments/*.yaml  <  .env  <  environment
 

@@ -141,10 +141,9 @@ class TestDelegation:
         assert deps.budget.requests == 3
 
     async def test_a_delegated_run_is_limited_by_its_own_config(self) -> None:
-        """MYC-48. A delegated run given no `usage_limits` fell to pydantic-ai's defaults —
+        """A delegated run given no `usage_limits` would fall to pydantic-ai's defaults —
         50 requests and no tool-call limit at all — so every number in `config/agents/`
-        bound the orchestrator and nothing it called. One question cost 41 `run_sql` calls
-        before the default request limit stopped it."""
+        would bind the orchestrator and nothing it called."""
         deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=3))
         child = Agent(deps_type=MycelDeps, output_type=str)
         parent = Agent(deps_type=MycelDeps, output_type=str)

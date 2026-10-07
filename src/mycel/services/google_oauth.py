@@ -8,7 +8,7 @@ consent round, and what it leaves behind is a refresh token.
 **The refresh token is a password with a long life.** It opens one calendar until its owner
 revokes it, so it is encrypted before it reaches Postgres and decrypted only here, on the
 way to a request. The key is `TOKEN_ENCRYPTION_KEY` and `services/tokens.py` owns it —
-shared with Jira since batch 060, which is why the name no longer says Google. It never
+shared with Jira, which is why the name does not say Google. It never
 appears in a log line, a Langfuse span, or a prompt — the functions below return access
 tokens and events, and nothing returns the refresh token.
 
@@ -261,7 +261,7 @@ def unseal(refresh_token_encrypted: str) -> str:
     A key that has been rotated makes every stored token unreadable, which is the same
     situation as a revoked grant from the person's point of view — so it is reported the
     same way, and reconnecting fixes it. Fernet itself is `services/tokens.py`, shared with
-    Jira since batch 060.
+    Jira.
     """
     try:
         return _unseal_token(refresh_token_encrypted)

@@ -18,10 +18,10 @@ What the cluster path proves today is that the chart runs. What it does not have
 cluster anyone else can reach, which is also why CI renders the chart rather than deploying
 it — see `.github/workflows/release.yml`.
 
-## Deploying, with compose
+## Running, with compose
 
 ```bash
-docker compose pull                                 # the image CI built, by SHA
+docker compose build                                # every app service builds in place
 docker compose run --rm api alembic upgrade head    # migrations FIRST
 docker compose up -d                                # then swap the containers
 ```

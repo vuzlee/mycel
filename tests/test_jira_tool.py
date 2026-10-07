@@ -20,7 +20,7 @@ something, and raising would end the job over the half of it that is answerable.
 
 **A refused write gives the draft back; a timed-out one does not.** Those two are one
 line apart in the code and opposite in consequence — getting the second wrong posts the
-same comment twice, which is the exact thing this whole batch exists to prevent.
+same comment twice, which is the exact thing the draft-then-confirm flow exists to prevent.
 
 **`create_project` is absent unless the deployment armed it**, and absent means absent: a
 tool the model cannot see is a tool it cannot be talked into using.

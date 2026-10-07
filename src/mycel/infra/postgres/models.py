@@ -41,8 +41,8 @@ class Base(DeclarativeBase):
 class JiraIssue(Base):
     """One issue from `search`, stored exactly as it arrived.
 
-    Nothing is parsed here on purpose. Jira keeps its own history, so unlike Telegram this
-    could be re-fetched — but a re-fetch reads what the issue looks like *now*, not what it
+    Nothing is parsed here on purpose. Jira keeps its own history, so this could be
+    re-fetched — but a re-fetch reads what the issue looks like *now*, not what it
     looked like when the transform first ran, which is a different fact. Bronze is what
     remembers the difference.
 
@@ -403,9 +403,8 @@ class Conversation(Base):
     Replaces the browser's `localStorage` list, which could not follow a user to a second
     machine and had no way to hold anything but a job id.
 
-    `kind` is `"chat"` for everything since batch 033, when the one other kind — a progress
-    summary opened by its own endpoint — was deleted along with that endpoint. Kept because
-    a second kind of thread is cheaper to add to a column that exists than to a table that
+    `kind` is `"chat"` for everything. Kept because a second kind of thread is cheaper to add to a
+    column that exists than to a table that
     has to grow one.
     """
 
@@ -430,15 +429,14 @@ class Turn(Base):
     always described as a holding area rather than a record, and this is the record. The two
     coexist: Redis answers "is it done yet", this answers "what did we produce last week".
 
-    `answer` is the markdown the orchestrator wrote. It was `body JSONB` until batch 033,
-    when the orchestrator's output stopped being a schema — JSONB was there so a finding
-    could grow an attribute without a migration, and text needs neither.
+    `answer` is the markdown the orchestrator wrote. Text, not JSONB: the output has no
+    schema to grow.
 
     `job_id` is unique so a redelivered job updates its row instead of writing a second one.
 
     `steps` is the tool calls this turn made, in the shape the stream sent them. Reasoning
     is not kept: it is worth watching live and not worth storing, while a tool call is what
-    makes the answer checkable. Null for every turn that ran before batch 037.
+    makes the answer checkable. Null for a turn recorded without steps.
     """
 
     __tablename__ = "turn"

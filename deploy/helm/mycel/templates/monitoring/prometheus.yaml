@@ -4,7 +4,7 @@ Prometheus: the thing that asks every 15 seconds how each process is doing.
 THE WHOLE POINT OF THIS FILE is the scrape config below. The compose version
 (`deploy/otel/prometheus.yaml`) names three addresses by hand — `api:8000`, `worker:9100`,
 `scheduler:9101`. Those are compose network names: inside the cluster they point nowhere,
-which is the break this batch exists to fix.
+which is the break this template exists to fix.
 
 Here it asks the cluster instead. A pod replaced by a new one with a new IP is found on the
 next refresh, and nobody edits anything. That is the property worth having, and it is also
@@ -131,7 +131,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "mycel.fullname" . }}-prometheus
-        # Deliberately not a PersistentVolumeClaim. Batch 057 left the stateful stores
+        # Deliberately not a PersistentVolumeClaim. The stateful stores stay
         # outside the cluster because storage is the painful part, and that reason does not
         # change here: losing seven days of samples on a dev box is not a problem, a claim
         # stuck Pending on the wrong storage class is - nothing runs at all then.

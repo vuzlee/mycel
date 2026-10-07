@@ -4,9 +4,8 @@ Returns payloads exactly as they arrived. Nothing is parsed here — `services/f
 puts them in bronze, `etl/` gives them meaning.
 
 **Every call runs on one person's OAuth token, and which person is the caller's to decide.**
-Until batch 060 this file used one API token out of `.env`, and that was adequate while it
-only read: everyone saw the same board and nobody's name was recorded. It stopped being
-adequate the moment it wrote — a comment on a shared token appears under the host's name
+One shared API token would be adequate for reads only: a write on it — a comment on a shared token
+appears under the host's name
 whoever typed it, and Jira cannot correct the author of an event already recorded. So a
 call takes an `Auth`: the deployment's service account for a background read
 (`domains/sync.py`), the asker's own grant for anything a question caused

@@ -3,7 +3,7 @@
 Revision ID: 0016
 Revises: 0015
 
-Batch 066 moves knowledge into the chat. Every thread of a user asks every one of their
+Knowledge moves into the chat. Every thread of a user asks every one of their
 documents, so the notebook between a user and a document has no job left. Each document
 takes its notebook's owner, the notebook table goes, and the duplicate check becomes
 per user. Qdrant's payload was re-keyed once, after this migration, by a one-off script.
@@ -46,8 +46,9 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uq_document_owner_sha256", "document", ["owner_id", "sha256"], schema="app"
     )
-    op.drop_index("ix_app_document_notebook_id", table_name="document", schema="app",
-                  if_exists=True)
+    op.drop_index(
+        "ix_app_document_notebook_id", table_name="document", schema="app", if_exists=True
+    )
     op.drop_column("document", "notebook_id", schema="app")
     op.drop_table("notebook", schema="app")
 
@@ -69,8 +70,10 @@ def downgrade() -> None:
         ),
         schema="app",
     )
-    op.execute("INSERT INTO app.notebook (owner_id, name) SELECT DISTINCT owner_id, 'Documents' "
-               "FROM app.document")
+    op.execute(
+        "INSERT INTO app.notebook (owner_id, name) SELECT DISTINCT owner_id, 'Documents' "
+        "FROM app.document"
+    )
     op.add_column("document", sa.Column("notebook_id", sa.Integer(), nullable=True), schema="app")
     op.execute(
         "UPDATE app.document d SET notebook_id = n.id FROM app.notebook n "
@@ -78,8 +81,14 @@ def downgrade() -> None:
     )
     op.alter_column("document", "notebook_id", nullable=False, schema="app")
     op.create_foreign_key(
-        "document_notebook_id_fkey", "document", "notebook", ["notebook_id"], ["id"],
-        source_schema="app", referent_schema="app", ondelete="CASCADE",
+        "document_notebook_id_fkey",
+        "document",
+        "notebook",
+        ["notebook_id"],
+        ["id"],
+        source_schema="app",
+        referent_schema="app",
+        ondelete="CASCADE",
     )
     op.drop_constraint("uq_document_owner_sha256", "document", schema="app")
     op.create_unique_constraint(

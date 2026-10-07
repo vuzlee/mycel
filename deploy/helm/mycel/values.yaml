@@ -69,7 +69,7 @@ config:
   OTEL_ENABLED: "false"
   OTEL_SERVICE_NAME: mycel
   OTEL_CAPTURE_CONTENT: "false"
-  LANGFUSE_BASE_URL: https://jp.cloud.langfuse.com
+  LANGFUSE_BASE_URL: https://cloud.langfuse.com
   METRICS_PORT: "9100"
   PUBLIC_BASE_URL: ""
   GOOGLE_CLIENT_ID: ""

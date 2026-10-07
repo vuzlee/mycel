@@ -3,8 +3,8 @@
 # Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
 model_spec: cloud:claude-sonnet-5
 
-# Twelve queries answer any question this schema holds; 41 was fishing, not analysis —
-# see MYC-48. `request_limit` is declared with it and one higher, because a limit that
+# Twelve queries answer any question this schema holds; 41 was fishing, not analysis.
+# `request_limit` is declared with it and one higher, because a limit that
 # binds has to be the one this file chose: without it the environment's `agents.defaults`
 # decides, and dev's 8 requests would stop the run long before the thirtieth query.
 tool_calls_limit: 12

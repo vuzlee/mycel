@@ -3,11 +3,14 @@
 Revision ID: 0017
 Revises: 0016
 
-Batch 069. Background reads used one person's Jira token, chosen as "the first to connect",
+Background reads used one person's Jira token, chosen as "the first to connect",
 and when they last succeeded was stamped on their row. The sync now runs on the
 deployment's service account, so the role and its stamp leave `jira_account` and the
 record of the last run becomes one row of its own. Hand grants in `membership` are cleared:
 access is now refreshed from Jira, per person, on connect and after every sync.
+
+`downgrade` restores the columns but not their contents: no account is the syncer again,
+`last_sync_at` is empty, and the cleared `membership` grants do not come back.
 """
 
 from collections.abc import Sequence

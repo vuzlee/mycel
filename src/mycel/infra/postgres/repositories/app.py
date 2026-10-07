@@ -131,8 +131,8 @@ class TurnRow:
     answer: str | None
     error: str | None
     spent_usd: Decimal | None
-    #: The tool calls this turn made, as the stream sent them. `None` for a turn that ran
-    #: before batch 037, and for one that failed.
+    #: The tool calls this turn made, as the stream sent them. `None` for a turn recorded
+    #: without steps, and for one that failed.
     steps: list[Any] | None
     created_at: datetime
 

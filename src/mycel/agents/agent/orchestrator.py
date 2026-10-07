@@ -13,8 +13,8 @@ the delegate toolset can reach.
 How the specialists are called — as tools, on the caller's budget, with a failure returned
 rather than raised — is `tools/delegate.py`.
 
-**Its output is markdown, not a schema.** Until batch 033 it filled `Report{findings,
-gaps, follow_ups}`, which turned every answer into one bulleted list: a count, a table of
+**Its output is markdown, not a schema.** A `Report{findings, gaps, follow_ups}` schema
+would turn every answer into one bulleted list: a count, a table of
 tickets and a yes-or-no all came out the same shape. Markdown lets the model pick — a table
 where the data has columns, a sentence where it does not — and it costs nothing to declare,
 because `str` has no schema to keep in step with a renderer.

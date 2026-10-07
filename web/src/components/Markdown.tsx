@@ -1,7 +1,7 @@
 /**
  * Markdown, rendered the one way everywhere it appears.
  *
- * The orchestrator has answered in markdown since batch 033, so this renders both the
+ * The orchestrator answers in markdown, so this renders both the
  * text arriving on the stream and the kept answer of a finished turn. GFM is on for
  * tables: a list of tickets with an assignee and a due date is what most answers are,
  * and a pipe table is how a model writes one.

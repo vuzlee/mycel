@@ -54,8 +54,8 @@ async def ensure() -> str:
     qdrant = client()
     if not await qdrant.collection_exists(name):
         await qdrant.create_collection(name, vectors_config=_collection().params)
-    # Re-declared on every start: creating an index that exists is a no-op, and a
-    # collection made before batch 066 has no `owner_id` index yet.
+    # Re-declared on every start: creating an index that exists is a no-op, and an
+    # older collection may have no `owner_id` index yet.
     await qdrant.create_payload_index(
         name,
         "owner_id",
