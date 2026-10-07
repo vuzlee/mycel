@@ -1,7 +1,7 @@
 name: Release
 
-# Build the image once, tagged by commit SHA. Every environment deploys that exact
-# image instead of rebuilding, so staging and prod run identical bytes.
+# Build both images once, tagged by commit SHA: `mycel` (api, worker, scheduler) and
+# `mycel-ingest` (docling). Nothing deploys yet; the chart job checks the tag reaches them.
 
 on:
   push:
@@ -31,6 +31,15 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/mycel:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          target: ingest
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/mycel-ingest:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mycel-ingest:latest
+          cache-from: type=gha,scope=ingest
+          cache-to: type=gha,mode=max,scope=ingest
 
   # Render the chart against the image this run just built. It is not a deploy — there is
   # no cluster outside a developer's laptop to deploy to, and CI cannot reach a minikube —
@@ -87,7 +96,7 @@ jobs:
       # cleanly while three Deployments run `latest` is the failure this catches.
       - name: The built image reaches every container
         run: |
-          expected=$(grep -cE '^\s+image: mycel:' /tmp/rendered.yaml || true)
-          actual=$(grep -cE "^\s+image: mycel:${{ github.sha }}$" /tmp/rendered.yaml || true)
+          expected=$(grep -cE '^\s+image: mycel(-ingest)?:' /tmp/rendered.yaml || true)
+          actual=$(grep -cE "^\s+image: mycel(-ingest)?:${{ github.sha }}$" /tmp/rendered.yaml || true)
           echo "$actual of $expected mycel images carry this commit"
           [ "$expected" = "$actual" ] && [ "$actual" != "0" ]

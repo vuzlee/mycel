@@ -1,0 +1,24 @@
+# Build context: only what the Dockerfile copies (src, config, migrations, web, lock).
+.git
+.venv
+.env
+.env.*
+!.env.example
+**/__pycache__
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.run
+.jira
+.local
+.claude
+notes
+web/node_modules
+web/dist
+# Each deployment's own model list; the image ships the example only.
+config/litellm/models.yaml
+.cache
+assets
+evals
+tests
+docs

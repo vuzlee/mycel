@@ -7,7 +7,7 @@
 # for a cluster that has load. MinIO came back in 061 as a store outside the cluster.
 
 image:
-  # ghcr.io at release time; on minikube the image is loaded into the node's own daemon,
+  # Docker Hub `<user>/mycel` at release time; on minikube the image is loaded into the node's own daemon,
   # so the repository is whatever `minikube image load` was given.
   repository: mycel
   tag: ""            # CI sets this to the commit SHA. Empty falls back to appVersion.

@@ -8,15 +8,8 @@ from typing import Any
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.documents import (
-    DELETING,
-    FAILED,
-    IN_FLIGHT,
-    PARSING,
-    READY,
-    Chunk,
-    Document,
-)
+from mycel.infra.postgres.documents import DELETING, FAILED, IN_FLIGHT, PARSING, READY
+from mycel.infra.postgres.models import Chunk, Document
 
 
 @dataclass(frozen=True, slots=True)

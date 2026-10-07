@@ -9,13 +9,13 @@ RUN npm run build
 FROM python:3.11-slim AS app
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8.0 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
 # Install dependencies first, copy source after - a code change skips the reinstall
-COPY pyproject.toml uv.lock* ./
-RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --no-install-project
 
 COPY src/ src/
 COPY config/ config/
@@ -25,7 +25,7 @@ COPY config/ config/
 # than a missing one.
 COPY migrations/ migrations/
 COPY alembic.ini ./
-RUN uv sync --no-dev
+RUN uv sync --locked --no-dev
 
 # Last: only the built assets cross over, and only `app.py::WEB_DIST` looks for them.
 COPY --from=web /web/dist/ web/dist/
@@ -40,13 +40,13 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libxcb1 libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8.0 /uv /usr/local/bin/uv
 WORKDIR /app
-COPY pyproject.toml uv.lock* ./
-RUN uv sync --frozen --no-dev --extra ingest --no-install-project
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --extra ingest --no-install-project
 COPY src/ src/
 COPY config/ config/
-RUN uv sync --frozen --no-dev --extra ingest
+RUN uv sync --locked --no-dev --extra ingest
 ENV PATH="/app/.venv/bin:$PATH"
 RUN docling-tools models download layout tableformer
 CMD ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]

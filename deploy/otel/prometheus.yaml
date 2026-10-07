@@ -1,13 +1,13 @@
-# Prometheus scrapes the three processes directly. There is no collector in between:
+# Prometheus scrapes the four processes directly. There is no collector in between:
 # traces go to Langfuse over OTLP, and metrics are the only thing left for this stack to
 # gather.
 #
-# Three targets, not one. The api is where requests arrive, but the worker is where jobs
-# run and the scheduler is where syncs run — scrape only the api and the graph stays
-# healthy while every job dies.
+# Four targets, not one. The api is where requests arrive, but the worker runs jobs, the
+# ingest worker parses documents and the scheduler runs syncs — scrape only the api and the
+# graph stays healthy while every job dies.
 #
 # Every process serves /metrics on a small port of its own, never on the app port; see
-# `observability/metrics_server.py`. api 9103, worker 9100, scheduler 9101.
+# `observability/metrics_server.py`. api 9103, worker 9100, scheduler 9101, ingest 9102.
 
 global:
   scrape_interval: 15s
@@ -24,3 +24,7 @@ scrape_configs:
   - job_name: mycel-scheduler
     static_configs:
       - targets: ["scheduler:9101"]
+
+  - job_name: mycel-ingest
+    static_configs:
+      - targets: ["ingest:9102"]

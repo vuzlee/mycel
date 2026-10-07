@@ -33,9 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-        # The image runs 3.11 (Dockerfile); the runner's default is newer.
-        with: {python-version: "3.11"}
-      - run: uv sync
+        # The image runs 3.11 (Dockerfile); the runner's default is newer. uv matches the image.
+        with: {python-version: "3.11", version: "0.8.0"}
+      - run: uv sync --locked
 
       - name: Lint
         run: uv run ruff check .

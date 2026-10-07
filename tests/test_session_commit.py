@@ -58,7 +58,10 @@ def server() -> Iterator[str]:
     running = uvicorn.Server(config)
     thread = threading.Thread(target=running.run, daemon=True)
     thread.start()
+    deadline = time.monotonic() + 15
     while not running.started:
+        if not thread.is_alive() or time.monotonic() > deadline:
+            pytest.fail("uvicorn did not start within 15s")
         time.sleep(0.05)
     try:
         yield f"http://127.0.0.1:{port}"

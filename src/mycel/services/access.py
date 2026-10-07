@@ -6,9 +6,12 @@ everyone connected after each sync. A person removed from a project in Jira lose
 within one sync.
 
 A person whose token no longer works keeps nothing. Failing closed is the only safe
-reading of "we could not ask".
+reading of "we could not ask". A bug is not "could not ask": it raises.
 """
 
+import httpx
+
+from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.session import session_scope
@@ -23,7 +26,7 @@ async def refresh(user_id: int) -> frozenset[str]:
     try:
         token, cloud_id = await jira_oauth.token_for(user_id)
         projects = frozenset(await jira.browsable_projects(jira.Auth(token, cloud_id)))
-    except Exception:
+    except (MycelError, httpx.HTTPError):
         log.warning(
             "could not read jira access; clearing it", extra={"user_id": user_id}, exc_info=True
         )

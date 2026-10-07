@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from mycel.infra.postgres import documents as tables
 from mycel.infra.postgres.engine import async_dsn
-from mycel.infra.postgres.models import Base
+from mycel.infra.postgres.models import Base, Document
 from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 
@@ -149,8 +149,8 @@ class TestWatchdog:
         doc = await repo.add_document(a, "f.pdf", "application/pdf", 1, "s1")
         await repo.start_parsing(doc.id)
         await session.execute(
-            update(tables.Document)
-            .where(tables.Document.id == doc.id)
+            update(Document)
+            .where(Document.id == doc.id)
             .values(updated_at=text("now() - interval '1 hour'"))
         )
 

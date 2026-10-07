@@ -276,15 +276,12 @@ services:
     # for a second browser tab. Grafana is the one here that holds rendered state.
     mem_limit: 512m
 
-# pgdata and rabbitdata already exist, filled by containers started by hand before this
-# file was usable. Named `external` so compose adopts them rather than creating
-# `mycel_pgdata` beside `mycel-pgdata` and starting from an empty database.
+# Fixed names so an existing `mycel-pgdata` is reused. On a machine where it was made by
+# hand, compose warns once that it "was not created by Compose": harmless, data is kept.
 volumes:
   pgdata:
-    external: true
     name: mycel-pgdata
   rabbitdata:
-    external: true
     name: mycel-rabbitdata
   qdrantdata:
   miniodata:
