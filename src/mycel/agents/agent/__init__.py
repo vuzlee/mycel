@@ -1,9 +1,9 @@
 """The agents themselves: one file per specialist, each a prompt and an output schema.
 
-  analyst.py       analyses figures
+  analyst.py       analyses figures and drafts Jira writes
   orchestrator.py  splits a request across the specialists
-  researcher.py    searches the web
-  librarian.py     searches the knowledge base
+  researcher.py    reads the web, mail and calendar
+  summariser.py    summarises a project's work over a window
 
 Kept apart from the machinery one level up (`core/`, `tools/`, `registry.py`) because the
 two change at different rates: a prompt is edited constantly, how a run is wired almost

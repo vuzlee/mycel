@@ -9,7 +9,7 @@ endpoint that no longer exists; the agent is now reached as a tool, and `delegat
 `render` on its way there.
 """
 
-from mycel.infra.postgres.repositories.gold import SECONDS_PER_DAY, WorkItemRow
+from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow
 from mycel.services.gather import ProgressWindow
 
 #: Date format in the prompt. ISO with a space: unambiguous to a model, and short enough
@@ -133,4 +133,4 @@ def _item(row: WorkItemRow) -> str:
 
 def _days(seconds: int) -> str:
     """Seconds as man-days, at Jira's own eight-hour working day."""
-    return f"{seconds / SECONDS_PER_DAY:.1f}d"
+    return f"{seconds / WORKDAY_SECONDS:.1f}d"

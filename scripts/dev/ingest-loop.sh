@@ -6,6 +6,8 @@
 # Capped so a PDF cannot take the machine: INGEST_CPUS cores, INGEST_MEM of RAM, low
 # priority. Over the memory cap the worker is killed, restarted here, and the job retried.
 
+set -uo pipefail
+
 INGEST_CPUS=${INGEST_CPUS:-2}
 INGEST_MEM=${INGEST_MEM:-4G}
 export OMP_NUM_THREADS=$INGEST_CPUS MKL_NUM_THREADS=$INGEST_CPUS TORCH_NUM_THREADS=$INGEST_CPUS

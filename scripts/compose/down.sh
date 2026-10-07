@@ -9,4 +9,4 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 
 docker compose --profile "*" stop
-log "data kept in volumes mycel-pgdata, mycel-rabbitdata, mycel-qdrantdata"
+log "data kept in volumes $DATA_VOLUMES"

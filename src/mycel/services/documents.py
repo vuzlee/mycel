@@ -22,6 +22,7 @@ from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.producer import publish
+from mycel.services.enqueue import delete_job, ingest_job
 
 PDF = "application/pdf"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -81,8 +82,6 @@ async def busy(owner_id: int) -> bool:
 
 async def upload(owner_id: int, file: Upload) -> DocumentRow:
     """Check, store the original, record it, queue the ingest job."""
-    from mycel.domains.ingest import ingest_job
-
     settings = get_settings()
     if len(file.data) > settings.document_max_bytes:
         raise DocumentError(413, "Files are limited to 2 MB.")
@@ -143,8 +142,6 @@ async def set_enabled(owner_id: int, document_id: int, enabled: bool) -> Documen
 
 async def delete_document(owner_id: int, document_id: int) -> None:
     """Hidden from search at once; the worker removes points, file and row after."""
-    from mycel.domains.ingest import delete_job
-
     async with session_scope() as session:
         repo = DocumentRepository(session)
         doc = await repo.owned_document(document_id, owner_id)

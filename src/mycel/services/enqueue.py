@@ -48,3 +48,11 @@ async def enqueue_chat(
         },
     )
     return await publish(job)
+
+
+def ingest_job(document_id: int) -> Job:
+    return Job(kind=JobKind.INGEST, payload={"document_id": document_id})
+
+
+def delete_job(document_id: int) -> Job:
+    return Job(kind=JobKind.DELETE_DOCUMENT, payload={"document_id": document_id})

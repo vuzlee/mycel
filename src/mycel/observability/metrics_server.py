@@ -28,13 +28,16 @@ from mycel.observability.metrics import render
 
 log = get_logger(__name__)
 
+#: How long a scrape may take to send its request line.
+READ_TIMEOUT_S = 5.0
+
 _NOT_FOUND = b"HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
 
 
 async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
     """One request, one response, close. Keep-alive would need a parser."""
     try:
-        parts = (await asyncio.wait_for(reader.readline(), timeout=5.0)).split(b" ")
+        parts = (await asyncio.wait_for(reader.readline(), timeout=READ_TIMEOUT_S)).split(b" ")
         target = parts[1].split(b"?")[0] if len(parts) > 1 else b""
         if target != b"/metrics":
             writer.write(_NOT_FOUND)

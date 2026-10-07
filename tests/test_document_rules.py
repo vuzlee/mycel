@@ -2,11 +2,11 @@
 
 import pytest
 
-from mycel.domains.ingest import delete_job, ingest_job
 from mycel.queue import topology
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import queue_for
 from mycel.services.documents import DOCX, MARKDOWN, PDF, DocumentError, sniff
+from mycel.services.enqueue import delete_job, ingest_job
 
 
 class TestSniff:

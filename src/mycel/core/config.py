@@ -15,6 +15,7 @@ from datetime import date
 from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
@@ -272,3 +273,11 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """The process-wide settings. Cached; call `get_settings.cache_clear()` in tests."""
     return Settings()
+
+
+def team_zone() -> ZoneInfo:
+    """The team's zone, falling back to UTC if the name is not one the system knows."""
+    try:
+        return ZoneInfo(get_settings().timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo("UTC")

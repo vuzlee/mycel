@@ -775,7 +775,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.api.routes.projects.list_threads", fake_threads)
+        monkeypatch.setattr("mycel.api.routes.conversations.list_threads", fake_threads)
         body = client.get("/conversations").json()
 
         assert asked == [SIGNED_IN.id]
@@ -801,7 +801,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.api.routes.projects.list_threads", fake_threads)
+        monkeypatch.setattr("mycel.api.routes.conversations.list_threads", fake_threads)
         body = client.get("/conversations").json()
 
         assert len(body) == 1 and body[0]["job_id"] is None
@@ -816,7 +816,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id))
             return True
 
-        monkeypatch.setattr("mycel.api.routes.projects.forget_thread", fake_forget)
+        monkeypatch.setattr("mycel.api.routes.conversations.forget_thread", fake_forget)
         response = client.delete("/conversations/7")
 
         assert response.status_code == 204
@@ -830,7 +830,7 @@ class TestTheLists:
         async def fake_forget(user_id: int, conversation_id: int) -> bool:
             return False
 
-        monkeypatch.setattr("mycel.api.routes.projects.forget_thread", fake_forget)
+        monkeypatch.setattr("mycel.api.routes.conversations.forget_thread", fake_forget)
 
         assert client.delete("/conversations/7").status_code == 404
 
@@ -843,7 +843,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id, pinned))
             return conversation_id == 7
 
-        monkeypatch.setattr("mycel.api.routes.projects.pin_thread", fake_pin)
+        monkeypatch.setattr("mycel.api.routes.conversations.pin_thread", fake_pin)
 
         assert client.put("/conversations/7/pin", json={"pinned": True}).status_code == 204
         assert client.put("/conversations/8/pin", json={"pinned": True}).status_code == 404

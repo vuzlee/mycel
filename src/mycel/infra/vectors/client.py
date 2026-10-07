@@ -18,7 +18,7 @@ from functools import lru_cache
 
 from qdrant_client import AsyncQdrantClient
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.logging import get_logger
 
 log = get_logger(__name__)
@@ -30,13 +30,13 @@ class VectorsUnavailable(RuntimeError):
     """Qdrant is not configured. Raised where the caller can still carry on without it."""
 
 
-def configured() -> bool:
+def configured(settings: Settings | None = None) -> bool:
     """Whether this deployment has somewhere to search.
 
     Checked before a tool is offered rather than inside it: a tool the model can see is a
     tool it will call, and a tool that fails every time costs a model turn to learn that.
     """
-    return bool(get_settings().qdrant_url.strip())
+    return bool((settings or get_settings()).qdrant_url.strip())
 
 
 def client() -> AsyncQdrantClient:

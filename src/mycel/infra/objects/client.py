@@ -6,7 +6,7 @@ from typing import Any
 
 import aioboto3
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 
 _session: aioboto3.Session | None = None
 
@@ -15,9 +15,9 @@ class ObjectsUnavailable(RuntimeError):
     """No object store is configured."""
 
 
-def configured() -> bool:
-    settings = get_settings()
-    return bool(settings.s3_endpoint_url and settings.s3_access_key and settings.s3_secret_key)
+def configured(settings: Settings | None = None) -> bool:
+    cfg = settings or get_settings()
+    return bool(cfg.s3_endpoint_url and cfg.s3_access_key and cfg.s3_secret_key)
 
 
 @asynccontextmanager

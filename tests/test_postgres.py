@@ -30,7 +30,7 @@ from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.app import AppRepository
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.repositories.gold import (
-    SECONDS_PER_DAY,
+    WORKDAY_SECONDS,
     GoldRepository,
     WorkItemRow,
     WorklogRow,
@@ -122,8 +122,8 @@ def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
         "sprint_state": None,
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
-        "original_estimate_seconds": 2 * SECONDS_PER_DAY,
-        "time_spent_seconds": SECONDS_PER_DAY,
+        "original_estimate_seconds": 2 * WORKDAY_SECONDS,
+        "time_spent_seconds": WORKDAY_SECONDS,
         "due_at": None,
         "created_at": _at(14),
         "resolved_at": None,
@@ -165,8 +165,8 @@ def _payload(key: str = "MYC-7", **overrides: Any) -> dict[str, Any]:
         "resolutiondate": None,
         "updated": "2026-09-18T09:00:00.000+0000",
         "labels": ["backfill"],
-        "timeoriginalestimate": 2 * SECONDS_PER_DAY,
-        "timespent": SECONDS_PER_DAY,
+        "timeoriginalestimate": 2 * WORKDAY_SECONDS,
+        "timespent": WORKDAY_SECONDS,
     }
     return {"id": key.split("-")[-1], "key": key, "fields": {**fields, **overrides}}
 
@@ -339,11 +339,11 @@ class TestGoldRepository:
         """The number nobody has today, and the reason the hashtag convention had to go."""
         repo = GoldRepository(session)
         await repo.upsert_items(
-            [_item(original_estimate_seconds=SECONDS_PER_DAY, time_spent_seconds=3 * 28800)]
+            [_item(original_estimate_seconds=WORKDAY_SECONDS, time_spent_seconds=3 * 28800)]
         )
 
         load = await repo.load_by_assignee(PROJECT, _at(1))
-        assert load[0].gap_seconds == 2 * SECONDS_PER_DAY
+        assert load[0].gap_seconds == 2 * WORKDAY_SECONDS
 
     async def test_unassigned_work_is_a_row_of_its_own(self, session: AsyncSession) -> None:
         """Six unassigned tickets is exactly what a lead needs to see, not something to drop."""

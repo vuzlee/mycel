@@ -32,35 +32,16 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools.calendar import CONNECT, MAX_HOURS, MAX_MINUTES, build_toolset
-from mycel.core.config import get_settings
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
-from mycel.notify import calendar
 from mycel.services.auth import Principal
 from mycel.services.google_oauth import NotConnected
+from mycel.sources import google_calendar
+from tests.fakes import FakeRedis
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("bangkok", "google_token")]
 
 _REAL_CLIENT = httpx2.AsyncClient
-
-
-class FakeRedis:
-    """Enough of the client for `drafts.py`: set with a TTL, and read-and-delete.
-
-    The TTL is recorded rather than honoured — nothing here waits ten minutes, and what a
-    test wants to know is that an expiry was asked for at all.
-    """
-
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-        self.ttls: dict[str, int | None] = {}
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self.values[key] = value
-        self.ttls[key] = ex
-
-    async def getdel(self, key: str) -> str | None:
-        return self.values.pop(key, None)
 
 
 class Calls:
@@ -91,14 +72,7 @@ def _event(hour: int, summary: str = "review") -> dict[str, Any]:
 
 def _soon() -> str:
     """A start that is tomorrow whenever the suite runs, since `_parse` refuses the past."""
-    return (datetime.now(calendar.zone()) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
-
-
-@pytest.fixture(autouse=True)
-def bangkok(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Not UTC, so a dropped `timeZone` or a host-zone reading shows up as a wrong hour."""
-    monkeypatch.setenv("TIMEZONE", "Asia/Bangkok")
-    get_settings.cache_clear()
+    return (datetime.now(google_calendar.zone()) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
 
 
 @pytest.fixture(autouse=True)
@@ -110,14 +84,6 @@ def redis(monkeypatch: pytest.MonkeyPatch) -> FakeRedis:
 
     monkeypatch.setattr(drafts, "get_client", _get_client)
     return fake
-
-
-@pytest.fixture(autouse=True)
-def token(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def _token(user_id: int) -> str:
-        return "access-token"
-
-    monkeypatch.setattr(calendar, "token_for", _token)
 
 
 #: Whoever the run is for, unless a test says otherwise.
@@ -166,7 +132,7 @@ class TestDraftingWritesNothing:
         self, tools: dict[str, Any], ctx: Any
     ) -> None:
         """A weekday name is what makes a wrong day catchable; two ISO dates look alike."""
-        starts = datetime.now(calendar.zone()) + timedelta(days=1)
+        starts = datetime.now(google_calendar.zone()) + timedelta(days=1)
         out = await tools["draft_event"](
             ctx, summary="review", starts_at=starts.strftime("%Y-%m-%dT%H:%M"), minutes=45
         )
@@ -351,6 +317,6 @@ class TestWithNoAccountConnected:
         async def _refuse(user_id: int) -> str:
             raise NotConnected("gone")
 
-        monkeypatch.setattr(calendar, "token_for", _refuse)
+        monkeypatch.setattr(google_calendar, "token_for", _refuse)
 
         assert await tools["read_events"](ctx, hours=24) == CONNECT

@@ -62,10 +62,6 @@ wait_for_stores() {
   wait_for minio    "curl -sf http://localhost:9000/minio/health/ready"
   wait_for litellm  "curl -sf http://localhost:4000/health/liveliness" 90
 }
-     The data is on the named volumes, which docker-compose.yml adopts, so removing
-     the containers keeps every row:  docker rm -f ${found[*]}
-     Then run this again."
-}
 
 # Whoever is listening on a port, if anyone. Tells "nothing is running" apart from
 # "something we did not start is running" — the second reads as the first in `status`,
@@ -89,3 +85,6 @@ synced_project() {
   docker exec "$pg" psql -U mycel -d mycel -tAc \
     'select project from gold.work_item limit 1' 2>/dev/null | tr -d '[:space:]' || true
 }
+
+# The named volumes that hold the data, for the "data kept" line every `down` prints.
+DATA_VOLUMES="mycel-pgdata, mycel-rabbitdata, mycel_qdrantdata, mycel_miniodata"

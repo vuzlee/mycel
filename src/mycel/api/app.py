@@ -6,9 +6,11 @@ knows which routers the system has:
     include_router(health.router)
     include_router(auth.router)
     include_router(projects.router)
+    include_router(conversations.router)
     include_router(dashboard.router)
     include_router(chat.router)
     include_router(events.router)
+    include_router(documents.router)
 
 Adding a domain = a module under `domains/`, a module under `api/routes/`, and one line
 here. Existing domains stay untouched.
@@ -54,6 +56,7 @@ from mycel.api.middleware import RequestIdMiddleware
 from mycel.api.routes import (
     auth,
     chat,
+    conversations,
     dashboard,
     documents,
     events,
@@ -128,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(projects.router)
+    app.include_router(conversations.router)
     app.include_router(dashboard.router)
     app.include_router(chat.router)
     app.include_router(documents.router)

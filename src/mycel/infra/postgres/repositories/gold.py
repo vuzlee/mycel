@@ -34,7 +34,7 @@ UNPRIORITISED = "None"
 
 #: What one work item is worth in a day, for turning seconds into man-days. Jira's own
 #: default working day, and the unit a plan is actually discussed in.
-SECONDS_PER_DAY = 8 * 3600
+WORKDAY_SECONDS = 8 * 3600
 
 
 @dataclass(frozen=True)

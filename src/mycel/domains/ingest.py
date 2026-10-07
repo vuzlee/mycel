@@ -20,19 +20,12 @@ from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
+from mycel.services.enqueue import delete_job
 
 if TYPE_CHECKING:
     from mycel.infra.documents.chunk import Passage
 
 log = get_logger(__name__)
-
-
-def ingest_job(document_id: int) -> Job:
-    return Job(kind=JobKind.INGEST, payload={"document_id": document_id})
-
-
-def delete_job(document_id: int) -> Job:
-    return Job(kind=JobKind.DELETE_DOCUMENT, payload={"document_id": document_id})
 
 
 async def run(job: Job) -> None:

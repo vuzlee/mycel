@@ -10,6 +10,9 @@ and after that nobody should be asking.
   budgets.py   what a job has spent, so its ceiling survives a retry or a second worker
   streams.py   one stream per job, carrying its events to whoever is watching
   drafts.py    an event the model proposed, until the person either agrees or forgets
+  answers.py   cached Knowledge answers, keyed by documents, prompt and models
+  citations.py the sources of a finished answer, beside it in `results`
+  document_events.py  a nudge to the page when a user's documents change
 
 It sits under `infra/` rather than `queue/` because `queue/` speaks AMQP and nothing else:
 publishing, consuming, retrying, dead-lettering. Nothing here goes near the broker — the

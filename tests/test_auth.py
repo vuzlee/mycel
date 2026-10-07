@@ -459,7 +459,7 @@ class TestForgottenPasswords:
         async def capture(to: str, subject: str, body: str) -> None:
             sent.append((to, subject, body))
 
-        monkeypatch.setattr(auth.mail, "send", capture)
+        monkeypatch.setattr(auth.smtp, "send", capture)
         return sent
 
     @staticmethod
@@ -626,7 +626,7 @@ class TestForgottenPasswordOverHttp:
     def test_an_unknown_address_is_accepted_like_any_other(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setattr("mycel.notify.mail.configured", lambda: True)
+        monkeypatch.setattr("mycel.infra.smtp.configured", lambda: True)
 
         assert client.post("/auth/forgot", json={"email": "nobody@example.com"}).status_code == 202
 

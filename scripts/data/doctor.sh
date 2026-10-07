@@ -21,7 +21,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 
 exec uv run python -c "
 import asyncio, sys
-from mycel.core import doctor
+from mycel import doctor
 
 checks = asyncio.run(doctor.run())
 print(doctor.render(checks))

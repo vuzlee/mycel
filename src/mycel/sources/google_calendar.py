@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 
 import httpx2
 
-from mycel.core.config import get_settings
+from mycel.core.config import get_settings, team_zone
 from mycel.core.logging import get_logger
 from mycel.services.google_oauth import GoogleError, token_for
 
@@ -102,11 +102,7 @@ async def create_event(user_id: int, summary: str, starts_at: datetime, ends_at:
 
 
 def zone() -> ZoneInfo:
-    """The team's zone, falling back to UTC if the name is not one the system knows."""
-    try:
-        return ZoneInfo(zone_name())
-    except Exception:
-        return ZoneInfo("UTC")
+    return team_zone()
 
 
 def zone_name() -> str:

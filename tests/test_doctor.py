@@ -16,9 +16,9 @@ import asyncio
 
 import pytest
 
-from mycel.core import doctor
+from mycel import doctor
 from mycel.core.config import Settings
-from mycel.core.doctor import Check, State
+from mycel.doctor import Check, State
 
 pytestmark = pytest.mark.anyio
 

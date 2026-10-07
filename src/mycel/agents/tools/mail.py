@@ -23,15 +23,13 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
+from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.logging import get_logger
 from mycel.services.google_oauth import NotConnected, token_for
 from mycel.sources import SourceError, gmail
 
 log = get_logger(__name__)
 
-#: A month. Not a permission — headers cross the context window, and a year of them is
-#: cost rather than information. Asking for more is answered with this much and told so.
-MAX_HOURS = 720
 
 #: Newest first, so the cap drops the oldest rather than the most likely to matter.
 MAX_MESSAGES = 60

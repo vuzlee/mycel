@@ -17,7 +17,7 @@ the caller phrase it for the provider it belongs to.
 
 from cryptography.fernet import Fernet, InvalidToken
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 
 
@@ -25,13 +25,13 @@ class TokenUnreadable(MycelError):
     """A stored token cannot be decrypted. The key was rotated, or the row is corrupt."""
 
 
-def key_set() -> bool:
+def key_set(settings: Settings | None = None) -> bool:
     """Whether this deployment can store a token at all.
 
     A deployment with an OAuth client and no key would write a refresh token in the clear,
     so it counts as not configured rather than as configured badly.
     """
-    return get_settings().token_encryption_key is not None
+    return (settings or get_settings()).token_encryption_key is not None
 
 
 def seal(refresh_token: str) -> str:

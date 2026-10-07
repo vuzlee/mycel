@@ -24,6 +24,10 @@ from enum import StrEnum
 from typing import Any
 
 from mycel.core.config import Settings
+from mycel.infra import smtp
+from mycel.infra.objects import client as object_store
+from mycel.infra.vectors import client as vector_store
+from mycel.services import google_oauth, jira_oauth
 
 
 class State(StrEnum):
@@ -50,6 +54,9 @@ TIMEOUT = 3.0
 #: and wrong for Atlassian: a healthy Jira answering in four would be reported BROKEN, which
 #: is the one mistake this file must not make — a false alarm costs more than a slow report.
 REMOTE_TIMEOUT = 15.0
+
+#: One HTTP call to the gateway or a self-hosted model, on this machine or the LAN.
+GATEWAY_TIMEOUT = 5.0
 
 
 async def _probe(
@@ -231,7 +238,7 @@ async def _upstreams(settings: Settings) -> str:
         return "no self-hosted upstream"
 
     down: list[str] = []
-    async with httpx2.AsyncClient(timeout=5) as client:
+    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT) as client:
         for base, model in sorted(bases.items(), key=lambda kv: kv[1]):
             # Any HTTP answer, 401 included, means the host is up: the app holds no
             # provider key, so it cannot ask for more than that without spending one.
@@ -248,7 +255,7 @@ async def _ask_gateway(settings: Settings, path: str) -> dict[str, Any]:
     import httpx2
 
     key = settings.litellm_api_key.get_secret_value() if settings.litellm_api_key else ""
-    async with httpx2.AsyncClient(timeout=5) as client:
+    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT) as client:
         response = await client.get(
             f"{settings.litellm_base_url.rstrip('/')}{path}",
             headers={"authorization": f"Bearer {key}"},
@@ -286,7 +293,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
             "SEARCH",
             lambda: _qdrant(env),
             missing=None
-            if env.qdrant_url.strip()
+            if vector_store.configured(env)
             else "not configured — rag_search is not offered to the model",
         ),
         _probe(
@@ -294,7 +301,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
             "NOTEBOOKS",
             lambda: _minio(env),
             missing=None
-            if (env.s3_endpoint_url and env.s3_access_key and env.s3_secret_key)
+            if object_store.configured(env)
             else "not configured — documents cannot be uploaded",
         ),
         _probe("ingest", "NOTEBOOKS", lambda: _parser(env), missing=None),
@@ -334,7 +341,7 @@ def _declared(env: Settings) -> list[Check]:
             "key set" if env.tavily_api_key else "not configured — web_search is not offered",
         )
     )
-    mail_out = bool(env.smtp_host and env.smtp_from)
+    mail_out = smtp.configured(env)
     out.append(
         Check(
             "REGISTRATION",
@@ -345,8 +352,7 @@ def _declared(env: Settings) -> list[Check]:
             else "off — no SMTP, so a forgotten password cannot be reset",
         )
     )
-    key = env.token_encryption_key
-    configured = env.google_client_id and env.google_client_secret and key
+    configured = google_oauth.configured(env)
     out.append(
         Check(
             "TOOLS",
@@ -359,7 +365,7 @@ def _declared(env: Settings) -> list[Check]:
     )
     # Two switches, and off is a decision rather than a gap. A deployment that reads Jira
     # and does not write to it is a whole valid deployment, so writing OFF is not a fault.
-    writes = bool(env.jira_client_id and env.jira_client_secret and key and env.jira_write_enabled)
+    writes = jira_oauth.configured(env) and env.jira_write_enabled
     out.append(
         Check(
             "TOOLS",

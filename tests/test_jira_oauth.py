@@ -33,26 +33,12 @@ from mycel.core.exceptions import ConfigError
 from mycel.services import jira_oauth as oauth
 from mycel.services.jira_oauth import JiraAuthError, NotConnected
 from mycel.services.tokens import TokenUnreadable, seal, unseal
+from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio
 
 _REAL_CLIENT = httpx2.AsyncClient
 KEY = Fernet.generate_key().decode()
-
-
-class FakeRedis:
-    """Enough of the client for the state round: set with a TTL, and read-and-delete."""
-
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-        self.ttls: dict[str, int | None] = {}
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self.values[key] = value
-        self.ttls[key] = ex
-
-    async def getdel(self, key: str) -> str | None:
-        return self.values.pop(key, None)
 
 
 def _routes(answers: dict[str, Any], status: int = 200) -> Any:

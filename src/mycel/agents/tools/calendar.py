@@ -30,16 +30,14 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
+from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
-from mycel.notify import calendar
 from mycel.services.google_oauth import GoogleError, NotConnected
+from mycel.sources import google_calendar
 
 log = get_logger(__name__)
 
-#: A month, the same ceiling and for the same reason as `read_mail`: events cross the
-#: context window, and a year of them is cost rather than information.
-MAX_HOURS = 720
 
 #: A working day. Longer than this is a holiday rather than a meeting, and a model that has
 #: misread "3" as a duration should be told so before it reaches somebody's calendar.
@@ -77,7 +75,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
         capped = min(hours, MAX_HOURS)
         try:
-            events = await calendar.list_events(user_id, capped)
+            events = await google_calendar.list_events(user_id, capped)
         except NotConnected:
             return CONNECT
         except GoogleError as exc:
@@ -144,7 +142,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             )
 
         try:
-            event = await calendar.create_event(
+            event = await google_calendar.create_event(
                 user_id, draft.summary, draft.starts_at, draft.ends_at
             )
         except NotConnected:
@@ -176,13 +174,13 @@ def _parse(starts_at: str) -> datetime:
             "starts_at must look like 2026-09-26T15:00, in the team's own timezone."
         ) from None
 
-    zone = calendar.zone()
+    zone = google_calendar.zone()
     moment = moment.replace(tzinfo=zone) if moment.tzinfo is None else moment.astimezone(zone)
     now = datetime.now(zone)
     if moment < now:
         raise ModelRetry(
             f"{starts_at} is in the past. It is {now.strftime('%A %d %B %Y, %H:%M')} "
-            f"in {calendar.zone_name()} — work the date out from that and draft again."
+            f"in {google_calendar.zone_name()} — work the date out from that and draft again."
         )
     if moment > now + timedelta(days=365):
         raise ModelRetry(f"{starts_at} is more than a year away; check the year.")
@@ -199,13 +197,15 @@ def _spell(moment: datetime) -> str:
     return moment.strftime("%A %d %B %Y, %H:%M")
 
 
-def _render(events: list[calendar.Event], asked: int, capped: int) -> str:
+def _render(events: list[google_calendar.Event], asked: int, capped: int) -> str:
     """The calendar as text the model can quote from, counts first.
 
     The count leads for the reason it does in `read_mail`: "two meetings" and "two of
     eleven" are different answers, and only one of them can be invented.
     """
-    lines = [f"{len(events)} events in the next {capped} hours, times in {calendar.zone_name()}."]
+    lines = [
+        f"{len(events)} events in the next {capped} hours, times in {google_calendar.zone_name()}."
+    ]
     if capped < asked:
         lines.append(f"({asked} hours was asked for; {MAX_HOURS} is the most that can be read.)")
     if not events:

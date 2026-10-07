@@ -13,7 +13,7 @@ provider takes, and nothing is waiting on the answer.
 **A timer has nobody signed in, so it reads as the deployment.** The service account in
 `JIRA_SERVICE_TOKEN` reads every project it may browse; no person's token is used, so
 nobody leaving can stop it. Each run is recorded in `app.sync_state`, success or failure,
-which is what `core/doctor.py` reads — a stopped sync and a quiet week look the same on a
+which is what `doctor.py` reads — a stopped sync and a quiet week look the same on a
 dashboard.
 
 After the data, access: every connected person's projects are asked of Jira again, so

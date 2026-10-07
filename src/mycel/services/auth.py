@@ -29,8 +29,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import MycelError
+from mycel.infra import smtp
 from mycel.infra.postgres.repositories.app import AppRepository, UserRow
-from mycel.notify import mail
 
 #: How long a session lives without being renewed. Two weeks: long enough that a person
 #: using this daily is never asked again, short enough that a forgotten laptop expires.
@@ -213,7 +213,7 @@ async def begin_password_reset(session: AsyncSession, email: str) -> None:
 
     minutes = settings.password_reset_ttl_seconds // 60
     link = f"{settings.public_base_url}/app/reset?token={token}"
-    await mail.send(
+    await smtp.send(
         user.email,
         "Reset your Mycel password",
         f"Someone asked to reset the password for this account.\n\n{link}\n\n"

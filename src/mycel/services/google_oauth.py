@@ -29,7 +29,7 @@ from urllib.parse import urlencode
 
 import httpx2
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.app import AppRepository, GoogleAccountRow
@@ -82,15 +82,15 @@ class Grant:
     scope: str
 
 
-def configured() -> bool:
+def configured(settings: Settings | None = None) -> bool:
     """Whether this deployment can connect an account at all.
 
     All three: the client is who is asking, and the key is what keeps the answer secret. A
     deployment with a client and no key would store a refresh token in the clear, so it
     counts as not configured rather than as configured badly.
     """
-    cfg = get_settings()
-    return bool(cfg.google_client_id and cfg.google_client_secret and key_set())
+    cfg = settings or get_settings()
+    return bool(cfg.google_client_id and cfg.google_client_secret and key_set(cfg))
 
 
 async def consent_url(user_id: int) -> str:

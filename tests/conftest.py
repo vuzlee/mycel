@@ -17,6 +17,8 @@ from pydantic_ai import models
 
 from mycel.core.config import Settings, get_settings
 
+pytest_plugins = ["tests.fakes"]
+
 # No test may reach a real model, whatever else it does.
 models.ALLOW_MODEL_REQUESTS = False
 

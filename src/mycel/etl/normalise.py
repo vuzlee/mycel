@@ -14,9 +14,8 @@ translation table in someone's head.
 
 from datetime import UTC, datetime, time
 from typing import Any
-from zoneinfo import ZoneInfo
 
-from mycel.core.config import get_settings
+from mycel.core.config import team_zone
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 
 JIRA = "jira"
@@ -168,15 +167,7 @@ def _due(value: Any) -> datetime | None:
         day = datetime.fromisoformat(value).date()
     except ValueError:
         return None
-    return datetime.combine(day, time.max, tzinfo=_zone()).astimezone(UTC)
-
-
-def _zone() -> ZoneInfo:
-    """The team's zone, falling back to UTC if the name is not one the system knows."""
-    try:
-        return ZoneInfo(get_settings().timezone)
-    except Exception:
-        return ZoneInfo("UTC")
+    return datetime.combine(day, time.max, tzinfo=team_zone()).astimezone(UTC)
 
 
 def _seconds(fields: dict[str, Any], flat: str, nested: str) -> int | None:

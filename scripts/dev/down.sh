@@ -15,4 +15,4 @@ reap ingest
 reap scheduler
 sweep
 docker compose stop "${INFRA[@]}"
-log "data kept in volumes mycel-pgdata, mycel-rabbitdata"
+log "data kept in volumes $DATA_VOLUMES"

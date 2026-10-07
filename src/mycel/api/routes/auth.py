@@ -37,7 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mycel.api.dependencies import SESSION_COOKIE, Db, current_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.notify import mail
+from mycel.infra import smtp
 from mycel.services import access, auth, google_oauth, jira_oauth
 from mycel.services.permission import readable_projects
 
@@ -164,7 +164,7 @@ async def forgot_password(
     refuses outright instead: a link that is never sent is worse than a feature that says
     it is off.
     """
-    if not mail.configured():
+    if not smtp.configured():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
     await auth.begin_password_reset(session, body.email)
 

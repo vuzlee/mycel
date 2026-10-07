@@ -27,7 +27,7 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.schemas import ProgressSummary
 from mycel.etl.normalise import JIRA
 from mycel.infra.postgres.repositories.gold import (
-    SECONDS_PER_DAY,
+    WORKDAY_SECONDS,
     AssigneeLoad,
     DayEffort,
     WorkItemRow,
@@ -63,8 +63,8 @@ def _item(key: str = "MYC-7", **kw: Any) -> WorkItemRow:
         "priority": "Medium",
         "assignee_account_id": "acct-1",
         "assignee_name": "Dev One",
-        "original_estimate_seconds": 2 * SECONDS_PER_DAY,
-        "time_spent_seconds": SECONDS_PER_DAY,
+        "original_estimate_seconds": 2 * WORKDAY_SECONDS,
+        "time_spent_seconds": WORKDAY_SECONDS,
         "due_at": None,
         "created_at": _at(14),
         "resolved_at": None,
@@ -94,8 +94,8 @@ def _window(items: list[WorkItemRow] | None = None, **kw: Any) -> ProgressWindow
                 name="Dev One",
                 items=len(rows),
                 done=totals["done"],
-                estimated_seconds=2 * SECONDS_PER_DAY,
-                spent_seconds=3 * SECONDS_PER_DAY,
+                estimated_seconds=2 * WORKDAY_SECONDS,
+                spent_seconds=3 * WORKDAY_SECONDS,
             )
         ],
         "overdue": [],

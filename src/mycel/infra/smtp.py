@@ -17,7 +17,7 @@ import asyncio
 import smtplib
 from email.message import EmailMessage
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 
@@ -30,10 +30,10 @@ class MailError(MycelError):
     """The message could not be handed to the server."""
 
 
-def configured() -> bool:
+def configured(settings: Settings | None = None) -> bool:
     """Whether this deployment can send at all. Checked before a feature offers to."""
-    settings = get_settings()
-    return bool(settings.smtp_host and settings.smtp_from)
+    cfg = settings or get_settings()
+    return bool(cfg.smtp_host and cfg.smtp_from)
 
 
 async def send(to: str, subject: str, body: str) -> None:

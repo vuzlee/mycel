@@ -45,29 +45,11 @@ from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
 from mycel.services.auth import Principal
 from mycel.sources import jira
+from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio
 
 _REAL_CLIENT = httpx2.AsyncClient
-
-
-class FakeRedis:
-    """Enough of the client for `drafts.py`: set with a TTL, and read-and-delete.
-
-    The TTL is recorded rather than honoured — nothing here waits ten minutes, and what a
-    test wants to know is that an expiry was asked for at all.
-    """
-
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-        self.ttls: dict[str, int | None] = {}
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self.values[key] = value
-        self.ttls[key] = ex
-
-    async def getdel(self, key: str) -> str | None:
-        return self.values.pop(key, None)
 
 
 class Calls:

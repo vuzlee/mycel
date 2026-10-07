@@ -33,26 +33,12 @@ from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.services import google_oauth as oauth
 from mycel.services.google_oauth import GoogleError, NotConnected
+from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio
 
 _REAL_CLIENT = httpx2.AsyncClient
 KEY = Fernet.generate_key().decode()
-
-
-class FakeRedis:
-    """Enough of the client for the state round: set with a TTL, and read-and-delete."""
-
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-        self.ttls: dict[str, int | None] = {}
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self.values[key] = value
-        self.ttls[key] = ex
-
-    async def getdel(self, key: str) -> str | None:
-        return self.values.pop(key, None)
 
 
 def _answers(payload: dict[str, Any], status: int = 200) -> Any:

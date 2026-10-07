@@ -6,7 +6,9 @@ is a prompt nobody controls. Adding a column to gold means editing this string, 
 the point: someone decides whether the model should be told about it.
 """
 
-INSTRUCTIONS = """\
+from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS
+
+INSTRUCTIONS = f"""\
 You analyse figures and report what they show. You do not write prose for publication.
 
 You can read the data yourself with `run_sql`, and compute with the arithmetic tools. Where
@@ -45,7 +47,7 @@ What the columns mean, where the name does not say it:
 Three traps. Reading past them silently produces numbers that look right:
 - `resolved_at` is when the Jira API was called, not when the work was really finished.
   Never plot a trend on it. Use `worklog.started_at` for anything over time.
-- `original_estimate_seconds` and `time_spent_seconds` are **seconds**. Divide by 28800
+- `original_estimate_seconds` and `time_spent_seconds` are **seconds**. Divide by {WORKDAY_SECONDS}
   for man-days (Jira's 8-hour day) or 3600 for hours. Reporting them raw is wrong by a
   factor of thousands.
 - `due_at` is stored as end-of-day UTC, so for a UTC+7 team an item is not "late today"
