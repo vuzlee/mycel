@@ -6,30 +6,30 @@
  */
 
 :root {
-  --mark-ink: #3d259d;
-  --ground: #f7f7fb;
+  --mark-ink: #6e56cf;
+  --ground: #faf9fc;
   --surface: #ffffff;
-  --sunk: #e7e4f1;
-  --raised: #fbfaff;
+  --sunk: #f3f1f8;
+  --raised: #ffffff;
 
-  --ink: #111116;
+  --ink: #17141f;
   --ink-2: #3d3d4a;
-  --muted: #666675;
-  --faint: #9696a3;
+  --muted: #6f6782;
+  --faint: #9d96ae;
 
-  --rule: #dddce8;
+  --rule: #e7e3f0;
   --rule-2: #c8c6d8;
 
-  --accent: #3d259d;
-  --accent-hover: #331f84;
+  --accent: #6e56cf;
+  --accent-hover: #654dc4;
   --accent-ink: #ffffff;
-  --accent-soft: #ede9fb;
-  --accent-line: #c2b8ea;
+  --accent-soft: #f4f0fe;
+  --accent-line: #d4cafe;
   /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
      a selection lands on are already tinted — the question bubble is `--accent-soft` —
      and a tint over a tint is not a mark. The pair is the one combination that reads on
      every background the app has. */
-  --select: #3d259d;
+  --select: #6e56cf;
   --select-ink: #ffffff;
   /* A cited quote, marked over text: the accent, thin enough to read through. */
   --quote-mark: rgb(61 37 157 / 20%);
@@ -94,27 +94,27 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground: #0d0e14;
-    --surface: #191a25;
-    --sunk: #1a1b27;
-    --raised: #232536;
+    --ground: #0b0910;
+    --surface: #131019;
+    --sunk: #0f0d15;
+    --raised: #1a1622;
 
-    --ink: #f2f2f7;
+    --ink: #f0edf7;
     --ink-2: #c9cad8;
-    --muted: #9293a6;
-    --faint: #686a7e;
+    --muted: #8f87a3;
+    --faint: #6b6380;
 
-    --rule: #2a2c3d;
+    --rule: #241f30;
     --rule-2: #3a3d52;
 
     --mark-ink: #d4c8ff;
-    --accent: #a593ff;
-    --accent-hover: #c6bbff;
-    --accent-ink: #0c0a18;
-    --accent-soft: #252047;
-    --accent-line: #4a4090;
-    --select: #a593ff;
-    --select-ink: #0c0a18;
+    --accent: #baa7ff;
+    --accent-hover: #e2ddfe;
+    --accent-ink: #14101d;
+    --accent-soft: #291f43;
+    --accent-line: #473876;
+    --select: #baa7ff;
+    --select-ink: #14101d;
     --quote-mark: rgb(160 143 255 / 30%);
 
     --flag: #f090b4;
@@ -139,27 +139,27 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #0d0e14;
-  --surface: #191a25;
-  --sunk: #1a1b27;
-  --raised: #232536;
+  --ground: #0b0910;
+  --surface: #131019;
+  --sunk: #0f0d15;
+  --raised: #1a1622;
 
-  --ink: #f2f2f7;
+  --ink: #f0edf7;
   --ink-2: #c9cad8;
-  --muted: #9293a6;
-  --faint: #686a7e;
+  --muted: #8f87a3;
+  --faint: #6b6380;
 
-  --rule: #2a2c3d;
+  --rule: #241f30;
   --rule-2: #3a3d52;
 
   --mark-ink: #d4c8ff;
-    --accent: #a593ff;
-  --accent-hover: #c6bbff;
-  --accent-ink: #0c0a18;
-  --accent-soft: #252047;
-  --accent-line: #4a4090;
-  --select: #a593ff;
-  --select-ink: #0c0a18;
+  --accent: #baa7ff;
+  --accent-hover: #e2ddfe;
+  --accent-ink: #14101d;
+  --accent-soft: #291f43;
+  --accent-line: #473876;
+  --select: #baa7ff;
+  --select-ink: #14101d;
   --quote-mark: rgb(160 143 255 / 30%);
 
   --flag: #f090b4;
@@ -1135,6 +1135,22 @@ details[open] > summary .chevron {
   }
   100% {
     stroke-dashoffset: 14;
+  }
+}
+
+/* Label fading in step with the .grow mark beside it. */
+.breathe {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  45%,
+  70% {
+    opacity: 1;
   }
 }
 
@@ -4399,7 +4415,7 @@ td[data-status="late"] {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--doing);
+  color: var(--accent);
 }
 
 .nb-failed,
@@ -4490,34 +4506,52 @@ td[data-status="late"] {
 }
 
 .nb-sources {
-  margin: 0;
-  padding: 0;
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--rule);
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .nb-sources button {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  padding: 1px 0;
+  border: 0;
+  background: none;
   text-align: left;
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--ink-2);
 }
 
 .nb-sources button:hover {
-  border-color: var(--accent-line);
   color: var(--ink);
+  text-decoration: underline;
 }
 
 .nb-sources b {
-  font-family: var(--mono);
   font-weight: 500;
   color: var(--accent);
+}
+
+.nb-sources small {
+  color: var(--ink-3, var(--ink-2));
+}
+
+.prose .cite {
+  margin-left: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.prose .cite:hover {
+  text-decoration: underline;
 }
 
 .nb-composer {

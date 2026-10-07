@@ -24,11 +24,35 @@ const COMPONENTS = {
   ),
 };
 
-export function Markdown({ body }: { body: string }) {
+const CITE = /\s?\[c(\d+)\]/g;
+
+interface Props {
+  body: string;
+  /** Turns `[cN]` markers into small numbered links. */
+  onCite?: (label: string) => void;
+}
+
+export function Markdown({ body, onCite }: Props) {
+  const components = onCite
+    ? {
+        ...COMPONENTS,
+        a: ({ href, children }: { href?: string; children?: React.ReactNode }) =>
+          href?.startsWith("#cite-") ? (
+            <button className="cite" onClick={() => onCite(href.slice(6))}>
+              [{children}]
+            </button>
+          ) : (
+            <a href={href} target="_blank" rel="noreferrer">
+              {children}
+            </a>
+          ),
+      }
+    : COMPONENTS;
+  const text = onCite ? body.replace(CITE, (_, n) => `[${n}](#cite-c${n})`) : body;
   return (
     <div className="prose">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={COMPONENTS}>
-        {body}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {text}
       </ReactMarkdown>
     </div>
   );

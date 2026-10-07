@@ -12,7 +12,7 @@ import {
   uploadDocument,
   type DocumentRow,
 } from "../../api";
-import { Close, Spinner, Trash, Upload } from "../icons";
+import { Close, Mycelium, Spinner, Trash, Upload } from "../icons";
 
 const ACCEPT = ".pdf,.docx,.md,.markdown";
 
@@ -249,7 +249,8 @@ function Status({ doc }: { doc: DocumentRow }) {
   }
   return (
     <span className="nb-working">
-      <Spinner size={10} /> {doc.status === "uploaded" ? "queued" : "processing"}
+      <Mycelium size={13} className="grow" />{" "}
+      <span className="breathe">{doc.status === "uploaded" ? "queued" : "processing"}</span>
     </span>
   );
 }
