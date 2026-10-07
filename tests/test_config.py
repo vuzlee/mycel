@@ -89,6 +89,7 @@ class TestWhereSettingsComeFrom:
         """dev.yaml sets DEBUG over base.yaml's INFO. Merged key by key, so an overlay
         that mentions one setting does not drop the rest."""
         monkeypatch.setenv("MYCEL_ENV", "dev")
+        monkeypatch.delenv("METRICS_PORT", raising=False)  # conftest sets a free one
         settings = Settings(_env_file=None)
         assert settings.log_level == "DEBUG"
         assert settings.metrics_port == 9100, "an overlay must not drop what it omits"

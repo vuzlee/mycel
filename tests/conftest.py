@@ -7,6 +7,7 @@ is a test suite nobody runs.
 
 import asyncio
 import os
+import socket
 from collections.abc import Iterator
 from urllib.parse import urlsplit, urlunsplit
 
@@ -94,6 +95,12 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
+def _free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
+
+
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Strip inherited env vars and reset the settings cache around every test.
@@ -106,6 +113,9 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
             monkeypatch.delenv(key, raising=False)
 
     monkeypatch.setitem(Settings.model_config, "env_file", None)
+    # The api listens for /metrics on METRICS_PORT + 3. A free port, so a running dev stack
+    # holding 9103 does not fail every app test at startup.
+    monkeypatch.setenv("METRICS_PORT", str(_free_port() - 3))
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
