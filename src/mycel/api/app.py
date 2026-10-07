@@ -5,6 +5,7 @@ knows which routers the system has:
 
     include_router(health.router)
     include_router(auth.router)
+    include_router(connections.router)
     include_router(projects.router)
     include_router(conversations.router)
     include_router(dashboard.router)
@@ -56,6 +57,7 @@ from mycel.api.middleware import RequestIdMiddleware
 from mycel.api.routes import (
     auth,
     chat,
+    connections,
     conversations,
     dashboard,
     documents,
@@ -130,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(connections.router)
     app.include_router(projects.router)
     app.include_router(conversations.router)
     app.include_router(dashboard.router)
