@@ -22,7 +22,6 @@ token exchange, the Fernet-sealed refresh token — is `services/google_oauth.py
 This is the second provider through it rather than a second design.
 """
 
-import secrets
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlencode
@@ -34,7 +33,7 @@ from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
-from mycel.infra.redis.client import get_client
+from mycel.services import oauth
 from mycel.services.tokens import TokenUnreadable, key_set, seal, unseal
 
 log = get_logger(__name__)
@@ -62,10 +61,10 @@ SCOPES = (
 PROJECT_SCOPE = "manage:jira-project"
 
 CALLBACK_PATH = "/auth/jira/callback"
-HTTP_TIMEOUT_S = 15.0
+PROVIDER = "jira"
+HTTP_TIMEOUT_S = oauth.HTTP_TIMEOUT_S
 
-#: Long enough to read a consent screen, short enough that an abandoned one is gone.
-STATE_TTL_S = 600
+STATE_TTL_S = oauth.STATE_TTL_S
 
 
 class JiraAuthError(MycelError):
@@ -122,9 +121,7 @@ async def consent_url(user_id: int) -> str:
     store, and the account is connected in a way that stops working within the hour.
     """
     client_id, _ = _client()
-    state = secrets.token_urlsafe(32)
-    client = await get_client()
-    await client.set(_state_key(state), str(user_id), ex=STATE_TTL_S)
+    state = await oauth.start_state(PROVIDER, user_id)
 
     query = urlencode(
         {
@@ -146,11 +143,10 @@ async def spend_state(state: str) -> int:
     Spent on first use: a callback url that lands in a history file or a referrer header
     cannot be replayed into a second connection.
     """
-    client = await get_client()
-    user_id = await client.getdel(_state_key(state))
+    user_id = await oauth.spend_state(PROVIDER, state)
     if user_id is None:
         raise JiraAuthError("that consent link has expired; start again from settings")
-    return int(user_id)
+    return user_id
 
 
 async def exchange(code: str) -> Grant:
@@ -310,21 +306,12 @@ async def _token_call(data: dict[str, str]) -> dict[str, Any]:
     between "connect again" and "something is broken".
     """
     try:
-        async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
-            response = await client.post(TOKEN_URL, json=data)
+        status, payload = await oauth.post_token(TOKEN_URL, json=data)
     except httpx2.HTTPError as exc:
         raise JiraAuthError(f"Atlassian could not be reached: {exc}") from exc
 
-    payload: dict[str, Any] = {}
-    try:
-        parsed = response.json()
-        if isinstance(parsed, dict):
-            payload = parsed
-    except ValueError:
-        pass
-
-    if response.status_code >= 400:
-        error = str(payload.get("error", response.status_code))
+    if status >= 400:
+        error = str(payload.get("error", status))
         if error in ("invalid_grant", "unauthorized_client", "access_denied"):
             raise NotConnected("your Jira account is no longer connected; connect it again")
         raise JiraAuthError(f"Atlassian refused the request: {error}")
@@ -398,9 +385,4 @@ def _client() -> tuple[str, str]:
 
 
 def _redirect_uri() -> str:
-    """Where Atlassian sends the person back. Must match the app's callback URL exactly."""
-    return f"{get_settings().public_base_url.rstrip('/')}{CALLBACK_PATH}"
-
-
-def _state_key(state: str) -> str:
-    return f"mycel:jira:state:{state}"
+    return oauth.redirect_uri(CALLBACK_PATH)

@@ -23,7 +23,6 @@ one Redis key with a ten-minute TTL is that value, and it is spent on first use 
 replayed callback connects nothing.
 """
 
-import secrets
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
@@ -34,7 +33,7 @@ from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
-from mycel.infra.redis.client import get_client
+from mycel.services import oauth
 from mycel.services.tokens import TokenUnreadable, key_set, seal
 from mycel.services.tokens import unseal as _unseal_token
 
@@ -54,10 +53,8 @@ SCOPES = (
 )
 
 CALLBACK_PATH = "/auth/google/callback"
-HTTP_TIMEOUT_S = 15.0
-
-#: Long enough to read a consent screen, short enough that an abandoned one is gone.
-STATE_TTL_S = 600
+PROVIDER = "google"
+STATE_TTL_S = oauth.STATE_TTL_S
 
 
 class GoogleError(MycelError):
@@ -102,9 +99,7 @@ async def consent_url(user_id: int) -> str:
     reconnect is always a working reconnect.
     """
     client_id, _ = _client()
-    state = secrets.token_urlsafe(32)
-    client = await get_client()
-    await client.set(_state_key(state), str(user_id), ex=STATE_TTL_S)
+    state = await oauth.start_state(PROVIDER, user_id)
 
     query = urlencode(
         {
@@ -127,11 +122,10 @@ async def spend_state(state: str) -> int:
     Spent on first use: a callback url that lands in a history file or a referrer header
     cannot be replayed into a second connection.
     """
-    client = await get_client()
-    user_id = await client.getdel(_state_key(state))
+    user_id = await oauth.spend_state(PROVIDER, state)
     if user_id is None:
         raise GoogleError("that consent link has expired; start again from settings")
-    return int(user_id)
+    return user_id
 
 
 async def exchange(code: str) -> Grant:
@@ -196,8 +190,7 @@ async def revoke(refresh_token_encrypted: str) -> None:
     disconnected here, whether or not Google was reachable when they asked.
     """
     try:
-        async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
-            await client.post(REVOKE_URL, data={"token": unseal(refresh_token_encrypted)})
+        await oauth.post_token(REVOKE_URL, data={"token": unseal(refresh_token_encrypted)})
     except (httpx2.HTTPError, GoogleError) as exc:
         log.warning("google revoke failed", extra={"error": str(exc)})
 
@@ -278,21 +271,12 @@ async def _token_call(data: dict[str, str]) -> dict[str, object]:
     difference between "connect again" and "something is broken".
     """
     try:
-        async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
-            response = await client.post(TOKEN_URL, data=data)
+        status, payload = await oauth.post_token(TOKEN_URL, data=data)
     except httpx2.HTTPError as exc:
         raise GoogleError(f"Google could not be reached: {exc}") from exc
 
-    payload: dict[str, object] = {}
-    try:
-        parsed = response.json()
-        if isinstance(parsed, dict):
-            payload = parsed
-    except ValueError:
-        pass
-
-    if response.status_code >= 400:
-        error = str(payload.get("error", response.status_code))
+    if status >= 400:
+        error = str(payload.get("error", status))
         if error == "invalid_grant":
             raise NotConnected("your Google account is no longer connected; connect it again")
         raise GoogleError(f"Google refused the request: {error}")
@@ -338,9 +322,4 @@ def _client() -> tuple[str, str]:
 
 
 def _redirect_uri() -> str:
-    """Where Google sends the person back. Must match the client's registered uri exactly."""
-    return f"{get_settings().public_base_url.rstrip('/')}{CALLBACK_PATH}"
-
-
-def _state_key(state: str) -> str:
-    return f"mycel:google:state:{state}"
+    return oauth.redirect_uri(CALLBACK_PATH)

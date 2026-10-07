@@ -31,6 +31,7 @@ from cryptography.fernet import Fernet
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.services import jira_oauth as oauth
+from mycel.services import oauth as shared_oauth
 from mycel.services.jira_oauth import JiraAuthError, NotConnected
 from mycel.services.tokens import TokenUnreadable, seal, unseal
 from tests.fakes import FakeRedis
@@ -90,7 +91,7 @@ def redis(monkeypatch: pytest.MonkeyPatch) -> FakeRedis:
     async def _get_client() -> FakeRedis:
         return fake
 
-    monkeypatch.setattr(oauth, "get_client", _get_client)
+    monkeypatch.setattr(shared_oauth, "get_client", _get_client)
     return fake
 
 
