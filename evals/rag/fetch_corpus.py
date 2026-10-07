@@ -1,9 +1,9 @@
 """Download the RAG benchmark corpus and check every hash.
 
-    uv run python -m evals.rag.fetch_corpus [--dir .cache/rag-corpus]
+    uv run python -m evals.rag.fetch_corpus
 
-Stops on the first mismatch: a changed document silently invalidates every label in
-evals/rag/questions.yaml.
+Writes to `.cache/rag-corpus/`. Stops on the first mismatch: a changed document silently
+invalidates every label in evals/rag/questions.yaml.
 """
 
 import argparse
@@ -15,9 +15,9 @@ from pathlib import Path
 import httpx2
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+from evals.rag.retrieval import CORPUS_DIR
+
 CORPUS = Path(__file__).with_name("corpus.yaml")
-DEFAULT_DIR = ROOT / ".cache" / "rag-corpus"
 
 
 def markdown_to_docx(markdown: str, target: Path) -> None:
@@ -58,10 +58,9 @@ def fetch(directory: Path) -> list[Path]:
     return paths
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", type=Path, default=DEFAULT_DIR)
-    fetch(parser.parse_args().dir)
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description=__doc__).parse_args(argv)
+    fetch(CORPUS_DIR)
     return 0
 
 

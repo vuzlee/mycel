@@ -1,14 +1,11 @@
-"""Run the golden set and report what it scored.
+"""Run the summariser golden set and report what it scored.
 
-    uv run python -m evals.run                     run every case, print the table
-    uv run python -m evals.run --compare-baseline  also fail if the score dropped
-    uv run python -m evals.run --save-baseline     record this run as the new baseline
+    uv run python -m evals.summariser.run                     run every case, print the table
+    uv run python -m evals.summariser.run --compare-baseline  also fail if the score dropped
+    uv run python -m evals.summariser.run --save-baseline     record this run as the baseline
 
-Costs money: every case is a real model call. That is the point — an eval that mocks the
-model measures the mock. CI only runs this when a pull request touches prompts or `llm/`.
-
-A run with an empty golden set exits 0 and says so. A CI step that fails because nobody
-has written the cases yet teaches people to ignore the step.
+Every case is a real model call through the gateway; an eval that mocks the model
+measures the mock. An empty golden set exits 0 and says so.
 """
 
 import argparse
@@ -18,17 +15,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from evals.case import Case, Check, load_all
+from evals.common import CEILING_USD
+from evals.summariser.case import Case, Check, load_all
 from mycel.agents.core.runner import run
 from mycel.agents.registry import build, build_deps
 from mycel.agents.schemas import ProgressSummary
 
 GOLDEN = Path(__file__).parent / "golden"
 BASELINE = Path(__file__).parent / "baseline.json"
-
-#: What one eval run may spend in total. Small on purpose: a runaway here is a bill, not a
-#: failed test, and a golden set large enough to exceed this wants its own decision.
-CEILING_USD = "1.00"
 
 
 @dataclass(frozen=True)
@@ -70,8 +64,8 @@ async def run_case(case: Case) -> Result:
 async def run_all(cases: list[Case]) -> list[Result]:
     """Every case, one after another.
 
-    Sequential rather than gathered: the free tier is 20 requests a day, and a burst that
-    trips a rate limit reports as a quality failure when it is a scheduling one.
+    Sequential rather than gathered: a burst that trips a rate limit reports as a quality
+    failure when it is a scheduling one.
     """
     return [await run_case(case) for case in cases]
 

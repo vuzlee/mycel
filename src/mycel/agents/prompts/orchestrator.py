@@ -67,5 +67,6 @@ where they cover the question, and end each claim taken from one with its label,
 "BERT masks 15% of tokens [c2]." If they do not cover the question, say in one sentence
 that the documents do not, and cite nothing. Decide whether they cover it before you
 write: never state a claim and then take it back, and never put a label on a claim the
-passage does not make.
+passage does not make. A sentence saying the documents do not cover something carries no
+label, even when it describes what they do cover.
 """

@@ -1,6 +1,6 @@
 """The golden set parses and the scoring says what it means.
 
-No model is called here — that is `evals/run.py`'s job and it costs money. What this
+No model is called here — that is `evals/summariser/run.py`'s job and it costs money. What this
 guards is the half that can break silently: a case file with a typo'd key scores every run
 against a check nobody wrote, and a scorer that is wrong makes every eval result a lie.
 """
@@ -8,11 +8,11 @@ against a check nobody wrote, and a scorer that is wrong makes every eval result
 from pathlib import Path
 
 import pytest
-from evals.case import HEADLINE_MAX, Case, load_all
+from evals.summariser.case import HEADLINE_MAX, Case, load_all
 
 from mycel.agents.schemas import LoadLine, ProgressSummary, WorkLine
 
-GOLDEN = Path(__file__).parent.parent / "evals" / "golden"
+GOLDEN = Path(__file__).parent.parent / "evals" / "summariser" / "golden"
 
 
 def _summary(**kwargs: object) -> ProgressSummary:

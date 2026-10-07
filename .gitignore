@@ -49,8 +49,8 @@ web/dist/
 # nothing from here is ever committed.
 assets/demo/
 
-# The embedding model's ONNX weights, fetched on first use. ~130 MiB, and a build
-# artefact rather than source: EMBEDDING_CACHE_DIR points here.
+# Downloaded artefacts: the RAG corpus (evals/rag/fetch_corpus.py) and the embedding
+# model's ONNX weights (EMBEDDING_CACHE_DIR points here).
 .cache/
 
 # A timestamped file per retrieval run; the summary that matters goes in the batch note.

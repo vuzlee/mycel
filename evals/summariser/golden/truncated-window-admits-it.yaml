@@ -11,18 +11,18 @@ prompt: |
 
   Work, by epic:
     MYC-5 — Agents
-      key=MYC-51  status=done  kind=story  title=Orchestrator splits the task  who=vu le  estimated=4.0d  spent=4.2d
-      key=MYC-52  status=done  kind=task  title=Analyst reads gold  who=mai tran  estimated=2.0d  spent=1.9d
-      key=MYC-53  status=doing  kind=story  title=Reviewer checks the sources  who=vu le  estimated=3.0d  spent=1.0d  due=2026-10-15
+      key=MYC-51  status=done  kind=story  title=Orchestrator splits the task  who=dev one  estimated=4.0d  spent=4.2d
+      key=MYC-52  status=done  kind=task  title=Analyst reads gold  who=dev two  estimated=2.0d  spent=1.9d
+      key=MYC-53  status=doing  kind=story  title=Reviewer checks the sources  who=dev one  estimated=3.0d  spent=1.0d  due=2026-10-15
 
   Nothing is past its due date.
 
   Per person — items, done, estimated vs spent (days):
-    vu le — 2 items, 1 done, estimated 7.0d, spent 5.2d (1.8d under)
-    mai tran — 1 items, 1 done, estimated 2.0d, spent 1.9d (0.1d under)
+    dev one — 2 items, 1 done, estimated 7.0d, spent 5.2d (1.8d under)
+    dev two — 1 items, 1 done, estimated 2.0d, spent 1.9d (0.1d under)
 
 expect:
   health: on_track
   shipped_keys: [MYC-51, MYC-52]
   notes_contain: ["dropped"]
-  load_people: [vu le, mai tran]
+  load_people: [dev one, dev two]

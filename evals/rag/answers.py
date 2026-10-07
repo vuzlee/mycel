@@ -1,10 +1,10 @@
-"""Phase B of batch 063: does the answer cite the right passage, and decline when it should?
+"""Does a Knowledge answer cite the right passage, and decline when it should?
 
     uv run python -m evals.rag.answers [--limit N]
 
 Runs the app's Knowledge path (search, passages in `<documents>`, one orchestrator call
 with only the Knowledge chip, marker check) for every question. Each result is saved as
-it lands, so a run stopped by a daily quota resumes without repeating a call.
+it lands, so a stopped run resumes without repeating a call.
 """
 
 import argparse
@@ -13,6 +13,7 @@ import json
 import sys
 from typing import Any
 
+from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import retrieval
 from evals.rag.metrics import normalise
 from mycel.agents.agent.orchestrator import Orchestrator
@@ -29,18 +30,20 @@ from mycel.services.citations import check
 STATE = retrieval.RESULTS / "answers.jsonl"
 
 
-def done_ids() -> set[str]:
-    if not STATE.exists():
-        return set()
-    return {json.loads(line)["id"] for line in STATE.read_text().splitlines() if line.strip()}
-
-
 async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> dict[str, Any]:
     settings = get_settings()
     hits = await vectors.search(retrieval.EVAL_OWNER_ID, str(q["question"]), settings.ask_top_k)
     base = {"id": q["id"], "answerable": q.get("answerable") is not False}
     if not hits or hits[0].score < settings.document_min_score:
-        return {**base, "gemini": False, "answered": False, "cited": [], "grounded": False}
+        return {
+            **base,
+            "model": False,
+            "answered": False,
+            "cited": [],
+            "dropped": [],
+            "grounded": False,
+            "answer": "",
+        }
 
     labelled = {
         f"c{i}": ChunkRow(
@@ -58,7 +61,7 @@ async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> d
     }
     cfg = AgentSettings.from_config(Orchestrator.name)
     deps = build_deps(
-        f"eval-{q['id']}", ceiling_usd="1.00", settings=cfg, chips=frozenset({Chip.KNOWLEDGE})
+        f"eval-{q['id']}", ceiling_usd=CEILING_USD, settings=cfg, chips=frozenset({Chip.KNOWLEDGE})
     )
     prompt = f"{render(labelled)}\n\n{q['question']}"
     answer = await runner.run(Orchestrator.build(cfg), prompt, deps)
@@ -72,7 +75,7 @@ async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> d
     ]
     return {
         **base,
-        "gemini": True,
+        "model": True,
         "answered": bool(checked.cited),
         "cited": checked.cited,
         "dropped": checked.dropped,
@@ -93,17 +96,17 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "correct": len(correct),
         "invented_citations": sum(len(r.get("dropped", [])) for r in rows),
         "unanswerable_declined": f"{len(declined)}/{len(unanswerable)}",
-        "gemini_calls": sum(1 for r in rows if r["gemini"]),
+        "model_calls": sum(1 for r in rows if r["model"]),
         "wrong": [r["id"] for r in answerable if r not in correct],
     }
 
 
-async def main_async(limit: int) -> int:
+async def main_async(limit: int | None = None) -> int:
     questions = retrieval.load_questions()
     names = sorted({str(q["doc"]) for q in questions if q.get("answerable") is not False})
     lookup, _ = await retrieval.ingest(names)
     retrieval.RESULTS.mkdir(exist_ok=True)
-    seen = done_ids()
+    seen = ids(STATE)
     todo = [q for q in questions if q["id"] not in seen][:limit]
     try:
         for q in todo:
@@ -121,15 +124,15 @@ async def main_async(limit: int) -> int:
     finally:
         await retrieval.cleanup(len(names))
 
-    rows = [json.loads(line) for line in STATE.read_text().splitlines() if line.strip()]
+    rows = read_jsonl(STATE)
     print(json.dumps(summarise(rows), indent=2))
     return 0 if len(rows) == len(questions) else 2
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=100)
-    return asyncio.run(main_async(parser.parse_args().limit))
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--limit", type=int, default=None, help="at most N questions (default all)")
+    return asyncio.run(main_async(parser.parse_args(argv).limit))
 
 
 if __name__ == "__main__":

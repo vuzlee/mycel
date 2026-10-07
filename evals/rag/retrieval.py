@@ -1,11 +1,11 @@
-"""Phase A of batch 063: does search find the right passage at all?
+"""Does Knowledge document search find the right passage at all?
 
     uv run python -m evals.rag.fetch_corpus
     uv run python -m evals.rag.retrieval [--keep]
 
 Ingests the corpus through the same parse / chunk / embed code as the worker into one
 eval owner id, asks every question for its top 20, and reports Recall@5/10/20, MRR,
-latency and a suggested no-answer threshold. No Gemini call is made.
+latency and a suggested no-answer threshold. Makes no model call.
 """
 
 import argparse
@@ -159,10 +159,10 @@ async def main_async(keep: bool) -> int:
     return 0
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--keep", action="store_true", help="leave the eval vectors in Qdrant")
-    return asyncio.run(main_async(parser.parse_args().keep))
+    return asyncio.run(main_async(parser.parse_args(argv).keep))
 
 
 if __name__ == "__main__":

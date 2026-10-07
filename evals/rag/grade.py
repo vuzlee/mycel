@@ -1,10 +1,11 @@
-"""Batch 067: does the answer say the right thing, judged against a reference answer.
+"""Does a Knowledge answer say the right thing, judged against a reference answer?
 
     uv run python -m evals.rag.grade [--limit N] [--fresh]
 
 `answers.py` checks that an answer cites the right passage; it cannot tell a cited answer
 that misreads the passage from one that reads it right. This asks a model to compare each
-saved answer with the reference in `questions.yaml`. Answers are re-asked only with
+saved answer with the reference in `questions.yaml`; the grader runs on the
+orchestrator's model, the same one that answered. Answers are re-asked only with
 `--fresh`; otherwise the saved `answers.jsonl` is graded as it stands. Each verdict is saved
 as it lands, so a stopped run resumes without repeating a call.
 """
@@ -18,6 +19,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import answers, retrieval
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
@@ -54,12 +56,6 @@ class Grader(BaseAgent[Verdict]):
     output_type = Verdict
 
 
-def graded_ids() -> set[str]:
-    if not STATE.exists():
-        return set()
-    return {json.loads(line)["id"] for line in STATE.read_text().splitlines() if line.strip()}
-
-
 async def grade_one(q: dict[str, Any], answer: dict[str, Any]) -> dict[str, Any]:
     base = {"id": q["id"], "answered": bool(answer.get("answered"))}
     if q.get("answerable") is False:
@@ -76,7 +72,7 @@ async def grade_one(q: dict[str, Any], answer: dict[str, Any]) -> dict[str, Any]
 
     # The orchestrator's model and fallbacks: a grade is one more call on the same gateway.
     cfg = AgentSettings.from_config("orchestrator")
-    deps = build_deps(f"grade-{q['id']}", ceiling_usd="1.00", settings=cfg)
+    deps = build_deps(f"grade-{q['id']}", ceiling_usd=CEILING_USD, settings=cfg)
     prompt = (
         f"Question: {q['question']}\n\nReference answer: {q['reference']}\n\n"
         f"Answer to grade:\n{answer['answer']}"
@@ -99,18 +95,18 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-async def main_async(limit: int, fresh: bool) -> int:
+async def main_async(limit: int | None, fresh: bool) -> int:
     if fresh:
         answers.STATE.unlink(missing_ok=True)
         STATE.unlink(missing_ok=True)
-        if await answers.main_async(100) != 0:
+        if await answers.main_async() != 0:
             return 2
 
-    saved = {row["id"]: row for row in map(json.loads, answers.STATE.read_text().splitlines())}
+    saved = {str(row["id"]): row for row in read_jsonl(answers.STATE)}
     questions = [
         q for q in retrieval.load_questions() if q.get("reference") or q.get("answerable") is False
     ]
-    seen = graded_ids()
+    seen = ids(STATE)
     todo = [q for q in questions if q["id"] not in seen and q["id"] in saved][:limit]
     for q in todo:
         try:
@@ -122,16 +118,16 @@ async def main_async(limit: int, fresh: bool) -> int:
             out.write(json.dumps(row) + "\n")
         print(f"  {row['id']}: {row['grade']} — {row['reason']}")
 
-    rows = [json.loads(line) for line in STATE.read_text().splitlines() if line.strip()]
+    rows = read_jsonl(STATE)
     print(json.dumps(summarise(rows), indent=2))
     return 0 if len(rows) == len(questions) else 2
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=100)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--limit", type=int, default=None, help="at most N grades (default all)")
     parser.add_argument("--fresh", action="store_true", help="re-ask every question first")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return asyncio.run(main_async(args.limit, args.fresh))
 
 

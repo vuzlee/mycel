@@ -1,30 +1,31 @@
-{"id": "b01", "answered": true, "grade": "correct", "reason": "Matches reference exactly: 15% of WordPiece tokens masked at random.", "model": true}
-{"id": "b02", "answered": true, "grade": "correct", "reason": "Correctly states the label as NotNext, matching the key fact in the reference.", "model": true}
-{"id": "b03", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: at most 1 hour on a single Cloud TPU (or a few hours on GPU) from the same pre-trained model.", "model": true}
-{"id": "b04", "answered": true, "grade": "correct", "reason": "Matches the reference value of 71.0 average GLUE test score.", "model": true}
-{"id": "b05", "answered": true, "grade": "correct", "reason": "Matches reference: expert human 85.0 vs BERT-Large 86.3, with five-annotation human at 88.0, plus extra accurate detail.", "model": true}
-{"id": "r01", "answered": true, "grade": "correct", "reason": "Matches the reference: 21 million passages from disjoint 100-word chunks.", "model": true}
-{"id": "r02", "answered": true, "grade": "correct", "reason": "Matches reference exactly: FAISS with a single MIPS index using Hierarchical Navigable Small World approximation.", "model": true}
-{"id": "r03", "answered": true, "grade": "correct", "reason": "States BART-large with ~400M parameters, matching the reference.", "model": true}
-{"id": "r04", "answered": true, "grade": "partly", "reason": "Correctly states the 71% figure but omits the additional detail that a gold article appears in the top 10 in 90% of cases.", "model": true}
-{"id": "r05", "answered": true, "grade": "partly", "reason": "Gives the 17.7% factuality figure but omits the 6.9% 'both poor' figure for specificity.", "model": true}
-{"id": "d01", "answered": true, "grade": "correct", "reason": "States 0.95.1 as minimum version and correctly notes Annotated support was added in 0.95.0.", "model": true}
-{"id": "d02", "answered": true, "grade": "correct", "reason": "States clearly that you pass the function without calling it (no parentheses), matching the reference.", "model": true}
-{"id": "d03", "answered": true, "grade": "correct", "reason": "Matches the reference: no plug-in system needed since dependencies allow declaring unlimited integrations.", "model": true}
-{"id": "d04", "answered": true, "grade": "correct", "reason": "States the default should be plain def, matching the reference, with correct extra context.", "model": true}
-{"id": "d05", "answered": true, "grade": "correct", "reason": "It correctly states FastAPI runs the plain def function in an external threadpool and awaits that, matching the reference.", "model": true}
-{"id": "d06", "answered": true, "grade": "correct", "reason": "Matches the reference: confirms \"no,\" explains FastAPI's effect is opposite due to threadpool overhead, and recommends async def.", "model": true}
-{"id": "d07", "answered": true, "grade": "correct", "reason": "Matches reference exactly, with added true detail about default tier.", "model": true}
-{"id": "d08", "answered": true, "grade": "correct", "reason": "Matches the reference's ~100 million vector rough ceiling and its dependence on dimensions, datatype, and quantization.", "model": true}
-{"id": "d09", "answered": true, "grade": "correct", "reason": "Matches the reference exactly, stating 12 shards divide evenly across 1,2,3,4,6,12 nodes, with extra true detail added.", "model": true}
-{"id": "d10", "answered": true, "grade": "correct", "reason": "Matches the reference exactly, stating HTTP 507 Insufficient Storage with gRPC ResourceExhausted equivalent.", "model": true}
-{"id": "d11", "answered": true, "grade": "correct", "reason": "Matches reference: raise open-files limit via docker ulimit flag or ulimit command for the session.", "model": true}
-{"id": "d12", "answered": true, "grade": "correct", "reason": "Matches the reference: cause is another instance using the same WAL files, and fix is giving each node its own storage directory/volume.", "model": true}
-{"id": "d13", "answered": true, "grade": "correct", "reason": "Matches the reference: return an immediate response like 202 Accepted and process the file using BackgroundTasks.", "model": true}
-{"id": "d14", "answered": true, "grade": "correct", "reason": "Matches the reference: FastAPI reuses the same BackgroundTasks object, merging tasks from all levels to run after the response.", "model": true}
-{"id": "d15", "answered": true, "grade": "correct", "reason": "Matches all key points: use Celery when work doesn't need to run in same process/share memory, requires a queue like RabbitMQ or Redis, and runs across processes/servers.", "model": true}
+{"id": "b01", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: 15% of WordPiece tokens masked at random.", "model": true}
+{"id": "b02", "answered": true, "grade": "correct", "reason": "Correctly identifies \"NotNext\" label, matching the reference's main point.", "model": true}
+{"id": "b03", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: at most 1 hour on a single Cloud TPU (or a few hours on a GPU) from the same pre-trained model.", "model": true}
+{"id": "b04", "answered": true, "grade": "correct", "reason": "Matches the reference value of 71.0 average on the GLUE test set.", "model": true}
+{"id": "b05", "answered": true, "grade": "correct", "reason": "Matches reference figures (85.0 expert human vs 86.3 BERT-Large, BERT outperforming) with extra accurate detail.", "model": true}
+{"id": "r01", "answered": true, "grade": "correct", "reason": "Matches reference: 100-word disjoint chunks yielding ~21 million passages.", "model": true}
+{"id": "r02", "answered": true, "grade": "correct", "reason": "Matches reference exactly, naming FAISS and HNSW approximation.", "model": true}
+{"id": "r03", "answered": true, "grade": "correct", "reason": "States BART-large generator is 400M parameters, matching the reference, with additional true detail.", "model": true}
+{"id": "r04", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: 71% top-1 and 90% within top 10.", "model": true}
+{"id": "r05", "answered": true, "grade": "partly", "reason": "Correctly gives the 17.7% factuality figure but omits the 6.9% 'both poor' share for specificity.", "model": true}
+{"id": "d01", "answered": true, "grade": "correct", "reason": "Matches reference exactly: 0.95.1 recommended, Annotated added in 0.95.0.", "model": true}
+{"id": "d02", "answered": true, "grade": "correct", "reason": "Matches the reference: no parentheses, pass the function itself to Depends.", "model": true}
+{"id": "d03", "answered": true, "grade": "correct", "reason": "Matches reference: states no plug-in system needed, dependencies/dependency injection allow unlimited integrations.", "model": true}
+{"id": "d04", "answered": true, "grade": "correct", "reason": "Matches the reference by stating plain/normal \"def\" is the default choice when unsure.", "model": true}
+{"id": "d05", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: FastAPI runs the plain def function in an external threadpool and awaits it instead of calling directly.", "model": true}
+{"id": "d06", "answered": true, "grade": "correct", "reason": "Matches reference: states the effect is opposite and recommends async def unless blocking I/O is involved.", "model": true}
+{"id": "d07", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: graph traversal's small random reads suffer from disk latency on the cold tier.", "model": true}
+{"id": "d08", "answered": true, "grade": "correct", "reason": "Matches reference: ~100 million vectors as a rough ceiling dependent on dimensions, datatype, and quantization, with extra accurate detail.", "model": true}
+{"id": "d09", "answered": true, "grade": "correct", "reason": "Matches the reference exactly: 12 shards dividing evenly across 1, 2, 3, 4, 6, and 12 nodes.", "model": true}
+{"id": "d10", "answered": true, "grade": "correct", "reason": "Matches reference exactly: HTTP 507 Insufficient Storage, gRPC ResourceExhausted.", "model": true}
+{"id": "d11", "answered": true, "grade": "correct", "reason": "Matches reference: raise open-files limit via docker run --ulimit nofile=10000:10000 or ulimit for user session.", "model": true}
+{"id": "d12", "answered": true, "grade": "correct", "reason": "Matches the reference: WouldBlock occurs because another instance already holds the WAL files, requiring each node to have its own separate storage directory/volume.", "model": true}
+{"id": "d13", "answered": true, "grade": "correct", "reason": "Matches the reference: returns 202 Accepted immediately and processes the file as a background task.", "model": true}
+{"id": "d14", "answered": true, "grade": "correct", "reason": "Matches reference: object is reused, tasks merged, and run after response.", "model": true}
+{"id": "d15", "answered": true, "grade": "correct", "reason": "Matches reference: use Celery for heavy work not needing shared memory, across processes/servers, requiring a queue like RabbitMQ or Redis.", "model": true}
+{"id": "a01", "answered": true, "grade": "wrong", "reason": "It denies having Adam's defaults and gives only AdaMax's values, missing Adam's actual defaults (0.001, 0.9, 0.999, 1e-8).", "model": true}
 {"id": "u01", "answered": false, "grade": "correct", "reason": "should decline; declined", "model": false}
 {"id": "u02", "answered": false, "grade": "correct", "reason": "should decline; declined", "model": false}
 {"id": "u03", "answered": false, "grade": "correct", "reason": "should decline; declined", "model": false}
 {"id": "u04", "answered": false, "grade": "correct", "reason": "should decline; declined", "model": false}
-{"id": "u05", "answered": false, "grade": "correct", "reason": "should decline; declined", "model": false}
+{"id": "u05", "answered": true, "grade": "wrong", "reason": "should decline; answered", "model": false}
