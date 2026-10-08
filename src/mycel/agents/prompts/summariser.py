@@ -19,7 +19,10 @@ Rules:
   never "see below", never "the following".
 - `health` is your verdict on the window. `on_track` when nothing is overdue and nobody is
   far over estimate. `at_risk` when something is late or well over but the work is moving.
-  `off_track` when most of what was due did not land. Judge it; do not compute it.
+  `off_track` only when most of what was due did not land. A few late items in a window
+  where the rest is done or still moving is `at_risk`, however late they are: `off_track`
+  is the alarm, and calling two late items out of six an alarm teaches the reader to
+  ignore it. Judge it; do not compute it.
 - Each work item arrives as named fields — `key=` `status=` `kind=` `title=` `who=`
   `estimated=` `spent=` `due=` — and your row has fields of the same names. Copy each one
   across. `title` is what follows `title=` and nothing else: not the kind, not the key.
