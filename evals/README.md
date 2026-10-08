@@ -31,6 +31,7 @@ load rows per person, notes for a truncated window.
 
 - `corpus.yaml`: public documents with pinned sha256.
 - `questions.yaml`: questions with evidence and reference answers, plus unanswerable ones.
+- `followups.yaml`: two-turn cases for the follow-up rewrite (batch 074).
 - `results/`: retrieval reports, `answers.jsonl`, `grades.jsonl`. Runs resume from these files.
 
 The grader uses the same model as the answerer: the orchestrator's model and fallbacks.
@@ -46,6 +47,7 @@ Run them by hand, and say how many calls before you do.
 | `uv run python -m evals.rag.retrieval` | 0 | Recall@5/10/20, MRR, latency |
 | `uv run python -m evals.rag.answers` | ~31 | citation correctness, declining unanswerable |
 | `uv run python -m evals.rag.grade` | ~26 | answer content against the reference |
+| `uv run python -m evals.rag.followups` | 5 | follow-up search: stitched vs rewritten, top-5 hits |
 | `uv run python -m evals.summariser.run --save-baseline` | 6 | summariser golden set, records the score |
 | `uv run python -m evals.summariser.run --compare-baseline` | 6 | same, fails if the score dropped |
 
@@ -62,4 +64,5 @@ Run them by hand, and say how many calls before you do.
 | Grounded | 25/26 (`a01` misses: Adam's defaults rank 11th) |
 | Declined | 5/5 |
 | Grades (correct / partly / wrong) | 29 / 1 / 1 (`a01`) |
+| Follow-ups @5 (stitched / rewritten) | 3/5 / 5/5, `gemini-3.5-flash-lite` rewrites (after `b515fec`) |
 | Summariser | 0.976 over 6 cases (one miss: `MYC-62`, far over estimate, left out of `at_risk`), saved to `evals/summariser/baseline.json` |

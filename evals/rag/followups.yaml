@@ -1,0 +1,31 @@
+# Follow-up cases for the 074 rewrite (MYC-122).
+#
+# Each case is two turns: `previous`, then `question`, which leans on it.
+# A hit is a passage from `doc` that contains `evidence`, as in questions.yaml.
+# f04 changes the subject on purpose: stitching drags the search back, a rewrite should not.
+
+- id: f01
+  previous: "What fraction of input tokens does BERT mask during pre-training?"
+  question: "And what label does it give when sentence B is a random one?"
+  doc: bert.pdf
+  evidence: "labeled as NotNext"
+- id: f02
+  previous: "Which library builds the nearest-neighbour index in RAG?"
+  question: "How big is its generator, in parameters?"
+  doc: rag.pdf
+  evidence: "with 400M parameters"
+- id: f03
+  previous: "If I'm unsure, should a FastAPI endpoint use def or async def?"
+  question: "How does it run the plain def one without blocking the server?"
+  doc: fastapi-async.md
+  evidence: "run in an external threadpool that is then awaited"
+- id: f04
+  previous: "Roughly how many vectors can a single Qdrant node handle?"
+  question: "Different topic: how can my FastAPI endpoint respond immediately while an uploaded file is processed slowly?"
+  doc: fastapi-background-tasks.docx
+  evidence: "process the file in the background"
+- id: f05
+  previous: "What HTTP status does Qdrant return when a disk quota blocks writes?"
+  question: "And how do I fix the one about too many open files?"
+  doc: qdrant-common-errors.md
+  evidence: "need to increase the limit of the open files"
