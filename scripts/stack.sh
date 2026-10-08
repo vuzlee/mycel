@@ -51,20 +51,9 @@ case "$mode" in
     run "$HERE/$mode/$action.sh" "$@"
     ;;
 
-  doctor)       run "$HERE/data/doctor.sh" "$@" ;;
-  sync)         run "$HERE/data/sync.sh" "$@" ;;
-  grafana-sync) run "$HERE/data/grafana-sync.sh" "$@" ;;
-
-  # The old flat commands, which muscle memory and several READMEs still use.
-  up|down|status|logs|restart)
-    printf '\033[33m!!\033[0m `stack.sh %s` is now `stack.sh dev %s`\n' "$mode" "$mode" >&2
-    [[ $mode == restart ]] && { "$HERE/dev/down.sh"; run "$HERE/dev/up.sh"; }
-    run "$HERE/dev/$mode.sh" "$@"
-    ;;
-  refetch)
-    printf '\033[33m!!\033[0m `stack.sh refetch` is now `stack.sh sync --refetch`\n' >&2
-    run "$HERE/data/sync.sh" --refetch
-    ;;
+  doctor)       run "$HERE/ops/doctor.sh" "$@" ;;
+  sync)         run "$HERE/ops/sync.sh" "$@" ;;
+  grafana-sync) run "$HERE/ops/grafana-sync.sh" "$@" ;;
 
   -h|--help|help) usage 0 ;;
   *) printf '\033[31mxx\033[0m unknown: %s\n\n' "$mode" >&2; usage ;;

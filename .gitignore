@@ -33,9 +33,6 @@ web/dist/
 # Host-process pids and logs from scripts/stack.sh
 .run/
 
-# One-off Jira maintenance scripts. Not part of the app.
-.jira/
-
 # The maintainer's own scripts: smoke runs on real models, their Jira board, the README
 # demo, trying one document. One folder, ignored whole, so nothing in the repo is half-kept.
 .local/
@@ -55,6 +52,7 @@ assets/demo/
 
 # A timestamped file per retrieval run; the summary that matters goes in the batch note.
 evals/rag/results/retrieval-*.json
+evals/rag/results/followups-*.json
 
 # This deployment's models and providers; start from models.example.yaml.
 config/litellm/models.yaml

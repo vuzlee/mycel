@@ -9,7 +9,6 @@
 .ruff_cache
 .pytest_cache
 .run
-.jira
 .local
 .claude
 notes

@@ -5,9 +5,6 @@ Revises: 0019
 
 Renames only: the column, its index, its unique constraint and its foreign key. No row
 is rewritten, and the downgrade renames everything back.
-
-The vector payload carries the same field; `scripts/data/qdrant_owner_to_user.py` adds
-`user_id` beside it and must run with this migration.
 """
 
 from collections.abc import Sequence

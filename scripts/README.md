@@ -6,7 +6,7 @@ lib/            what the modes share
 dev/            app on the host, stores in compose
 compose/        everything in containers
 k8s/            the chart on minikube
-data/           talks to the data or the repo, not to a mode
+ops/            talks to the data or the repo, not to a mode
 ```
 
 ## Why a directory per mode
@@ -55,7 +55,7 @@ container is up": Postgres accepts TCP several seconds before it will serve one,
 alembic run in that window fails with a message about the database rather than about the
 wait.
 
-## data/
+## ops/
 
 `doctor`, `sync` and `grafana-sync` take no mode. They talk to the database or to the repo,
 and both are the same whichever way the app happens to be running.
