@@ -7,10 +7,10 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from mycel.agents.tools import calendar as calendar_tool
 from mycel.core.config import get_settings
 from mycel.infra.postgres.engine import async_dsn
 from mycel.infra.postgres.models import Base
-from mycel.sources import google_calendar
 
 #: The suite's own database, set by `conftest.py`. Empty means the Postgres tests skip.
 DSN = os.environ.get("DATABASE_URL", "")
@@ -47,7 +47,7 @@ def google_token(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _token(user_id: int) -> str:
         return "access-token"
 
-    monkeypatch.setattr(google_calendar, "token_for", _token)
+    monkeypatch.setattr(calendar_tool, "token_for", _token)
 
 
 @pytest.fixture

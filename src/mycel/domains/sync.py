@@ -128,9 +128,12 @@ async def _index_gold() -> int:
         from mycel.infra.vectors import indexer
 
         embedded = 0
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         async with session_scope() as session:
-            for project in await GoldRepository(session).projects():
-                embedded += (await indexer.index_project(session, project)).embedded
+            gold = GoldRepository(session)
+            for project in await gold.projects():
+                items = await gold.items_between(project, since=epoch)
+                embedded += (await indexer.index_items(items)).embedded
         return embedded
     except Exception:
         log.warning("indexing gold failed; search is behind", exc_info=True)

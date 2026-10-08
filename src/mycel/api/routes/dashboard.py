@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
-from mycel.domains.dashboard import DEFAULT_DAYS, get_dashboard
 from mycel.infra.postgres.repositories.gold import WorkItemRow
+from mycel.services.dashboards import DEFAULT_DAYS, get_dashboard
 from mycel.services.permission import NotReadable
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])

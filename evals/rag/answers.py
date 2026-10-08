@@ -15,10 +15,10 @@ from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
-from mycel.domains.knowledge import render
 from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors import documents as vectors
 from mycel.services.citations import check
+from mycel.services.knowledge import render
 
 STATE = retrieval.RESULTS / "answers.jsonl"
 

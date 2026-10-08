@@ -33,4 +33,4 @@ COPY src/ src/
 COPY config/ config/
 RUN uv sync --locked --no-default-groups --group ingest
 RUN docling-tools models download layout tableformer
-CMD ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]
+CMD ["python", "-m", "mycel.worker", "--queue", "ingest"]

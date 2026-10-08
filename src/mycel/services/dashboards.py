@@ -1,4 +1,4 @@
-"""The dashboard domain: one project, one window, one picture of it."""
+"""The dashboard as one person may see it: every read is gated by permission."""
 
 from datetime import UTC, datetime, timedelta
 

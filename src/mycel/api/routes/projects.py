@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 from mycel.api.dependencies import CurrentUser
-from mycel.domains.dashboard import known_projects
+from mycel.services.dashboards import known_projects
 
 router = APIRouter(tags=["projects"])
 

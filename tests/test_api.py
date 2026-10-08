@@ -16,7 +16,6 @@ from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
-from mycel.domains.conversations import ConversationSummary
 from mycel.infra.postgres.repositories.conversations import ConversationRow, TurnRow
 from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.infra.postgres.repositories.gold_stats import (
@@ -28,6 +27,7 @@ from mycel.infra.postgres.repositories.gold_stats import (
 from mycel.infra.redis.results import JobResult
 from mycel.llm.budget import BudgetExceeded
 from mycel.services.auth import Principal
+from mycel.services.conversations import ConversationSummary
 from mycel.services.dashboard import Dashboard, EpicProgress
 
 #: Who every request in this file is made by.
@@ -458,7 +458,7 @@ def _no_session(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake() -> AsyncIterator[None]:
         yield None
 
-    monkeypatch.setattr("mycel.domains.dashboard.session_scope", fake)
+    monkeypatch.setattr("mycel.services.dashboards.session_scope", fake)
 
 
 class TestTheBoard:
@@ -470,7 +470,7 @@ class TestTheBoard:
 
         _may_read(monkeypatch, {"MYC"})
         _no_session(monkeypatch)
-        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
+        monkeypatch.setattr("mycel.services.dashboards.build_dashboard", fake_build)
 
     def _late(self) -> WorkItemRow:
         """One story, past its due date and still in progress — the row the screen is for."""
@@ -621,7 +621,7 @@ class TestTheBoard:
 
         _may_read(monkeypatch, {"MYC"})
         _no_session(monkeypatch)
-        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
+        monkeypatch.setattr("mycel.services.dashboards.build_dashboard", fake_build)
         client.get("/dashboard/MYC?days=30")
         assert seen["days"] == 30
 
@@ -641,7 +641,7 @@ class TestTheBoard:
 
         _may_read(monkeypatch, set())
         _no_session(monkeypatch)
-        monkeypatch.setattr("mycel.domains.dashboard.build_dashboard", fake_build)
+        monkeypatch.setattr("mycel.services.dashboards.build_dashboard", fake_build)
 
         assert client.get("/dashboard/MYC").status_code == 403
         assert read == []
@@ -660,7 +660,7 @@ class TestTheLists:
 
         _may_read(monkeypatch, {"MYC"})
         _no_session(monkeypatch)
-        monkeypatch.setattr("mycel.domains.dashboard.list_projects", fake_list)
+        monkeypatch.setattr("mycel.services.dashboards.list_projects", fake_list)
 
         assert client.get("/projects").json() == ["MYC"]
 
@@ -686,7 +686,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.domains.conversations.list_conversations", fake_conversations)
+        monkeypatch.setattr("mycel.services.conversations.list_conversations", fake_conversations)
         body = client.get("/conversations").json()
 
         assert asked == [SIGNED_IN.id]
@@ -712,7 +712,7 @@ class TestTheLists:
                 )
             ]
 
-        monkeypatch.setattr("mycel.domains.conversations.list_conversations", fake_conversations)
+        monkeypatch.setattr("mycel.services.conversations.list_conversations", fake_conversations)
         body = client.get("/conversations").json()
 
         assert len(body) == 1 and body[0]["job_id"] is None
@@ -727,7 +727,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id))
             return True
 
-        monkeypatch.setattr("mycel.domains.conversations.forget_conversation", fake_forget)
+        monkeypatch.setattr("mycel.services.conversations.forget_conversation", fake_forget)
         response = client.delete("/conversations/7")
 
         assert response.status_code == 204
@@ -741,7 +741,7 @@ class TestTheLists:
         async def fake_forget(user_id: int, conversation_id: int) -> bool:
             return False
 
-        monkeypatch.setattr("mycel.domains.conversations.forget_conversation", fake_forget)
+        monkeypatch.setattr("mycel.services.conversations.forget_conversation", fake_forget)
 
         assert client.delete("/conversations/7").status_code == 404
 
@@ -754,7 +754,7 @@ class TestTheLists:
             seen.append((user_id, conversation_id, pinned))
             return conversation_id == 7
 
-        monkeypatch.setattr("mycel.domains.conversations.pin_conversation", fake_pin)
+        monkeypatch.setattr("mycel.services.conversations.pin_conversation", fake_pin)
 
         assert client.put("/conversations/7/pin", json={"pinned": True}).status_code == 204
         assert client.put("/conversations/8/pin", json={"pinned": True}).status_code == 404

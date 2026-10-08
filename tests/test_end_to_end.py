@@ -19,6 +19,7 @@ from mycel.infra.redis.client import close_clients
 from mycel.queue import topology
 from mycel.queue.connection import channel, close_connection
 from mycel.queue.consumer import run_worker
+from mycel.worker import HANDLER
 
 pytestmark = pytest.mark.anyio
 
@@ -62,7 +63,7 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
     monkeypatch.setattr(chat_domain.Orchestrator, "build", classmethod(lambda cls, s: None))
 
     stop = asyncio.Event()
-    worker = asyncio.create_task(run_worker(stop))
+    worker = asyncio.create_task(run_worker(HANDLER, stop))
 
     app = create_app(Settings(otel_enabled=False))
     transport = ASGITransport(app=app)

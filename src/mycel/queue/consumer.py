@@ -7,19 +7,16 @@ import sys
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 from opentelemetry import context as otel_context
 
-from mycel.agents.core.exceptions import AgentError
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
-from mycel.domains import chat as chat_domain
-from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import results
 from mycel.infra.redis.client import close_clients
-from mycel.llm.budget import BudgetExceeded
 from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel, close_connection
-from mycel.queue.job import INGEST_KINDS, Job, JobKind
+from mycel.queue.handler import Handler
+from mycel.queue.job import Job
 
 log = get_logger(__name__)
 
@@ -27,18 +24,18 @@ log = get_logger(__name__)
 PREFETCH = 2
 
 
-async def handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> None:
+async def handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs: Handler) -> None:
     """Run one job, then ack; failures go to retry or dead-letter, never re-raised."""
     ctx = context.extract(dict(message.headers or {}))
     token = otel_context.attach(ctx) if ctx is not None else None
     try:
-        await _handle(message, dlx)
+        await _handle(message, dlx, jobs)
     finally:
         if token is not None:
             otel_context.detach(token)
 
 
-async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> None:
+async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs: Handler) -> None:
     """The body of `handle`, with the caller's trace context already attached."""
     try:
         job = Job.model_validate_json(message.body)
@@ -50,43 +47,27 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange) -> No
 
     try:
         await results.mark_running(job.job_id)
-        await _run(job)
+        await jobs.run(job)
         await message.ack()
-    except BudgetExceeded as exc:
+    except jobs.final as exc:
         # Out of budget is not transient: straight to the dead-letter queue.
         log.warning("job refused for budget", extra={"job_id": job.job_id})
-        await _record_failure(job, str(exc))
+        await jobs.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
-    except (AgentError, OSError) as exc:
+    except jobs.transient as exc:
         # Transient: mark failed only on the last attempt, so pollers see `running`.
         if retry.exhausted(message):
-            await _record_failure(job, str(exc))
+            await jobs.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
     except Exception as exc:  # the loop must survive; see the docstring
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
-        await _record_failure(job, repr(exc))
+        await jobs.record_failure(job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
 
 
-async def _run(job: Job) -> None:
-    """Hand the job to the domain that owns its kind."""
-    if job.kind is JobKind.INGEST:
-        await ingest_domain.run(job)
-    elif job.kind is JobKind.DELETE_DOCUMENT:
-        await ingest_domain.delete(job)
-    else:
-        await chat_domain.run(job)
-
-
-async def _record_failure(job: Job, error: str) -> None:
-    """Each domain records its own failure where its caller looks for it."""
-    if job.kind in INGEST_KINDS:
-        await ingest_domain.record_failure(job, error)
-    else:
-        await chat_domain.record_failure(job, error)
-
-
-async def run_worker(stop: asyncio.Event | None = None, queue: str = topology.QUEUE) -> None:
+async def run_worker(
+    jobs: Handler, stop: asyncio.Event | None = None, queue: str = topology.QUEUE
+) -> None:
     """Consume until `stop` is set, then finish the job in flight."""
     stop = stop or asyncio.Event()
 
@@ -100,7 +81,7 @@ async def run_worker(stop: asyncio.Event | None = None, queue: str = topology.QU
 
         async def _on_message(message: AbstractIncomingMessage) -> None:
             nonlocal done
-            await handle(message, topo.dlx)
+            await handle(message, topo.dlx, jobs)
             done += 1
             # docling keeps native memory it never gives back; exit and be restarted.
             if budget and done >= budget:
@@ -115,8 +96,8 @@ async def run_worker(stop: asyncio.Event | None = None, queue: str = topology.QU
         log.info("worker stopping")
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Entry point for `python -m mycel.queue.consumer [--queue ingest]`."""
+def main(jobs: Handler, argv: list[str] | None = None) -> int:
+    """Consume `--queue` (jobs by default) until SIGTERM, serving /metrics."""
     args = argv if argv is not None else sys.argv[1:]
     queue = args[args.index("--queue") + 1] if "--queue" in args else topology.QUEUE
     settings = get_settings()
@@ -133,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         port = settings.metrics_port + (2 if queue == topology.INGEST_QUEUE else 0)
         metrics = await serve_metrics(port, settings.metrics_host)
         try:
-            await run_worker(stop, queue)
+            await run_worker(jobs, stop, queue)
         finally:
             metrics.close()
             await close_connection()
@@ -145,7 +126,3 @@ def main(argv: list[str] | None = None) -> int:
         if provider is not None:
             provider.shutdown()
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

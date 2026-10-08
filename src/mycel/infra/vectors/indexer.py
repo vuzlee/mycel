@@ -4,14 +4,12 @@ import asyncio
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
 from qdrant_client.models import PointStruct
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.repositories.gold import GoldRepository, WorkItemRow
+from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.infra.vectors import collections
 from mycel.infra.vectors.client import client, embed
 
@@ -127,11 +125,3 @@ async def index_items(items: Sequence[WorkItemRow]) -> IndexResult:
         extra={"seen": len(items), "embedded": embedded, "skipped": skipped},
     )
     return IndexResult(seen=len(items), embedded=embedded, skipped=skipped)
-
-
-async def index_project(session: AsyncSession, project: str) -> IndexResult:
-    """Embed a project's items; `index_items` skips what Qdrant already holds unchanged."""
-    items = await GoldRepository(session).items_between(
-        project, since=datetime(1970, 1, 1, tzinfo=UTC)
-    )
-    return await index_items(items)

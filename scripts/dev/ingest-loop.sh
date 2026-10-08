@@ -21,6 +21,6 @@ else
 fi
 
 while true; do
-  "${cap[@]}" nice -n 10 uv run python -m mycel.queue.consumer --queue ingest
+  "${cap[@]}" nice -n 10 uv run python -m mycel.worker --queue ingest
   sleep 1
 done

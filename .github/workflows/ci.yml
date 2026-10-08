@@ -54,7 +54,7 @@ jobs:
         run: |
           uv venv /tmp/prod --python 3.11
           VIRTUAL_ENV=/tmp/prod uv sync --locked --no-default-groups --active
-          /tmp/prod/bin/python -c "import mycel.api.app, mycel.queue.consumer, mycel.scheduler, mycel.doctor"
+          /tmp/prod/bin/python -c "import mycel.api.app, mycel.worker, mycel.scheduler, mycel.doctor"
 
 
       - name: Type check

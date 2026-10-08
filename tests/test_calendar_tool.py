@@ -11,6 +11,7 @@ from pydantic_ai import ModelRetry
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
+from mycel.agents.tools import calendar as calendar_tool
 from mycel.agents.tools.calendar import CONNECT, MAX_HOURS, MAX_MINUTES, build_toolset
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
@@ -292,6 +293,6 @@ class TestWithNoAccountConnected:
         async def _refuse(user_id: int) -> str:
             raise NotConnected("gone")
 
-        monkeypatch.setattr(google_calendar, "token_for", _refuse)
+        monkeypatch.setattr(calendar_tool, "token_for", _refuse)
 
         assert await tools["read_events"](ctx, hours=24) == CONNECT

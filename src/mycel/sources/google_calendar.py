@@ -9,8 +9,7 @@ import httpx2
 
 from mycel.core.config import get_settings, team_zone
 from mycel.core.logging import get_logger
-from mycel.services.google_oauth import GoogleError, token_for
-from mycel.sources import google_client
+from mycel.sources import SourceError, google_client
 
 API = "https://www.googleapis.com/calendar/v3"
 #: The person's own calendar.
@@ -34,7 +33,7 @@ class Event:
     all_day: bool = False
 
 
-async def list_events(user_id: int, hours: int) -> list[Event]:
+async def list_events(token: str, hours: int) -> list[Event]:
     """Events from now to `hours` ahead, repeating events expanded."""
     now = datetime.now(UTC)
     params = {
@@ -45,12 +44,12 @@ async def list_events(user_id: int, hours: int) -> list[Event]:
         "maxResults": str(MAX_EVENTS),
         "timeZone": get_settings().timezone,
     }
-    payload = await _call(user_id, "GET", f"/calendars/{CALENDAR}/events", params=params)
+    payload = await _call(token, "GET", f"/calendars/{CALENDAR}/events", params=params)
     items = payload.get("items", [])
     return [_event(item) for item in items if isinstance(item, dict)]
 
 
-async def create_event(user_id: int, summary: str, starts_at: datetime, ends_at: datetime) -> Event:
+async def create_event(token: str, summary: str, starts_at: datetime, ends_at: datetime) -> Event:
     """Put one event on this person's calendar and return it, with its link."""
     zone = zone_name()
     body = {
@@ -58,7 +57,7 @@ async def create_event(user_id: int, summary: str, starts_at: datetime, ends_at:
         "start": {"dateTime": starts_at.isoformat(), "timeZone": zone},
         "end": {"dateTime": ends_at.isoformat(), "timeZone": zone},
     }
-    payload = await _call(user_id, "POST", f"/calendars/{CALENDAR}/events", json=body)
+    payload = await _call(token, "POST", f"/calendars/{CALENDAR}/events", json=body)
     return _event(payload)
 
 
@@ -72,23 +71,22 @@ def zone_name() -> str:
 
 
 async def _call(
-    user_id: int,
+    token: str,
     method: str,
     path: str,
     params: dict[str, str] | None = None,
     json: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """One authorized request; raises `GoogleError`, or `NotConnected` from `token_for`."""
-    token = await token_for(user_id)
+    """One authorized request; raises `SourceError`."""
     try:
         async with google_client(token) as client:
             response = await client.request(method, f"{API}{path}", params=params, json=json)
             response.raise_for_status()
             payload = response.json()
     except httpx2.HTTPError as exc:
-        raise GoogleError(f"the calendar could not be reached: {exc}") from exc
+        raise SourceError(f"the calendar could not be reached: {exc}") from exc
     if not isinstance(payload, dict):
-        raise GoogleError("the calendar answered with something unreadable")
+        raise SourceError("the calendar answered with something unreadable")
     return payload
 
 
@@ -115,7 +113,7 @@ def _when(edge: dict[str, Any]) -> datetime:
     """
     raw = edge.get("dateTime") or edge.get("date")
     if not isinstance(raw, str):
-        raise GoogleError("the calendar returned an event with no start")
+        raise SourceError("the calendar returned an event with no start")
     moment = datetime.fromisoformat(raw)
     if moment.tzinfo is None:
         # An all-day entry is a bare date: midnight in the team's zone.

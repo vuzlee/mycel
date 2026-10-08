@@ -13,8 +13,8 @@ from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
-from mycel.services.google_oauth import GoogleError, NotConnected
-from mycel.sources import google_calendar
+from mycel.services.google_oauth import GoogleError, NotConnected, token_for
+from mycel.sources import SourceError, google_calendar
 
 log = get_logger(__name__)
 
@@ -57,10 +57,10 @@ async def _read_events(ctx: RunContext[MycelDeps], hours: int = 12) -> str:
 
     capped = min(hours, MAX_HOURS)
     try:
-        events = await google_calendar.list_events(user_id, capped)
+        events = await google_calendar.list_events(await token_for(user_id), capped)
     except NotConnected:
         return CONNECT
-    except GoogleError as exc:
+    except (GoogleError, SourceError) as exc:
         raise ToolFailed("read_events", str(exc)) from exc
     return _render(events, asked=hours, capped=capped)
 
@@ -123,11 +123,11 @@ async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
 
     try:
         event = await google_calendar.create_event(
-            user_id, draft.summary, draft.starts_at, draft.ends_at
+            await token_for(user_id), draft.summary, draft.starts_at, draft.ends_at
         )
     except NotConnected:
         return CONNECT
-    except GoogleError as exc:
+    except (GoogleError, SourceError) as exc:
         raise ToolFailed("confirm_event", str(exc)) from exc
 
     log.info("calendar event created", extra={"user_id": user_id})

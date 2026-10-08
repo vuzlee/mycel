@@ -18,7 +18,7 @@ if [[ -n $squatter ]] && ! alive api; then
 fi
 
 spawn api       uv run uvicorn --factory mycel.api.app:create_app --port "$API_PORT"
-spawn worker    uv run python -m mycel.queue.consumer
+spawn worker    uv run python -m mycel.worker
 spawn ingest    "$ROOT/scripts/dev/ingest-loop.sh"
 spawn scheduler uv run python -m mycel.scheduler
 

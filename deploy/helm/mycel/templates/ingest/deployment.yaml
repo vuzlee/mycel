@@ -43,7 +43,7 @@ spec:
         - name: ingest
           image: {{ printf "%s:%s" .Values.ingest.image.repository (.Values.image.tag | default .Chart.AppVersion) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]
+          command: ["python", "-m", "mycel.worker", "--queue", "ingest"]
           ports:
             - name: metrics
               containerPort: {{ add (.Values.config.METRICS_PORT | int) 2 }}

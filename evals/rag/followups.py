@@ -14,8 +14,8 @@ from mycel.agents.agent.rewriter import Rewriter
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
-from mycel.domains.knowledge import search_text
 from mycel.infra.vectors import documents as vectors
+from mycel.services.knowledge import search_text
 
 HERE = Path(__file__).parent
 

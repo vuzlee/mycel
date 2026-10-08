@@ -60,7 +60,7 @@ services:
   worker:
     build: {context: ., target: app}
     profiles: [app]
-    command: python -m mycel.queue.consumer
+    command: python -m mycel.worker
     env_file: .env
     environment:
       <<: *stores

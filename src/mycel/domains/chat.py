@@ -16,7 +16,6 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.domains import knowledge
 from mycel.events.channel import EventChannel, NullChannel, RecordingChannel
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
@@ -29,6 +28,7 @@ from mycel.infra.redis import answers, budgets, citations, results
 from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
+from mycel.services import knowledge
 from mycel.services.auth import Principal
 from mycel.services.citations import check
 from mycel.services.enqueue import enqueue_chat

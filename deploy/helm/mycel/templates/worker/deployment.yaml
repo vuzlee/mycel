@@ -43,7 +43,7 @@ spec:
         - name: worker
           image: {{ include "mycel.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "-m", "mycel.queue.consumer"]
+          command: ["python", "-m", "mycel.worker"]
           ports:
             - name: metrics
               containerPort: {{ .Values.config.METRICS_PORT | int }}

@@ -10,11 +10,13 @@ from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.core.exceptions import AgentError
 from mycel.domains import chat as chat_domain
+from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import budgets, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, retry, topology
 from mycel.queue.job import Job, JobKind
 from mycel.services.auth import Principal
+from mycel.worker import HANDLER
 
 pytestmark = pytest.mark.anyio
 
@@ -159,7 +161,7 @@ class TestSuccess:
 
         message.ack = recording_ack  # type: ignore[method-assign]
 
-        await consumer.handle(message, FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(message, FakeExchange(), HANDLER)  # type: ignore[arg-type]
         assert seen == ["ran", "acked"]
 
     async def test_the_answer_is_stored_for_the_caller(
@@ -167,7 +169,7 @@ class TestSuccess:
     ) -> None:
         """The API has only a job id; without this the work happened for nobody."""
         _runs(monkeypatch, _ANSWER)
-        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
         assert store["job-1"]["status"] == "done"
 
 
@@ -181,7 +183,7 @@ class TestFailures:
         dlx = FakeExchange()
         message = _message()
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.RETRY_QUEUE]
         # Acked, not nacked: the copy carries the job onward, so the original must go.
@@ -192,7 +194,7 @@ class TestFailures:
     ) -> None:
         """A caller polling between attempts must not be told the job is dead."""
         _runs(monkeypatch, AgentError("provider returned 503"))
-        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
         assert store["job-1"]["status"] == "running"
 
     async def test_the_last_attempt_lands_in_the_dead_letter_queue(
@@ -202,7 +204,7 @@ class TestFailures:
         dlx = FakeExchange()
         message = _message(**{retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS - 1})
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert store["job-1"]["status"] == "failed"
@@ -214,7 +216,7 @@ class TestFailures:
         _runs(monkeypatch, BudgetExceeded("job-1", Decimal("0.51"), Decimal("0.50")))
         dlx = FakeExchange()
 
-        await consumer.handle(_message(), dlx)  # type: ignore[arg-type]
+        await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert store["job-1"]["status"] == "failed"
@@ -224,7 +226,7 @@ class TestFailures:
         dlx = FakeExchange()
         message = FakeMessage(b"{not json")
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert message.acked
@@ -236,7 +238,7 @@ class TestFailures:
         _runs(monkeypatch, ZeroDivisionError("oops"))
         dlx = FakeExchange()
 
-        await consumer.handle(_message(), dlx)  # type: ignore[arg-type]
+        await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
@@ -255,7 +257,7 @@ class TestFailures:
         )
         message = FakeMessage(job.model_dump_json().encode())
 
-        await consumer.handle(message, FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(message, FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert message.acked
         assert store["job-1"]["status"] == "done"
@@ -267,7 +269,7 @@ class TestFailures:
         job = Job(kind=JobKind.CHAT, payload={}, job_id="job-1")
         message = FakeMessage(job.model_dump_json().encode())
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
@@ -280,7 +282,7 @@ class TestAKindThisWorkerDoesNotKnow:
         dlx = FakeExchange()
         body = b'{"kind":"librarian","payload":{},"job_id":"job-1"}'
 
-        await consumer.handle(FakeMessage(body), dlx)  # type: ignore[arg-type]
+        await consumer.handle(FakeMessage(body), dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
@@ -353,7 +355,7 @@ class TestTheBudgetSurvivesARetry:
             return _ANSWER
 
         monkeypatch.setattr(chat_domain.runner, "run", fake_run)
-        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert seen == [Decimal("0.30")]
 
@@ -365,7 +367,7 @@ class TestTheBudgetSurvivesARetry:
             return _ANSWER
 
         monkeypatch.setattr(chat_domain.runner, "run", fake_run)
-        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.20")
 
@@ -379,7 +381,7 @@ class TestTheBudgetSurvivesARetry:
             raise AgentError("provider returned 503")
 
         monkeypatch.setattr(chat_domain.runner, "run", fake_run)
-        await consumer.handle(_message(), FakeExchange())  # type: ignore[arg-type]
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.40")
 
@@ -391,7 +393,7 @@ class TestTheBudgetSurvivesARetry:
         dlx = FakeExchange()
         message = _message()
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         # Straight to the dead-letter queue: another attempt spends money the job lacks.
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
@@ -404,7 +406,6 @@ class TestIngestJobs:
     async def test_a_failing_ingest_job_retries_on_the_ingest_queue(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
-        from mycel.domains import ingest as ingest_domain
 
         async def boom(job: Job) -> None:
             raise OSError("minio went away")
@@ -421,7 +422,7 @@ class TestIngestJobs:
         message.routing_key = topology.INGEST_QUEUE  # type: ignore[attr-defined]
         dlx = FakeExchange()
 
-        await consumer.handle(message, dlx)  # type: ignore[arg-type]
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.INGEST_RETRY_QUEUE]
         assert failed == []
