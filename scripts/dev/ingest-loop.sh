@@ -12,6 +12,12 @@ INGEST_CPUS=${INGEST_CPUS:-2}
 INGEST_MEM=${INGEST_MEM:-4G}
 export OMP_NUM_THREADS=$INGEST_CPUS MKL_NUM_THREADS=$INGEST_CPUS TORCH_NUM_THREADS=$INGEST_CPUS
 
+# Without docling every upload fails as `unreadable`, quietly. Stop here instead.
+if ! uv run python -c "import docling" 2>/dev/null; then
+  echo "!! docling is not installed; run \`uv sync\` (the ingest group is a default)" >&2
+  exit 1
+fi
+
 cap=()
 if systemd-run --user --scope --quiet true 2>/dev/null; then
   cap=(systemd-run --user --scope --quiet -p "MemoryMax=$INGEST_MEM" -p "CPUQuota=${INGEST_CPUS}00%")

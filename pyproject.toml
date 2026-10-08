@@ -60,15 +60,6 @@ dependencies = [
 ]
 
 # Only the ingest worker parses documents. docling pulls in torch, so the API image skips it.
-[project.optional-dependencies]
-ingest = [
-  "docling>=2.15",
-  # Named so the CPU index below applies: the default wheel pulls ~3 GB of CUDA libraries
-  # for a worker that runs on CPU.
-  "torch",
-  "torchvision",
-]
-
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]
 torchvision = [{ index = "pytorch-cpu" }]
@@ -93,6 +84,19 @@ dev = [
   # Coverage, so "is this tested" has an answer instead of an opinion.
   "pytest-cov>=5.0",
 ]
+# Document parsing, for the ingest worker only (~2.5 GB). A group rather than an extra, and
+# a default one: a plain `uv sync` on a dev machine then keeps it instead of removing it.
+# The `app` image leaves it out with `--no-default-groups`.
+ingest = [
+  "docling>=2.15",
+  # Named so the CPU index below applies: the default wheel pulls ~3 GB of CUDA libraries
+  # for a worker that runs on CPU.
+  "torch",
+  "torchvision",
+]
+
+[tool.uv]
+default-groups = ["dev", "ingest"]
 
 [build-system]
 requires = ["hatchling"]

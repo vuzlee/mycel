@@ -3059,15 +3059,6 @@ dependencies = [
     { name = "uvicorn" },
 ]
 
-[package.optional-dependencies]
-ingest = [
-    { name = "docling" },
-    { name = "torch", version = "2.14.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.14.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.29.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torchvision", version = "0.29.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "anyio" },
@@ -3079,6 +3070,13 @@ dev = [
     { name = "ruff" },
     { name = "types-pyyaml" },
 ]
+ingest = [
+    { name = "docling" },
+    { name = "torch", version = "2.14.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "torch", version = "2.14.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.29.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
+    { name = "torchvision", version = "0.29.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -3088,7 +3086,6 @@ requires-dist = [
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg", specifier = ">=0.29" },
     { name = "cryptography", specifier = ">=43.0" },
-    { name = "docling", marker = "extra == 'ingest'", specifier = ">=2.15" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "fastembed", specifier = ">=0.5" },
     { name = "filetype", specifier = ">=1.2" },
@@ -3104,11 +3101,8 @@ requires-dist = [
     { name = "qdrant-client", specifier = ">=1.12" },
     { name = "redis", specifier = ">=5.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
-    { name = "torch", marker = "extra == 'ingest'", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "torchvision", marker = "extra == 'ingest'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["ingest"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3120,6 +3114,11 @@ dev = [
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "ruff", specifier = ">=0.6" },
     { name = "types-pyyaml", specifier = ">=6.0" },
+]
+ingest = [
+    { name = "docling", specifier = ">=2.15" },
+    { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torchvision", index = "https://download.pytorch.org/whl/cpu" },
 ]
 
 [[package]]

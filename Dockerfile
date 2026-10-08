@@ -15,7 +15,7 @@ WORKDIR /app
 
 # Install dependencies first, copy source after - a code change skips the reinstall
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-dev --no-install-project
+RUN uv sync --locked --no-default-groups --no-install-project
 
 COPY src/ src/
 COPY config/ config/
@@ -25,7 +25,7 @@ COPY config/ config/
 # than a missing one.
 COPY migrations/ migrations/
 COPY alembic.ini ./
-RUN uv sync --locked --no-dev
+RUN uv sync --locked --no-default-groups
 
 # Last: only the built assets cross over, and only `app.py::WEB_DIST` looks for them.
 COPY --from=web /web/dist/ web/dist/
@@ -43,10 +43,10 @@ RUN apt-get update \
 COPY --from=ghcr.io/astral-sh/uv:0.8.0 /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-dev --extra ingest --no-install-project
+RUN uv sync --locked --no-default-groups --group ingest --no-install-project
 COPY src/ src/
 COPY config/ config/
-RUN uv sync --locked --no-dev --extra ingest
+RUN uv sync --locked --no-default-groups --group ingest
 ENV PATH="/app/.venv/bin:$PATH"
 RUN docling-tools models download layout tableformer
 CMD ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]
