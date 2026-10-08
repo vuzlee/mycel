@@ -11,7 +11,7 @@ from mycel.sources import jira
 
 
 @dataclass(frozen=True, slots=True)
-class Asked:
+class JiraWriteRequest:
     """What the model passed to `draft_jira_write`, before anything is looked up."""
 
     issue_key: str | None
@@ -25,19 +25,23 @@ class Asked:
 
 
 async def resolve(
-    auth: jira.Auth, user_id: int, kind: str, asked: Asked
+    auth: jira.Auth, user_id: int, kind: str, asked: JiraWriteRequest
 ) -> tuple[str, dict[str, Any]]:
     """Resolve the model's arguments into the payload and its read-back sentence."""
     return await _RESOLVERS[kind](auth, user_id, asked)
 
 
-async def _resolve_comment(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+async def _resolve_comment(
+    auth: jira.Auth, user_id: int, a: JiraWriteRequest
+) -> tuple[str, dict[str, Any]]:
     key = _required(a.issue_key, "issue_key", "comment")
     body = _required(a.text, "text", "comment")
     return f"Comment on {key}: {body!r}", {"issue_key": key, "text": body}
 
 
-async def _resolve_move(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+async def _resolve_move(
+    auth: jira.Auth, user_id: int, a: JiraWriteRequest
+) -> tuple[str, dict[str, Any]]:
     key = _required(a.issue_key, "issue_key", "move")
     wanted = _required(a.to_status, "to_status", "move").strip()
     # Checked before the person agrees; the allowed list tells the model what to use.
@@ -50,7 +54,9 @@ async def _resolve_move(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, d
     return f"Move {key} to {wanted}", {"issue_key": key, "to_status": wanted}
 
 
-async def _resolve_issue(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+async def _resolve_issue(
+    auth: jira.Auth, user_id: int, a: JiraWriteRequest
+) -> tuple[str, dict[str, Any]]:
     proj = _required(a.project, "project", "issue").upper()
     title = _required(a.summary, "summary", "issue")
     who = "nobody"
@@ -69,7 +75,9 @@ async def _resolve_issue(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, 
     }
 
 
-async def _resolve_project(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
+async def _resolve_project(
+    auth: jira.Auth, user_id: int, a: JiraWriteRequest
+) -> tuple[str, dict[str, Any]]:
     key = _required(a.project, "project", "project").upper()
     name = _required(a.project_name or a.summary, "project_name", "project")
     # The lead is whoever consented, never someone searched for.

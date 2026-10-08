@@ -128,7 +128,7 @@ class DashboardResponse(BaseModel):
 
 
 @router.get("/{project}", response_model=DashboardResponse)
-async def read_dashboard(
+async def get_dashboard_view(
     project: str,
     user: CurrentUser,
     days: int = Query(default=DEFAULT_DAYS, ge=1, le=MAX_DAYS),

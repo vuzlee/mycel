@@ -9,7 +9,7 @@ import httpx2
 from mycel.core.logging import get_logger
 from mycel.sources import NotWritten, SourceError
 
-HTTP_TIMEOUT_S = 30.0
+HTTP_TIMEOUT_SECONDS = 30.0
 
 #: Retries after a 429; `Retry-After` is honored, else exponential back-off.
 RETRIES = 3
@@ -56,10 +56,10 @@ async def request(
 
     for attempt in range(RETRIES):
         try:
-            async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S, headers=headers) as client:
+            async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS, headers=headers) as client:
                 response = await client.request(method, url, json=body, params=params)
         except httpx2.TimeoutException as exc:
-            raise SourceError(f"jira: {path} did not respond in {HTTP_TIMEOUT_S}s") from exc
+            raise SourceError(f"jira: {path} did not respond in {HTTP_TIMEOUT_SECONDS}s") from exc
         except httpx2.HTTPError as exc:
             # A connection never made cannot have written anything.
             raise NotWritten(f"jira: could not reach {url}: {exc}") from exc

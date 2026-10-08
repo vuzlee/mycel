@@ -131,7 +131,7 @@ class TestTheStateIsSpentOnce:
         """An abandoned consent round must disappear without anybody tidying up."""
         await oauth.consent_url(7)
 
-        assert list(redis.ttls.values()) == [shared_oauth.STATE_TTL_S]
+        assert list(redis.ttls.values()) == [shared_oauth.STATE_TTL_SECONDS]
 
 
 class TestExchangingTheCode:

@@ -25,7 +25,7 @@ class _Connected(Protocol):
     def user_id(self) -> int: ...
 
 
-class GoogleStatus(BaseModel):
+class GoogleConnectionResponse(BaseModel):
     """Whether a Google account is attached, and which one."""
 
     configured: bool
@@ -33,19 +33,21 @@ class GoogleStatus(BaseModel):
     connected_at: str | None = None
 
 
-@router.get("/google", response_model=GoogleStatus)
-async def google_status(user: CurrentUser) -> GoogleStatus:
+@router.get("/google", response_model=GoogleConnectionResponse)
+async def get_google_connection(user: CurrentUser) -> GoogleConnectionResponse:
     """Which Google account this person has connected, if any."""
     if not google_oauth.configured():
-        return GoogleStatus(configured=False)
+        return GoogleConnectionResponse(configured=False)
     row = await google_oauth.connected(user.id)
     if row is None:
-        return GoogleStatus(configured=True)
-    return GoogleStatus(configured=True, email=row.email, connected_at=row.connected_at.isoformat())
+        return GoogleConnectionResponse(configured=True)
+    return GoogleConnectionResponse(
+        configured=True, email=row.email, connected_at=row.connected_at.isoformat()
+    )
 
 
 @router.get("/google/start")
-async def google_start(
+async def start_google_connection(
     user: CurrentUser,
 ) -> RedirectResponse:
     """Send the browser to Google's consent screen."""
@@ -57,7 +59,7 @@ async def google_start(
 
 
 @router.get("/google/callback")
-async def google_callback(
+async def finish_google_connection(
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
@@ -67,13 +69,13 @@ async def google_callback(
 
 
 @router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
-async def google_disconnect(user: CurrentUser) -> None:
+async def delete_google_connection(user: CurrentUser) -> None:
     """Disconnect. Google is asked to forget the grant, and the row goes either way."""
     removed = await google_oauth.disconnect(user.id)
     log.info("google account disconnected", extra={"user_id": user.id, "removed": removed})
 
 
-class JiraStatus(BaseModel):
+class JiraConnectionResponse(BaseModel):
     """Whether a Jira account is attached, which one, and the projects it opens here."""
 
     configured: bool
@@ -82,15 +84,15 @@ class JiraStatus(BaseModel):
     projects: list[str] = []
 
 
-@router.get("/jira", response_model=JiraStatus)
-async def jira_status(user: CurrentUser) -> JiraStatus:
+@router.get("/jira", response_model=JiraConnectionResponse)
+async def get_jira_connection(user: CurrentUser) -> JiraConnectionResponse:
     """Which Jira account this person has connected, if any, and what it lets them read."""
     if not jira_oauth.configured():
-        return JiraStatus(configured=False)
+        return JiraConnectionResponse(configured=False)
     row = await jira_oauth.connected(user.id)
     if row is None:
-        return JiraStatus(configured=True)
-    return JiraStatus(
+        return JiraConnectionResponse(configured=True)
+    return JiraConnectionResponse(
         configured=True,
         display_name=row.display_name,
         connected_at=row.connected_at.isoformat(),
@@ -99,7 +101,7 @@ async def jira_status(user: CurrentUser) -> JiraStatus:
 
 
 @router.get("/jira/start")
-async def jira_start(user: CurrentUser) -> RedirectResponse:
+async def start_jira_connection(user: CurrentUser) -> RedirectResponse:
     """Send the browser to Atlassian's consent screen."""
     if not jira_oauth.configured():
         raise HTTPException(
@@ -109,7 +111,7 @@ async def jira_start(user: CurrentUser) -> RedirectResponse:
 
 
 @router.get("/jira/callback")
-async def jira_callback(
+async def finish_jira_connection(
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
@@ -122,7 +124,7 @@ async def jira_callback(
 
 
 @router.delete("/jira", status_code=status.HTTP_204_NO_CONTENT)
-async def jira_disconnect(user: CurrentUser) -> None:
+async def delete_jira_connection(user: CurrentUser) -> None:
     """Disconnect."""
     removed = await jira_oauth.disconnect(user.id)
     log.info("jira account disconnected", extra={"user_id": user.id, "removed": removed})

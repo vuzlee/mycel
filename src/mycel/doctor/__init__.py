@@ -5,7 +5,7 @@ import asyncio
 from mycel.core.config import Settings
 from mycel.doctor.declared import declared
 from mycel.doctor.probes import (
-    REMOTE_TIMEOUT,
+    REMOTE_TIMEOUT_SECONDS,
     _gateway,
     _jira,
     _langfuse,
@@ -43,7 +43,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
             missing=None
             if (env.jira_service_token and env.jira_cloud_id)
             else "no service account — set JIRA_SERVICE_TOKEN and JIRA_CLOUD_ID",
-            timeout=REMOTE_TIMEOUT,
+            timeout=REMOTE_TIMEOUT_SECONDS,
         ),
         _probe(
             "qdrant",
@@ -55,13 +55,13 @@ async def run(settings: Settings | None = None) -> list[Check]:
         ),
         _probe(
             "minio",
-            "NOTEBOOKS",
+            "DOCUMENTS",
             lambda: _minio(env),
             missing=None
             if object_store.configured(env)
             else "not configured — documents cannot be uploaded",
         ),
-        _probe("ingest", "NOTEBOOKS", lambda: _parser(env), missing=None),
+        _probe("ingest", "DOCUMENTS", lambda: _parser(env), missing=None),
         _probe(
             "langfuse",
             "OBSERVABILITY",

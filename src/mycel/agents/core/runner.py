@@ -49,7 +49,7 @@ async def run(
 
     def charge(usage: "RunUsage") -> None:
         nonlocal overdrawn
-        overdrawn = _charge(deps, cfg, usage)
+        overdrawn = _record_usage(deps, cfg, usage)
 
     output = await _iterate(agent, prompt, deps, cfg, deps.budget.limits(cfg), None, None, charge)
     # Raised after the run, so a bookkeeping error never hides what stopped it.
@@ -58,7 +58,7 @@ async def run(
     return output
 
 
-async def _drive(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter) -> None:
+async def _iterate_nodes(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter) -> None:
     """Walk one agent loop, streaming model requests where the model supports it."""
     async for node in agent_run:
         if Agent.is_model_request_node(node) and _can_stream(agent_run.ctx.deps.model):
@@ -78,7 +78,9 @@ def _name_of(agent: "Agent[MycelDeps, OutputT]") -> str:
     return agent.name or "agent"
 
 
-def _charge(deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage") -> BudgetExceeded | None:
+def _record_usage(
+    deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage"
+) -> BudgetExceeded | None:
     """Record one run's spend, returning the overdraft rather than raising it."""
     # `usage` already includes delegated tokens, so count only here.
     tokens_spent_total.labels(model=cfg.model_spec, direction="input").inc(usage.input_tokens)
@@ -132,7 +134,7 @@ async def _iterate(
         ) as agent_run:
             try:
                 await emitter.emit(RUN_STARTED, prompt=prompt)
-                await _drive(agent_run, emitter)
+                await _iterate_nodes(agent_run, emitter)
                 await emitter.emit(RUN_FINISHED)
             finally:
                 if on_usage is not None:

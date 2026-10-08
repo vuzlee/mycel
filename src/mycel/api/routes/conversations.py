@@ -39,7 +39,7 @@ class TurnResponse(BaseModel):
 
 
 @router.get("/conversations", response_model=list[ConversationResponse])
-async def read_conversations(
+async def list_conversations(
     user: CurrentUser,
     limit: int = Query(default=HISTORY_LIMIT, ge=1, le=HISTORY_LIMIT),
 ) -> list[ConversationResponse]:
@@ -60,7 +60,7 @@ async def read_conversations(
 
 
 @router.get("/conversations/{conversation_id}/turns", response_model=list[TurnResponse])
-async def read_turns(conversation_id: int, user: CurrentUser) -> list[TurnResponse]:
+async def list_turns(conversation_id: int, user: CurrentUser) -> list[TurnResponse]:
     """Every run in one conversation, oldest first."""
     return [
         TurnResponse(

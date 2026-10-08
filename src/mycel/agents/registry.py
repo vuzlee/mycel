@@ -3,15 +3,15 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from mycel.agents.agent.analyst import Analyst
-from mycel.agents.agent.orchestrator import Orchestrator
-from mycel.agents.agent.researcher import Researcher
-from mycel.agents.agent.rewriter import Rewriter
-from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.specialists.analyst import Analyst
+from mycel.agents.specialists.orchestrator import Orchestrator
+from mycel.agents.specialists.researcher import Researcher
+from mycel.agents.specialists.rewriter import Rewriter
+from mycel.agents.specialists.summarizer import Summarizer
 from mycel.core.exceptions import ConfigError
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget

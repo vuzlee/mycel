@@ -9,11 +9,11 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.schemas import ProgressSummary
+from mycel.agents.specialists.summarizer import Summarizer
 from mycel.etl.normalize import JIRA
 from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow
 from mycel.infra.postgres.repositories.gold_stats import AssigneeLoad, DayEffort

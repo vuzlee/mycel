@@ -237,7 +237,7 @@ async def _whoami(access: str, cloud_id: str) -> tuple[str, str]:
 async def _api(access: str, url: str) -> Any:
     """One authorized GET during the consent round, before any account row exists."""
     try:
-        async with httpx2.AsyncClient(timeout=oauth.HTTP_TIMEOUT_S) as client:
+        async with httpx2.AsyncClient(timeout=oauth.HTTP_TIMEOUT_SECONDS) as client:
             response = await client.get(
                 url, headers={"authorization": f"Bearer {access}", "accept": "application/json"}
             )

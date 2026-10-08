@@ -160,7 +160,7 @@ class TestTheStateIsSpentOnce:
     async def test_the_state_expires_on_its_own(self, configured: None, redis: FakeRedis) -> None:
         await oauth.consent_url(7)
 
-        assert list(redis.ttls.values()) == [shared_oauth.STATE_TTL_S]
+        assert list(redis.ttls.values()) == [shared_oauth.STATE_TTL_SECONDS]
 
 
 class TestExchangingTheCode:

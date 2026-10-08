@@ -21,3 +21,8 @@ class MycelDeps:
 
     #: Chips picked this turn. `None` keeps every tool; an empty set keeps none.
     chips: "frozenset[Chip] | None" = None
+
+    @property
+    def user_id(self) -> int | None:
+        """Who the run acts for, or `None` when nobody is behind it."""
+        return self.principal.id if self.principal else None

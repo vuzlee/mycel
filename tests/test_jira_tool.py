@@ -142,7 +142,7 @@ class TestDraftingWritesNothing:
 
         await tools["draft_jira_write"](ctx, kind="comment", issue_key="MYC-12", text="done")
 
-        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_S]
+        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_SECONDS]
 
 
 class TestWhatTheDraftReadsBack:
@@ -331,7 +331,7 @@ class TestWhatAFailedWriteCostsThePerson:
         with pytest.raises(ToolFailed):
             await tools["confirm_jira_write"](ctx, draft_id=draft_id)
 
-        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_S]
+        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_SECONDS]
 
 
 class TestWhenNobodyIsConnected:

@@ -9,11 +9,11 @@ from typing import Any
 from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import retrieval
 from evals.rag.metrics import normalize
-from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.registry import build_deps
+from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.core.config import get_settings
 from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors import documents as vectors

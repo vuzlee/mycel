@@ -10,14 +10,14 @@ from typing import Any, cast
 from pydantic_ai import RunContext
 from pydantic_ai.toolsets import FunctionToolset
 
-from mycel.agents.agent.analyst import Analyst
-from mycel.agents.agent.researcher import Researcher
-from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import AgentError, ToolFailed, TransportError
+from mycel.agents.specialists.analyst import Analyst
+from mycel.agents.specialists.researcher import Researcher
+from mycel.agents.specialists.summarizer import Summarizer
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.session import session_scope
 from mycel.services.analyze import render
@@ -63,7 +63,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             project: The project key, e.g. "PROJ".
             days: How far back the window reaches. Defaults to a week.
         """
-        await _must_read(ctx, project)
+        await _require_readable(ctx, project)
         until = datetime.now(UTC)
         async with session_scope() as session:
             window = await gather_progress(session, project, until - timedelta(days=days), until)
@@ -72,7 +72,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
     return toolset
 
 
-async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
+async def _require_readable(ctx: RunContext[MycelDeps], project: str) -> None:
     """Raise `ToolFailed` unless the asker may read `project`; no principal reads nothing."""
     try:
         await require(ctx.deps.principal, project)

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from mycel.agents.agent.rewriter import Rewriter
+from mycel.agents.specialists.rewriter import Rewriter
 from mycel.domains import chat as domain
 from mycel.queue.job import Job, JobKind
 from mycel.services import knowledge

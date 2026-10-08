@@ -104,37 +104,41 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
     @toolset.tool(name="percent_change")
     def _percent_change(ctx: RunContext[MycelDeps], previous: float, current: float) -> float:
         """Percentage change from a previous value to a current one."""
-        return _guarded(ctx, "percent_change", percent_change, previous=previous, current=current)
+        return _call_guarded(
+            ctx, "percent_change", percent_change, previous=previous, current=current
+        )
 
     @toolset.tool(name="absolute_change")
     def _absolute_change(ctx: RunContext[MycelDeps], previous: float, current: float) -> float:
         """Plain difference between two values. Use when percent change is undefined."""
-        return _guarded(ctx, "absolute_change", absolute_change, previous=previous, current=current)
+        return _call_guarded(
+            ctx, "absolute_change", absolute_change, previous=previous, current=current
+        )
 
     @toolset.tool(name="percentage")
     def _percentage(ctx: RunContext[MycelDeps], part: float, whole: float) -> float:
         """What percentage one value is of another."""
-        return _guarded(ctx, "percentage", percentage, part=part, whole=whole)
+        return _call_guarded(ctx, "percentage", percentage, part=part, whole=whole)
 
     @toolset.tool(name="cagr")
     def _cagr(ctx: RunContext[MycelDeps], begin: float, end: float, periods: float) -> float:
         """Compound annual growth rate, in percent, over a number of periods."""
-        return _guarded(ctx, "cagr", cagr, begin=begin, end=end, periods=periods)
+        return _call_guarded(ctx, "cagr", cagr, begin=begin, end=end, periods=periods)
 
     @toolset.tool(name="share_of_total")
     def _share_of_total(ctx: RunContext[MycelDeps], values: dict[str, float]) -> dict[str, float]:
         """Each named value as a percentage of their total."""
-        return _guarded(ctx, "share_of_total", share_of_total, values=values)
+        return _call_guarded(ctx, "share_of_total", share_of_total, values=values)
 
     @toolset.tool(name="summary_stats")
     def _summary_stats(ctx: RunContext[MycelDeps], values: list[float]) -> SummaryStats:
         """Count, total, mean, median, spread and range of a series, in one call."""
-        return _guarded(ctx, "summary_stats", summary_stats, values=values)
+        return _call_guarded(ctx, "summary_stats", summary_stats, values=values)
 
     return toolset
 
 
-def _guarded(ctx: RunContext[MycelDeps], name: str, fn: Callable[..., T], **kwargs: Any) -> T:
+def _call_guarded(ctx: RunContext[MycelDeps], name: str, fn: Callable[..., T], **kwargs: Any) -> T:
     """Guard against repetition, call the function, turn refusals into re-prompts."""
     guard_repeat(ctx, name, **kwargs)
     try:

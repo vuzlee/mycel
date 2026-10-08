@@ -51,7 +51,7 @@ async def _read_events(ctx: RunContext[MycelDeps], hours: int = 12) -> str:
     if hours < 1:
         raise ModelRetry("read_events needs a window of at least one hour.")
 
-    user_id = _whose(ctx.deps)
+    user_id = ctx.deps.user_id
     if user_id is None:
         return CONNECT
 
@@ -85,7 +85,7 @@ async def _draft_event(
         summary=summary,
         starts_at=starts_at,
     )
-    user_id = _whose(ctx.deps)
+    user_id = ctx.deps.user_id
     if user_id is None:
         return CONNECT
 
@@ -96,7 +96,7 @@ async def _draft_event(
 
     draft = await drafts.put(user_id, summary.strip(), starts, ends)
     return (
-        f"Not booked yet. {_spell(starts)} to {ends.strftime('%H:%M')}, "
+        f"Not booked yet. {_format_when(starts)} to {ends.strftime('%H:%M')}, "
         f"{minutes} minutes — {draft.summary}.\n"
         f"Read that back and ask whether it is right. To book it, call confirm_event "
         f"with draft_id={draft.draft_id}."
@@ -109,7 +109,7 @@ async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
     Args:
         draft_id: The id `draft_event` returned for the event they agreed to.
     """
-    user_id = _whose(ctx.deps)
+    user_id = ctx.deps.user_id
     if user_id is None:
         return CONNECT
 
@@ -131,12 +131,7 @@ async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
         raise ToolFailed("confirm_event", str(exc)) from exc
 
     log.info("calendar event created", extra={"user_id": user_id})
-    return f"Booked: {_spell(event.starts_at)} — {event.summary}. {event.link}"
-
-
-def _whose(deps: MycelDeps) -> int | None:
-    """Whose calendar this run may touch, or `None` for a run nobody is behind."""
-    return deps.principal.id if deps.principal else None
+    return f"Booked: {_format_when(event.starts_at)} — {event.summary}. {event.link}"
 
 
 def _parse(starts_at: str) -> datetime:
@@ -161,7 +156,7 @@ def _parse(starts_at: str) -> datetime:
     return moment
 
 
-def _spell(moment: datetime) -> str:
+def _format_when(moment: datetime) -> str:
     """A time in words, so a wrong day is easy for the person to catch."""
     return moment.strftime("%A %d %B %Y, %H:%M")
 

@@ -9,7 +9,7 @@ from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
-from mycel.agents.tools.jira_writes import Asked, apply, resolve
+from mycel.agents.tools.jira_writes import JiraWriteRequest, apply, resolve
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
@@ -106,7 +106,7 @@ async def _draft_jira_write(
         issue_key=issue_key,
         summary=summary,
     )
-    user_id = _whose(ctx.deps)
+    user_id = ctx.deps.user_id
     if user_id is None:
         return CONNECT
     if kind not in KINDS:
@@ -117,7 +117,7 @@ async def _draft_jira_write(
         return CONNECT
 
     try:
-        asked = Asked(
+        asked = JiraWriteRequest(
             issue_key=issue_key,
             text=text,
             to_status=to_status,
@@ -145,7 +145,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
     Args:
         draft_id: The id `draft_jira_write` returned for the change they agreed to.
     """
-    user_id = _whose(ctx.deps)
+    user_id = ctx.deps.user_id
     if user_id is None:
         return CONNECT
 
@@ -190,13 +190,9 @@ def offered() -> bool:
     return configured() and get_settings().jira_write_enabled
 
 
-def _whose(deps: MycelDeps) -> int | None:
-    return deps.principal.id if deps.principal else None
-
-
 async def _auth(deps: MycelDeps) -> jira.Auth | None:
     """The asker's own grant, or `None` when they have not connected one."""
-    user_id = _whose(deps)
+    user_id = deps.user_id
     if user_id is None:
         return None
     try:

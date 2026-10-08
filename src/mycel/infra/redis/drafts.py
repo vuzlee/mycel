@@ -10,7 +10,7 @@ from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
 
 #: Long enough to confirm, short enough that an abandoned draft is gone.
-DRAFT_TTL_S = 600
+DRAFT_TTL_SECONDS = 600
 
 
 class Draft(BaseModel):
@@ -34,7 +34,9 @@ async def put(user_id: int, summary: str, starts_at: datetime, ends_at: datetime
         starts_at=starts_at,
         ends_at=ends_at,
     )
-    await _kv.put(await get_client(), _key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_S)
+    await _kv.put(
+        await get_client(), _key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_SECONDS
+    )
     return draft
 
 
@@ -87,7 +89,7 @@ async def take_jira(draft_id: str, user_id: int) -> JiraDraft | None:
 async def restore_jira(draft: JiraDraft) -> None:
     """Put a spent draft back under its own id, for a write that cannot have landed."""
     await _kv.put(
-        await get_client(), _jira_key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_S
+        await get_client(), _jira_key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_SECONDS
     )
 
 

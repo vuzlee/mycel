@@ -16,7 +16,7 @@ from mycel.services import documents as service
 router = APIRouter(tags=["documents"])
 
 
-class DocumentOut(BaseModel):
+class DocumentResponse(BaseModel):
     id: int
     filename: str
     mime: str
@@ -27,18 +27,18 @@ class DocumentOut(BaseModel):
     pages: int | None
 
 
-class DocumentPatch(BaseModel):
+class DocumentUpdateRequest(BaseModel):
     """One change at a time: switch it on or off, or rename it."""
 
     enabled: bool | None = None
     filename: str | None = Field(default=None, min_length=1, max_length=200)
 
 
-class SourceOut(BaseModel):
+class SourceResponse(BaseModel):
     url: str
 
 
-class ChunkOut(BaseModel):
+class ChunkResponse(BaseModel):
     id: int
     document_id: int
     filename: str
@@ -47,8 +47,8 @@ class ChunkOut(BaseModel):
     page_start: int | None
 
 
-def _document(row: DocumentRow) -> DocumentOut:
-    return DocumentOut(
+def _document(row: DocumentRow) -> DocumentResponse:
+    return DocumentResponse(
         id=row.id,
         filename=row.filename,
         mime=row.mime,
@@ -64,8 +64,10 @@ def _refused(exc: service.DocumentError) -> HTTPException:
     return HTTPException(exc.status, exc.message)
 
 
-@router.post("/documents", response_model=DocumentOut, status_code=202)
-async def upload_document(user: CurrentUser, file: Annotated[UploadFile, File()]) -> DocumentOut:
+@router.post("/documents", response_model=DocumentResponse, status_code=202)
+async def upload_document(
+    user: CurrentUser, file: Annotated[UploadFile, File()]
+) -> DocumentResponse:
     data = await file.read(service.max_bytes() + 1)
     try:
         doc = await service.upload(user.id, service.Upload(file.filename or "document", data))
@@ -74,13 +76,13 @@ async def upload_document(user: CurrentUser, file: Annotated[UploadFile, File()]
     return _document(doc)
 
 
-@router.get("/documents", response_model=list[DocumentOut])
-async def list_documents(user: CurrentUser) -> list[DocumentOut]:
+@router.get("/documents", response_model=list[DocumentResponse])
+async def list_documents(user: CurrentUser) -> list[DocumentResponse]:
     return [_document(d) for d in await service.list_documents(user.id)]
 
 
 @router.get("/documents/status")
-async def document_status(request: Request, user: CurrentUser) -> StreamingResponse:
+async def stream_document_status(request: Request, user: CurrentUser) -> StreamingResponse:
     """The user's document list, sent again whenever one of them changes state (SSE)."""
     return StreamingResponse(
         _status_frames(request, user.id),
@@ -105,8 +107,10 @@ async def _status_frames(request: Request, user_id: int) -> AsyncIterator[str]:
         await listener.close()
 
 
-@router.patch("/documents/{document_id}", response_model=DocumentOut)
-async def patch_document(document_id: int, body: DocumentPatch, user: CurrentUser) -> DocumentOut:
+@router.patch("/documents/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: int, body: DocumentUpdateRequest, user: CurrentUser
+) -> DocumentResponse:
     try:
         doc = None
         if body.filename is not None:
@@ -129,21 +133,21 @@ async def delete_document(document_id: int, user: CurrentUser) -> Response:
     return Response(status_code=202)
 
 
-@router.get("/documents/{document_id}/source", response_model=SourceOut)
-async def document_source(document_id: int, user: CurrentUser) -> SourceOut:
+@router.get("/documents/{document_id}/source", response_model=SourceResponse)
+async def get_document_source(document_id: int, user: CurrentUser) -> SourceResponse:
     try:
-        return SourceOut(url=await service.source_url(user.id, document_id))
+        return SourceResponse(url=await service.source_url(user.id, document_id))
     except service.DocumentError as exc:
         raise _refused(exc) from exc
 
 
-@router.get("/chunks/{chunk_id}", response_model=ChunkOut)
-async def read_chunk(chunk_id: int, user: CurrentUser) -> ChunkOut:
+@router.get("/chunks/{chunk_id}", response_model=ChunkResponse)
+async def get_chunk(chunk_id: int, user: CurrentUser) -> ChunkResponse:
     try:
         c = await service.chunk(user.id, chunk_id)
     except service.DocumentError as exc:
         raise _refused(exc) from exc
-    return ChunkOut(
+    return ChunkResponse(
         id=c.id,
         document_id=c.document_id,
         filename=c.filename,

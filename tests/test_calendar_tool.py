@@ -128,7 +128,7 @@ class TestDraftingWritesNothing:
         """An abandoned draft must disappear on its own — there is nothing to clean up."""
         await tools["draft_event"](ctx, summary="review", starts_at=_soon())
 
-        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_S]
+        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_SECONDS]
 
 
 class TestWhatDraftingRefuses:

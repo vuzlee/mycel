@@ -10,7 +10,7 @@ from mycel.core.logging import get_logger
 
 log = get_logger(__name__)
 
-TIMEOUT_S = 20.0
+TIMEOUT_SECONDS = 20.0
 
 
 class MailError(MycelError):
@@ -42,7 +42,7 @@ def _send(to: str, subject: str, body: str) -> None:
 
     try:
         host = settings.smtp_host or ""
-        with smtplib.SMTP(host, settings.smtp_port, timeout=TIMEOUT_S) as server:
+        with smtplib.SMTP(host, settings.smtp_port, timeout=TIMEOUT_SECONDS) as server:
             if settings.smtp_starttls:
                 server.starttls()
             if settings.smtp_username and settings.smtp_password:

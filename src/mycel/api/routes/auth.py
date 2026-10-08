@@ -130,7 +130,7 @@ async def reset_password(
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(user: CurrentUser) -> UserResponse:
+async def get_me(user: CurrentUser) -> UserResponse:
     """Who the cookie belongs to. The call the UI makes on load to decide what to show."""
     return UserResponse(id=user.id, email=user.email)
 

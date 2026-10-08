@@ -51,7 +51,7 @@ async def request_chat(
         job_id = await enqueue_chat(
             question,
             conversation.id,
-            _recall(turns),
+            _history_text(turns),
             user_id=user_id,
             chips=chips,
             previous=previous,
@@ -88,7 +88,7 @@ async def _conversation_of(
     return conversation
 
 
-def _recall(turns: list[TurnRow]) -> str:
+def _history_text(turns: list[TurnRow]) -> str:
     """Earlier turns of a conversation, as text for the prompt."""
     done = [turn for turn in turns if turn.status == "done" and turn.answer]
     if not done:

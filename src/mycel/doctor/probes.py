@@ -9,13 +9,13 @@ from mycel.core.config import Settings
 from mycel.doctor.report import Check, State
 
 #: Long enough for a local container, short enough that a wrong host does not look like a hang.
-TIMEOUT = 3.0
+TIMEOUT_SECONDS = 3.0
 
 #: For anything across the internet.
-REMOTE_TIMEOUT = 15.0
+REMOTE_TIMEOUT_SECONDS = 15.0
 
 #: One HTTP call to the gateway or a self-hosted model, on this machine or the LAN.
-GATEWAY_TIMEOUT = 5.0
+GATEWAY_TIMEOUT_SECONDS = 5.0
 
 
 async def _probe(
@@ -24,7 +24,7 @@ async def _probe(
     probe: Callable[[], Awaitable[str]],
     *,
     missing: str | None,
-    timeout: float = TIMEOUT,
+    timeout: float = TIMEOUT_SECONDS,
 ) -> Check:
     """Run one probe, or report why it was not run."""
     if missing is not None:
@@ -71,7 +71,7 @@ async def _postgres(settings: Settings) -> str:
 async def _rabbitmq(settings: Settings) -> str:
     import aio_pika
 
-    connection = await aio_pika.connect_robust(settings.rabbitmq_url, timeout=TIMEOUT)
+    connection = await aio_pika.connect_robust(settings.rabbitmq_url, timeout=TIMEOUT_SECONDS)
     await connection.close()
     return "connected"
 
@@ -178,7 +178,7 @@ async def _upstreams(settings: Settings) -> str:
         return "no self-hosted upstream"
 
     down: list[str] = []
-    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT) as client:
+    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT_SECONDS) as client:
         for base, model in sorted(bases.items(), key=lambda kv: kv[1]):
             # Any HTTP answer, 401 included, means the host is up.
             try:
@@ -194,7 +194,7 @@ async def _ask_gateway(settings: Settings, path: str) -> dict[str, Any]:
     import httpx2
 
     key = settings.litellm_api_key.get_secret_value() if settings.litellm_api_key else ""
-    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT) as client:
+    async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT_SECONDS) as client:
         response = await client.get(
             f"{settings.litellm_base_url.rstrip('/')}{path}",
             headers={"authorization": f"Bearer {key}"},

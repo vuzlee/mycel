@@ -6,14 +6,14 @@ from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
-from mycel.agents.agent.orchestrator import Orchestrator
-from mycel.agents.agent.rewriter import Rewriter
 from mycel.agents.core import runner
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
+from mycel.agents.specialists.orchestrator import Orchestrator
+from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.events.channel import EventChannel, NullChannel, RecordingChannel
@@ -81,7 +81,7 @@ async def run(job: Job) -> None:
             await answers.put(
                 principal.id,
                 found.version,
-                _writer(settings),
+                _answer_cache_writer(settings),
                 found.query,
                 {"answer": answer, "sources": sources},
             )
@@ -132,7 +132,9 @@ async def _answer_without_model(
         text, sources = knowledge.NOT_FOUND, []
     else:
         settings = AgentSettings.from_config(Orchestrator.name)
-        cached = await answers.get(user_id, found.version, _writer(settings), found.query)
+        cached = await answers.get(
+            user_id, found.version, _answer_cache_writer(settings), found.query
+        )
         if cached is None:
             return False
         text, sources = cached["answer"], cached["sources"]
@@ -141,7 +143,7 @@ async def _answer_without_model(
     return True
 
 
-def _writer(settings: AgentSettings) -> str:
+def _answer_cache_writer(settings: AgentSettings) -> str:
     """What a cached Knowledge answer depends on besides the documents: prompt and models."""
     return answers.writer(
         Orchestrator.instructions, (settings.model_spec, *settings.fallback_specs)

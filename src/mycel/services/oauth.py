@@ -12,10 +12,10 @@ from mycel.core.exceptions import ConfigError, MycelError
 from mycel.infra.redis.client import get_client
 from mycel.services.tokens import TokenUnreadable, unseal
 
-HTTP_TIMEOUT_S = 15.0
+HTTP_TIMEOUT_SECONDS = 15.0
 
 #: How long a consent round may take.
-STATE_TTL_S = 600
+STATE_TTL_SECONDS = 600
 
 
 async def consent_url(provider: str, auth_url: str, user_id: int, params: dict[str, str]) -> str:
@@ -82,7 +82,7 @@ async def start_state(provider: str, user_id: int) -> str:
     """A fresh state for one consent round, remembered as this person's."""
     state = secrets.token_urlsafe(32)
     client = await get_client()
-    await client.set(_state_key(provider, state), str(user_id), ex=STATE_TTL_S)
+    await client.set(_state_key(provider, state), str(user_id), ex=STATE_TTL_SECONDS)
     return state
 
 
@@ -102,7 +102,7 @@ async def post_token(
     url: str, *, data: dict[str, str] | None = None, json: Any = None
 ) -> tuple[int, dict[str, Any]]:
     """One POST to a token endpoint: the status and the JSON body, or `{}` when it has none."""
-    async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
+    async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
         response = await client.post(url, data=data, json=json)
     payload: dict[str, Any] = {}
     try:

@@ -10,7 +10,7 @@ from mycel.domains.chat import run
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.queue.job import Job, JobKind
 from mycel.services.auth import Principal
-from mycel.services.chat import HISTORY_CHARS, HISTORY_TURNS, _recall
+from mycel.services.chat import HISTORY_CHARS, HISTORY_TURNS, _history_text
 
 pytestmark = pytest.mark.anyio
 
@@ -33,40 +33,40 @@ def _turn(n: int, question: str, answer: str, status: str = "done") -> TurnRow:
 class TestWhatIsRemembered:
     def test_an_empty_thread_remembers_nothing(self) -> None:
         """No header, no blank block — a first question is sent as it was typed."""
-        assert _recall([]) == ""
+        assert _history_text([]) == ""
 
     def test_a_finished_turn_comes_back_as_question_and_answer(self) -> None:
-        text = _recall([_turn(1, "how is MYC?", "MYC shipped four tickets.")])
+        text = _history_text([_turn(1, "how is MYC?", "MYC shipped four tickets.")])
         assert "Q: how is MYC?" in text
         assert "MYC shipped four tickets." in text
 
     def test_a_failed_turn_is_not_remembered(self) -> None:
         """A run that went wrong has nothing to recall."""
-        assert _recall([_turn(1, "how is MYC?", "", status="failed")]) == ""
+        assert _history_text([_turn(1, "how is MYC?", "", status="failed")]) == ""
 
 
 class TestTheCeilings:
     def test_only_the_most_recent_turns_survive(self) -> None:
         turns = [_turn(n, f"q{n}", f"a{n}") for n in range(HISTORY_TURNS + 3)]
-        text = _recall(turns)
+        text = _history_text(turns)
         assert "q0" not in text
         assert f"q{HISTORY_TURNS + 2}" in text
 
     def test_a_trim_says_how_much_it_dropped(self) -> None:
         """Silence would leave the model believing it can see the whole thread."""
         turns = [_turn(n, f"q{n}", f"a{n}") for n in range(HISTORY_TURNS + 2)]
-        assert "2 earlier turn(s) omitted" in _recall(turns)
+        assert "2 earlier turn(s) omitted" in _history_text(turns)
 
     def test_one_long_answer_does_not_get_through_on_a_turn_count(self) -> None:
         """Counting turns bounds nothing: six of these would be far over the ceiling."""
         turns = [_turn(n, f"q{n}", "x" * HISTORY_CHARS) for n in range(3)]
-        text = _recall(turns)
+        text = _history_text(turns)
         assert text.count("Q: ") == 1
         assert "2 earlier turn(s) omitted" in text
 
     def test_the_newest_turn_is_kept_even_when_it_is_over_the_ceiling(self) -> None:
         """A follow-up is about the turn just before it."""
-        assert "q0" in _recall([_turn(0, "q0", "x" * (HISTORY_CHARS * 2))])
+        assert "q0" in _history_text([_turn(0, "q0", "x" * (HISTORY_CHARS * 2))])
 
 
 class TestTheWorkerUsesIt:

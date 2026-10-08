@@ -10,11 +10,11 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ModelTimeout, ToolFailed
+from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.tools import delegate
 from mycel.agents.tools.delegate import build_toolset
 from mycel.llm.budget import BudgetExceeded, JobBudget

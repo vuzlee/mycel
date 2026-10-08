@@ -40,7 +40,7 @@ PASSWORD = "correct horse battery"
 ANSWER = "Two stories shipped and one is overdue."
 
 #: Long enough to tell a worker that never picked the job up from a slow one.
-TIMEOUT_S = 20.0
+TIMEOUT_SECONDS = 20.0
 
 
 @pytest.fixture
@@ -87,7 +87,7 @@ async def _sign_in(client: AsyncClient) -> None:
 async def _poll(client: AsyncClient, job_id: str) -> dict[str, object]:
     """Read the job the way the UI does, until it stops saying `running`."""
     waited = 0.0
-    while waited < TIMEOUT_S:
+    while waited < TIMEOUT_SECONDS:
         response = await client.get(f"/chat/{job_id}")
         if response.status_code == 200 and response.json()["status"] != "running":
             return dict(response.json())

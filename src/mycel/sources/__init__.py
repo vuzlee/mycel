@@ -5,13 +5,13 @@ import httpx2
 from mycel.core.exceptions import MycelError
 
 #: One timeout for every Google API call, mail and calendar alike.
-GOOGLE_TIMEOUT_S = 20.0
+GOOGLE_TIMEOUT_SECONDS = 20.0
 
 
 def google_client(token: str) -> httpx2.AsyncClient:
     """An HTTP client carrying one person's Google access token."""
     return httpx2.AsyncClient(
-        timeout=GOOGLE_TIMEOUT_S, headers={"authorization": f"Bearer {token}"}
+        timeout=GOOGLE_TIMEOUT_SECONDS, headers={"authorization": f"Bearer {token}"}
     )
 
 
