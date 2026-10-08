@@ -1,33 +1,4 @@
-"""Agent that analyses figures from gold: trends, anomalies, period-over-period.
-
-Returns numbers with their sources, not prose — framing them is someone else's job.
-
-"With their sources" is enforced, not requested: `Analyst.validate_output` rejects any
-figure whose `source` is empty and re-prompts naming the offending labels. Without it
-nothing downstream can check a draft against the figures, and the report becomes a set of
-assertions that cannot be cited.
-
-Arithmetic goes through `tools/compute.py` rather than the model's head, because an
-arithmetic slip is the hardest error to spot in a finished report: a wrong number reads
-exactly like a right one. That module owns the tools themselves; this file only says which
-toolsets the analyst gets.
-
-`tools/query.py` is the gold-layer read this file promised when it only had `compute`, and
-it is what makes the dashboard an agent rather than a second screen: the questions a fixed
-set of SQL queries could not answer are now written per question. It needs no new rule to
-stay honest — `validate_output` already refuses a figure without a source, and the query
-that produced a number *is* its source.
-
-**`tools/jira.py` is the first thing this agent can change**, and it lands here rather than
-on the researcher because the tracker is this system's own data — the same rows `run_sql`
-reads, written to instead of read. The researcher is for what is outside. What makes the
-write safe is that tool, not this file: nothing reaches Jira until a draft has been read
-back by full name and agreed to.
-
-It is conditional for the reason `rag_search` is: a deployment that has not armed writing,
-or whose person has not connected, gains nothing from a tool that refuses every call — and
-on a free tier of twenty requests a day, the turn spent discovering that is worth keeping.
-"""
+"""Agent that analyzes gold figures and returns cited numbers; may draft Jira writes."""
 
 from pydantic import BaseModel, Field
 from pydantic_ai import ModelRetry, RunContext
@@ -67,8 +38,6 @@ class Analysis(BaseModel):
 
 
 class Analyst(BaseAgent[Analysis]):
-    """Reads figures, reports what they show, cites every number."""
-
     name = "analyst"
     instructions = load("analyst")
     output_type = Analysis
@@ -82,7 +51,7 @@ class Analyst(BaseAgent[Analysis]):
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Analysis) -> Analysis:
-        """Reject uncited figures. This is the enforcement of the module docstring."""
+        """Reject figures with no source."""
         uncited = [f.label for f in output.figures if not f.source.strip()]
         if uncited:
             raise ModelRetry(

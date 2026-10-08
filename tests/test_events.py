@@ -139,12 +139,7 @@ class TestEmitter:
 
 
 class TestProseArrivesAsItIsWritten:
-    """Deltas are the point of the streamed path: a long answer must not land in one block.
-
-    The rule that keeps it honest is that the same words go out once. A model that streams
-    sends deltas and the finished part is then silent; a model that cannot sends the part
-    whole, and a reader cannot tell which happened.
-    """
+    """Deltas are the point of the streamed path: a long answer must not land in one block."""
 
     async def test_each_piece_is_its_own_event(self, deps: MycelDeps, channel: Collector) -> None:
         emitter = RunEmitter(deps, "orchestrator", None)
@@ -282,11 +277,7 @@ class TestNestingThroughARealRun:
         assert {e.parent_tool_call_id for e in channel.published} == {None}
 
     async def test_a_streaming_model_reaches_the_client_in_pieces(self, channel: Collector) -> None:
-        """The whole point, through `runner.run`: one answer, several events.
-
-        `FunctionModel` streams only when given a `stream_function`, which is also how the
-        runner decides whether to open the node as a stream at all.
-        """
+        """The whole point, through `runner.run`: one answer, several events."""
         deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
@@ -312,11 +303,7 @@ class TestNestingThroughARealRun:
 
 
 class Kept:
-    """What `app.turn` holds for a job, as far as the frames care: a status.
-
-    A real `TurnRow` carries the answer and the spend too, and none of that reaches this
-    code — the row is consulted to tell a run that is over from one that has not started.
-    """
+    """What `app.turn` holds for a job, as far as the frames care: a status."""
 
     def __init__(self, status: str) -> None:
         self.status = status
@@ -341,12 +328,7 @@ async def _collect(
     kept: Any = None,
     stream: bool = True,
 ) -> list[str]:
-    """Drive `_frames` over a canned stream instead of Redis.
-
-    `kept` is what `app.turn` holds for the job and `stream` whether Redis still has the
-    key. The default pair — no record, stream present — is a run still in flight, which is
-    what most tests here are about.
-    """
+    """Drive `_frames` over a canned stream instead of Redis."""
 
     async def fake_read(job_id: str, after: str = "0") -> Any:
         for item in items:
@@ -403,13 +385,7 @@ class TestSseFrames:
 
 
 class TestAFinishedRunDoesNotBlock:
-    """A run whose stream is gone but whose answer is kept.
-
-    Redis holds the stream under a TTL and loses it outright on restart; `app.turn` holds
-    the answer. Without the short circuit the client subscribes to a key nothing will ever
-    write to, `xread` blocks until it times out, and the composer stays disabled on a
-    question that was answered days ago.
-    """
+    """A run whose stream is gone but whose answer is kept."""
 
     async def test_a_kept_turn_with_no_stream_closes_at_once(
         self, monkeypatch: pytest.MonkeyPatch
@@ -438,12 +414,7 @@ class TestAFinishedRunDoesNotBlock:
     async def test_a_run_that_just_finished_still_replays_its_tool_calls(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The record alone is not enough to close on.
-
-        A finished run has a turn row within milliseconds, and its stream is still there. A
-        reader opening the page a moment later has to see the calls the run made — closing
-        on the row would leave every answer with an empty middle.
-        """
+        """The record alone is not enough to close on."""
         called = SequencedEvent(seq=1, agent="analyst", type=TOOL_CALLED, payload={"tool": "sql"})
         frames = await _collect(
             [("1-0", called)], FakeRequest(), monkeypatch, kept=Kept("done"), stream=True
@@ -454,19 +425,7 @@ class TestAFinishedRunDoesNotBlock:
 
 
 class TestAQueuedRunIsNotMistakenForAFinishedOne:
-    """The window between POST /chat and the worker picking the job up.
-
-    A turn is written twice and the first write is `queued`, at the moment the question is
-    enqueued. In that window a run answers both halves of the short circuit above: its
-    stream does not exist yet, because the key is created by the first `xadd` and the
-    worker is still a broker hop away, and its row is already in `app.turn`.
-
-    The page opens the stream immediately after the POST, so this was every run, not an
-    edge: the client was told the run had finished before it began, closed its EventSource,
-    and the sixty-odd events that followed went into a stream nobody was reading. What the
-    reader saw was a question stuck on "Working through it" while the composer freed up —
-    the answer arrived by poll, and the whole activity list was gone.
-    """
+    """The window between POST /chat and the worker picking the job up."""
 
     async def test_it_waits_on_the_stream_instead_of_closing(
         self, monkeypatch: pytest.MonkeyPatch
@@ -502,8 +461,7 @@ class TestATurnKeepsItsToolCalls:
         assert [event.type for event in inner.published] == ["thinking", TOOL_CALLED]
 
     async def test_only_tool_calls_are_kept(self) -> None:
-        """Reasoning is worth watching and not worth storing; a call is what makes an
-        answer checkable."""
+        """Reasoning is worth watching and not worth storing."""
         recorder = RecordingChannel(NullChannel())
 
         for type_ in ("run_started", "thinking", TOOL_CALLED, TOOL_RETURNED, "text"):
@@ -512,8 +470,7 @@ class TestATurnKeepsItsToolCalls:
         assert [step["type"] for step in recorder.steps] == [TOOL_CALLED, TOOL_RETURNED]
 
     async def test_steps_are_numbered_from_one(self) -> None:
-        """Their own sequence, not the stream's: the stream counts every event, so a kept
-        list carrying its numbers would replay as one long gap."""
+        """Their own sequence, not the stream's."""
         recorder = RecordingChannel(NullChannel())
 
         for _ in range(3):
@@ -528,9 +485,7 @@ class TestATurnKeepsItsToolCalls:
         assert recorder.steps == []
 
     async def test_the_head_survives_the_ceiling_and_the_rest_is_counted(self) -> None:
-        """A looping run writes the same call forever. The first calls are the ones that
-        chose the direction, so they are what is kept — and the loss is reported rather
-        than silent."""
+        """A looping run writes the same call forever."""
         recorder = RecordingChannel(NullChannel())
 
         for n in range(RecordingChannel.MAX_STEPS + 5):

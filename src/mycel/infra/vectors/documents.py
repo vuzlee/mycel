@@ -1,8 +1,4 @@
-"""Document passages in Qdrant: write, hide, delete, search. Filters run inside Qdrant.
-
-The payload carries ids and the `enabled` flag. `user_id` keeps one user's passages out
-of another's search; Postgres checks ownership again when the text is read.
-"""
+"""Document passages in Qdrant: write, hide, delete, search, filtered by user inside Qdrant."""
 
 import asyncio
 import uuid
@@ -54,8 +50,7 @@ async def ensure() -> str:
     qdrant = client()
     if not await qdrant.collection_exists(name):
         await qdrant.create_collection(name, vectors_config=_collection().params)
-    # Re-declared on every start: creating an index that exists is a no-op, and an
-    # older collection may have no `user_id` index yet.
+    # Re-declared each start: idempotent, and older collections may lack the `user_id` index.
     await qdrant.create_payload_index(
         name,
         "user_id",

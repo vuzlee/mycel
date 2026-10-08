@@ -1,5 +1,3 @@
-"""A user's document store: a document is cut into chunks."""
-
 from datetime import datetime
 
 from sqlalchemy import (

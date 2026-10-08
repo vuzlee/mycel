@@ -1,21 +1,4 @@
-"""The chat domain: ask something, and let a worker answer it.
-
-One kind of work lands here — a question for the orchestrator, which routes it to whichever
-specialist covers it and writes up what comes back. The summariser has no endpoint of its
-own; the orchestrator reaches it as a tool.
-
-The work is split across two processes, and the split is visible in the two halves of this
-module. `request_chat` returns as soon as the job is queued, because a run takes minutes;
-`run` is what the worker calls when it picks the job up.
-
-**The worker calls this, not an agent.** Building the orchestrator in `queue/consumer.py`
-would put the order of steps in the transport layer. The consumer receives, dispatches
-here, and acks; what a job *means* is this module's business.
-
-Every run is written twice: to Redis so a poller can see it finish, and to `app.turn` so it
-is still there next week. `infra/redis/results.py` calls itself a holding area rather than
-a record, and this is where the record is kept.
-"""
+"""The chat domain: ask something, and let a worker answer it."""
 
 from dataclasses import replace
 from decimal import Decimal
@@ -55,13 +38,10 @@ log = get_logger(__name__)
 #: How much of a question becomes the conversation's title in the sidebar.
 TITLE_CHARS = 80
 
-#: How many earlier turns a follow-up carries. A follow-up leans on what was just said,
-#: not on the first thing asked, and every turn is paid for in tokens on every turn after
-#: it.
+#: How many earlier turns a follow-up carries.
 HISTORY_TURNS = 6
 
-#: And a ceiling in characters, because one long answer outweighs six short turns. Counting
-#: turns alone does not bound anything.
+#: And a ceiling in characters, because one long answer outweighs six short turns.
 HISTORY_CHARS = 6000
 
 #: What the rewriter reads for a follow-up's search: "it" points at something recent.
@@ -70,11 +50,7 @@ REWRITE_ANSWER_CHARS = 500
 
 
 class ConversationNotFound(Exception):
-    """The conversation asked for is not this person's, or not there.
-
-    One exception for both, on purpose: telling a caller a conversation exists but belongs to
-    someone else tells them something they did not have.
-    """
+    """The conversation asked for is not this person's, or not there."""
 
 
 async def request_chat(
@@ -139,22 +115,14 @@ async def _conversation_of(
 
 
 def _recall(turns: list[TurnRow]) -> str:
-    """Earlier turns of a conversation, as text for the prompt.
-
-    Text rather than `message_history`: the cap and the "omitted" line below are Mycel's
-    decisions, and handing the framework a message list would give it the trimming.
-
-    Only finished turns. A failed one has nothing to remember, and showing a model how a
-    run went wrong is not context, it is an example to follow.
-    """
+    """Earlier turns of a conversation, as text for the prompt."""
     done = [turn for turn in turns if turn.status == "done" and turn.answer]
     if not done:
         return ""
 
     kept: list[str] = []
     spent = 0
-    # Newest first, so the ceiling drops the oldest turns rather than the ones a follow-up
-    # is actually about.
+    # Newest first, so the ceiling drops the oldest turns.
     for turn in reversed(done[-HISTORY_TURNS:]):
         block = f"Q: {turn.question}\nA: {turn.answer}"
         if kept and spent + len(block) > HISTORY_CHARS:
@@ -171,11 +139,7 @@ def _recall(turns: list[TurnRow]) -> str:
 
 
 async def find_turn(job_id: str) -> TurnRow | None:
-    """The kept record of a run, whatever Redis has since forgotten.
-
-    This is the half of "written twice" that outlives a TTL, and the reason an answer
-    opened next week opens rather than 404s.
-    """
+    """The kept record of a run, whatever Redis has since forgotten."""
     async with session_scope() as session:
         return await ConversationRepository(session).turn_by_job_id(job_id)
 
@@ -328,11 +292,7 @@ async def _deps(
     principal: Principal,
     chips: frozenset[Chip] | None,
 ) -> MycelDeps:
-    """What one attempt runs with.
-
-    The budget is seeded from Redis rather than from zero: this runs once per *attempt*,
-    and a fresh ceiling each time would let one job spend it three times over, silently.
-    """
+    """What one attempt runs with."""
     ceiling = get_settings().job_ceiling_usd
     return build_deps(
         job.job_id,
@@ -353,12 +313,7 @@ async def _finish(
     steps: list[dict[str, Any]],
     sources: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Write a finished run to both stores: Redis to be polled, Postgres to be kept.
-
-    The steps go with the answer and only with it. A failed run leaves half a chain of
-    tool calls, which is something to read in the logs, not something a conversation should
-    replay as if it were work done.
-    """
+    """Write a finished run to both stores: Redis to be polled, Postgres to be kept."""
     await results.store(job.job_id, answer, str(spent))
     await _record(
         job,
@@ -379,26 +334,8 @@ async def _record(
     spent_usd: Decimal | None = None,
     steps: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Update the durable row this job already has, if it still has one.
-
-    A missing `conversation_id` is not worth failing a finished run over — the answer was
-    produced, and Redis has it. It is logged instead, because it means a caller queued a
-    job without opening a conversation for it.
-
-    Neither is a conversation deleted while the job ran. The row this job wrote at queue time
-    went with it (`ON DELETE CASCADE`), so the upsert finds nothing to update and inserts,
-    and the insert fails the foreign key. There is nowhere left to keep the run and nobody
-    left to read it: the conversation is gone from the rail and from `/conversations`.
-
-    Swallowed here rather than left to the consumer, because the consumer's last resort is
-    to call `record_failure`, which lands in this same function against the same missing
-    conversation — so the failure path raises too, the message is never acked, and one deleted
-    conversation leaves a job unacked until the broker's `consumer_timeout` redelivers it to fail
-    the same way again.
-    """
-    # Counted here rather than at each call site: this is the one function both the done
-    # and the failed path go through, and it already has the word for which one it was.
-    # Before the early return, because a job with no conversation still ended.
+    """Update the durable row this job already has, if it still has one."""
+    # Counted here: both the done and the failed paths go through this function.
     jobs_total.labels(kind=str(job.kind), status=status).inc()
 
     conversation_id = int(str(job.payload.get("conversation_id", 0)))

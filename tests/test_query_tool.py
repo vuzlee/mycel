@@ -1,13 +1,4 @@
-"""`run_sql`, against a real Postgres — never a fake.
-
-The whole point of this tool is a layer only Postgres enforces. A fake session would let
-`SET TRANSACTION READ ONLY` pass as a no-op and every write test below would go green
-while the real thing wrote to the database. So these skip without `DATABASE_URL` rather
-than substitute something that cannot fail the way production can.
-
-The string checks in `_reject` are tested separately and purely: they are an early, legible
-error, not the defence, and mixing the two would suggest otherwise.
-"""
+"""`run_sql`, against a real Postgres — never a fake."""
 
 import os
 from collections.abc import AsyncIterator
@@ -48,8 +39,7 @@ class TestWhatIsRefusedBeforeTheDatabase:
         assert _reject("SELECT 1") is None
 
     def test_a_cte_passes(self) -> None:
-        """`WITH` is how an aggregate over a window gets written, so refusing it would
-        push the model towards worse SQL."""
+        """`WITH` is how an aggregate over a window gets written."""
         assert _reject("WITH x AS (SELECT 1) SELECT * FROM x") is None
 
     @pytest.mark.parametrize(
@@ -66,8 +56,7 @@ class TestWhatIsRefusedBeforeTheDatabase:
         ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE", "GRANT", "CREATE", "COPY"],
     )
     def test_a_write_hidden_behind_a_select_is_named_and_refused(self, write: str) -> None:
-        """The case the blocklist is for, one keyword at a time: a hole in it passes
-        silently, and the refusal has to say which word it objected to."""
+        """The case the blocklist is for, one keyword at a time."""
         refusal = _reject(f"SELECT 1 FROM t WHERE x = (WITH q AS ({write} INTO t) SELECT 1)")
         assert refusal is not None and write in refusal
 
@@ -109,20 +98,11 @@ class TestTheTable:
 
 
 class _AgainstTheDatabase:
-    """Schema, seeding and fixtures for everything only a real Postgres can answer.
-
-    A base rather than a parent test class: inheriting one test class from another reruns
-    every test in it, and these are the slowest in the file.
-    """
+    """Schema, seeding and fixtures for everything only a real Postgres can answer."""
 
     @pytest.fixture(autouse=True)
     async def schema(self, monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[None]:
-        """Gold, built and dropped, with the tool's own engine pointed at it.
-
-        The tool opens its own `session_scope()` — that is the convention it breaks and
-        the reason this fixture has to reach the process-wide engine rather than hand a
-        session in.
-        """
+        """Gold, built and dropped, with the tool's own engine pointed at it."""
         monkeypatch.setenv("DATABASE_URL", DSN)
         await dispose_engine()
         engine = create_async_engine(async_dsn(DSN))
@@ -130,9 +110,7 @@ class _AgainstTheDatabase:
             for schema in SCHEMAS:
                 await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
             await conn.run_sync(Base.metadata.create_all)
-            # The same statements migration 0012 runs. The suite never runs alembic, so
-            # without this the tool would step into a role the policies do not exist for —
-            # and every row-filtering test below would pass by reading everything.
+            # The same statements migration 0012 runs; the suite never runs alembic.
             await acl.apply(conn)
         await engine.dispose()
         try:
@@ -151,11 +129,7 @@ class _AgainstTheDatabase:
 
     @pytest.fixture
     def granted(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
-        """What the asker may read, without an `app.membership` behind it.
-
-        A list the test mutates: the scope is read per call, so a revoke mid-run takes
-        effect on the next query rather than at the end of the job.
-        """
+        """What the asker may read, without an `app.membership` behind it."""
         projects: list[str] = ["MYC"]
 
         async def _readable(user: Any) -> frozenset[str]:
@@ -218,11 +192,7 @@ class TestAgainstTheDatabase(_AgainstTheDatabase):
     async def test_a_write_that_slips_past_the_string_check_still_cannot_write(
         self, run_sql: Any, ctx: Any
     ) -> None:
-        """The layer that matters, tested the only way it can be.
-
-        `SELECT ... INTO` creates a table and opens with SELECT, so `_reject` lets it
-        through. Postgres is what refuses it, which is the claim the whole tool rests on.
-        """
+        """The layer that matters, tested the only way it can be."""
         await self._seed()
         with pytest.raises(ModelRetry) as caught:
             await run_sql(ctx, "SELECT * INTO gold.stolen FROM gold.work_item")
@@ -235,11 +205,7 @@ class TestAgainstTheDatabase(_AgainstTheDatabase):
     async def test_a_slow_query_is_cut_short_with_a_readable_error(
         self, run_sql: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A model can write a three-table cross join without meaning to. The run must
-        come back saying so rather than hold a connection until someone notices.
-
-        The real cap is five seconds; the test shortens it so the suite does not wait it out.
-        """
+        """A model can write a three-table cross join without meaning to."""
         monkeypatch.setattr(query_tool, "TIMEOUT_MS", 200)
         with pytest.raises(ModelRetry) as caught:
             await run_sql(ctx, "SELECT pg_sleep(3)")
@@ -274,8 +240,7 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
     async def test_a_plain_select_only_returns_the_granted_project(
         self, run_sql: Any, ctx: Any
     ) -> None:
-        """The query names no project and no user. Postgres filters it anyway, which is
-        the whole reason the rule is a policy rather than something read off the SQL."""
+        """The query names no project and no user."""
         await self._two_projects()
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
         assert "MYC-7" in out
@@ -284,15 +249,13 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
     async def test_naming_another_project_outright_still_returns_nothing(
         self, run_sql: Any, ctx: Any
     ) -> None:
-        """No rows rather than an error: a refusal that said "not allowed" would be a way
-        of learning that ACME exists."""
+        """No rows rather than an error."""
         await self._two_projects()
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE project = 'ACME'")
         assert out == "issue_key\n(no rows)"
 
     async def test_a_subquery_cannot_reach_around_it(self, run_sql: Any, ctx: Any) -> None:
-        """A policy applies per table scan, so it applies inside a CTE too — which a
-        filter bolted onto the outer query would not."""
+        """A policy applies per table scan, so it applies inside a CTE too."""
         await self._two_projects()
         out = await run_sql(
             ctx,
@@ -310,8 +273,7 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
         assert out.endswith("\n1")
 
     async def test_a_run_with_nobody_attached_reads_nothing(self, run_sql: Any, ctx: Any) -> None:
-        """`None` is closed. A path that forgot the principal gets an empty answer, never
-        the whole of gold."""
+        """`None` is closed."""
         await self._two_projects()
         ctx.deps = replace(ctx.deps, principal=None)
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
@@ -320,8 +282,7 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
     async def test_a_grant_taken_back_applies_to_the_next_query(
         self, run_sql: Any, ctx: Any, granted: list[str]
     ) -> None:
-        """The scope is read per call, not carried on the deps: a revoke lands on the next
-        query rather than at the end of a job that may run for minutes."""
+        """The scope is read per call, not carried on the deps."""
         await self._two_projects()
         assert "MYC-7" in await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
 

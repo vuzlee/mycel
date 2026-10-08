@@ -2,9 +2,6 @@
 
 Revision ID: 0015
 Revises: 0014
-
-Postgres is the source of truth for document RAG; MinIO and Qdrant are copies.
-See notes/flow/plan/e3-data/061-notebook-and-ingest.md.
 """
 
 from collections.abc import Sequence

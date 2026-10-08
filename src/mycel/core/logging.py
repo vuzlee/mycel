@@ -1,20 +1,4 @@
-"""Structured logs: one JSON object per line on stdout, always carrying `trace_id`.
-
-Nothing here knows Loki exists. Promtail collects container stdout and ships it; changing
-log backend is an edit to `deploy/monitoring/promtail.yaml`, not to this file.
-
-`trace_id` is the one piece of wiring we do by hand. The logger cannot know it on its own,
-so the formatter reads the current OTel span on every record — that is what lets you jump
-from a log line straight to its trace instead of hunting by timestamp.
-
-`request_id` works the same way but comes from a contextvar rather than a span, because it
-is ours and outlives any one span. `api/middleware.py` sets it; every line logged while
-handling that request carries it without a single call site mentioning it. It only follows
-the async task, so it does not reach a thread pool or another process — see that module.
-
-If the id is missing, or OTel was never set up, it still logs and never raises. Logging
-that kills a request turns a small problem into a large one.
-"""
+"""Structured logs: one JSON line per record on stdout, with `trace_id` and `request_id`."""
 
 import json
 import logging
@@ -24,11 +8,10 @@ from typing import Any
 
 from opentelemetry import trace
 
-#: The id of the request being handled, or empty outside one. Read by the formatter.
+#: The id of the request being handled, or empty outside one.
 current_request_id: ContextVar[str] = ContextVar("current_request_id", default="")
 
-# Attributes LogRecord always carries; anything else was passed via `extra=` and belongs in
-# the JSON body.
+# Anything not in here came from `extra=` and goes in the JSON body.
 _STANDARD = frozenset(logging.LogRecord("", 0, "", 0, "", None, None).__dict__) | {
     "message",
     "asctime",
@@ -47,7 +30,6 @@ class JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        # Never let a missing or broken span stop a log line from being written.
         try:
             ctx = trace.get_current_span().get_span_context()
             if ctx.is_valid:
@@ -68,9 +50,7 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, default=str)
 
 
-#: Libraries that log a full request URL at INFO. A URL can carry a token or a key, so
-#: that line can write a live credential to stdout. Raised to WARNING rather than
-#: filtered, because a failing request is still worth seeing.
+#: Libraries that log full request URLs (which may carry credentials) at INFO.
 _QUIET = ("httpx", "httpx2", "httpcore")
 
 
@@ -89,12 +69,7 @@ def setup_logging(level: str = "INFO") -> None:
 
 
 def bind_request_id(request_id: str) -> Token[str]:
-    """Attach an id to everything logged from here on in this task.
-
-    Returns the token the caller must `current_request_id.reset()` with when the request
-    ends — without that the value outlives the request and the next one handled by the
-    same task inherits it.
-    """
+    """Tag this task's logs with an id; the caller must `reset()` the returned token."""
     return current_request_id.set(request_id)
 
 

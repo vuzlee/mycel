@@ -1,22 +1,4 @@
-"""One tool: read the mailbox over the window the question implies.
-
-The old plan for this was a bulletin on a cron at 08:00, with a fixed "yesterday" window.
-Two things were wrong with it. It spent one of twenty daily model requests whether or not
-anyone read the result, and a fixed window cannot answer the most natural question there
-is about mail — *anything important this week?*
-
-So the window is a parameter and the model fills it in: today is 24 hours, this week is
-168, this month is 720. That is the same shape as the `summariser` tool taking `days`, and
-for the same reason — a span is something a model reads out of a sentence and code cannot.
-
-**This needs no new rule to stay honest.** `Researcher.validate_output` has rejected any
-claim with empty `sources` since the first slice, and every Gmail message has a permalink,
-so the existing rule already covers what comes back here. The same argument let `run_sql`
-join the analyst without new machinery.
-
-Headers only, and why, is `sources/gmail.py`. This file is the window, the cap, and the
-shape the model reads.
-"""
+"""Tool: read the headers of the asker's recent mail."""
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
@@ -31,7 +13,7 @@ from mycel.sources import SourceError, gmail
 log = get_logger(__name__)
 
 
-#: Newest first, so the cap drops the oldest rather than the most likely to matter.
+#: Newest first, so the cap drops the oldest.
 MAX_MESSAGES = 60
 
 
@@ -42,7 +24,6 @@ CONNECT = (
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    """Reading the asker's own mailbox, as a toolset an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
     @toolset.tool(name="read_mail")
@@ -61,8 +42,6 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         if hours < 1:
             raise ModelRetry("read_mail needs a window of at least one hour.")
 
-        # The asker's own inbox, on their own Google grant. A run with nobody behind it reads
-        # nothing: "connect an account" is the answer, never somebody else's mail.
         if ctx.deps.principal is None:
             return CONNECT
         capped = min(hours, MAX_HOURS)
@@ -72,8 +51,6 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         except NotConnected:
             return CONNECT
         except SourceError as exc:
-            # Not the model's to fix: no credentials, or a mailbox that will not answer.
-            # Re-prompting would walk it round the same loop until the run dies unread.
             raise ToolFailed("read_mail", str(exc)) from exc
 
         return _render(mailbox, asked=hours, capped=capped)
@@ -82,11 +59,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
 
 def _render(mailbox: gmail.Mailbox, asked: int, capped: int) -> str:
-    """The mailbox as text the model can quote from, counts first.
-
-    The counts lead because they are the part the model must not invent: how many messages
-    were looked at is the difference between "three worth reading" and "three of forty-seven".
-    """
+    """The mailbox as quotable text, counts first so the model does not invent them."""
     lines = [f"{mailbox.total} messages in the last {capped} hours."]
     if capped < asked:
         lines.append(f"({asked} hours was asked for; {MAX_HOURS} is the most that can be read.)")

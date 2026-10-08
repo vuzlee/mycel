@@ -1,12 +1,4 @@
-"""One engine per process, built on first use.
-
-The DSN is stored in the plain `postgresql://` form so alembic and psql can read the same
-variable; the async driver is swapped in here.
-
-Pool size is per process, not per deployment: `api` runs N uvicorn workers and `worker`
-scales by consumer count, each holding its own pool. Summed past Postgres's
-`max_connections`, the failure only appears under load.
-"""
+"""One async engine per process, built on first use from a plain `postgresql://` DSN."""
 
 from functools import lru_cache
 
@@ -36,7 +28,6 @@ def get_engine() -> AsyncEngine:
 
 
 async def dispose_engine() -> None:
-    """Close the pool and forget the engine, so the next call builds a fresh one."""
     if get_engine.cache_info().currsize:
         await get_engine().dispose()
     get_engine.cache_clear()

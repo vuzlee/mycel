@@ -1,17 +1,4 @@
-"""Can this person see this project.
-
-The data is a team's own tracked work, so permission is checked before touching gold — not
-after an answer has already been produced from it.
-
-The rule is a row in `app.membership`: a grant exists, or it does not. The rows are a copy
-of what Jira says each person may browse, written only by `services/access.py`; nothing
-here grants by hand. The absent case is the closed one on purpose.
-
-**Every read of one project's data for a person goes through `readable` or `require`.**
-`domains/dashboard.py`, the summariser and the project picker call them; `run_sql` and
-`rag_search` pass `readable_projects` down to the database and to Qdrant. A test fails if
-a person-facing route reads gold another way.
-"""
+"""Can this person see this project."""
 
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
@@ -24,11 +11,7 @@ async def can_read_project(user: Principal, project: str) -> bool:
 
 
 async def readable_projects(user: Principal) -> frozenset[str]:
-    """Everything this person may read, in one query.
-
-    Filtering a list of projects one `can_read_project` at a time is a query per project.
-    Callers with a list ask this once instead.
-    """
+    """Everything this person may read, in one query."""
     async with session_scope() as session:
         return await AccountRepository(session).projects_for(user.id)
 

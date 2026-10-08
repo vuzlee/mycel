@@ -2,27 +2,6 @@
 
 Revision ID: 0006
 Revises: 0005
-
-`/reports` was the name from when the app had a button per capability: one for a report,
-one for progress, one for the dashboard. The orchestrator now routes a question to
-whichever specialist covers it, and there is one chat box. The table outlived the product
-it was named for.
-
-`turn` is not a new word. The HTTP layer already says it — `GET
-/conversations/{id}/turns` returns `TurnResponse` — so this is the storage layer catching
-up to a name already chosen, not a name invented here.
-
-**`body JSONB` becomes `answer TEXT`, and that is a drop, not a cast.** The orchestrator's
-output stopped being a schema: it writes markdown, and JSONB was only there
-so a finding could grow an attribute without a migration. There is no cast from
-`{"findings": [...], "gaps": [...]}` to the prose a model would have written for the same
-question, and inventing one would put made-up text in a column that is supposed to hold
-what was actually said. The rows that had a body lose it; the questions and the job ids
-stay. On this deployment that is one row.
-
-RENAME for the table, its constraints and its index, because those carry no data and a
-rename keeps every row. `downgrade` reverses all of it and gives `body` back as an empty
-column — the same shape, without the answers, for the same reason.
 """
 
 from collections.abc import Sequence
@@ -49,9 +28,7 @@ def upgrade() -> None:
     op.drop_column("turn", "body", schema="app")
     op.add_column("turn", sa.Column("answer", sa.Text(), nullable=True), schema="app")
 
-    # Every thread is a chat now: the one other kind was opened by `POST /reports/summary`,
-    # deleted in this batch. The column stays — a second kind of thread is cheaper to add
-    # to a column that exists.
+    # Every thread is a chat; the column stays for a second kind later.
     op.execute("UPDATE app.conversation SET kind = 'chat' WHERE kind <> 'chat'")
 
 

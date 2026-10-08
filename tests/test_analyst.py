@@ -1,9 +1,4 @@
-"""The analyst agent, run against fake models.
-
-`TestModel` proves the wiring: every tool signature is serialisable and the output schema
-is satisfiable. `FunctionModel` drives the sequences that matter — an uncited figure, a
-tool that refuses, a model stuck in a loop.
-"""
+"""The analyst agent, run against fake models."""
 
 from decimal import Decimal
 from typing import Any
@@ -29,9 +24,7 @@ pytestmark = pytest.mark.anyio
 
 LOCAL = AgentSettings(model_spec="local:qwen3-4b")
 
-# TestModel calls every tool with the same placeholder arguments on every step, which is
-# exactly the pattern guards.py exists to stop. Wiring tests therefore disable the guard;
-# they are checking that the tools are callable, not that the model is sane.
+# TestModel repeats placeholder arguments every step, which trips the loop guard.
 UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000)
 
 
@@ -42,8 +35,7 @@ def deps() -> MycelDeps:
 
 @pytest.fixture
 def unguarded_deps() -> MycelDeps:
-    """The guard reads its threshold from deps, not from the agent, because the limit
-    belongs to the run rather than to the agent definition."""
+    """The guard reads its threshold from deps."""
     return MycelDeps(job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=UNGUARDED)
 
 
@@ -56,9 +48,7 @@ def _analysis_call(figures: list[dict[str, Any]], findings: list[str]) -> ModelR
     )
 
 
-# Each tool with arguments it will actually accept. TestModel cannot drive these: it
-# sends 0.0 for every parameter, and most of these functions are undefined at zero — which
-# is the point of their guard clauses, not a flaw in them.
+# Each tool with arguments it will actually accept.
 VALID_CALLS: list[tuple[str, dict[str, Any]]] = [
     ("percent_change", {"previous": 100.0, "current": 130.0}),
     ("absolute_change", {"previous": 100.0, "current": 130.0}),
@@ -71,12 +61,7 @@ VALID_CALLS: list[tuple[str, dict[str, Any]]] = [
 
 class TestWiring:
     async def test_every_tool_is_registered_and_callable(self, unguarded_deps: MycelDeps) -> None:
-        """Walk every tool once, then produce an output.
-
-        This is the smoke test that no tool signature is unserialisable and no compute
-        function was left unregistered — an unregistered tool is a capability the analyst
-        silently does not have.
-        """
+        """Walk every tool once, then produce an output."""
         step = [0]
 
         def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -211,8 +196,7 @@ class TestToolErrorsBecomeRetries:
 
 class TestDegenerateLoop:
     async def test_repeating_the_same_call_is_stopped(self, deps: MycelDeps) -> None:
-        """A model that keeps asking the same question never reaches an output, so the
-        output validator cannot catch it. This is why guards.py exists."""
+        """A model that keeps asking the same question never reaches an output."""
 
         def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             return ModelResponse(

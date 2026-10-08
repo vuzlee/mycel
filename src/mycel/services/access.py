@@ -1,13 +1,4 @@
-"""Who may read which project, asked of Jira on each person's own token.
-
-Jira already knows who may browse what; a second list kept here by hand only drifts from
-it. So `app.membership` is a copy, written by nothing but this file: on connect, and for
-everyone connected after each sync. A person removed from a project in Jira loses it here
-within one sync.
-
-A person whose token no longer works keeps nothing. Failing closed is the only safe
-reading of "we could not ask". A bug is not "could not ask": it raises.
-"""
+"""Who may read which project, asked of Jira on each person's own token."""
 
 import httpx2
 

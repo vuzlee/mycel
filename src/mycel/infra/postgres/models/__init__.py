@@ -1,8 +1,4 @@
-"""The mapped tables, one module per schema group.
-
-Every model is imported here, so `Base.metadata` holds every table: alembic autogenerates
-against it, and a table missing from this file looks to alembic like one to drop.
-"""
+"""Every model imported, so `Base.metadata` (and alembic) sees every table."""
 
 from mycel.infra.postgres.models.app import (
     Conversation,

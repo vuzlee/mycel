@@ -1,17 +1,4 @@
-"""Turn a `'<tier>:<model_name>'` spec into a model client ready to call.
-
-Every model is reached through one gateway, the LiteLLM proxy, over the OpenAI Chat
-Completions API. `<model_name>` is a `model_name` in `config/litellm/config.yaml`; which
-provider sits behind it, which keys it rotates through and how it cools a spent key down
-are that file's business. Changing model is a config edit, never a code change.
-
-This is the single documented exception to "never import a provider SDK directly"
-(see `llm/router.py`).
-
-Gemini 3 needs its `thought_signature` returned on every tool call. Its own
-OpenAI-compatible endpoint drops it; LiteLLM keeps it inside the tool call id, which the
-client sends back unchanged. Checked on 2026-10-05 with two-turn tool calls, plain and
-streamed, for Gemini 3.5 Flash Lite and Claude Sonnet 5.
+"""Turn a `'<tier>:<model_name>'` spec into a pydantic-ai model behind the LiteLLM gateway.
 
 Building a model makes no network call, so agents can be constructed at import time.
 """
@@ -28,9 +15,7 @@ if TYPE_CHECKING:
     from pydantic_ai.models import Model
     from pydantic_ai.settings import ModelSettings
 
-#: Statuses that mean "this model could not serve the request", as opposed to "the request
-#: was wrong". Only these move to the next model in `fallback_specs`. A 429 is included:
-#: LiteLLM has already tried every key it holds for this model before it says so.
+#: Statuses that move to the next fallback model; a 429 means LiteLLM already tried every key.
 _UNAVAILABLE_STATUS = (429, 500, 502, 503, 504)
 
 
@@ -39,11 +24,7 @@ def build_model(
     agent_settings: AgentSettings | None = None,
     settings: Settings | None = None,
 ) -> "Model":
-    """`'<tier>:<name>'` -> a pydantic-ai `Model` that calls the gateway.
-
-    With `fallback_specs` set, the result is a `FallbackModel` over `spec` and then each of
-    them in turn, all built here so a typo fails at startup rather than during an outage.
-    """
+    """Build the model, wrapped in a `FallbackModel` when `fallback_specs` is set."""
     agent_cfg = agent_settings or AgentSettings()
     env = settings or get_settings()
 

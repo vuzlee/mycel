@@ -1,7 +1,4 @@
-"""The gold tables agents read.
-
-A contract: adding a column is free; changing what one means needs two releases.
-"""
+"""The gold tables agents read. Adding a column is safe; changing its meaning is not."""
 
 from datetime import datetime
 
@@ -21,25 +18,7 @@ from mycel.infra.postgres.models.base import GOLD, Base
 
 
 class WorkItem(Base):
-    """One piece of tracked work: an epic, a story, a task, a subtask.
-
-    Replaces `progress_update`, which held a hashtag and a sentence. That could say a task
-    was in progress and nothing else — not whether it was late, what it was estimated at,
-    or which epic it belonged to. This is the shape a question like "who is over their
-    estimate" can actually be asked of.
-
-    Field names are Jira's own wherever Jira has one, so a column here can be traced back
-    to a payload in bronze without a translation table in someone's head.
-    `original_estimate_seconds` and `time_spent_seconds` are seconds because that is what
-    Jira stores; hours and days are a display decision and are made in the UI.
-
-    `parent_key` is a key, not a foreign key: a sync may bring in a child before its
-    parent, and a constraint would make the order of a page of results load-bearing.
-
-    `status` is the site's own name for a status and `status_category` is Jira's
-    `todo`/`doing`/`done` rollup. Both, because one team renames "In Progress" to
-    "Cooking" and a dashboard still has to group it with the others.
-    """
+    """One piece of tracked work: an epic, a story, a task, a subtask."""
 
     __tablename__ = "work_item"
     __table_args__ = (
@@ -76,12 +55,7 @@ class WorkItem(Base):
 
 
 class Worklog(Base):
-    """Effort, on the day it was spent.
-
-    One row per logged entry rather than one running total per issue, because a total
-    cannot answer "how did this week go" and a curve can. Keyed by Jira's own worklog id,
-    so an edited entry updates its row instead of being counted twice.
-    """
+    """One logged worklog entry, keyed by Jira's worklog id."""
 
     __tablename__ = "worklog"
     __table_args__ = (

@@ -2,9 +2,6 @@
 
 Revision ID: 0019
 Revises: 0018
-
-A timestamp rather than a boolean: pinned threads sort by when they were pinned, so the
-newest pin sits first, and null means not pinned.
 """
 
 from collections.abc import Sequence

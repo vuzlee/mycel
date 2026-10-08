@@ -1,17 +1,4 @@
-"""`read_mail`, and the connector under it, against a fake Gmail API.
-
-Three claims are worth proving here and none is about the model's judgement.
-
-**Whose inbox is the asker's.** It used to be one mailbox from `.env`, so every user read
-the maintainer's mail. The token handed to Gmail must be the asker's own, and a run with
-nobody behind it — or nobody connected — reads nothing.
-
-**Headers only.** `format=metadata` with three named headers is what keeps a body out; the
-fake records what was asked of it.
-
-**The window comes from the question.** "This week" and "today" are different questions,
-so the hours asked for must reach the search and the cap must hold.
-"""
+"""`read_mail`, and the connector under it, against a fake Gmail API."""
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal

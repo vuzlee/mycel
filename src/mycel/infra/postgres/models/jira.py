@@ -1,5 +1,3 @@
-"""Jira as it arrived (bronze) and cleaned (silver)."""
-
 from datetime import datetime
 from typing import Any
 
@@ -20,16 +18,7 @@ from mycel.infra.postgres.models.base import BRONZE, SILVER, Base
 
 
 class JiraIssue(Base):
-    """One issue from `search`, stored exactly as it arrived.
-
-    Nothing is parsed here on purpose. Jira keeps its own history, so this could be
-    re-fetched — but a re-fetch reads what the issue looks like *now*, not what it
-    looked like when the transform first ran, which is a different fact. Bronze is what
-    remembers the difference.
-
-    `issue_id` rather than `issue_key` as the key: a key changes when a project is renamed
-    or an issue is moved, and the id never does.
-    """
+    """One issue from `search`, stored exactly as it arrived."""
 
     __tablename__ = "jira_issue"
     __table_args__ = ({"schema": BRONZE},)
@@ -41,13 +30,7 @@ class JiraIssue(Base):
 
 
 class JiraWorklog(Base):
-    """One logged entry, as Jira handed it over.
-
-    Separate from the issue because Jira serves it from a separate endpoint and because a
-    worklog is the one thing in this source that can be back-dated: its `started` is
-    whatever it was told, which makes it the only honest time series in a project that was
-    filled in after the fact.
-    """
+    """One worklog entry, as Jira returned it."""
 
     __tablename__ = "jira_worklog"
     __table_args__ = ({"schema": BRONZE},)
@@ -59,17 +42,7 @@ class JiraWorklog(Base):
 
 
 class SilverWorkItem(Base):
-    """One issue, unwrapped from its provider's envelope and nothing more.
-
-    Silver answers to the **source**: Jira adding a field or renaming a status changes
-    this table. Gold answers to the **question**: a new dashboard block changes that one.
-    While Jira is the only source the two hold identical columns, which is what one source
-    looks like rather than a duplication to clean up — `etl/promote.py` is where they will
-    diverge.
-
-    Columns mirror `gold.work_item` exactly, down to the natural key, so the promotion
-    step stays a copy until it has a reason not to be.
-    """
+    """One issue, unwrapped from the provider's envelope and nothing more."""
 
     __tablename__ = "work_item"
     __table_args__ = (
@@ -105,7 +78,7 @@ class SilverWorkItem(Base):
 
 
 class SilverWorklog(Base):
-    """One logged entry, unwrapped. The silver twin of `gold.worklog`."""
+    """One worklog entry, unwrapped."""
 
     __tablename__ = "worklog"
     __table_args__ = (

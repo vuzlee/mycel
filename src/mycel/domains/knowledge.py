@@ -1,9 +1,4 @@
-"""The Knowledge chip: find the user's passages before the model runs. No model here;
-the follow-up rewrite happens in `chat` before `retrieve` is called.
-
-Retrieval is code: Qdrant top k, nothing below `document_min_score`. What it finds goes
-into the orchestrator's prompt inside `<documents>`, labelled `c1`..`cN`, as data.
-"""
+"""The Knowledge chip."""
 
 from dataclasses import dataclass, field
 from typing import Any

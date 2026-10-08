@@ -1,10 +1,4 @@
-"""The web search tool, against a fake Tavily.
-
-No request leaves the machine: `httpx2.MockTransport` answers in place of the API, which
-makes the failure cases — a spent quota, a rejected key, a timeout — testable at all. They
-are the ones worth pinning down, because each has to fail in a way the *operator* can act
-on rather than sending the model round another loop.
-"""
+"""The web search tool, against a fake Tavily."""
 
 from decimal import Decimal
 from typing import Any
@@ -35,8 +29,7 @@ def _configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web_search, "get_settings", _settings)
 
 
-#: Captured before any test patches the name, so the factory below builds a real client
-#: rather than recursing into its own replacement.
+#: Captured before patching, so the factory builds a real client.
 _REAL_CLIENT = httpx2.AsyncClient
 
 
@@ -142,8 +135,7 @@ class TestResults:
 
 
 class TestFailures:
-    """Split by who can fix it. The model fixes its arguments; nobody re-prompts their way
-    out of a spent quota."""
+    """Split by who can fix it."""
 
     async def test_an_empty_query_is_the_model_s_to_fix(
         self, monkeypatch: pytest.MonkeyPatch

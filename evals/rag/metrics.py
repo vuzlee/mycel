@@ -49,10 +49,7 @@ def mrr(results: Sequence[Ranked]) -> float:
 
 
 def threshold(results: Sequence[Ranked], keep: float = 0.95) -> tuple[float, int, int]:
-    """The highest top-score cut that still lets `keep` of answerable questions through.
-
-    Returns (threshold, answerable kept, unanswerable blocked).
-    """
+    """The highest top-score cut that still lets `keep` of answerable questions through."""
     answerable = sorted(r.scores[0] for r in results if r.evidence is not None and r.scores)
     if not answerable:
         return 0.0, 0, 0

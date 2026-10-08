@@ -1,4 +1,4 @@
-"""Token counting with the embedding model's own tokenizer, not Gemini's."""
+"""Token counting with the embedding model's own tokenizer."""
 
 from functools import lru_cache
 from typing import Any

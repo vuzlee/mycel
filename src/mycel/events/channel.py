@@ -4,8 +4,7 @@ from typing import Any, Protocol
 
 from mycel.events.event import TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
 
-#: The only types kept. Reasoning is the longest part of a run and the least useful when
-#: read back; a tool call and its result are what make an answer checkable.
+#: Only tool calls and results are kept; they make an answer checkable.
 _KEPT = frozenset({TOOL_CALLED, TOOL_RETURNED})
 
 
@@ -23,18 +22,9 @@ class NullChannel:
 
 
 class RecordingChannel:
-    """Publishes as usual, and keeps the tool calls so the turn can be reopened later.
+    """Publishes as usual and keeps the tool calls, since the stream trims from the front."""
 
-    Wraps rather than replaces: the stream is still what a watching page reads, and this
-    only remembers a copy of the part worth keeping.
-
-    Wrapping rather than re-reading the stream at the end, because by then the stream may
-    be short of exactly what matters. `maxlen` trims from the front, so a long run loses
-    its first tool calls first — the ones that set its direction.
-    """
-
-    #: Steps one turn keeps. A run past this is a loop, and a loop writes the same call
-    #: forever; the head is kept because the first calls are what chose the direction.
+    #: Steps one turn keeps; the head is kept because the first calls set the direction.
     MAX_STEPS = 400
 
     def __init__(self, inner: EventChannel) -> None:
@@ -47,9 +37,7 @@ class RecordingChannel:
         if event.type not in _KEPT:
             return
         if len(self._steps) < self.MAX_STEPS:
-            # Numbered here rather than taken from the stream: the stream's sequence counts
-            # every event, so a kept list carrying it would read as one long gap. These are
-            # the steps in order, and a replay has nothing to be told it is missing.
+            # Renumbered: the stream's sequence counts every event and would show gaps.
             self._steps.append(
                 SequencedEvent(seq=len(self._steps) + 1, **event.model_dump()).model_dump()
             )
@@ -58,11 +46,10 @@ class RecordingChannel:
 
     @property
     def steps(self) -> list[dict[str, Any]]:
-        """What to store. Empty stays empty — a turn that called nothing keeps nothing."""
+        """Steps to store; empty when the turn called no tools."""
         return list(self._steps)
 
     @property
     def dropped(self) -> int:
-        """Tool events past the ceiling, so a caller can say so rather than lose them
-        silently."""
+        """Tool events past the ceiling, so a caller can report them."""
         return self._dropped

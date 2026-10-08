@@ -1,4 +1,4 @@
-"""The S3 session and presigned URLs. Opened on first use, never at import."""
+"""The S3 client and presigned URLs, opened on first use."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -22,7 +22,6 @@ def configured(settings: Settings | None = None) -> bool:
 
 @asynccontextmanager
 async def s3() -> AsyncIterator[Any]:
-    """One S3 client for the block. aiobotocore clients are cheap to open."""
     global _session
     if not configured():
         raise ObjectsUnavailable("S3_ENDPOINT_URL, S3_ACCESS_KEY and S3_SECRET_KEY must be set")

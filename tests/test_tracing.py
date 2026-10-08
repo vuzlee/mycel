@@ -29,12 +29,7 @@ class TestDisabled:
         assert tracing.setup_tracing(_settings(otel_enabled=False)) is None
 
     def test_off_is_the_default_where_nothing_overrides_it(self) -> None:
-        """base.yaml leaves it off, which is what a fresh checkout gets.
-
-        Read without the overlay on purpose: dev.yaml turns it on, because the point of a
-        dev machine is being able to see what happened. Asserting the merged value would
-        be asserting which environment the test is running in.
-        """
+        """base.yaml leaves it off, which is what a fresh checkout gets."""
         from mycel.core.config_files import load_config
         from mycel.core.settings_source import SETTINGS_KEY
 
@@ -57,8 +52,7 @@ class TestEnabled:
         assert provider.resource.attributes["service.name"] == "mycel-worker"
 
     def test_calling_twice_installs_one_provider(self) -> None:
-        """Three entrypoints each call setup; a second provider would silently swallow
-        the spans sent to it."""
+        """Three entrypoints each call setup."""
         assert tracing.setup_tracing(_settings(otel_enabled=True)) is not None
         assert tracing.setup_tracing(_settings(otel_enabled=True)) is None
 
@@ -74,8 +68,7 @@ def test_instrumenting_agents_is_safe_to_repeat() -> None:
 
 
 class TestWhereSpansGo:
-    """The endpoint and its credentials, which are silent when wrong: the exporter keeps
-    batching and the UI simply stays empty."""
+    """The endpoint and its credentials, which are silent when wrong."""
 
     def test_an_explicit_endpoint_wins_and_carries_no_credentials(self) -> None:
         endpoint, headers = tracing._otlp_target(
@@ -109,12 +102,7 @@ class TestWhereSpansGo:
 
 
 class TestWhatIsNotTraced:
-    """A trace is one turn, and the page must not bury it.
-
-    `web/src/run.ts` polls the chat endpoint every three seconds, so without this a
-    two-minute run arrives as one real trace among forty empty ones — each an equal root
-    in the UI, which is what makes the real one unfindable.
-    """
+    """A trace is one turn, and the page must not bury it."""
 
     @staticmethod
     def _excluded(path: str) -> bool:

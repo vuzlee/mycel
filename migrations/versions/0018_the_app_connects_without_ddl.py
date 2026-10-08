@@ -2,20 +2,6 @@
 
 Revision ID: 0018
 Revises: 0017
-
-The app connected as the database owner, so a bug or an injection in it could drop any
-table. Migrations need the owner; the app does not. This creates `mycel_app` with read and
-write on every table and sequence, no DDL, membership of `mycel_reader` so `run_sql` can
-still step down, and a gold read policy so the dashboard and sync are not hidden by the row
-security that binds `mycel_reader`.
-
-Runs as the owner (`MIGRATION_DATABASE_URL`), which is why it can be a migration rather than
-a hand-run script: there is no step to forget. Unset `MYCEL_APP_PASSWORD` and it does
-nothing, leaving a dev machine on the owner. The earlier three-role design (`grants.sql`,
-`mycel_etl`) never had code that connected as `mycel_etl`, and is removed.
-
-`downgrade` drops only the gold policies. The role `mycel_app` and its grants stay;
-drop them by hand if the app should connect as the owner again.
 """
 
 import os
@@ -35,7 +21,7 @@ SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 def _password() -> str | None:
-    """Through Settings, so `.env` counts: scripts run alembic without exporting it."""
+    """Read through Settings so `.env` counts."""
     secret = get_settings().mycel_app_password
     return secret.get_secret_value() if secret else os.environ.get("MYCEL_APP_PASSWORD")
 
@@ -74,8 +60,7 @@ def upgrade() -> None:
         )
     # `run_sql` steps down into the reader for one query; SET ROLE needs membership.
     op.execute(f"GRANT mycel_reader TO {APP}")
-    # Row security binds mycel_reader; the app role is not the owner, so without these it
-    # would read gold as empty. Every other reader checks permission a layer up.
+    # Row security binds mycel_reader; without these the app role reads gold as empty.
     for table in ("work_item", "worklog"):
         op.execute(f"DROP POLICY IF EXISTS {table}_app_reads_all ON gold.{table}")
         op.execute(

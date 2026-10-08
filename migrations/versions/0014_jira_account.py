@@ -2,25 +2,6 @@
 
 Revision ID: 0014
 Revises: 0013
-
-Until this table, Jira was reached on one API token in `.env` — the deployment's own. That
-is adequate while the app only reads: everyone sees the same board, and nobody's name is
-recorded anywhere. It stops being adequate the moment the app writes. A comment posted on
-a shared token appears under the host's name whatever the person typing it is called, and
-Jira has no way to correct the author of an event already written.
-
-So the grant is per person, and the table is `google_account`'s twin — one row per user,
-the refresh token encrypted before it arrives, no access token column because one lives
-under an hour.
-
-**`is_syncer` is the column that is not about OAuth.** Background syncing has nobody signed
-in, so it borrows one person's token; the first person to connect takes that role. The
-partial unique index is the rule: at most one row may be true. A `CHECK` could not say it —
-it is a statement about the table, not about a row.
-
-`last_sync_at` exists for `core/doctor.py` alone. A syncer who leaves the company takes
-the syncing with them, silently, and a dashboard going stale looks exactly like a quiet
-week. This column is what lets one command tell those apart.
 """
 
 from collections.abc import Sequence
@@ -55,7 +36,7 @@ def upgrade() -> None:
         sa.Column("last_sync_at", sa.DateTime(timezone=True), nullable=True),
         schema="app",
     )
-    # At most one syncer. Partial, so the many `false` rows do not collide with each other.
+    # At most one syncer; partial, so the many `false` rows do not collide.
     op.create_index(
         "uq_jira_account_syncer",
         "jira_account",

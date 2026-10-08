@@ -1,9 +1,4 @@
-"""The golden set parses and the scoring says what it means.
-
-No model is called here — that is `evals/summariser/run.py`'s job and it costs money. What this
-guards is the half that can break silently: a case file with a typo'd key scores every run
-against a check nobody wrote, and a scorer that is wrong makes every eval result a lie.
-"""
+"""The golden set parses and the scoring says what it means."""
 
 from pathlib import Path
 

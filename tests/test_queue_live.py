@@ -1,17 +1,4 @@
-"""The queue against a real broker — the half `test_queue.py` cannot prove.
-
-The fakes there believe whatever the consumer tells them. Only a broker decides whether the
-exchange routes `jobs` to the queue we think it does, whether the declarations in
-`topology.py` match what is already on the server, and whether a rejected message really
-lands in `jobs.retry` rather than vanishing.
-
-Skipped unless `RABBITMQ_URL` points at one:
-
-    docker run -d --name mycel-test-rabbit -p 5673:5672 rabbitmq:3-alpine
-    RABBITMQ_URL=amqp://guest:guest@localhost:5673/ uv run pytest tests/test_queue_live.py
-
-No model and no database: this is the transport, not the work.
-"""
+"""The queue against a real broker — the half `test_queue.py` cannot prove."""
 
 import os
 from collections.abc import AsyncIterator
@@ -33,11 +20,7 @@ needs_broker = pytest.mark.skipif(
 
 @pytest.fixture
 async def live() -> AsyncIterator[AbstractChannel]:
-    """A channel with the topology declared, and all three queues emptied first.
-
-    Purged rather than deleted: deleting and redeclaring would hide exactly the failure
-    this file exists to catch, where an existing queue's arguments disagree with ours.
-    """
+    """A channel with the topology declared, and all three queues emptied first."""
     async with channel() as ch:
         topo = await topology.declare(ch)
         for queue in (topo.jobs, topo.retry, topo.dead):
@@ -53,9 +36,7 @@ def _job(question: str = "how is the quarter going?") -> Job:
 @needs_broker
 class TestTopology:
     async def test_declaring_twice_agrees_with_itself(self, live: AbstractChannel) -> None:
-        """A second declaration with different arguments is `PRECONDITION_FAILED`, on a
-        channel nobody watches. Declaring from one function is the reason it cannot happen
-        — this is the assertion that the reason holds."""
+        """A second declaration with different arguments is `PRECONDITION_FAILED`."""
         again = await topology.declare(live)
 
         assert again.jobs.name == topology.QUEUE
@@ -66,8 +47,7 @@ class TestTopology:
 @needs_broker
 class TestPublishing:
     async def test_a_published_job_arrives_in_jobs(self, live: AbstractChannel) -> None:
-        """The routing key reaches the queue we think it does — the one thing a fake
-        exchange cannot be wrong about, and a real one can."""
+        """The routing key reaches the queue we think it does."""
         job = _job()
 
         assert await publish(job) == job.job_id
@@ -92,8 +72,7 @@ class TestPublishing:
 @needs_broker
 class TestRejecting:
     async def test_a_failure_lands_in_the_retry_queue(self, live: AbstractChannel) -> None:
-        """Not requeued to the head of `jobs`, which would fail again at once and burn a
-        worker in a tight loop. It goes to `jobs.retry` and waits out the TTL there."""
+        """Not requeued to the head of `jobs`."""
         topo = await topology.declare(live)
         await publish(_job())
         incoming = await topo.jobs.get(timeout=5)
@@ -108,8 +87,7 @@ class TestRejecting:
         await held.ack()
 
     async def test_giving_up_parks_the_job_instead(self, live: AbstractChannel) -> None:
-        """A body that will not parse gets no second attempt: `jobs.dlq` has no TTL and no
-        dead-letter target, so it stays until somebody looks."""
+        """A body that will not parse gets no second attempt."""
         topo = await topology.declare(live)
         await publish(_job())
         incoming = await topo.jobs.get(timeout=5)
@@ -125,8 +103,7 @@ class TestRejecting:
     async def test_the_last_attempt_goes_to_the_dead_letter_queue(
         self, live: AbstractChannel
     ) -> None:
-        """Attempt counting is ours, in a header — the broker's `x-death` counts per queue
-        and reason, which is easier to read wrong."""
+        """Attempt counting is ours, in a header."""
         topo = await topology.declare(live)
         await publish(_job())
 

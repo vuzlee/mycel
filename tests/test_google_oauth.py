@@ -1,26 +1,4 @@
-"""One person's standing permission to reach their own calendar, and what guards it.
-
-Four things here are load-bearing, and each of them is one line of code that a refactor
-could quietly drop:
-
-**A refresh token never rests in the clear.** It opens one calendar until its owner revokes
-it, so the only thing Postgres ever holds is a Fernet ciphertext. A test that the encryption
-happens is a test that a database dump is not a list of calendars.
-
-**A half-configured deployment counts as unconfigured.** A client with no encryption key
-would connect an account and store the token readably, which is worse than refusing. The
-key is `TOKEN_ENCRYPTION_KEY`, shared with Jira — one key, two providers.
-
-**`state` is spent once.** The callback arrives as a redirect, so the value nobody saw is the
-only thing tying it to the person who started it, and a url in a history file must not be
-replayable.
-
-**`invalid_grant` is not a fault.** It is what Google says when someone revoked access, and
-it has to reach the person as "connect it again" rather than as a traceback.
-
-No network and no Redis: the token endpoint is a `MockTransport` and the state store is a
-dict. Postgres is `services/google_oauth.py`'s other half and is not touched here.
-"""
+"""One person's standing permission to reach their own calendar, and what guards it."""
 
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
@@ -81,8 +59,7 @@ class TestWhetherThisDeploymentCanConnectAnything:
     def test_a_client_without_a_key_is_not_configured(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Half-configured is the state a deployment actually reaches, and connecting anyway
-        would store a refresh token readably — worse than refusing."""
+        """Half-configured is the state a deployment actually reaches."""
         monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
         monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
         get_settings.cache_clear()
@@ -99,9 +76,10 @@ class TestWhetherThisDeploymentCanConnectAnything:
 
 class TestTheConsentUrl:
     async def test_it_asks_for_a_refresh_token(self, configured: None, redis: FakeRedis) -> None:
-        """`access_type=offline` with `prompt=consent` is the whole of whether a token comes
-        back: Google sends one on the first consent only, so every round forces the prompt
-        and a reconnect is always a working reconnect."""
+        """`access_type=offline` with `prompt=consent` is the whole of whether a token comes back:
+        Google sends one on the first consent only, so every round forces the prompt and a
+        reconnect is always a working reconnect.
+        """
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
         assert query["access_type"] == ["offline"]
@@ -110,8 +88,7 @@ class TestTheConsentUrl:
     async def test_it_asks_for_the_narrowest_scopes(
         self, configured: None, redis: FakeRedis
     ) -> None:
-        """`calendar.events` cannot delete a calendar and `gmail.readonly` cannot send or
-        delete; `calendar` and `gmail.modify` would each be a great deal wider."""
+        """`calendar.events` cannot delete a calendar and `gmail.readonly` cannot send or delete."""
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
         assert query["scope"] == [
@@ -139,8 +116,7 @@ class TestTheStateIsSpentOnce:
     async def test_a_replayed_callback_connects_nothing(
         self, configured: None, redis: FakeRedis
     ) -> None:
-        """A callback url lands in a history file and a referrer header, and neither of them
-        may be enough to attach a second account."""
+        """A callback url lands in a history file and a referrer header."""
         state = parse_qs(urlsplit(await oauth.consent_url(7)).query)["state"][0]
         await oauth.spend_state(state)
 
@@ -162,8 +138,7 @@ class TestExchangingTheCode:
     async def test_a_grant_carries_the_email_and_the_scopes_granted(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The scope is as granted, not as asked for: Google may hand back less, and a tool
-        that assumes otherwise fails at the write rather than at the connect."""
+        """The scope is as granted, not as asked for."""
         id_token = "header." + _b64({"email": "dev@example.com"}) + ".signature"
         monkeypatch.setattr(
             httpx2,
@@ -180,8 +155,7 @@ class TestExchangingTheCode:
     async def test_a_response_with_no_refresh_token_names_the_way_out(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The failure worth naming: everything else about that response looks fine, and the
-        account would be connected in a way that stops working within the hour."""
+        """The failure worth naming: everything else about that response looks fine."""
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"access_token": "ya29."}))
 
         with pytest.raises(GoogleError) as caught:
@@ -202,8 +176,7 @@ class TestRefreshing:
     async def test_a_revoked_grant_reads_as_not_connected(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Revoking access is a thing people do, and it is not a fault — it has to reach them
-        as "connect it again" rather than as a traceback."""
+        """Revoking access is a thing people do, and it is not a fault."""
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"error": "invalid_grant"}, status=400))
 
         with pytest.raises(NotConnected):
@@ -212,8 +185,7 @@ class TestRefreshing:
     async def test_any_other_refusal_is_a_google_error(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A broken client is not a revoked grant, and telling somebody to reconnect would
-        send them round a loop that cannot help."""
+        """A broken client is not a revoked grant."""
         monkeypatch.setattr(
             httpx2, "AsyncClient", _answers({"error": "invalid_client"}, status=401)
         )
@@ -242,8 +214,7 @@ class TestTheTokenAtRest:
     def test_a_token_sealed_under_another_key_reads_as_not_connected(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A rotated key looks exactly like a revoked grant from the person's side, and the
-        answer to both is the same sentence."""
+        """A rotated key looks exactly like a revoked grant from the person's side."""
         stale = Fernet(Fernet.generate_key()).encrypt(b"1//refresh").decode()
 
         with pytest.raises(NotConnected):

@@ -1,12 +1,4 @@
-"""Assemble one project's picture from gold.
-
-Reads only. Every count is produced by the database — see `GoldStats.load_by_assignee`
-for why that matters — and this layer only joins the answers together.
-
-It reuses `gather_progress` rather than querying gold itself. The dashboard and the report
-must not be able to disagree about what happened this week, and two code paths asking the
-same question is how they start to.
-"""
+"""Assemble one project's picture from gold."""
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -23,29 +15,16 @@ from mycel.infra.postgres.repositories.gold_stats import (
 )
 from mycel.services.gather import gather_progress
 
-#: Rows in the activity feed. Enough that a reader sees a shape rather than a headline,
-#: short enough to stay a glance rather than a table to scroll.
+#: Rows in the activity feed.
 RECENT_LIMIT = 12
 
-#: How far back the heatmap reaches, regardless of the chosen window. Twelve weeks is the
-#: shortest span in which a rhythm is visible — a quiet fortnight reads as a quiet
-#: fortnight rather than as a stopped project — and it is a fixed grid, so it must not
-#: change shape when the window buttons are pressed.
+#: How far back the heatmap reaches, regardless of the chosen window.
 HEATMAP_DAYS = 84
 
 
 @dataclass(frozen=True)
 class EpicProgress:
-    """One epic and how far its children have got.
-
-    The level a plan is discussed at. An epic with no children in the window still gets a
-    row at zero, because "nothing happened on that epic" is the answer somebody came for.
-
-    Two pairs of numbers, not one. `items`/`done` is the whole epic, which is what a
-    progress bar can honestly be drawn from; `moved`/`moved_done` is this window, which is
-    what tells you whether anyone touched it lately. A single pair would have to be one or
-    the other, and each answers a question the other cannot.
-    """
+    """One epic and how far its children have got."""
 
     issue_key: str
     title: str
@@ -63,15 +42,7 @@ class EpicProgress:
 
 @dataclass(frozen=True)
 class Dashboard:
-    """What one project has been doing in one window.
-
-    `overdue` is a list rather than a count: the point of the screen is that a late ticket
-    is visible without hunting, and a number is something you then have to go and expand.
-
-    `totals` is the window and `all_totals` is the project. Both, because the first
-    answers "what happened this week" and the second "how far are we" — a screen carrying
-    only the window can be read as a project nearly done when it was merely a quiet week.
-    """
+    """What one project has been doing in one window."""
 
     project: str
     since: datetime
@@ -82,21 +53,15 @@ class Dashboard:
     assignees: list[AssigneeLoad]
     epics: list[EpicProgress]
     effort_by_day: list[DayEffort]
-    #: Unfinished items by priority, whole project. Done work is excluded on purpose —
-    #: see `GoldStats.count_by_priority`.
+    #: Unfinished items by priority, whole project.
     priorities: dict[str, int]
-    #: What the project's work is made of, largest kind first. Whole project.
+    #: What the project's work is made of, largest kind first.
     kinds: list[KindTally]
-    #: The last things to move, newest first. Whole project rather than the window: a
-    #: window with nothing in it reads as a dead project instead of a quiet fortnight.
+    #: The last things to move, newest first.
     recent: list[WorkItemRow]
-    #: Every sprint with work in it, newest first. Whole project, and the backlog is not
-    #: one of them — see `GoldStats.count_by_sprint`. Empty on a site that does not
-    #: use sprints, which is an ordinary configuration and not a failure.
+    #: Every sprint with work in it, newest first.
     sprints: list[SprintTally]
-    #: Effort logged per day over `HEATMAP_DAYS`, oldest first, days with nothing left
-    #: out. Its own span, not the window: a heatmap of seven cells is a bar chart. Same
-    #: worklog source as `effort_by_day`, which is the window's slice of this.
+    #: Effort logged per day over `HEATMAP_DAYS`, oldest first, days with nothing left out.
     calendar: list[DayEffort]
 
     @property
@@ -114,8 +79,7 @@ async def build_dashboard(
     gold = GoldRepository(session)
     stats = GoldStats(session)
 
-    # Every epic, not only the ones with movement: an epic nobody has started is a row at
-    # zero, and leaving it out is how a plan looks shorter than it is.
+    # Every epic, not only moving ones: an unstarted epic is a row at zero.
     epics = await gold.epics(project)
     children = await gold.children_of(project, [epic.issue_key for epic in epics])
     by_parent: dict[str, list[WorkItemRow]] = {epic.issue_key: [] for epic in epics}

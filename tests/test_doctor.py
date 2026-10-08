@@ -1,16 +1,4 @@
-"""`doctor`, and the distinction that justifies it.
-
-The report has three states and only two of them are obvious. **BROKEN and OFF both mean a
-feature is unavailable**, and from outside they look identical — an absent `rag_search`
-behaves exactly like a broken one. Somebody who has just cloned the repo cannot tell whether
-to go fixing or to relax, and that is the question this command exists to answer.
-
-So the tests here are mostly about which of the two a check lands on, and about the one
-rule that follows from it: a probe is never attempted for something that is simply not
-configured. Attempting it would turn every unconfigured feature into a connection error.
-
-No network and no containers: every probe is replaced.
-"""
+"""`doctor`, and the distinction that justifies it."""
 
 import asyncio
 
@@ -30,8 +18,7 @@ def _settings(**kwargs: object) -> Settings:
 
 class TestProbeIsNotRunWhenThereIsNothingToProbe:
     async def test_a_missing_reason_means_off_and_no_call(self) -> None:
-        """OFF is decided before anything connects: an unconfigured feature must not be
-        reported as a connection failure, because those read as something to fix."""
+        """OFF is decided before anything connects."""
         called = False
 
         async def probe() -> str:
@@ -60,8 +47,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
         assert "5433" in check.detail
 
     async def test_an_empty_error_still_says_something(self) -> None:
-        """`str(OSError())` is empty, and a report line with nothing on it is worse than
-        a wrong one — the class name is usually enough to know what to do."""
+        """`str(OSError())` is empty."""
 
         async def probe() -> str:
             raise OSError()
@@ -83,16 +69,14 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
 
 class TestWhatCountsAsConfigured:
     def test_an_absent_tool_is_off_and_says_what_is_missing(self) -> None:
-        """The detail names the tool, because 'not configured' alone leaves the reader to
-        work out which capability they just lost."""
+        """The detail names the tool."""
         checks = doctor._declared(_settings(tavily_api_key=None))
         search = next(c for c in checks if c.name == "web search")
         assert search.state is State.OFF
         assert "web_search" in search.detail
 
     def test_the_calendar_needs_all_three_keys(self) -> None:
-        """Two of three is not partly working: the consent round fails at the end, after
-        the person has already agreed to something."""
+        """Two of three is not partly working."""
         partial = _settings(google_client_id="id", google_client_secret="secret")
         check = next(c for c in doctor._declared(partial) if c.name == "calendar & mail")
         assert check.state is State.OFF
@@ -100,9 +84,7 @@ class TestWhatCountsAsConfigured:
 
 class TestTheOpenFrontDoor:
     def test_open_registration_is_reported_broken(self) -> None:
-        """The default is that anyone who can reach the URL gets an account. Right on a
-        laptop, wrong on a company network — and nobody reads a setting they do not know
-        exists, which is the whole reason this line is in the report."""
+        """The default is that anyone who can reach the URL gets an account."""
         checks = doctor._declared(_settings())
         who = next(c for c in checks if c.name == "who may sign up")
         assert who.state is State.BROKEN
@@ -122,8 +104,7 @@ class TestTheOpenFrontDoor:
 
 class TestTheReport:
     def test_off_alone_is_not_a_failure(self) -> None:
-        """`doctor` exits non-zero on BROKEN so it can gate a deploy. If OFF counted, every
-        deployment that skipped a feature would fail its own check."""
+        """`doctor` exits non-zero on BROKEN so it can gate a deploy."""
         checks = [
             Check("G", "a", State.OK, ""),
             Check("G", "b", State.OFF, ""),
@@ -136,8 +117,7 @@ class TestTheReport:
         assert "1 broken, 1 off" in rendered
 
     def test_groups_keep_their_order(self) -> None:
-        """Stores first, then what depends on them. A report sorted alphabetically reads
-        as a list rather than as a sequence of things to check."""
+        """Stores first, then what depends on them."""
         checks = [
             Check("STORES", "a", State.OK, ""),
             Check("TOOLS", "b", State.OK, ""),

@@ -1,4 +1,4 @@
-"""Connected Google and Jira accounts, project memberships and the sync's state, in `app`."""
+"""Connected Google and Jira accounts, project memberships and sync state."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -19,11 +19,7 @@ from mycel.infra.postgres.repositories._result import rowcount
 
 @dataclass(frozen=True)
 class GoogleAccountRow:
-    """One person's connected Google account.
-
-    Carries the token still encrypted: decrypting is `services/google_oauth.py`'s, and a
-    row that travels in the clear is a row that ends up in a log line.
-    """
+    """One person's connected Google account, token still encrypted."""
 
     user_id: int
     email: str
@@ -43,10 +39,7 @@ class SyncStateRow:
 
 @dataclass(frozen=True)
 class JiraAccountRow:
-    """One person's connected Jira account.
-
-    Carries the token still encrypted, as `GoogleAccountRow` does.
-    """
+    """One person's connected Jira account, token still encrypted."""
 
     user_id: int
     account_id: str
@@ -58,8 +51,7 @@ class JiraAccountRow:
 
 
 class AccountRepository:
-    """Reads and writes these tables on a session someone else owns, so callers can share
-    one transaction."""
+    """Reads and writes on a caller-owned session."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -72,11 +64,7 @@ class AccountRepository:
         return frozenset(rows)
 
     async def replace_projects(self, user_id: int, projects: Iterable[str]) -> None:
-        """Make this person's grants exactly `projects`, which came from Jira.
-
-        Replaced, never merged: a project they lost in Jira must leave here too, and a
-        merge would only ever add.
-        """
+        """Replace this person's grants with exactly `projects`, so lost projects are removed."""
         await self._session.execute(delete(Membership).where(Membership.user_id == user_id))
         rows = [{"user_id": user_id, "project": p} for p in sorted(set(projects))]
         if rows:
@@ -92,11 +80,7 @@ class AccountRepository:
     async def upsert_google_account(
         self, user_id: int, email: str, refresh_token_encrypted: str, scope: str
     ) -> None:
-        """Attach a Google account, replacing whatever this person had connected before.
-
-        Upsert rather than insert: a second consent is the same person reconnecting, and two
-        live grants for one user is two answers to "whose calendar" with no way to choose.
-        """
+        """Attach a Google account, replacing any previous one."""
         stmt = insert(GoogleAccount).values(
             user_id=user_id,
             email=email,
@@ -116,7 +100,7 @@ class AccountRepository:
         )
 
     async def google_account(self, user_id: int) -> GoogleAccountRow | None:
-        """What this person connected, or `None`. `None` is a normal answer."""
+        """What this person connected, or `None`."""
         row = await self._session.scalar(
             select(GoogleAccount).where(GoogleAccount.user_id == user_id)
         )
@@ -138,7 +122,7 @@ class AccountRepository:
         refresh_token_encrypted: str,
         scope: str,
     ) -> None:
-        """Attach a Jira account, replacing whatever this person had connected before."""
+        """Attach a Jira account, replacing any previous one."""
         stmt = insert(JiraAccount).values(
             user_id=user_id,
             account_id=account_id,
@@ -162,24 +146,19 @@ class AccountRepository:
         )
 
     async def jira_account(self, user_id: int) -> JiraAccountRow | None:
-        """What this person connected, or `None`. `None` is a normal answer."""
+        """What this person connected, or `None`."""
         row = await self._session.scalar(select(JiraAccount).where(JiraAccount.user_id == user_id))
         return _jira(row) if row else None
 
     async def jira_account_locked(self, user_id: int) -> JiraAccountRow | None:
-        """The row, locked until this transaction ends.
-
-        Atlassian rotates refresh tokens: spending one returns the next, and the old one
-        soon stops working. Two processes refreshing at once would both spend the same
-        token and one of them would keep the wrong successor. The lock makes them queue.
-        """
+        """The row, locked until commit, so two refreshes can't spend one rotating token."""
         row = await self._session.scalar(
             select(JiraAccount).where(JiraAccount.user_id == user_id).with_for_update()
         )
         return _jira(row) if row else None
 
     async def set_jira_refresh_token(self, user_id: int, sealed: str) -> None:
-        """Keep the successor a refresh just returned."""
+        """Store the rotated refresh token."""
         await self._session.execute(
             update(JiraAccount)
             .where(JiraAccount.user_id == user_id)
@@ -187,7 +166,6 @@ class AccountRepository:
         )
 
     async def sync_state(self) -> SyncStateRow:
-        """How the last background sync went. Empty before the first one."""
         row = await self._session.get(SyncState, 1)
         if row is None:
             return SyncStateRow(None, None, None)
@@ -206,11 +184,7 @@ class AccountRepository:
         )
 
     async def delete_jira_account(self, user_id: int) -> bool:
-        """Disconnect. False when there was nothing to disconnect.
-
-        Their project access goes with it: it came from Jira on this token, and with no
-        token there is nothing to keep it true.
-        """
+        """Disconnect and drop the project access from Jira. False if nothing was connected."""
         await self._session.execute(delete(Membership).where(Membership.user_id == user_id))
         result = await self._session.execute(
             delete(JiraAccount).where(JiraAccount.user_id == user_id)

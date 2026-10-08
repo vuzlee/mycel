@@ -1,10 +1,4 @@
-"""Does the 074 rewrite find a follow-up's passage better than stitching?
-
-    uv run python -m evals.rag.followups
-
-Ingests the documents the cases name, then searches each follow-up twice: with the
-stitched text (previous + question) and with the rewriter's output. One model call per case.
-"""
+"""Does the 074 rewrite find a follow-up's passage better than stitching?"""
 
 import asyncio
 import json

@@ -1,11 +1,4 @@
-"""Alembic entry point.
-
-Reads the DSN from `Settings`, not from `alembic.ini`, so a migration cannot run against a
-different database than the application. Runs async, for the same reason the engine does.
-
-`alembic_version` stays in `public`: it is alembic's own bookkeeping, and a per-layer
-schema cannot hold it when the first migration is what creates that schema.
-"""
+"""Alembic entry point; the DSN comes from Settings, and alembic_version stays in public."""
 
 import asyncio
 
@@ -30,13 +23,13 @@ def _configure(connection: Connection) -> None:
 
 
 def _url() -> str:
-    """The owner's URL: only the owner may change the schema. Falls back to the app's."""
+    """The owner's URL, since only the owner may change the schema; falls back to the app's."""
     settings = get_settings()
     return settings.migration_database_url or settings.database_url
 
 
 def run_offline() -> None:
-    """Emit SQL to stdout, for a DBA who applies migrations by hand."""
+    """Emit SQL to stdout instead of applying it."""
     context.configure(
         url=_url(),
         target_metadata=target_metadata,
@@ -54,7 +47,6 @@ def _migrate(connection: Connection) -> None:
 
 
 async def run_online() -> None:
-    """Apply migrations against a live database."""
     engine = async_engine_from_config(
         {"sqlalchemy.url": async_dsn(_url())},
         prefix="sqlalchemy.",

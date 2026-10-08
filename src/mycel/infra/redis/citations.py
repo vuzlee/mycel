@@ -1,4 +1,4 @@
-"""The citations of a finished knowledge answer, beside the answer text in `results`."""
+"""Citations of a finished knowledge answer, stored beside it."""
 
 import json
 from typing import Any

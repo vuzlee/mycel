@@ -1,13 +1,4 @@
-"""Read one project's progress: the part of this system a person can just look at.
-
-Synchronous, unlike `/chat`. A question is minutes of agent work and gets a job id; a
-board is a handful of counting queries, so it answers in the request and needs no receipt.
-
-    GET  /dashboard/{project}   the numbers, as JSON
-
-Every field says its own scope, because they are not all the same one: some blocks are the
-window and some are the whole project, and which is which is invisible from the figures.
-"""
+"""Read one project's progress: the part of this system a person can just look at."""
 
 from datetime import datetime
 from typing import Annotated
@@ -23,8 +14,7 @@ from mycel.services.permission import NotReadable
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-#: Longest window a caller may ask for. Not a performance limit — the counting is in SQL —
-#: but a year of history on one screen is not a dashboard, it is an export.
+#: Longest window a caller may ask for.
 MAX_DAYS = 90
 
 
@@ -45,15 +35,7 @@ class ItemResponse(BaseModel):
 
 
 class AssigneeResponse(BaseModel):
-    """One person's row, summed over the window's items.
-
-    `gap_seconds` is spent minus estimated: positive means over the estimate. Seconds
-    throughout — man-days are a display decision and belong to whatever renders this.
-
-    The window picks *which* issues are summed, not which hours: these are Jira's lifetime
-    totals on each issue. `effort_by_day` counts worklogs dated inside the window instead,
-    so the two are not two views of one number.
-    """
+    """One person's row, summed over the window's items."""
 
     account_id: str | None = None
     name: str
@@ -110,89 +92,40 @@ class DashboardResponse(BaseModel):
     since: datetime
     until: datetime
     percent: int = Field(
-        description=(
-            "The project finished, 0-100, by items done over items that exist. Whole "
-            "project, never the window: a quiet week would otherwise read as nearly done."
-        )
+        description="The project finished, 0-100, by items done over items that exist."
     )
     all_totals: dict[str, int] = Field(
-        description=(
-            "Every item in the project by category, no window. The denominator behind "
-            "`percent`, given as well so a caller can show the parts it is made of."
-        )
+        description="Every item in the project by category, no window."
     )
     totals: dict[str, int] = Field(
-        description=(
-            "Items that moved in the window, counted by the status category they are in "
-            "now: todo, doing, done. Not how many changed category during it — Jira dates "
-            "a transition from the API call, so that question has no honest answer. Every "
-            "issue type counts as one, epics included."
-        )
+        description="Items that moved in the window, by current status category: todo, doing, done."
     )
     priorities: dict[str, int] = Field(
-        description=(
-            "Unfinished items by priority name, whole project. Done work is left out: a "
-            "priority answers 'what next', and a shipped ticket has no next. Jira's five "
-            "come first even at zero, then whatever else the site uses; items with no "
-            "priority set are counted under 'None'."
-        )
+        description="Unfinished items by priority name, whole project."
     )
     kinds: list[KindResponse] = Field(
-        description=(
-            "What the project's work is made of, largest kind first, whole project. Not "
-            "windowed: the shape of a team's work does not change because a week was quiet."
-        )
+        description="What the project's work is made of, largest kind first, whole project."
     )
     recent: list[ItemResponse] = Field(
-        description=(
-            "The last items to move, newest first, whole project rather than the window — "
-            "an empty feed would read as a dead project when the truth is that the last "
-            "thing to happen was a fortnight ago and is worth naming."
-        )
+        description="The last items to move, newest first, whole project rather than the window."
     )
     sprints: list[SprintResponse] = Field(
-        description=(
-            "Every sprint with work in it, newest first, whole project. The backlog is "
-            "not among them: an item with no sprint is not planned into one, and a row "
-            "for it would sit beside real sprints claiming to be one. Empty on a site "
-            "that does not use sprints, which is a configuration rather than a failure."
-        )
+        description="Every sprint with work in it, newest first, whole project."
     )
     calendar: list[DayResponse] = Field(
-        description=(
-            "Effort logged per day over the last twelve weeks, oldest first, from the "
-            "same worklogs as `effort_by_day`. Its own fixed span rather than the window, "
-            "because it is a calendar grid and must not change shape when the window "
-            "does. Days with nothing logged are omitted; a caller drawing the grid fills "
-            "its own gaps."
-        )
+        description="Effort logged per day over the last twelve weeks, oldest first."
     )
     overdue: list[ItemResponse] = Field(
-        description=(
-            "Past its due date and not done, most overdue first. The whole project, not "
-            "the window: an item overdue for a month and untouched since is the one most "
-            "worth seeing, and a window filter would hide it."
-        )
+        description="Past its due date and not done, most overdue first."
     )
     assignees: list[AssigneeResponse] = Field(
-        description=(
-            "One row per person, over the window's items. Busiest first. `estimated_seconds` "
-            "and `spent_seconds` are Jira's lifetime totals on those issues, not effort "
-            "inside the window — compare `effort_by_day` for that."
-        )
+        description="One row per person, over the window's items."
     )
     epics: list[EpicResponse] = Field(
-        description=(
-            "Every epic in the project, including ones nothing moved under. `items` and "
-            "`done` are the epic's whole size, which is what `percent` is drawn from; "
-            "`moved` and `moved_done` are this window."
-        )
+        description="Every epic in the project, including ones nothing moved under."
     )
     effort_by_day: list[DayResponse] = Field(
-        description=(
-            "Logged effort per day, from worklogs and dated by the day the work was "
-            "logged for — not from resolution dates, which a back-filled project moves."
-        )
+        description="Logged effort per day, dated by the day the work was logged for."
     )
 
 
@@ -202,11 +135,7 @@ async def read_dashboard(
     user: Annotated[Principal, Depends(current_user)],
     days: int = Query(default=DEFAULT_DAYS, ge=1, le=MAX_DAYS),
 ) -> DashboardResponse:
-    """The numbers for one project.
-
-    A project with no data is an empty dashboard, not a 404: a project set up but not yet
-    synced is a normal state, and the page for it should say so rather than look broken.
-    """
+    """The numbers for one project."""
     try:
         board = await get_dashboard(user, project, days=days)
     except NotReadable:

@@ -1,23 +1,4 @@
-"""One question, all the way through: HTTP → broker → worker → Redis → Postgres → HTTP.
-
-Every other test file proves one leg with the next one faked. This proves the joins: that
-the id the API hands back is the id the worker writes under, that a thread opened at queue
-time is the thread the answer lands in, and that `GET /chat/{job_id}` reads back what a
-different process wrote.
-
-A chat question goes in, and its answer comes back from the worker. Needs all three
-services, and skips without them:
-
-    docker compose up -d postgres rabbitmq redis
-
-    DATABASE_URL=postgresql://mycel:$POSTGRES_PASSWORD@localhost:5433/mycel \\
-    RABBITMQ_URL=amqp://guest:guest@localhost:5672/ \\
-    REDIS_URL=redis://localhost:6379/0 uv run pytest tests/test_end_to_end.py
-
-The model is the one thing still stubbed. It is also the only piece that is not a join:
-what the agent answers is `evals/`, and paying a provider per CI run to learn that a
-routing key is spelled right would be a bad trade.
-"""
+"""One question, all the way through: HTTP → broker → worker → Redis → Postgres → HTTP."""
 
 import asyncio
 import os
@@ -57,19 +38,13 @@ EMAIL = "e2e@example.com"
 PASSWORD = "correct horse battery"
 ANSWER = "Two stories shipped and one is overdue."
 
-#: Long enough that a worker which never picked the job up looks different from one still
-#: working, short enough that a broken join fails the suite rather than hanging it.
+#: Long enough to tell a worker that never picked the job up from a slow one.
 TIMEOUT_S = 20.0
 
 
 @pytest.fixture
 async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
-    """The app and a worker, both against the real services, on one loop.
-
-    The worker runs as a task here rather than as a process: a separate process would need
-    the same environment assembled twice, and what is under test is the messages between
-    them, not how they were started.
-    """
+    """The app and a worker, both against the real services, on one loop."""
     monkeypatch.setenv("DATABASE_URL", DSN)
     monkeypatch.setenv("RABBITMQ_URL", BROKER)
     monkeypatch.setenv("REDIS_URL", CACHE)
@@ -82,8 +57,7 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
     async def _answer(*args: object, **kwargs: object) -> str:
         return ANSWER
 
-    # The one stub: the model. `build` too, since there is no agent left to build for a
-    # `run` that never reads it.
+    # The one stub is the model, and `build` with it.
     monkeypatch.setattr(runner, "run", _answer)
     monkeypatch.setattr(chat_domain.Orchestrator, "build", classmethod(lambda cls, s: None))
 
@@ -126,8 +100,7 @@ class TestOneQuestionAllTheWay:
     async def test_the_answer_comes_back_under_the_id_the_api_gave(
         self, stack: AsyncClient
     ) -> None:
-        """The whole point of the job id: the API mints it before any worker exists, and a
-        different process has to write its answer under exactly that key."""
+        """The whole point of the job id."""
         await _sign_in(stack)
 
         queued = await stack.post("/chat", json={"question": "how is the quarter going?"})
@@ -141,8 +114,7 @@ class TestOneQuestionAllTheWay:
     async def test_the_answer_lands_in_the_thread_opened_at_queue_time(
         self, stack: AsyncClient
     ) -> None:
-        """The thread exists before the job does, so a run that dies still has somewhere to
-        be recorded — and a run that lives must land in that same one."""
+        """The thread exists before the job does."""
         await _sign_in(stack)
 
         queued = await stack.post("/chat", json={"question": "did anything ship?"})
@@ -166,8 +138,7 @@ class TestOneQuestionAllTheWay:
         assert (await _poll(stack, second.json()["job_id"]))["status"] == "done"
 
     async def test_the_run_survives_redis_forgetting_it(self, stack: AsyncClient) -> None:
-        """Redis is a holding area with a TTL; `app.turn` is the record. An answer opened
-        next week opens because the second write happened."""
+        """Redis is a holding area with a TTL; `app.turn` is the record."""
         await _sign_in(stack)
         queued = await stack.post("/chat", json={"question": "what is overdue?"})
         job_id = queued.json()["job_id"]

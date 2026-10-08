@@ -1,7 +1,4 @@
-"""A user's document store: ownership, upload limits, disable, rename, delete. No HTTP here.
-
-Every error is an English sentence the page can show as is.
-"""
+"""A user's document store: ownership, upload limits, disable, rename, delete. No HTTP here."""
 
 import hashlib
 import io

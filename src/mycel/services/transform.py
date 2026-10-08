@@ -1,8 +1,4 @@
-"""Run the steps in etl/: bronze -> silver -> gold.
-
-Idempotent: re-running the same window gives the same result, because every write upserts
-on a natural key.
-"""
+"""Run the steps in etl/: bronze -> silver -> gold."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -21,11 +17,7 @@ log = get_logger(__name__)
 
 @dataclass(frozen=True)
 class TransformResult:
-    """How much reached each layer. Reported, not just logged, so a caller can assert.
-
-    The silver and gold counts are separate on purpose: with one source they must agree,
-    and a test that says so is what keeps the middle layer honest rather than decorative.
-    """
+    """How much reached each layer. Reported, not just logged, so a caller can assert."""
 
     silver_items: int
     silver_worklogs: int
@@ -34,20 +26,7 @@ class TransformResult:
 
 
 async def transform(session: AsyncSession, keys: Sequence[str] | None = None) -> TransformResult:
-    """Lift bronze into silver, then silver into gold.
-
-    `keys` limits the replay to the issues one fetch brought in; without it the whole of
-    bronze is rebuilt, which is a supported operation rather than a repair hack.
-
-    The checks run before the first write. Silver is the layer above bronze now, and the
-    point of stopping here is that nothing malformed ever gets that far — so a failure
-    leaves both silver and gold untouched, with bronze still holding everything needed to
-    replay once the transform is fixed.
-
-    Gold is promoted from what silver *holds*, read back, rather than from the rows still
-    in memory. That makes `transform(session)` with no keys a genuine rebuild from silver
-    instead of a rebuild from bronze wearing a different name.
-    """
+    """Lift bronze into silver, then silver into gold."""
     bronze = BronzeRepository(session)
 
     items = [
@@ -106,12 +85,7 @@ def _worklog_project(payload: dict[str, object], by_key: dict[str, str]) -> str:
 
 
 def _project(payload: dict[str, object]) -> str:
-    """The project an issue belongs to, read from the issue itself.
-
-    The sync reads every project the service account may browse, so configuration cannot
-    say which one an issue came from. Its own `fields.project.key` does; the key's prefix
-    is the fallback for a payload without it.
-    """
+    """The project an issue belongs to, read from the issue itself."""
     fields = payload.get("fields")
     project = fields.get("project") if isinstance(fields, dict) else None
     if isinstance(project, dict) and project.get("key"):

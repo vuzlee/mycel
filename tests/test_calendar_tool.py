@@ -1,24 +1,4 @@
-"""The three calendar tools, and the draft store under two of them.
-
-One claim matters more than everything else in this file: **`draft_event` writes nothing**.
-It is the whole reason the write is split in two. The time in "three o'clock Friday" is
-something a model read out of a sentence, and a wrong reading that reaches Google puts a
-meeting nobody arranged on a real person's phone. So the fake transport here is asked not
-what it was sent but *whether it was called at all*.
-
-Around that:
-
-**A draft belongs to one person.** The id is a random string that travels through a prompt,
-and a prompt is the least trustworthy place in the system for one to travel.
-
-**A draft is spent once.** An enthusiastic "yes, do it" twice over books one meeting.
-
-**Not connected is a sentence, not an exception.** A person with no Google account still
-asked something, and raising would end the job over the half of it that is answerable.
-
-No Redis and no network: the draft store gets an in-memory client, and the calendar gets a
-transport that records rather than answers.
-"""
+"""The three calendar tools, and the draft store under two of them."""
 
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -154,8 +134,7 @@ class TestWhatDraftingRefuses:
     async def test_a_time_in_the_past_is_sent_back_with_today_in_it(
         self, tools: dict[str, Any], ctx: Any
     ) -> None:
-        """Almost always a year or a weekday read wrong, and naming today is how the model
-        works out what "tomorrow" was without a tool for it."""
+        """Almost always a year or a weekday read wrong."""
         with pytest.raises(ModelRetry) as caught:
             await tools["draft_event"](ctx, summary="review", starts_at="2020-01-01T09:00")
 
@@ -210,8 +189,7 @@ class TestConfirming:
     async def test_a_draft_id_from_a_prompt_cannot_book_on_another_calendar(
         self, tools: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The id travels through a model's context, which is the least trustworthy place in
-        the system for one to travel."""
+        """The id travels through a model's context."""
         calls = Calls(_event(15))
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
         mine = _ctx(ASKER)
@@ -227,8 +205,7 @@ class TestConfirming:
     async def test_an_unknown_draft_is_a_sentence_not_a_retry(
         self, tools: dict[str, Any], ctx: Any
     ) -> None:
-        """There is no argument the model could fix: the draft it was holding is gone, and
-        drafting again is the way forward."""
+        """There is no argument the model could fix."""
         out = await tools["confirm_event"](ctx, draft_id="never-existed")
 
         assert "expired" in out
@@ -238,8 +215,7 @@ class TestReadingTheCalendar:
     async def test_the_counts_lead(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """ "Two meetings" and "two of eleven" are different answers, and a model cannot
-        count what it was not shown."""
+        """ "Two meetings" and "two of eleven" are different answers."""
         calls = Calls({"items": [_event(9, "standup"), _event(15)]})
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
 
@@ -311,8 +287,7 @@ class TestWithNoAccountConnected:
     async def test_a_revoked_grant_reads_as_not_connected(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Revoking access at Google is a thing people do, and it must come back as "connect
-        it again" rather than as a traceback."""
+        """Revoking access at Google is a thing people do."""
 
         async def _refuse(user_id: int) -> str:
             raise NotConnected("gone")

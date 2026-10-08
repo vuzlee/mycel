@@ -1,42 +1,14 @@
-"""Exchange, queues and dead-letter wiring, declared in one place.
-
-**Both sides call this, and neither declares anything of its own.** A producer and a
-consumer that declare the same queue with different arguments is the classic silent
-RabbitMQ failure: whichever runs second gets `PRECONDITION_FAILED` and, on a channel that
-nobody is watching, the process simply stops receiving. Declaring from one function means
-there is only one set of arguments to disagree with.
-
-The shape:
-
-    mycel.jobs (direct exchange)
-      └─ jobs                  x-dead-letter-exchange: mycel.jobs.dlx
-    mycel.jobs.dlx (direct)
-      ├─ jobs.retry            x-message-ttl, dead-letters back to mycel.jobs
-      └─ jobs.dlq              nothing consumes it; kept for inspection
-
-Nothing consumes `jobs.retry`. A rejected message lands there, ages out against the
-queue's TTL, and the broker routes it back to `jobs` by itself — the delay is the TTL, not
-a consumer sleeping. `retry.py` decides which of the two dead-letter queues a failure goes
-to.
-
-Declarations are idempotent, so calling this on every connection is correct and cheap. It
-also means a cold `docker compose up` needs no setup step: whichever process starts first
-creates the topology.
-"""
+"""Exchanges, queues and dead-letter wiring, declared in one place for both sides."""
 
 from dataclasses import dataclass
 
 from aio_pika import ExchangeType
 from aio_pika.abc import AbstractChannel, AbstractExchange, AbstractQueue
 
-#: Retry delay before a failed job is handed back to `jobs`. One value, not a tiered chain:
-#: the failures worth retrying here are a provider 503 or a rate limit, and both clear in
-#: about this long. Tiers can be added by declaring more retry queues with longer TTLs.
+#: Delay before a failed job returns to its work queue.
 RETRY_DELAY_MS = 60_000
 
-#: How many times a job is retried before it is parked in the dead-letter queue. Counted in
-#: a header we write, not from the broker's own `x-death` array, which is easier to read
-#: wrong than to read.
+#: Retries before a job is parked in the dead-letter queue.
 MAX_ATTEMPTS = 3
 
 EXCHANGE = "mycel.jobs"
@@ -46,8 +18,7 @@ QUEUE = "jobs"
 RETRY_QUEUE = "jobs.retry"
 DEAD_QUEUE = "jobs.dlq"
 
-#: Document ingest has its own queue and its own worker: docling holds ~3-4 GB of RAM and
-#: minutes of CPU, and a chat question must never wait behind it.
+#: Document ingest has its own queue so chat jobs never wait behind docling.
 INGEST_QUEUE = "ingest"
 INGEST_RETRY_QUEUE = "ingest.retry"
 INGEST_DEAD_QUEUE = "ingest.dlq"
@@ -74,11 +45,7 @@ class Topology:
 
 
 async def declare(channel: AbstractChannel) -> Topology:
-    """Declare everything, idempotently, and hand back the bound objects.
-
-    Durable throughout: a broker restart with transient queues loses every queued job, and
-    a job nobody knows was dropped is worse than one that fails loudly.
-    """
+    """Declare everything durably and idempotently, and return the bound objects."""
     exchange = await channel.declare_exchange(EXCHANGE, ExchangeType.DIRECT, durable=True)
     dlx = await channel.declare_exchange(DLX, ExchangeType.DIRECT, durable=True)
     jobs, retry, dead = await _family(channel, exchange, dlx, QUEUE, RETRY_QUEUE, DEAD_QUEUE)

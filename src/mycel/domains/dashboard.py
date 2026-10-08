@@ -1,16 +1,4 @@
-"""The dashboard domain: one project, one window, one picture of it.
-
-One step — no queue, no agent, no model. A dashboard is a handful of counting queries and
-answers in milliseconds, so it runs inside the request rather than being handed to a
-worker. That is also what makes it the cheapest feature in the system.
-
-One way in is better than three for *asking questions*: a summary and a progress narrative are the
-analyst's job, and a screen
-of them was a second interface to the same answers. It does not hold for *looking*. The
-questions a board answers — what is late, who is loaded, what moved — are asked over and
-over, at a glance, and paying a model round-trip to re-derive a count that SQL already has
-is the wrong trade. The analyst stays for everything a fixed screen cannot ask.
-"""
+"""The dashboard domain: one project, one window, one picture of it."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -19,8 +7,7 @@ from mycel.services.auth import Principal
 from mycel.services.dashboard import Dashboard, build_dashboard, list_projects
 from mycel.services.permission import readable, require
 
-#: The default window. A week covers a team that works on weekdays and rests at the
-#: weekend; a shorter one makes a normal Monday look like a dead project.
+#: The default window.
 DEFAULT_DAYS = 7
 
 

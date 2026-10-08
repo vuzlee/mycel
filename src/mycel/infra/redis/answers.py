@@ -1,9 +1,4 @@
-"""Cached knowledge answers. The same question on an unchanged store costs nothing.
-
-Keyed by the user's store version (document count and newest change) and by what wrote the
-answer (prompt and models), so an upload, a prompt edit or a model swap makes every earlier
-answer unreachable without deleting anything. Cache server.
-"""
+"""Cached knowledge answers, keyed by store version and by prompt and models."""
 
 import hashlib
 import json
@@ -19,7 +14,7 @@ def normalise(question: str) -> str:
 
 
 def writer(instructions: str, models: tuple[str, ...]) -> str:
-    """A short fingerprint of what answers: the prompt and every model it may fall to."""
+    """A short fingerprint of the prompt and every model it may fall back to."""
     return hashlib.sha256("\n".join((instructions, *models)).encode()).hexdigest()[:12]
 
 

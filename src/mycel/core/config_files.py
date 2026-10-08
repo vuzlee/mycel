@@ -1,26 +1,4 @@
-"""The non-secret half of configuration: YAML files under `config/`, read and merged.
-
-Two halves, split by whether a value can be committed. `config.py` reads the environment
-and holds everything secret or per-machine; this module reads files that live in git and
-hold everything a reviewer should see in a diff — batch sizes, model choices, limits.
-
-**YAML, not INI.** The configuration is nested (`agents.defaults.request_limit`) and typed:
-INI would make every value a string and every nesting a naming convention.
-
-**Layered, not duplicated.** `environments/base.yaml` holds the real configuration;
-`environments/dev.yaml` and `environments/prod.yaml` hold only what differs and are merged
-over it, key by key and at every depth. A full copy per environment drifts — someone fixes a
-value in one file and the other keeps the bug for months.
-
-**One folder per concern.** `config/` is a tree, not a flat pile: `environments/` holds the
-layered files, `agents/` one file per agent, `mcp/` the declared servers, `sources/` the
-upstreams. The names live below as constants and every reader joins them itself, so a caller
-— a test, mostly — names one directory rather than four.
-
-**Secrets are never here.** These files are committed. Where a value must stay private the
-YAML names the variable that holds it (`api_key_env: GEMINI_API_KEYS`) and `config.py`
-reads it. That way the file still documents what a deployment needs without carrying it.
-"""
+"""Committed YAML config under `config/`: `environments/base.yaml` with `<env>.yaml` over it."""
 
 from collections.abc import Mapping
 from functools import lru_cache
@@ -35,20 +13,14 @@ from mycel.core.exceptions import ConfigError
 
 CONFIG_DIR = REPO_ROOT / "config"
 
-#: Subdirectories of `CONFIG_DIR`, named here so the layout is written down once.
+#: Subdirectories of `CONFIG_DIR`.
 ENV_SUBDIR = "environments"
 AGENTS_SUBDIR = "agents"
 MCP_SUBDIR = "mcp"
 
 
 def load_config(env: str | None = None, config_dir: Path | None = None) -> dict[str, Any]:
-    """Return `environments/base.yaml` with `environments/<env>.yaml` merged over it.
-
-    `config_dir` is the root of the tree, not the environments folder: callers name
-    `config/` and this joins the subdirectory, so the layout stays in one module.
-
-    `env` defaults to `MYCEL_ENV`, so a process configures itself from one variable.
-    """
+    """`environments/base.yaml` with `<env>.yaml` over it; `env` defaults to `MYCEL_ENV`."""
     directory = (config_dir or CONFIG_DIR) / ENV_SUBDIR
     name = env or get_settings().mycel_env
 
@@ -59,27 +31,17 @@ def load_config(env: str | None = None, config_dir: Path | None = None) -> dict[
 
 @lru_cache(maxsize=8)
 def get_config(env: str | None = None) -> dict[str, Any]:
-    """`load_config` for the process, read once.
-
-    Cached because config is read on every agent build and the files never change while a
-    process runs. Tests call `get_config.cache_clear()`.
-    """
+    """Cached `load_config`; tests call `get_config.cache_clear()`."""
     return load_config(env)
 
 
 def read_yaml(path: Path) -> dict[str, Any]:
-    """Parse one YAML mapping that must exist — for files outside the layered merge, like
-    `config/agents/<name>.yaml` or `config/mcp/servers.yaml`."""
+    """Parse one YAML mapping that must exist."""
     return _read(path, required=True)
 
 
 def _read(path: Path, *, required: bool) -> dict[str, Any]:
-    """Parse one YAML file into a dict, or raise `ConfigError` saying which file is wrong.
-
-    A missing overlay is fine — an environment that overrides nothing needs no file. A
-    missing `environments/base.yaml` is not: it means the process is running from somewhere
-    that has no configuration at all, and continuing with defaults would hide that.
-    """
+    """Parse one YAML mapping, or raise `ConfigError` naming the file."""
     if not path.exists():
         if required:
             raise ConfigError(f"missing configuration file: {path}")
@@ -98,12 +60,7 @@ def _read(path: Path, *, required: bool) -> dict[str, Any]:
 
 
 def _deep_merge(base: dict[str, Any], overlay: Mapping[str, Any]) -> dict[str, Any]:
-    """Merge `overlay` into `base` at every depth, without mutating either.
-
-    Nested rather than top-level merging is the whole point of the layering: `dev.yaml`
-    setting `agents.defaults.request_limit` must keep the other `defaults` keys, not
-    replace the block with a one-key dict.
-    """
+    """Merge `overlay` into `base` at every depth, without mutating either."""
     result = dict(base)
     for key, value in overlay.items():
         current = result.get(key)

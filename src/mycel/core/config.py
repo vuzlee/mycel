@@ -1,14 +1,6 @@
-"""Configuration read from the environment, once.
+"""Settings from the environment, `.env` and `config/environments/` YAML, read once.
 
-Every knob the system needs arrives as an environment variable, so the same image runs in
-dev, staging and prod with no `if env == "prod"` anywhere in the code. `.env` is read in
-development; in a container the variables are already set.
-
-`extra="ignore"` is load-bearing: `.env.example` carries the Postgres, RabbitMQ and Redis
-credentials the containers read and no field here does, and a strict model would refuse to
-start over a variable it has no field for.
-
-`get_settings()` is cached — config is read once per process, and tests clear the cache.
+`extra="ignore"` because `.env` also carries container-only variables with no field here.
 """
 
 from datetime import date
@@ -24,22 +16,7 @@ from mycel.core.settings_source import EnvironmentFileSource
 
 
 class Settings(BaseSettings):
-    """Every setting the system reads, wherever it comes from.
-
-    Four sources, and later wins:
-
-        class default  <  config/environments/*.yaml  <  .env  <  environment
-
-    The split between the last two and the rest is one rule: **what must never reach git
-    lives in `.env`, everything else lives in `config/`.** Keys, passwords and the four
-    store URLs stay; intervals, hosts, log levels and feature switches move.
-
-    The store URLs look like the exception and are not: `postgresql://user:pw@host/db` is a
-    password with an address attached, and a committed one is a committed password.
-
-    **The environment wins, always.** `docker run -e LOG_LEVEL=DEBUG` has to work, or
-    environment variables stop meaning anything — see `settings_source.py`.
-    """
+    """Every setting. Secrets live in `.env`; everything committable lives in `config/`."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -57,13 +34,7 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """The four sources, highest priority first.
-
-        pydantic-settings reads this tuple in order and the FIRST source to supply a name
-        wins, which is the reverse of how the docstring above reads it. Written
-        highest-first here because that is the order pydantic wants; read it as "init beats
-        environment beats .env beats YAML beats the class default".
-        """
+        """Sources, highest priority first: init, environment, .env, YAML, secrets."""
         return (
             init_settings,
             env_settings,
@@ -74,99 +45,51 @@ class Settings(BaseSettings):
 
     mycel_env: Literal["dev", "staging", "prod"] = "dev"
 
-    # LLM. Every model is reached through the LiteLLM gateway (`config/litellm/`). The
-    # provider keys live in `.env` and are read by the gateway, never by the app.
+    # Every model goes through the LiteLLM gateway; provider keys are read by it, not the app.
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: SecretStr | None = None
     #: USD per million tokens, (input, output), by gateway model name.
     model_prices_usd: dict[str, tuple[Decimal, Decimal]] = {}
 
-    # Tools that reach outside the process. Optional on the same terms as the model keys:
-    # an agent that never searches the web is a valid deployment, and `web_search` says so
-    # itself rather than failing at import.
     tavily_api_key: SecretStr | None = None
 
-    # Sources. A deployment syncs the providers it has credentials for; a missing token
-    # is not an error until something actually asks that source for data.
-    #: The background sync's own identity: an Atlassian service account with Browse on
-    #: the projects to sync, and its API token. Never a person's token — a sync that runs
-    #: on someone stops when they leave. Every project it can browse is synced.
+    #: The background sync's Atlassian service account token (never a person's).
     jira_service_token: SecretStr | None = None
     jira_cloud_id: str | None = None
-    #: The service token's last day. Atlassian does not return it, so it is written down
-    #: when the token is made; `doctor` warns a month before.
+    #: The service token's last day (Atlassian does not return it); `doctor` warns early.
     jira_service_token_expires: date | None = None
-    #: The Atlassian OAuth 2.0 (3LO) app a person consents to, so Mycel can ask Jira which
-    #: projects *they* may browse and write as them. developer.atlassian.com -> your app ->
-    #: Authorization, with `{public_base_url}/auth/jira/callback` as a callback URL.
+    #: Atlassian OAuth 3LO app; callback `{public_base_url}/auth/jira/callback`.
     jira_client_id: str | None = None
     jira_client_secret: SecretStr | None = None
-    #: Whether this deployment may write back to Jira. Off by default: reading someone's
-    #: tracker is recoverable and commenting on fifty issues by mistake is not, so a write
-    #: path that exists has to be switched on deliberately.
+    #: Whether writing back to Jira is offered at all.
     jira_write_enabled: bool = False
-    #: Whether creating a Jira *project* is offered. Its own switch, separate from the one
-    #: above, because the three other writes can be undone and this one cannot: many sites
-    #: refuse to delete a project over the API, and a project key is never reusable. On, and
-    #: the consent screen asks for `manage:jira-project` as well; off, and it never does.
+    #: Whether creating a project is offered; separate because it cannot be undone.
     jira_allow_create_project: bool = False
 
-    # Outputs. Optional: a deployment with nothing configured still works, and a feature
-    # that needs a missing credential refuses when used.
-    #: Where a link out of this deployment points. Nothing has no page to be relative to,
-    #: so this is the only place the deployment's own address is written down.
+    #: This deployment's own address, for outbound links.
     public_base_url: str = "http://localhost:8000"
-    #: The OAuth client a person consents to, so Mycel may read and write *their* calendar.
-    #: A client rather than a service account: a service account writes to a calendar of
-    #: the deployment's own, which is the wrong calendar for "what have I got this
-    #: afternoon". Console -> APIs & Services -> Credentials -> OAuth client ID, type
-    #: "Web application", with `{public_base_url}/auth/google/callback` as a redirect URI.
+    #: Google OAuth web client; redirect `{public_base_url}/auth/google/callback`.
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
-    #: The key every stored refresh token is encrypted with — Google's and Atlassian's
-    #: alike. Url-safe base64, 32 bytes:
-    #: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
-    #: No default and no fallback to plaintext — a refresh token opens one person's account
-    #: for as long as they leave it alone, so a deployment without this key refuses to
-    #: connect an account rather than keeping one readably. Named for what it does rather
-    #: than for one of its two users.
+    #: Fernet key encrypting stored refresh tokens. Unset refuses to connect accounts.
     token_encryption_key: SecretStr | None = None
-    #: Seconds between scheduled syncs. Jira keeps its history, so this is a freshness
-    #: knob rather than a deadline — nothing is lost by syncing late.
     sync_interval_seconds: int = 900
-    #: The team's own timezone, as an IANA name. A Jira due date is a bare calendar day
-    #: with no zone, and "end of that day" only means anything in a zone: read as UTC, a
-    #: UTC+7 team's overdue work still counts as on time until seven the next morning.
     timezone: str = "UTC"
-    #: How often expired sessions are swept. Nothing depends on it — expiry is checked on
-    #: read — but without it `app.session` only ever grows.
     session_sweep_interval_seconds: int = 86400
 
-    # Sending mail. The only channel that reaches a person, and the reason a forgotten
-    # password can be recovered at all: without it `/auth/forgot` answers the same way but
-    # nothing arrives, so the route refuses instead of pretending.
     smtp_host: str | None = None
     smtp_port: int = 587
-    #: The From address. Set together with the host — a message with no sender is refused
-    #: by every server worth sending through.
+    #: The From address; required together with the host.
     smtp_from: str | None = None
     smtp_username: str | None = None
     smtp_password: SecretStr | None = None
-    #: STARTTLS on the usual submission port. Off only for a local capture server in a
-    #: test, never for anything that leaves the machine.
     smtp_starttls: bool = True
-    #: How long a reset link works. Short: it is a password in an inbox, and an inbox is
-    #: read by whoever is sitting at the machine.
+    #: How long a reset link works.
     password_reset_ttl_seconds: int = 3600
 
-    # Who may create an account. Both empty means registration is open, which is right for
-    # one machine on localhost and wrong for anything reachable from outside it.
-    #: Comma-separated email domains that may register, e.g. "acme.com,acme.vn". Set, and
-    #: an address outside them is refused.
+    #: Comma-separated email domains that may register; empty allows any.
     registration_allowed_domains: str = ""
-    #: A shared code the registration form must carry. Set, and a request without it is
-    #: refused. Coarse — one code for everyone, rotated by changing it — but it is the
-    #: difference between a gate and no gate.
+    #: A shared code registration must carry, when set.
     registration_invite_code: SecretStr | None = None
 
     @property
@@ -175,75 +98,43 @@ class Settings(BaseSettings):
         parts = self.registration_allowed_domains.split(",")
         return frozenset(p.strip().lower().lstrip("@") for p in parts if p.strip())
 
-    # Observability. Agent runs go to Langfuse over OTLP HTTP; the endpoint is derived from
-    # the base url, so a deployment sets the two keys and nothing else.
     otel_enabled: bool = False
     otel_exporter_otlp_endpoint: str | None = None
     otel_service_name: str = "mycel"
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str = "https://cloud.langfuse.com"
-    #: Whether a span carries the prompt sent and the text returned, as well as the model,
-    #: tokens and cost it always carries. Off by default because turning it on sends real
-    #: user data to a third party: the question somebody typed, and the internal figures
-    #: that came back. On in development, where reading the SQL an agent wrote is the
-    #: whole point of having a trace; off in production unless somebody has decided.
+    #: Whether spans carry prompt and reply text (sends user data to a third party).
     otel_capture_content: bool = False
-    #: Where `/metrics` listens. Each process has its own port, never the app port:
-    #: worker `metrics_port`, scheduler +1, ingest +2, api +3. Loopback by default: the endpoint has
-    #: no authentication, so
-    #: the interface it binds to is the only thing making it private.
+    #: `/metrics` interface; it has no auth, so binding is the only access control.
     metrics_host: str = "127.0.0.1"
     metrics_port: int = 9100
 
-    # Infrastructure. The defaults are the throwaway local ones `docker-compose.yml`
-    # brings up, so a dev machine needs neither variable set. Any deployment that is not
-    # a laptop overrides both from the environment — there is no real password here.
-    #: What the running app connects as. In a deployment this is `mycel_app`: it reads and
-    #: writes rows and cannot create, alter or drop anything, so a bug or an injection in
-    #: the app cannot take the schema with it. Plain `postgresql://` form;
-    #: `postgres/engine.py` swaps in the async driver.
+    #: The app's connection (`mycel_app` in deployments: no DDL rights).
     database_url: str = "postgresql://mycel:mycel@localhost:5433/mycel"
-    #: What migrations connect as: the database owner, who alone may change the schema.
-    #: Unset falls back to `database_url`, which is right for a dev machine and for tests,
-    #: where both are the owner.
+    #: The schema owner for migrations; unset falls back to `database_url`.
     migration_database_url: str | None = None
-    #: `mycel_app`'s password. Migration 0018 creates the role with it; unset, the role is
-    #: not created and the app keeps connecting as the owner.
+    #: `mycel_app`'s password; unset, the role is not created.
     mycel_app_password: SecretStr | None = None
-    #: Pool size is per process. `api` runs N uvicorn workers and `worker` scales by
-    #: consumer count, so the ceiling that matters is this times the process count.
+    #: Per process, so the real ceiling is this times the process count.
     db_pool_size: int = 5
     rabbitmq_url: str = "amqp://mycel:mycel@localhost:5672/"
-    #: In-flight state: results, budgets, event streams. This server runs `noeviction` —
-    #: see `infra/redis/client.py`.
+    #: In-flight state (results, budgets, event streams), on a `noeviction` server.
     redis_url: str = "redis://localhost:6379/0"
-    #: Cached values, on a server that is allowed to evict them. A separate db index by
-    #: default, so the two policies never share a keyspace.
+    #: Evictable cache, on its own db index.
     redis_cache_url: str = "redis://localhost:6379/1"
-    #: How long a finished answer stays readable. Long enough for a caller to come back for
-    #: it, short enough that Redis is never asked to be a database.
+    #: How long a finished answer stays readable.
     result_ttl_seconds: int = 3600
-    #: How many events one job's stream keeps. Capped so a chatty run cannot fill Redis;
-    #: a client that falls this far behind sees a gap in `seq` and knows it.
+    #: Events kept per job stream; a lagging client sees a gap in `seq`.
     event_stream_max_events: int = 1000
 
-    # Search over gold. Optional on the same terms as the model keys: a deployment without
-    # Qdrant running is valid, and `rag_search` says so itself rather than failing at
-    # import — see `agents/tools/rag_search.py`.
-    #
-    #: Where Qdrant answers. Empty disables search entirely rather than leaving a tool that
-    #: fails on every call: a tool the model can see is a tool it will try.
+    #: Empty disables search, and `rag_search` is not offered.
     qdrant_url: str = ""
-    #: The embedding model, run on this machine. Its name is part of the collection name,
-    #: because the dimension belongs to the model: changing it means a new collection and a
-    #: full reindex, and there is no way to mix two vector spaces in one.
+    #: Part of the collection name: changing it needs a new collection and a reindex.
     embedding_model: str = "BAAI/bge-small-en-v1.5"
-    #: Where fastembed keeps the downloaded ONNX weights. Named so a container can mount it
-    #: and not re-download 130 MiB on every start.
+    #: Where fastembed keeps downloaded weights; mount it in containers.
     embedding_cache_dir: str = ".cache/fastembed"
 
-    # Notebooks: uploaded documents, chunked and embedded for question answering.
     s3_endpoint_url: str = ""
     s3_access_key: SecretStr | None = None
     s3_secret_key: SecretStr | None = None
@@ -261,8 +152,7 @@ class Settings(BaseSettings):
     document_min_score: float = 0.75
     ask_top_k: int = 5
     ask_max_chars: int = 500
-    #: Most one queued job may spend. The HTTP layer has its own ceiling in
-    #: `api/dependencies.py`; a worker has no request to read one from, so it reads this.
+    #: Most one queued job may spend.
     job_ceiling_usd: Decimal = Decimal("0.50")
 
     log_level: str = "INFO"

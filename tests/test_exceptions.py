@@ -1,9 +1,4 @@
-"""`translate_agent_errors`, the seam where pydantic-ai's failures become Mycel's.
-
-Worth its own file because the translation is invisible until production: a missed case
-does not fail a test, it just reaches the operator as a framework exception with no tier
-on it.
-"""
+"""`translate_agent_errors`, the seam where pydantic-ai's failures become Mycel's."""
 
 import httpx2
 import pytest
@@ -56,8 +51,7 @@ class TestTranslation:
 
 
 class TestTimeoutDetection:
-    """pydantic-ai wraps the SDK's own exception, so a timeout is only visible from the
-    `__cause__` chain underneath `ModelAPIError`."""
+    """pydantic-ai wraps the SDK's own exception."""
 
     def test_a_wrapped_timeout_is_recognised(self) -> None:
         wrapped = ModelAPIError(model_name="qwen", message="timed out")
@@ -67,8 +61,7 @@ class TestTimeoutDetection:
             _raise(wrapped)
 
     def test_a_wrapped_sdk_timeout_is_recognised(self) -> None:
-        """Neither provider SDK inherits from the HTTP library's timeout, so the match is
-        by name."""
+        """Neither provider SDK inherits from the HTTP library's timeout."""
 
         class APITimeoutError(Exception):
             pass

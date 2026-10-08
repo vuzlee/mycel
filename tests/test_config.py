@@ -1,5 +1,4 @@
-"""Settings reads the environment, tolerates variables it has no field for, and keeps
-secrets out of reprs."""
+"""Settings reads the environment."""
 
 import pytest
 
@@ -7,12 +6,7 @@ from mycel.core.config import Settings, get_settings
 
 
 def test_defaults_need_no_environment() -> None:
-    """A bare process must still produce usable settings — no credential required.
-
-    `otel_enabled` is deliberately not asserted here: it comes from
-    `config/environments/`, where dev turns it on and prod leaves it off. Asserting one
-    value would be asserting which environment the test happens to run in.
-    """
+    """A bare process must still produce usable settings — no credential required."""
     s = Settings()
     assert s.mycel_env == "dev"
     assert s.litellm_base_url == "http://localhost:4000"
@@ -29,10 +23,7 @@ def test_environment_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_unknown_variables_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`.env.example` carries DATABASE_URL, RabbitMQ and Qdrant keys this slice never reads.
-
-    A strict model would refuse to start over them.
-    """
+    """`.env.example` carries DATABASE_URL, RabbitMQ and Qdrant keys this slice never reads."""
     monkeypatch.setenv("DATABASE_URL", "postgresql://x/y")
     monkeypatch.setenv("RABBITMQ_URL", "amqp://localhost:5672/")
     assert Settings().mycel_env == "dev"
@@ -46,12 +37,7 @@ def test_invalid_env_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_secret_is_not_in_repr(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Settings end up in logs and tracebacks; the key must not travel with them.
-
-    Named on a field that still exists. `extra="ignore"` means a variable with no field
-    behind it never reaches the repr at all, so this test would pass for the wrong reason
-    the day the field it names is deleted.
-    """
+    """Settings end up in logs and tracebacks; the key must not travel with them."""
     monkeypatch.setenv("JIRA_CLIENT_SECRET", "sk-do-not-leak")
     assert "jira_client_secret" in repr(Settings())
     assert "sk-do-not-leak" not in repr(Settings())
@@ -68,26 +54,18 @@ def test_provider_keys_never_reach_the_app(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 class TestWhereSettingsComeFrom:
-    """Four sources, and the order between them is what is tested.
-
-        class default  <  config/environments/*.yaml  <  .env  <  environment
-
-    The environment has to win, or `docker run -e LOG_LEVEL=DEBUG` stops working — and a
-    person discovering that is a person who has already spent an hour on it.
-    """
+    """Four sources, and the order between them is what is tested."""
 
     def test_the_environment_beats_the_yaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LOG_LEVEL", "DEBUG")
         assert Settings(_env_file=None).log_level == "DEBUG"
 
     def test_the_yaml_beats_the_class_default(self) -> None:
-        """base.yaml carries the real defaults now; the class default is the fallback for
-        a checkout with no config directory at all."""
+        """base.yaml carries the real defaults now."""
         assert Settings(_env_file=None).embedding_model == "BAAI/bge-small-en-v1.5"
 
     def test_the_overlay_beats_base(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """dev.yaml sets DEBUG over base.yaml's INFO. Merged key by key, so an overlay
-        that mentions one setting does not drop the rest."""
+        """dev.yaml sets DEBUG over base.yaml's INFO."""
         monkeypatch.setenv("MYCEL_ENV", "dev")
         monkeypatch.delenv("METRICS_PORT", raising=False)  # conftest sets a free one
         settings = Settings(_env_file=None)
@@ -99,13 +77,7 @@ class TestWhereSettingsComeFrom:
         assert Settings(_env_file=None).log_level == "INFO"
 
     def test_reading_the_yaml_does_not_recurse(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The source reads MYCEL_ENV from the environment directly, NOT through
-        get_settings().
-
-        Through it, the lru_cache is still empty mid-construction, so it builds a second
-        Settings and the inner one returns first — before any YAML is read. The symptom is
-        a value that is present when printed and None when the app asks for it.
-        """
+        """The source reads MYCEL_ENV from the environment directly, NOT through get_settings()."""
         from mycel.core.config import get_settings
 
         get_settings.cache_clear()

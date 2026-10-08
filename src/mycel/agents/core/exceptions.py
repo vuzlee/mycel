@@ -1,19 +1,6 @@
-"""Agent framework errors: loop exhausted, output failed validation, tool failed, model
-timed out.
+"""Agent runtime errors, and the translation from pydantic-ai's exceptions.
 
-Inherits the base exception in `core/`, so layers above can catch by group without knowing
-the details.
-
-`translate_agent_errors` is where pydantic-ai's exceptions become Mycel's. Two are
-deliberately *not* translated, because they are control flow rather than failure:
-
-  ModelRetry       a tool asking the model to try again — must reach pydantic-ai
-  ValidationError  raised inside an output validator — same
-
-Wrapping either breaks the retry machinery and turns a recoverable run into a dead one.
-
-Provider failures arrive as `ModelAPIError`: pydantic-ai catches the SDK's own exception
-and re-raises, so a timeout is only recognisable from the `__cause__` chain underneath.
+`ModelRetry` and output `ValidationError` are never translated: they drive pydantic-ai retries.
 """
 
 from collections.abc import Iterator
@@ -27,29 +14,11 @@ class AgentError(MycelError):
 
 
 class TransportError(AgentError):
-    """The provider could not be reached, or would not answer. Not a result.
-
-    The distinction this draws is the one `tools/delegate.py` splits on. Every other
-    `AgentError` is something that happened *during* a run and will happen again the same
-    way: a tool with no data, a schema the model could not fill, a loop making no progress.
-    Those are answers, poor ones, and an agent narrating them is right.
-
-    This is not an answer. The request never reached a model, or the model never replied,
-    and the only thing that changes the outcome is trying again later — which is exactly
-    what `queue/retry.py` exists to do. Narrating it produces a job marked done whose text
-    has to be *read* to discover it says nothing.
-
-    A parent class rather than a tuple of names at each `except`, so a third kind of
-    transport failure lands on the right side of the line without an edit anywhere.
-    """
+    """The provider could not be reached or did not answer: retry the job, do not narrate it."""
 
 
 class ModelTimeout(TransportError):
-    """The model did not answer in time.
-
-    Names the tier, because the answer differs: a cloud timeout is usually transient, a
-    local one usually means the vLLM container is down and the whole pipeline is stalled.
-    """
+    """The model did not answer in time."""
 
 
 class RunawayStopped(AgentError):
@@ -57,11 +26,7 @@ class RunawayStopped(AgentError):
 
 
 class DegenerateLoop(AgentError):
-    """The model called the same tool with the same arguments once too often.
-
-    Distinct from `RunawayStopped`: that is "too much work", this is "no progress". The
-    fix is a prompt change, not a higher limit.
-    """
+    """The model repeated an identical tool call: no progress, unlike `RunawayStopped`."""
 
     def __init__(self, tool: str, count: int) -> None:
         super().__init__(
@@ -77,17 +42,7 @@ class OutputValidationFailed(AgentError):
 
 
 class ToolFailed(AgentError):
-    """A tool could not do its work, and no amount of re-prompting would change that.
-
-    The counterpart to `ModelRetry`, and the distinction is the whole point: a tool whose
-    *arguments* were wrong raises `ModelRetry` so the model can fix them, while a tool whose
-    *world* is wrong — quota spent, search API down, Qdrant unreachable — raises this. Ask
-    the model to retry that and it walks the same loop until `max_retries` turns a plain
-    outage into an unreadable run error.
-
-    Names the tool, because by the time this surfaces the caller sees a failed job and not
-    which capability was missing.
-    """
+    """A tool's environment failed (quota, outage); unlike `ModelRetry`, retrying cannot help."""
 
     def __init__(self, tool: str, reason: str) -> None:
         super().__init__(f"tool {tool!r} failed: {reason}")
@@ -100,12 +55,7 @@ class ModelCallFailed(TransportError):
 
 
 def _all_models_failed(model_spec: str, group: BaseException) -> TransportError:
-    """One Mycel error for a whole failed chain, naming what each model said.
-
-    A timeout only if *every* model timed out: one model that answered with a 503 makes
-    "did not respond in time" a wrong sentence, and the difference decides where the
-    reader goes looking.
-    """
+    """One error for a failed fallback chain; a timeout only if every model timed out."""
     causes = list(getattr(group, "exceptions", ()))
     said = "; ".join(str(cause) for cause in causes) or str(group)
     detail = f"{model_spec} and its fallbacks all failed: {said}"
@@ -115,14 +65,7 @@ def _all_models_failed(model_spec: str, group: BaseException) -> TransportError:
 
 
 def caused_by_timeout(exc: BaseException) -> bool:
-    """Whether a timeout is anywhere under `exc`.
-
-    Public because `model_builder.py` asks the same question for a different reason: here
-    it decides which Mycel error to raise, there whether to try the next model.
-
-    Provider SDKs do not share a base class and none of them inherit from the HTTP
-    library's timeout, so this matches on the chain by name as well as by type.
-    """
+    """Whether a timeout is anywhere in the cause chain, matched by type or by SDK class name."""
     import httpx2
 
     seen: BaseException | None = exc
@@ -148,18 +91,13 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
     try:
         yield
     except FallbackExceptionGroup as exc:
-        # Every model in the chain failed. This arrives as a group rather than as a
-        # `ModelAPIError`, so without this clause it would sail past the one below and
-        # reach `tools/delegate.py` as an ordinary exception, where nothing was reached and the job
-        # was written up as an answer.
+        # Not a `ModelAPIError`, so it would otherwise skip the transport clause below.
         raise _all_models_failed(model_spec, exc) from exc
     except UsageLimitExceeded as exc:
         raise RunawayStopped(f"{model_spec}: {exc}") from exc
     except UnexpectedModelBehavior as exc:
         raise OutputValidationFailed(f"{model_spec}: {exc}") from exc
     except ModelAPIError as exc:
-        # Which side failed decides where to look: a local timeout means the vLLM
-        # container is down, a cloud one is usually transient.
         if caused_by_timeout(exc):
             raise ModelTimeout(f"{model_spec} did not respond in time: {exc}") from exc
         raise ModelCallFailed(f"{model_spec}: {exc}") from exc

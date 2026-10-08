@@ -1,23 +1,4 @@
-"""The orchestrator, run against fake models.
-
-Two things are worth pinning down here, and neither is about the orchestrator's own
-reasoning — that is the model's job, not the code's.
-
-The first is **money**: a delegated run must be billed once, by the caller. `runner.delegate`
-forwards `usage=ctx.usage` and deliberately skips `budget.record()`, so a regression there
-double-charges silently and only shows up on an invoice.
-
-The second is **what a failing specialist does to a run**, and the line is not "did it
-raise", it is "is this an answer". A tool with no data or a schema the model could not fill
-comes back as text the orchestrator writes around. A `TransportError` — nothing was reached
-— must kill the run, so the queue retries it; so must `BudgetExceeded`, because continuing
-spends money the job does not have. Both sides are pinned here, in one class, because the
-bug they guard against is the boundary moving.
-
-The output is a plain `str`, so a model's turn ends with a `TextPart`
-rather than a `final_result` tool call. That is the point of the change and not an
-incidental one: prose arrives on the stream as it is written, and a tool call does not.
-"""
+"""The orchestrator, run against fake models."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -46,13 +27,11 @@ LOCAL = AgentSettings(model_spec="local:qwen3-4b")
 
 @asynccontextmanager
 async def _null_session() -> AsyncIterator[None]:
-    """A stand-in for `session_scope`: the summariser tool opens its own, and what it
-    does with the session is `gather_progress`'s business, faked separately."""
+    """A stand-in for `session_scope`."""
     yield None
 
 
 #: The specialists are delegated to on every step, which is the pattern guards.py stops.
-#: These tests drive the delegation deliberately, so the guard is out of the way.
 UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000)
 
 
@@ -86,11 +65,8 @@ def _asks_then_answers(tool: str, question: str) -> Any:
 
 class TestWiring:
     async def test_every_delegated_agent_is_registered(self) -> None:
-        """An agent missing from the toolset is a capability the orchestrator silently
-        does not have.
-
-        The names are the agents' own, not `ask_*`: one string reaches the tool, the class
-        and its `config/agents/<name>.yaml`, and none of them implies a rank.
+        """An agent missing from the toolset is a capability the orchestrator silently does not
+        have.
         """
         toolset = build_toolset()
         assert set(toolset.tools) == {"researcher", "analyst", "summariser"}
@@ -98,8 +74,7 @@ class TestWiring:
     async def test_a_delegated_answer_reaches_the_model_as_text(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The specialist's schema has to survive the tool-result boundary as JSON: that is
-        what keeps a statement attached to its sources."""
+        """The specialist's schema has to survive the tool-result boundary as JSON."""
         seen: list[str] = []
 
         class _Output:
@@ -125,8 +100,7 @@ class TestMoney:
     async def test_a_delegated_run_is_billed_once(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`delegate` must not call `budget.record()`: the caller's own record already
-        includes the delegated tokens, so a second one bills them twice."""
+        """`delegate` must not call `budget.record()`."""
         recorded: list[Any] = []
         original = deps.budget.record
 
@@ -157,11 +131,7 @@ class TestAFailingSpecialist:
     async def test_becomes_text_the_model_can_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """One unavailable source must not cost the whole run.
-
-        `ToolFailed` and not a transport error: the specialist ran and its world was wrong,
-        which is a poor answer rather than no answer. See the test below for the other side.
-        """
+        """One unavailable source must not cost the whole run."""
 
         async def _fails(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
             raise ToolFailed("web_search", "the search host is unreachable")
@@ -193,12 +163,7 @@ class TestAFailingSpecialist:
     async def test_a_transport_failure_kills_the_run_instead(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The other side of the line, and the one that was wrong.
-
-        On 2026-09-24 a 503 inside the analyst was narrated as prose and the job was marked
-        done: billed, written into the thread, never retried. Nothing was reached, so there
-        is nothing to narrate — it has to reach the queue, which knows how to try again.
-        """
+        """The other side of the line, and the one that was wrong."""
 
         async def _unreachable(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
             raise ModelTimeout("cloud:gemini-3.5-flash-lite did not respond in time")
@@ -213,8 +178,7 @@ class TestAFailingSpecialist:
     async def test_running_out_of_money_still_ends_the_job(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`BudgetExceeded` is not an `AgentError` and must pass through: continuing would
-        spend money the job does not have."""
+        """`BudgetExceeded` is not an `AgentError` and must pass through."""
 
         async def _overdrawn(agent: Any, prompt: str, ctx: Any, cfg: Any) -> Any:
             raise BudgetExceeded("job-1", Decimal("1.01"), Decimal("1.00"))
@@ -228,11 +192,7 @@ class TestAFailingSpecialist:
 
 
 class TestTheSummariserTool:
-    """The one delegated tool that does not forward a question.
-
-    It takes `project` and `days` and builds the prompt itself, because the summariser's
-    prompt is tuned. Letting the orchestrator write that prompt would throw the tuning away.
-    """
+    """The one delegated tool that does not forward a question."""
 
     async def test_it_builds_the_prompt_from_the_window_it_was_given(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -278,9 +238,7 @@ class TestTheSummariserTool:
     async def test_a_project_the_asker_was_not_granted_is_never_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A project name from the model is checked against the grant before any
-        read. `gather_progress` must not be reached at all — a refusal produced after
-        the read is a refusal that already loaded the data."""
+        """A project name from the model is checked against the grant before any read."""
         reached = []
         monkeypatch.setattr(delegate, "gather_progress", lambda *a, **k: reached.append(a))
         _granted(monkeypatch, "OTHER")
@@ -294,8 +252,7 @@ class TestTheSummariserTool:
     async def test_the_refusal_does_not_say_whether_the_project_exists(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """One sentence for both cases. Two would turn this tool into a way of learning
-        which projects exist by naming them one at a time."""
+        """One sentence for both cases."""
         _granted(monkeypatch, "OTHER")
 
         with pytest.raises(ToolFailed) as raised:
@@ -306,8 +263,7 @@ class TestTheSummariserTool:
     async def test_a_run_with_nobody_attached_reads_nothing(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`None` is closed, not open. A code path that forgets the principal has to fail
-        the same way an ungranted one does."""
+        """`None` is closed, not open."""
         _granted(monkeypatch, "MYC")
 
         with pytest.raises(ToolFailed):

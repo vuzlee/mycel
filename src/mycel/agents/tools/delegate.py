@@ -1,40 +1,7 @@
-"""Tools whose capability is another agent.
+"""Tools that delegate to a specialist agent, named after it.
 
-**A tool that wraps an agent carries that agent's name.** `researcher`, `analyst`,
-`summariser` — the same string as the class's `name`, the same string as its
-`config/agents/<name>.yaml`, so one grep reaches all three. The old names were
-`ask_researcher` and `ask_analyst`; the fault was `ask_`, which reads as a chain of
-command. There is none. The four agents differ in capability, and the orchestrator running
-first is a choice of flow rather than a rank.
-
-Wrapping is not a design choice: pydantic-ai cannot hand an `Agent` to an `Agent` — `Agent`
-is not an `AbstractToolset` and there is no `as_tool()` — and a model can call tools and
-nothing else. Calling `runner.delegate` in a tool body is the only route the library
-offers, and `ask_` used to conflate that constraint with a hierarchy.
-
-**Delegation, not handoff.** `runner.delegate` forwards `usage=ctx.usage`, which merges a
-delegated agent's tokens into the caller's — so the single `record()` at the end of the
-calling run already bills every delegated token. That is also why nothing here calls
-`budget.record()`: doing so would charge the same tokens twice. See `core/runner.py`.
-
-**A failing delegation is reported, not a dead run — unless nothing was reached.** The line
-is not "did it raise", it is "is this an answer". A tool with no data, a schema the model
-could not fill, a loop making no progress: poor answers, but answers, and the caller
-narrates them. A `TransportError` is not an answer. The request never reached a model, and
-the only thing that changes the outcome is trying again later, so it propagates and the job
-fails — which is the retry path `queue/retry.py` exists to run.
-
-Catching it too was a real outage: on 2026-09-24 a 503 inside the analyst came back as
-"the work data analysis service encountered a 503 error", the job was marked done, billed,
-written into the conversation, and never retried. A crash is visible; that paragraph has to be
-*read* to notice it says nothing.
-
-`BudgetExceeded` is deliberately not caught either: out of money is the end of the job, and
-continuing would spend money the job does not have.
-
-This is the one tool module that imports from `agents/agent/`, which is what makes it the
-only place the dependency exists — every other module gets delegation by asking for this
-toolset rather than by importing an agent.
+A failed delegation returns text the caller can narrate, except `TransportError` and
+`BudgetExceeded`, which propagate so the job fails (and can be retried).
 """
 
 from datetime import UTC, datetime, timedelta
@@ -106,15 +73,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
 
 async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
-    """Stop before reading, or raise `ToolFailed`.
-
-    `ToolFailed` rather than `ModelRetry`: not being granted a project is not a wrong
-    argument the model can fix, and a retry is an invitation to try project names until one
-    lands.
-
-    No principal is no access. A run with nobody attached reads nothing here, the same as
-    `run_sql` — see `agents/core/deps.py` for why `None` is closed rather than open.
-    """
+    """Raise `ToolFailed` unless the asker may read `project`; no principal reads nothing."""
     try:
         await require(ctx.deps.principal, project)
     except NotReadable as exc:
@@ -127,29 +86,16 @@ async def _delegate(
     agent_cls: type[BaseAgent[Any]],
     prompt: str,
 ) -> str:
-    """Run one delegated agent on the caller's budget.
-
-    A failure that is an answer comes back as text. A `TransportError` is re-raised, so the
-    job fails and the queue can retry it.
-
-    The output is serialised to JSON because a tool result goes back to the model as text:
-    the delegated agent's schema is what keeps statements attached to their sources across
-    that boundary.
-    """
+    """Run one delegated agent on the caller's budget; output goes back as JSON."""
     name = agent_cls.name
     cfg = AgentSettings.from_config(name)
     try:
         output = await runner.delegate(agent_cls.build(cfg), prompt, ctx, cfg)
     except TransportError:
-        # Raised before the clause below can swallow it: nothing was reached, so there is
-        # nothing to narrate, and a retry is the only thing that changes the outcome.
         log.warning("delegated agent could not reach its model", extra={"agent": name})
         raise
     except AgentError as exc:
-        # Returned, not raised: see the module docstring. `BudgetExceeded` is not an
-        # `AgentError` and so passes through, ending the job as it should.
         log.warning("delegated agent failed", extra={"agent": name, "error": str(exc)})
         return f"{name} could not answer: {exc}. Say so in the answer and continue."
-    # Every delegated agent's output_type is a `BaseModel`, but `BaseAgent` is generic over
-    # plain objects, so the guarantee is ours to state rather than the type system's.
+    # Every delegated output_type is a `BaseModel`; the generic cannot say so.
     return cast(str, output.model_dump_json())

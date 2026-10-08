@@ -1,15 +1,4 @@
-"""Which Redis client a caller gets back, and why the loop is part of the question.
-
-A `redis.Redis` holds sockets bound to the loop that opened them. Handing one to a second
-loop raises `got Future attached to a different loop` and then `Event loop is closed`,
-and neither message mentions the cache that produced it — it reads as a broken Redis.
-
-One process runs several loops in practice: pytest opens one per test and `asyncio.run`
-opens one per call. These tests pin the two halves of that: a client is reused inside one
-loop, and never across two.
-
-No server needed. `from_url` is lazy, so nothing here connects.
-"""
+"""Which Redis client a caller gets back, and why the loop is part of the question."""
 
 import asyncio
 
@@ -35,11 +24,7 @@ class TestOneClientPerLoop:
         assert await module.get_client() is not await module.get_cache_client()
 
     def test_a_second_loop_gets_its_own(self) -> None:
-        """The failure this keying exists for: a pool reused past the loop that opened it.
-
-        Driven with `asyncio.run` rather than the anyio fixture because two separate loops
-        is the whole point, and one test body only ever runs on one.
-        """
+        """The failure this keying exists for: a pool reused past the loop that opened it."""
         first = asyncio.run(module.get_client())
         second = asyncio.run(module.get_client())
         assert first is not second
@@ -62,12 +47,7 @@ class TestClosing:
         await module.close_clients()
 
     def test_a_dead_loop_s_client_is_dropped_rather_than_closed(self) -> None:
-        """`aclose()` on a client from a dead loop is the very error being avoided.
-
-        The stale entry is dropped on the next lookup, so the dict shrinks without
-        anything being awaited on a loop that has ended. Synchronous, because driving two
-        loops from inside a third is not something asyncio allows.
-        """
+        """`aclose()` on a client from a dead loop is the very error being avoided."""
         url = get_settings().redis_url
 
         dead = asyncio.new_event_loop()

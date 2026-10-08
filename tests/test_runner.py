@@ -1,9 +1,4 @@
-"""`runner.run` and `runner.delegate`, which between them decide what a job is charged.
-
-The tests that matter here are about arithmetic, not about models: that a run is charged
-once, that a run stopped part-way is still charged, and that delegation does not bill the
-same tokens twice.
-"""
+"""`runner.run` and `runner.delegate`, which between them decide what a job is charged."""
 
 from decimal import Decimal
 from typing import Any
@@ -82,8 +77,7 @@ class TestCharging:
 
 class TestStoppedRunsAreStillCharged:
     async def test_a_runaway_run_records_what_it_spent(self) -> None:
-        """The reason runner.run uses iter() rather than run(): tokens spent before the
-        limit tripped are real money, and must not vanish."""
+        """The reason runner.run uses iter() rather than run()."""
         settings = AgentSettings(model_spec="local:qwen3-4b", request_limit=3)
         deps = _deps(settings=settings)
 
@@ -141,9 +135,7 @@ class TestDelegation:
         assert deps.budget.requests == 3
 
     async def test_a_delegated_run_is_limited_by_its_own_config(self) -> None:
-        """A delegated run given no `usage_limits` would fall to pydantic-ai's defaults —
-        50 requests and no tool-call limit at all — so every number in `config/agents/`
-        would bind the orchestrator and nothing it called."""
+        """A delegated run given no `usage_limits` would fall to pydantic-ai's defaults."""
         deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=3))
         child = Agent(deps_type=MycelDeps, output_type=str)
         parent = Agent(deps_type=MycelDeps, output_type=str)
@@ -160,8 +152,7 @@ class TestDelegation:
             """Delegate to the child agent."""
             return await runner.delegate(child, "q", ctx)
 
-        # Different arguments every call, so `guards.py` never fires: the limit is the
-        # only thing that can stop this, which is the whole point of the test.
+        # Different arguments every call, so only the limit can stop this.
         asked = [0]
 
         def child_says(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -184,9 +175,7 @@ class TestDelegation:
         assert len(queries) == 3, f"the child's own tool_calls_limit must bind, got {len(queries)}"
 
     async def test_a_delegate_limit_is_not_spent_by_its_caller(self) -> None:
-        """The counters are the caller's, so a limit read against them raw would already be
-        part-spent before the delegated run starts — and a specialist called late in a long
-        orchestration would get fewer calls than its own file grants it."""
+        """The counters are the caller's."""
         CHILD = AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=2)
         deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=20))
         child = Agent(deps_type=MycelDeps, output_type=str)
@@ -298,14 +287,10 @@ class TestCostAccounting:
 
 
 class TestBookkeepingNeverMasks:
-    """The budget is recorded in a `finally`. An exception from there would replace
-    whatever actually stopped the run, leaving the caller with a bookkeeping error in
-    place of the diagnosis."""
+    """The budget is recorded in a `finally`."""
 
     async def test_a_runaway_survives_a_failing_charge(self) -> None:
-        """The caller must hear about the runaway, because that is the one a human can
-        act on. `cost_limit` normally stops a run before it can overdraw, so the
-        overdraft is forced here rather than waited for."""
+        """The caller must hear about the runaway, because that is the one a human can act on."""
 
         class Overdrawing(JobBudget):
             def record(self, usage: Any, fallback_cost: Decimal | None = None) -> None:

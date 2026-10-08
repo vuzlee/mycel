@@ -1,15 +1,4 @@
-"""The sync chain: the Jira connector, the normaliser, and the checks that guard gold.
-
-No request leaves the machine and no database is touched — `httpx2.MockTransport` answers
-for the REST API, and the layered tests in `test_postgres.py` cover the SQL. What is
-pinned here is the part with no equivalent elsewhere: the ways Jira fails, the shape its
-payloads actually have, and the rule that nothing malformed reaches the layer above.
-
-`tests/fixtures/jira_payloads.json` is a recorded response from a real site with the
-addresses and account ids replaced. Recorded rather than hand-written, because the bugs
-worth catching live in the fields Jira fills in its own way — an offset with no colon, a
-bare due date, an estimate that is only inside `timetracking`.
-"""
+"""The sync chain: the Jira connector, the normaliser, and the checks that guard gold."""
 
 import copy
 import json
@@ -49,13 +38,11 @@ def _configured(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(jira, "get_settings", _settings)
 
 
-#: One person's grant, which every call to the connector now takes. A constant
-#: rather than a fixture because it is two strings and nothing in it can go stale.
+#: One person's grant, which every connector call takes.
 AUTH = jira.Auth(access_token="access-token", cloud_id="cloud-1")
 
 
-#: Captured before any test patches the name, so the factory below builds a real client
-#: rather than recursing into its own replacement.
+#: Captured before patching, so the factory builds a real client.
 _REAL_CLIENT = httpx2.AsyncClient
 
 
@@ -253,8 +240,7 @@ class TestWritingBack:
         assert text == "two stories shipped"
 
     async def test_a_transition_is_looked_up_by_name(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Ids are per workflow: a hardcoded one is right until somebody edits the workflow,
-        and then it silently moves issues somewhere else."""
+        """Ids are per workflow: a hardcoded one is right until somebody edits the workflow."""
         self._armed(monkeypatch)
         sent: list[dict[str, Any]] = []
 
@@ -300,11 +286,7 @@ class TestHowJiraFails:
     async def test_the_call_is_addressed_by_cloud_id_not_by_hostname(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """An OAuth token is only accepted at `api.atlassian.com/ex/jira/<cloud id>`.
-
-        Sent to the site's own `*.atlassian.net` host it is rejected as unauthenticated,
-        which reads like a revoked grant rather than like the wrong url.
-        """
+        """An OAuth token is only accepted at `api.atlassian.com/ex/jira/<cloud id>`."""
         seen: list[str] = []
 
         def handler(request: httpx2.Request) -> httpx2.Response:
@@ -332,8 +314,7 @@ class TestHowJiraFails:
     async def test_a_refusal_is_certain_not_to_have_written(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`NotWritten` is what lets a tool offer a draft again, so the line between it
-        and a plain SourceError is the line between a safe retry and a double comment."""
+        """`NotWritten` is what lets a tool offer a draft again."""
         from mycel.sources import NotWritten
 
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=403))
@@ -343,8 +324,7 @@ class TestHowJiraFails:
     async def test_a_timeout_is_not_certain_either_way(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The request may have arrived and only the answer been lost. Marking this
-        `NotWritten` would invite a retry that writes the same thing twice."""
+        """The request may have arrived and only the answer been lost."""
         from mycel.sources import NotWritten
 
         def handler(request: httpx2.Request) -> httpx2.Response:
@@ -371,8 +351,7 @@ class TestHowJiraFails:
     async def test_a_lapsed_grant_says_to_connect_again(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """401 used to mean a token had reached its one-year expiry, which nobody could
-        act on without a shell. It now means the consent lapsed, and the fix is a click."""
+        """401 used to mean a token had reached its one-year expiry."""
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=401))
         with pytest.raises(SourceError, match="Connect Jira again"):
             await jira.search_issues(AUTH, "project = MYC")
@@ -488,8 +467,7 @@ class TestNormalisingAnIssue:
         assert row.priority == "High"
 
     def test_a_hidden_priority_field_is_none_not_a_guess(self) -> None:
-        """An ordinary configuration. Inventing a Medium here would put work in a bar
-        nobody put it in."""
+        """An ordinary configuration."""
         row = from_jira_issue(_issue("MYC-6"), PROJECT)
         assert row is not None
         assert row.priority is None
@@ -505,8 +483,7 @@ class TestNormalisingAnIssue:
         assert (row.sprint_id, row.sprint_name, row.sprint_state) == (2, "Sprint 0", "active")
 
     def test_only_the_last_sprint_of_a_rollover_is_kept(self) -> None:
-        """Jira sends every sprint the item has ever been in. Counting them all would put
-        one item in three sprints and make each of them look bigger than it was."""
+        """Jira sends every sprint the item has ever been in."""
         payload = _issue("MYC-7")
         fields = {
             **payload["fields"],

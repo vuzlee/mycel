@@ -1,17 +1,4 @@
-"""Send one email, over SMTP. The only way out of this system that reaches a person.
-
-`calendar.py` writes to a calendar nobody replies to; this writes to an inbox, which makes
-it the one channel a password reset can use. Nothing is ever read back — there is no IMAP
-here, and `agents/tools/mail.py` reads a mailbox for a different reason entirely.
-
-`smtplib` from the standard library rather than a client of its own: sending is one
-connection per message and the call is wrapped in `asyncio.to_thread`, so the blocking
-socket never touches the event loop that called it.
-
-Optional, and it fails loudly rather than quietly. A calendar event nobody gets is a
-cosmetic loss; a reset link nobody gets means an account that cannot be recovered, so a
-deployment with no SMTP configured raises here and the route turns the feature off above.
-"""
+"""Send one plain-text email over SMTP."""
 
 import asyncio
 import smtplib
@@ -31,7 +18,7 @@ class MailError(MycelError):
 
 
 def configured(settings: Settings | None = None) -> bool:
-    """Whether this deployment can send at all. Checked before a feature offers to."""
+    """Whether this deployment can send mail."""
     cfg = settings or get_settings()
     return bool(cfg.smtp_host and cfg.smtp_from)
 
@@ -45,7 +32,7 @@ async def send(to: str, subject: str, body: str) -> None:
 
 
 def _send(to: str, subject: str, body: str) -> None:
-    """The blocking half. One connection, one message, closed either way."""
+    """Blocking send: one connection, one message, closed either way."""
     settings = get_settings()
     message = EmailMessage()
     message["From"] = settings.smtp_from

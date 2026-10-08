@@ -1,13 +1,4 @@
-"""The data layer, against a real Postgres — never SQLite.
-
-A migration is only proven on the database it will run on: SQLite has no schemas, no
-`ON CONFLICT ... ON CONSTRAINT` and no JSONB, so it would skip most of what can break.
-Without `DATABASE_URL` pointing somewhere reachable, these skip.
-
-The pure-function half of the chain — Jira's payloads into rows — is in `test_sync.py`
-against recorded payloads. What is here is what only a database can answer: the upserts,
-the windows, the grouping, and that `alembic upgrade head` builds what the models declare.
-"""
+"""The data layer, against a real Postgres — never SQLite."""
 
 import asyncio
 from collections.abc import AsyncIterator
@@ -51,8 +42,7 @@ class AppRepository(IdentityRepository, AccountRepository, ConversationRepositor
 pytestmark = pytest.mark.anyio
 
 
-# Every fixture below drops its schemas on teardown. `conftest` hands us a database whose
-# name ends in `_test`; this asserts it, so a stray DATABASE_URL can never wipe a real one.
+# Fixtures drop schemas, so refuse any database not named `*_test`.
 assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 PROJECT = "MYC"
@@ -65,11 +55,7 @@ async def _drop(conn: Any) -> None:
 
 @pytest.fixture
 async def alembic() -> AsyncIterator[Config]:
-    """Alembic against an empty database, whatever the last run left behind.
-
-    Both the schemas and alembic's own version row are cleared first: a stale version row
-    over a missing schema makes `upgrade` a no-op and every assertion below meaningless.
-    """
+    """Alembic against an empty database, whatever the last run left behind."""
     engine = create_async_engine(async_dsn(DSN))
     async with engine.begin() as conn:
         await _drop(conn)
@@ -177,8 +163,9 @@ class TestBronzeRepository:
         assert stored == payload
 
     async def test_the_same_issue_twice_overwrites(self, session: AsyncSession) -> None:
-        """Unlike an event, which arriving twice does not make truer, an issue is a record
-        and a second fetch is a later, better version of it."""
+        """Unlike an event, which arriving twice does not make truer, an issue is a record and a
+        second fetch is a later, better version of it.
+        """
         repo = BronzeRepository(session)
         await repo.save_issues([_payload()])
         await repo.save_issues([_payload(summary="renamed")])
@@ -194,8 +181,7 @@ class TestBronzeRepository:
         assert await BronzeRepository(session).save_issues([]) == 0
 
     async def test_a_worklog_carries_the_issue_key_back_out(self, session: AsyncSession) -> None:
-        """Jira's worklog payload has no key in it — it is only in the URL it came from —
-        so the key lives in its own column and is joined back on here."""
+        """Jira's worklog payload has no key in it."""
         repo = BronzeRepository(session)
         await repo.save_worklogs("MYC-7", [_worklog_payload()])
 
@@ -291,8 +277,7 @@ class TestGoldRepository:
     async def test_an_epic_outside_the_window_is_still_reachable(
         self, session: AsyncSession
     ) -> None:
-        """An epic rarely moves while its children do, and a hierarchy with a hole where
-        the parent's name should be is worse than one extra query."""
+        """An epic rarely moves while its children do."""
         repo = GoldRepository(session)
         await repo.upsert_items([_epic(updated_at=_at(2)), _item()])
 
@@ -410,12 +395,7 @@ class TestTheAsyncDsn:
 
 @needs_postgres
 class TestTheMigration:
-    """`create_all` and `alembic upgrade head` must build the same thing.
-
-    The repository tests run on `create_all`, which is fast and always matches the models.
-    Production runs on the migration. Without this test the two drift and nobody notices
-    until a deploy.
-    """
+    """`create_all` and `alembic upgrade head` must build the same thing."""
 
     @pytest.mark.parametrize(
         ("schema", "table"),
@@ -449,8 +429,7 @@ class TestTheMigration:
             )
         await engine.dispose()
 
-        # Compiled for postgresql, not `str(type)`: a declared `DateTime` prints as
-        # DATETIME generically and TIMESTAMP on this dialect, which is the same column.
+        # Compiled for postgresql: generic `str(type)` prints DATETIME, not TIMESTAMP.
         declared = {
             c.name: c.type.compile(postgresql.dialect())
             for c in Base.metadata.tables[f"{schema}.{table}"].columns
@@ -468,8 +447,7 @@ class TestTheMigration:
     async def test_the_hashtag_tables_are_gone(
         self, alembic: Config, schema: str, table: str
     ) -> None:
-        """Dropped rather than deprecated — 0004 for the first two, 0005 for `silver.message`.
-        A table nothing writes to is a standing question about which of the two is real."""
+        """Dropped rather than deprecated — 0004 for the first two, 0005 for `silver.message`."""
         await asyncio.to_thread(command.upgrade, alembic, "head")
 
         engine = create_async_engine(async_dsn(DSN))
@@ -497,12 +475,7 @@ class TestTheMigration:
 
 @needs_postgres
 class TestTheTransform:
-    """Bronze to silver to gold, on one session.
-
-    The two counts are asserted separately every time. With Jira as the only source they
-    must agree, and a test that says so is what stops the middle layer quietly falling out
-    of the data path again.
-    """
+    """Bronze to silver to gold, on one session."""
 
     async def test_a_payload_reaches_gold(self, session: AsyncSession) -> None:
         await BronzeRepository(session).save_issues([_payload()])
@@ -575,12 +548,7 @@ class TestTheAdvisoryLock:
 
     @pytest.fixture(autouse=True)
     async def _own_engine(self) -> AsyncIterator[None]:
-        """A fresh process-wide engine per test, because each test gets its own loop.
-
-        `try_lock` uses the cached engine, as the scheduler does. A pooled connection
-        opened under one loop and checked out under the next is dead, and the failure
-        surfaces as `Event loop is closed` from somewhere unrelated.
-        """
+        """A fresh process-wide engine per test, because each test gets its own loop."""
         await dispose_engine()
         yield
         await dispose_engine()
@@ -638,8 +606,7 @@ class TestTheProgressWindow:
     async def test_too_many_items_drops_the_oldest_and_counts_them(
         self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The newest survive: a summary of this sprint that omits yesterday keeps the
-        wrong half. `dropped` is non-zero so `render` can say the window is partial."""
+        """The newest items survive the cut."""
         monkeypatch.setattr("mycel.services.gather.MAX_ITEMS", 2)
         await GoldRepository(session).upsert_items(
             [_item(f"MYC-{n}", updated_at=_at(15) + timedelta(hours=n)) for n in (1, 2, 3)]
@@ -652,11 +619,7 @@ class TestTheProgressWindow:
 
 @needs_postgres
 class TestTheDashboard:
-    """The same window the summariser reads, shaped for a screen.
-
-    It goes through `gather_progress` rather than querying gold itself, so the two pages
-    cannot disagree about what happened this week.
-    """
+    """The same window the summariser reads, shaped for a screen."""
 
     async def test_it_counts_by_category(self, session: AsyncSession) -> None:
         await GoldRepository(session).upsert_items(
@@ -679,12 +642,7 @@ class TestTheDashboard:
     async def test_an_epic_is_sized_by_all_its_children_not_the_window(
         self, session: AsyncSession
     ) -> None:
-        """The bar is the epic; `moved` is the week.
-
-        A child finished last month still counts towards how far the epic has got. Sizing
-        the bar by the window would draw a quiet epic as nearly done, which is the one
-        thing a progress bar must never do.
-        """
+        """The bar is the epic; `moved` is the week."""
         await GoldRepository(session).upsert_items(
             [
                 _epic(),
@@ -708,11 +666,7 @@ class TestTheDashboard:
         assert [(e.issue_key, e.moved, e.percent) for e in board.epics] == [("MYC-6", 0, 0)]
 
     async def test_progress_is_the_project_not_the_window(self, session: AsyncSession) -> None:
-        """`percent` answers "how far are we", which a window cannot answer.
-
-        One item moved this week and it was done. Reading the window would call the
-        project finished; it is one of three.
-        """
+        """`percent` answers "how far are we", which a window cannot answer."""
         await GoldRepository(session).upsert_items(
             [
                 _item("MYC-7", status_category="done"),
@@ -737,12 +691,7 @@ class TestTheDashboard:
     async def test_an_old_overdue_ticket_is_late_without_being_in_the_window(
         self, session: AsyncSession
     ) -> None:
-        """The one asymmetry the dashboard's captions promise, pinned.
-
-        `overdue` is whole-project; every other block is the window. A ticket last touched
-        before `since` must still show as late — that is the ticket nobody is looking at —
-        while contributing nothing to the counts that say "these seven days".
-        """
+        """The one asymmetry the dashboard's captions promise, pinned."""
         await GoldRepository(session).upsert_items([_item(due_at=_at(10), updated_at=_at(11))])
 
         board = await build_dashboard(session, PROJECT, _at(15), _at(21))
@@ -752,12 +701,7 @@ class TestTheDashboard:
     async def test_spent_is_the_ticket_lifetime_and_effort_is_the_window(
         self, session: AsyncSession
     ) -> None:
-        """Two numbers on one screen that are allowed to disagree, pinned so they stay so.
-
-        Per person sums what Jira holds on the tickets the window selected — lifetime
-        totals. Effort logged sums the worklogs *dated* inside it. The docs promise the two
-        differ; without this, a later "fix" that made them agree would look like a cleanup.
-        """
+        """Two numbers on one screen that are allowed to disagree, pinned so they stay so."""
         gold = GoldRepository(session)
         await gold.upsert_items([_item("MYC-7", time_spent_seconds=10 * 3600)])
         await gold.upsert_worklogs(
@@ -771,12 +715,7 @@ class TestTheDashboard:
     async def test_an_epic_counts_as_an_item_but_never_as_its_own_child(
         self, session: AsyncSession
     ) -> None:
-        """An epic is a Jira issue like any other, and the captions now say so.
-
-        It counts in `totals` and against its assignee, so those two never disagree. It is
-        not in its own `items`, which counts children — an epic containing itself would
-        make every epic look one bigger than it is.
-        """
+        """An epic is a Jira issue like any other, and the captions now say so."""
         await GoldRepository(session).upsert_items(
             [_epic("MYC-6"), _item("MYC-7", parent_key="MYC-6")]
         )
@@ -809,12 +748,7 @@ class TestPriorityKindAndActivity:
     """Priority, kind and the activity feed. All three are whole-project on purpose."""
 
     async def test_priorities_count_only_unfinished_work(self, session: AsyncSession) -> None:
-        """A shipped Highest is not backlog pressure.
-
-        The block answers "what should be picked up next", and a finished ticket has no
-        next. Counting done work here would make a team that cleared its urgent tickets
-        look like it is drowning in them.
-        """
+        """A shipped Highest is not backlog pressure."""
         await GoldRepository(session).upsert_items(
             [
                 _item("MYC-7", priority="Highest"),
@@ -874,11 +808,7 @@ class TestPriorityKindAndActivity:
     async def test_the_feed_is_newest_first_and_ignores_the_window(
         self, session: AsyncSession
     ) -> None:
-        """The one block where an empty window would be a lie.
-
-        "Nothing happened" is what a reader concludes from an empty feed, when the truth
-        is that the last thing to happen was a fortnight ago and is worth naming.
-        """
+        """The one block where an empty window would be a lie."""
         await GoldRepository(session).upsert_items(
             [
                 _item("MYC-7", updated_at=_at(2)),
@@ -958,15 +888,7 @@ class TestSprintProgress:
 
 @needs_postgres
 class TestTheHeatmap:
-    """`effort_by_day` over twelve weeks: whether anyone was working at all.
-
-    The only block on the board that is not a snapshot. Every other one answers "how does
-    it stand now"; this answers "was anyone working", which a count of open tickets cannot
-    tell you either way.
-
-    From worklogs, not from `updated_at`. A sync touches every issue it refetches, so a
-    calendar of touches draws the shape of the sync schedule rather than of the work.
-    """
+    """`effort_by_day` over twelve weeks: whether anyone was working at all."""
 
     async def test_a_day_sums_every_worklog_on_it(self, session: AsyncSession) -> None:
         """Two logs on the same day are one cell worth both, not two cells."""
@@ -985,11 +907,7 @@ class TestTheHeatmap:
         ]
 
     async def test_a_quiet_day_gets_no_row_at_all(self, session: AsyncSession) -> None:
-        """Absent, not zero.
-
-        The grid draws its own calendar and has to fill the gaps regardless, so sending
-        three months of zeroes to say nothing happened is the wrong shape for the wire.
-        """
+        """Absent, not zero."""
         await GoldRepository(session).upsert_worklogs([_worklog("1", started_at=_at(18))])
 
         counted = await GoldRepository(session).effort_by_day(PROJECT, _at(1))
@@ -1010,12 +928,7 @@ class TestTheHeatmap:
     async def test_the_window_chart_is_a_slice_of_the_same_worklogs(
         self, session: AsyncSession
     ) -> None:
-        """Both halves of the block read one source, at two zooms.
-
-        The calendar keeps the old log the window has already left behind, which is the
-        whole reason the pair exists: the window alone cannot say the project was busy
-        a fortnight ago.
-        """
+        """Both halves of the block read one source, at two zooms."""
         await GoldRepository(session).upsert_worklogs(
             [
                 _worklog("1", started_at=_at(2)),
@@ -1030,8 +943,7 @@ class TestTheHeatmap:
 
 @needs_postgres
 class TestATurnKeepsItsToolCalls:
-    """`app.turn.steps`, so a thread reopened after the stream expired is not an empty
-    middle."""
+    """`app.turn.steps`, so a thread reopened after the stream expired is not an empty middle."""
 
     async def test_the_steps_come_back_as_they_were_written(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
@@ -1047,8 +959,9 @@ class TestATurnKeepsItsToolCalls:
     async def test_a_later_write_without_steps_does_not_erase_them(
         self, session: AsyncSession
     ) -> None:
-        """A redelivery that ends in failure must not wipe what a successful attempt
-        already recorded."""
+        """A redelivery that ends in failure must not wipe what a successful attempt already
+        recorded.
+        """
         repo = AppRepository(session)
         user = await repo.create_user("redeliver@example.com", "x")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")
@@ -1063,11 +976,7 @@ class TestATurnKeepsItsToolCalls:
 
 @needs_postgres
 class TestForgettingAThread:
-    """Delete is the one write in `app` that has to be scoped by hand.
-
-    Nothing else in the sidebar can reach across users, because everything else reads by
-    `user_id`. A delete takes an id from the URL, so the owner goes in the WHERE.
-    """
+    """Delete is the one write in `app` that has to be scoped by hand."""
 
     async def test_the_runs_under_it_go_too(self, session: AsyncSession) -> None:
         """`ON DELETE CASCADE` on `turn.conversation_id`, proved rather than assumed."""
@@ -1091,20 +1000,10 @@ class TestForgettingAThread:
 
 @needs_postgres
 class TestTheSidebarFollowsTheLastThingSaid:
-    """Order by the newest turn, not by when the thread was opened.
-
-    The thread you went back to is the one you are working in. Ordering by `created_at`
-    buries it under every thread opened since, which is the opposite of what a history is
-    for.
-
-    Every row here is stamped by hand. `func.now()` is frozen for the whole transaction in
-    Postgres, so rows written by one test all share a timestamp and the order between them
-    is whatever the planner feels like — which proves nothing either way.
-    """
+    """Order by the newest turn, not by when the thread was opened."""
 
     async def _stamp(self, session: AsyncSession, table: str, key: str, month: int) -> None:
-        # A turn carries both times, and the order reads the later one. Stamped together
-        # unless a test is about them differing.
+        # A turn carries both times, and the order reads the later one.
         columns = "created_at = :when"
         if table == "turn":
             columns += ", updated_at = :when"
@@ -1114,12 +1013,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
         )
 
     async def test_a_finished_run_lifts_its_thread(self, session: AsyncSession) -> None:
-        """The second write of a turn moves the thread.
-
-        A turn is written when the question is queued and again when the run ends. Ordering
-        on `created_at` reads the first write only, so a thread whose answer arrives last
-        stays wherever it was.
-        """
+        """The second write of a turn moves the thread."""
         repo = AppRepository(session)
         user = await repo.create_user("finished@example.com", "x")
         early = await repo.create_conversation(user.id, "chat", "asked first")
@@ -1182,8 +1076,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
         assert await repo.pin_conversation(thread.id, mine.id, True) is False
 
     async def test_a_thread_with_no_turns_still_sorts(self, session: AsyncSession) -> None:
-        """`COALESCE` back to its own `created_at` — a thread opened and never answered
-        still has to appear somewhere rather than fall out of the list."""
+        """`COALESCE` back to its own `created_at`."""
         repo = AppRepository(session)
         user = await repo.create_user("empty@example.com", "x")
         spoken = await repo.create_conversation(user.id, "chat", "answered")
@@ -1201,12 +1094,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
 @needs_postgres
 class TestAConnectedGoogleAccount:
-    """One row per person, and reconnecting replaces it rather than adding a second.
-
-    The upsert is the whole of it. Google hands back a refresh token on the first consent
-    only, so someone who reconnects after revoking must end up with the new token in the one
-    place the calendar looks — not with the dead one still sitting beside it.
-    """
+    """One row per person, and reconnecting replaces it rather than adding a second."""
 
     async def test_connecting_keeps_what_the_calendar_needs(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
@@ -1221,8 +1109,7 @@ class TestAConnectedGoogleAccount:
         assert row.scope == "openid email"
 
     async def test_reconnecting_replaces_the_token(self, session: AsyncSession) -> None:
-        """A second consent round supersedes the first: two live tokens for one person is a
-        grant nobody can revoke by disconnecting."""
+        """A second consent round supersedes the first."""
         repo = AppRepository(session)
         user = await repo.create_user("again@example.com", "x")
 
@@ -1267,8 +1154,7 @@ class TestAConnectedGoogleAccount:
 
 @needs_postgres
 class TestAConnectedJiraAccount:
-    """The Google table's twin. It carries no background work: the sync runs on the
-    deployment's service account, and this token only asks and writes as its owner."""
+    """The Google table's twin."""
 
     async def _connect(
         self, repo: AppRepository, email: str, *, account: str = "acct-1", token: str = "sealed"
@@ -1280,8 +1166,7 @@ class TestAConnectedJiraAccount:
         return user.id
 
     async def test_connecting_keeps_what_a_write_needs(self, session: AsyncSession) -> None:
-        """The account id is the author of every write, and the cloud id addresses the
-        site. Neither is in the token response, so both are kept at connect time."""
+        """The account id is the author of every write, and the cloud id addresses the site."""
         repo = AppRepository(session)
         user_id = await self._connect(repo, "jira@example.com")
 
@@ -1328,8 +1213,7 @@ class TestAConnectedJiraAccount:
     async def test_a_rotated_refresh_token_replaces_the_spent_one(
         self, session: AsyncSession
     ) -> None:
-        """Atlassian retires a refresh token once it is spent, so the successor has to land
-        in the row or the next use of this person's grant fails."""
+        """Atlassian retires a refresh token once it is spent."""
         repo = AppRepository(session)
         user_id = await self._connect(repo, "rotate@example.com", token="old")
 

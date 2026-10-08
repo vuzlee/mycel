@@ -1,4 +1,4 @@
-"""All SQL for a user's documents and their chunks. Ownership is checked in every read."""
+"""SQL for a user's documents and chunks. Ownership is checked in every read."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -61,7 +61,7 @@ class DocumentRepository:
     # --- the store ---
 
     async def busy(self, user_id: int) -> bool:
-        """A document is still being processed, so the knowledge base cannot be asked."""
+        """Whether a document is still processing, so the knowledge base cannot be asked."""
         return bool(await self.count_in_flight(user_id))
 
     async def version(self, user_id: int) -> str:
@@ -114,7 +114,6 @@ class DocumentRepository:
         return _document(row) if row else None
 
     async def lock_document(self, document_id: int) -> DocumentRow | None:
-        """The row, locked until this transaction ends."""
         row = await self._session.scalar(
             select(Document).where(Document.id == document_id).with_for_update()
         )
@@ -162,7 +161,7 @@ class DocumentRepository:
         )
 
     async def rename(self, document_id: int, filename: str) -> None:
-        """The display name only; the object key in MinIO keeps the name it was uploaded with."""
+        """Rename for display; the object key keeps the original name."""
         await self._session.execute(
             update(Document).where(Document.id == document_id).values(filename=filename)
         )
@@ -201,7 +200,7 @@ class DocumentRepository:
     # --- chunks ---
 
     async def replace_chunks(self, document_id: int, chunks: Sequence[NewChunk]) -> list[int]:
-        """Drop the old chunks, write the new ones, return their ids in `ord` order."""
+        """Replace a document's chunks; return the new ids in `ord` order."""
         await self._session.execute(delete(Chunk).where(Chunk.document_id == document_id))
         rows = [
             Chunk(
@@ -223,7 +222,7 @@ class DocumentRepository:
         return await self._count(select(Chunk.id).where(Chunk.document_id == document_id))
 
     async def readable_chunks(self, chunk_ids: Sequence[int], user_id: int) -> list[ChunkRow]:
-        """Chunks the owner may read right now: their document, ready and enabled."""
+        """Chunks the owner may read now: their document, ready and enabled."""
         if not chunk_ids:
             return []
         rows = await self._session.execute(

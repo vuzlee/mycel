@@ -1,9 +1,4 @@
-"""Shared test fixtures.
-
-The module-level `ALLOW_MODEL_REQUESTS = False` is the important line: it makes any real
-provider call raise instead of going out to the network. A test suite that can spend money
-is a test suite nobody runs.
-"""
+"""Shared test fixtures."""
 
 import asyncio
 import os
@@ -48,15 +43,8 @@ async def _create_if_missing(dsn: str) -> None:
 
 
 def _resolve_test_dsn() -> str | None:
-    """The suite's own database, beside the developer's — never the developer's.
-
-    Every Postgres test drops its schemas on teardown, so pointing them at the dev database
-    would wipe it. The server is a property of the machine and comes from the environment or
-    `.env`; the database name is this suite's, always ending in `_test`. Unreachable server
-    means the Postgres tests skip, which is right on a machine with no database.
-    """
-    # The owner, not the app role: the suite builds and drops its schemas, which is DDL,
-    # and a deployment's app role is the one thing that may not do that.
+    """The suite's own database, beside the developer's — never the developer's."""
+    # The owner, not the app role: the suite runs DDL.
     env = dotenv_values(".env")
     dsn = (
         os.environ.get("MIGRATION_DATABASE_URL")
@@ -85,7 +73,6 @@ else:
     os.environ.pop("DATABASE_URL", None)
 
 # Variables that would otherwise leak a developer's real environment into the tests. A
-# machine with a live GEMINI_API_KEYS must not behave differently from CI.
 _LEAKY_PREFIXES = ("MYCEL_", "GEMINI_", "OTEL_", "LOG_")
 
 
@@ -103,18 +90,13 @@ def _free_port() -> int:
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Strip inherited env vars and reset the settings cache around every test.
-
-    Also stops `Settings` reading the developer's `.env`, so the suite sees defaults
-    unless a test sets a variable itself.
-    """
+    """Strip inherited env vars and reset the settings cache around every test."""
     for key in list(os.environ):
         if key.startswith(_LEAKY_PREFIXES):
             monkeypatch.delenv(key, raising=False)
 
     monkeypatch.setitem(Settings.model_config, "env_file", None)
-    # The api listens for /metrics on METRICS_PORT + 3. A free port, so a running dev stack
-    # holding 9103 does not fail every app test at startup.
+    # A free METRICS_PORT, so a running dev stack on 9103 does not break app tests.
     monkeypatch.setenv("METRICS_PORT", str(_free_port() - 3))
     get_settings.cache_clear()
     yield

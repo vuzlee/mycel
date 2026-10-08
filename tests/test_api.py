@@ -1,13 +1,4 @@
-"""The HTTP shell: assembly, the request id, and how errors come back.
-
-No model is ever called here — `conftest.py` forbids it, and the model would
-run in another process anyway. The queue and the result store are stubbed, because
-what these tests are about is the shell: that a request is accepted without waiting, that
-failures map to the right status, and that the request id survives the trip.
-
-Whether the orchestrator is any good is `test_orchestrator.py`'s question; whether the job
-survives a broker is `test_queue.py`'s.
-"""
+"""The HTTP shell: assembly, the request id, and how errors come back."""
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
@@ -39,17 +30,12 @@ from mycel.llm.budget import BudgetExceeded
 from mycel.services.auth import Principal
 from mycel.services.dashboard import Dashboard, EpicProgress
 
-#: Who every request in this file is made by. Signing in for real would need a database,
-#: which is `test_auth.py`'s subject — here the shell is under test, not the login.
+#: Who every request in this file is made by.
 SIGNED_IN = Principal(id=1, email="tester@example.com")
 
 
 def _signed_in(app: FastAPI) -> None:
-    """Satisfy `Depends(current_user)` without a session table.
-
-    Overridden rather than stubbed with a cookie: a cookie would still be looked up in
-    Postgres, and these tests deliberately run without one.
-    """
+    """Satisfy `Depends(current_user)` without a session table."""
     app.dependency_overrides[current_user] = lambda: SIGNED_IN
 
 
@@ -80,12 +66,7 @@ def _stored(
     result: JobResult | None,
     kept: TurnRow | None = None,
 ) -> None:
-    """Make everything the route reads answer, with neither Redis nor Postgres here.
-
-    The route reads three things: the result in Redis while a run is in flight, the kept
-    row once the TTL has passed, and the cited sources. Leaving any one unstubbed sends it
-    to a real store, which is a connection error dressed up as a 500.
-    """
+    """Make everything the route reads answer, with neither Redis nor Postgres here."""
 
     async def fake_fetch(job_id: str) -> JobResult | None:
         return result
@@ -106,14 +87,7 @@ KEPT_ANSWER = "Nothing was asked, so nothing happened."
 
 
 def _kept(job_id: str, *, status: str = "done", age_s: float = 0.0) -> TurnRow:
-    """A row as `app.turn` keeps it, for the fallback half of the result endpoint.
-
-    A row that never ran has no answer, which is how a `queued` one is told apart from a
-    finished one without a second argument nobody reads.
-
-    `age_s` is how long ago it was written, which only a `queued` row cares about: young
-    means the worker has not reached it, old means Redis lost it.
-    """
+    """A row as `app.turn` keeps it, for the fallback half of the result endpoint."""
     return TurnRow(
         id=1,
         conversation_id=1,
@@ -159,8 +133,9 @@ class TestHealth:
     def test_an_unreachable_database_answers_503(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """503, not a stack trace: a load balancer reads the code, and this endpoint is
-        polled every few seconds while a dependency is down."""
+        """503, not a stack trace: a load balancer reads the code, and this endpoint is polled every
+        few seconds while a dependency is down.
+        """
         _database(monkeypatch, up=False)
         response = client.get("/health/ready")
 
@@ -206,11 +181,7 @@ class TestQueueingAQuestion:
     def test_a_request_is_accepted_rather_than_answered(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The status code is the contract: accepted, and not done.
-
-        A caller that reads 202 as "here is your answer" fails on the missing body rather
-        than quietly treating a receipt as an answer.
-        """
+        """The status code is the contract: accepted, and not done."""
         _queues(monkeypatch, "job-abc")
         response = client.post("/chat", json={"question": "what is true"})
 
@@ -229,11 +200,7 @@ class TestQueueingAQuestion:
     def test_a_follow_up_names_the_thread_it_joins(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The conversation the caller asked for comes back, not a fresh one.
-
-        Without the field a second
-        question opened a second thread, and the page had no way to say otherwise.
-        """
+        """The conversation the caller asked for comes back, not a fresh one."""
         seen: list[int | None] = []
 
         async def fake_request(
@@ -322,12 +289,7 @@ class TestCollectingAnAnswer:
     def test_a_kept_row_that_never_ran_is_not_running(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A job still `queued` when Redis forgot it is failed, not in flight.
-
-        Telling a caller `running` sends them polling a job nobody will ever finish. Old
-        enough that Redis could have forgotten it: below the TTL the same row means the
-        opposite, which is the test below.
-        """
+        """A job still `queued` when Redis forgot it is failed, not in flight."""
         stale = get_settings().result_ttl_seconds + 60
         _stored(monkeypatch, None, kept=_kept("job-abc", status="queued", age_s=stale))
         assert client.get("/chat/job-abc").json()["status"] == "failed"
@@ -335,26 +297,14 @@ class TestCollectingAnAnswer:
     def test_a_run_still_on_its_way_to_a_worker_is_running(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The window every run passes through, and the one the page polls in.
-
-        The turn is written `queued` in the same transaction as the publish, and the
-        worker's `mark_running` is a broker hop later — so for a moment there is a row and
-        no Redis key, and the page starts polling the instant the POST returns. Read as
-        `failed`, that moment puts "The run failed." over a run that is about to answer.
-        """
+        """The window every run passes through, and the one the page polls in."""
         _stored(monkeypatch, None, kept=_kept("job-abc", status="queued", age_s=0.5))
         assert client.get("/chat/job-abc").json()["status"] == "running"
 
     def test_a_running_run_still_names_its_thread_and_its_question(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Redis says `running`; the thread and the question come off the kept row.
-
-        `request_chat` writes that row at queue time, so it is there before a worker
-        touches the job. The page needs both from the first poll: a thread's title is the
-        question that *opened* it, and its latest job id is the wrong run for a link
-        naming an earlier one.
-        """
+        """Redis says `running`; the thread and the question come off the kept row."""
         _stored(monkeypatch, JobResult(job_id="job-abc", status="running"), kept=_kept("job-abc"))
         body = client.get("/chat/job-abc").json()
 
@@ -374,11 +324,7 @@ class TestCollectingAnAnswer:
 
 
 class TestErrorsComeBackAsThemselves:
-    """The mapping is the point: these are not all 500s.
-
-    A caller who asked for too much must not be told the server is broken, because the two
-    call for opposite responses — one is retried, the other is reported.
-    """
+    """The mapping is the point: these are not all 500s."""
 
     @pytest.mark.parametrize(
         ("raised", "status", "kind"),
@@ -405,11 +351,7 @@ class TestErrorsComeBackAsThemselves:
     def test_a_plain_bug_is_not_dressed_up_as_a_handled_error(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Anything that is not a `MycelError` must reach the server's own handler.
-
-        Catching it here would turn every bug into a tidy JSON body and lose the traceback,
-        which is the one thing a bug needs to leave behind.
-        """
+        """Anything that is not a `MycelError` must reach the server's own handler."""
         _queues(monkeypatch, RuntimeError("this is a bug"))
         assert client.post("/chat", json={"question": "anything"}).status_code == 500
 
@@ -423,26 +365,12 @@ class TestErrorsComeBackAsThemselves:
 
 
 class TestTheThingsThatFailSilently:
-    """Two properties that no ordinary test touches, neither caught by an ordinary test.
-
-    Neither shows up as a wrong answer. The first shows up as a server that handles one
-    request at a time under load; the second as two disconnected trees in Langfuse.
-
-    The trace one matters most: the span the worker restores
-    from the message headers attaches to the span this test is checking exists.
-    """
+    """Two properties that no ordinary test touches, neither caught by an ordinary test."""
 
     def test_a_slow_publish_does_not_block_another_request(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """If anything on the path is sync and blocking, the second request waits.
-
-        The run itself no longer happens here, but a publish still crosses the network and
-        a blocking AMQP client on this path would serialise every caller. Asserted by
-        having the first publish refuse to finish until the second has started, which can
-        only happen if both are in flight at once. A blocking implementation deadlocks
-        here instead of returning a wrong value.
-        """
+        """If anything on the path is sync and blocking, the second request waits."""
         import asyncio
         import threading
 
@@ -476,12 +404,7 @@ class TestTheThingsThatFailSilently:
     def test_the_publish_span_sits_under_the_http_span(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """One trace, not two.
-
-        HTTP spans and agent spans landing in
-        separate trees makes the work done in `73b8b17` worthless, and nothing else in the
-        suite would notice. Checked by recording spans in memory rather than exporting.
-        """
+        """One trace, not two."""
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -493,9 +416,7 @@ class TestTheThingsThatFailSilently:
         provider = TracerProvider()
         provider.add_span_processor(SimpleSpanProcessor(exporter))
 
-        # `setup_tracing` refuses to install a second provider in one process, so the app
-        # is handed this one directly — the wiring under test is `instrument_app`, not
-        # how the provider was built.
+        # `setup_tracing` refuses a second provider in one process.
         monkeypatch.setattr("mycel.api.app.setup_tracing", lambda cfg: provider)
 
         async def one_span(
@@ -541,12 +462,7 @@ def _no_session(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestTheBoard:
-    """`GET /dashboard/{project}`: counting queries, answered inside the request.
-
-    Nothing here reaches a database — `build_dashboard` is `test_postgres.py`'s subject.
-    What is under test is the route: that permission is checked before anything is read,
-    that seconds stay seconds, and that a window is a parameter with a ceiling.
-    """
+    """`GET /dashboard/{project}`: counting queries, answered inside the request."""
 
     def _answers(self, monkeypatch: pytest.MonkeyPatch, board: Dashboard) -> None:
         async def fake_build(session: Any, project: str, since: Any, until: Any) -> Dashboard:
@@ -663,8 +579,7 @@ class TestTheBoard:
     def test_priority_kind_and_activity_reach_the_page(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Priority, kind and the feed. The feed carries `updated_at`, which is what makes
-        it a feed rather than a second list of tickets."""
+        """Priority, kind and the feed."""
         self._answers(monkeypatch, self._board())
         body = client.get("/dashboard/MYC").json()
 
@@ -847,11 +762,7 @@ class TestTheLists:
 
 
 class TestTheSinglePageApp:
-    """A reload at a deep route must serve the page, not a 404.
-
-    Skipped rather than failed without a build: the UI is a client of this service, and a
-    source checkout that has never run `npm run build` is a normal state.
-    """
+    """A reload at a deep route must serve the page, not a 404."""
 
     @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
     @pytest.mark.parametrize("path", ["/app/", "/app/home", "/app/login", "/app/register"])
@@ -868,11 +779,7 @@ class TestTheSinglePageApp:
 
 
 class TestWhatNeedsALogin:
-    """Which doors are locked, and which deliberately are not.
-
-    This is the test that catches a route added later without `Depends(current_user)` —
-    the failure mode is silent, because an open endpoint works perfectly for everyone.
-    """
+    """Which doors are locked, and which deliberately are not."""
 
     @pytest.fixture
     def stranger(self) -> Iterator[TestClient]:
@@ -902,8 +809,7 @@ class TestWhatNeedsALogin:
 
     @pytest.mark.parametrize("path", ["/health/live", "/health/ready"])
     def test_health_does_not_need_one(self, stranger: TestClient, path: str) -> None:
-        """A health check that needs a login is not a health check: a load balancer has
-        no account, and a 401 reads as a healthy service to nothing at all."""
+        """A health check that needs a login is not a health check."""
         assert stranger.get(path).status_code != 401
 
 

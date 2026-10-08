@@ -28,7 +28,7 @@ class TestWhichQuota:
 
 class TestUntilReset:
     def test_waits_until_midnight_pacific(self) -> None:
-        # 2026-10-05 07:00 UTC is 00:00 PDT, so the next reset is a full day away.
+        # 07:00 UTC is 00:00 PDT, so the next reset is a full day away.
         assert callbacks.seconds_until_reset(datetime(2026, 10, 5, 7, 0, tzinfo=UTC)) == 86400
 
     def test_one_hour_before_reset(self) -> None:

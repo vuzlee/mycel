@@ -1,11 +1,6 @@
-"""Chips: the sources a person picks for one turn. No chip, no tool.
+"""Chips: the sources a person picks for one turn. A tool outside them is never sent.
 
-A chip is enforced by what the model is shown, not by what it is told. Every toolset an
-agent builds goes through `allowed`, which reads `deps.chips`; a tool outside the chosen
-chips is never in the request, so the model cannot call it.
-
-`chips=None` means "not decided by a person" — a script, a test, a scheduled report —
-and keeps every tool. An empty set is a person who picked nothing, and gets none.
+`chips=None` keeps every tool; an empty set keeps none.
 """
 
 from enum import StrEnum
@@ -26,11 +21,7 @@ REACHES: dict[str, str] = {
 
 
 def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
-    """This turn's note to the orchestrator: which sources are off, and what to say then.
-
-    Without it a run with no tools writes a heading and stops, and the page shows a title
-    over nothing.
-    """
+    """Instructions telling the orchestrator which sources are off and how to reply."""
     if chips is None:
         return ""
     off = [label for key, label in REACHES.items() if key not in chips]
@@ -53,9 +44,7 @@ class Chip(StrEnum):
     MAIL = "mail"
 
 
-#: Which tools each chip opens, at every level: the specialist an orchestrator may call,
-#: and the tools that specialist may then use. Knowledge is absent: it opens no tool, its
-#: passages are put in the prompt by `domains/knowledge.py`.
+#: Agents and tools each chip opens. Knowledge opens no tool; its passages go in the prompt.
 TOOLS: dict[Chip, frozenset[str]] = {
     Chip.WEB: frozenset({"researcher", "web_search"}),
     Chip.MAIL: frozenset({"researcher", "read_mail"}),

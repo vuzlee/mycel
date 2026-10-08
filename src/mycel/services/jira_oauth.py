@@ -1,26 +1,4 @@
-"""One person's standing permission to reach Jira as themselves.
-
-**Per-person consent, and the argument is authorship rather than security.** A deployment
-token reads a board perfectly well — everyone sees the same issues and nobody's name is
-written down. It writes a board badly: a comment posted on it appears under the host's
-name whoever typed it, and Jira offers no way to correct the author of an event already
-recorded. So reading could have stayed on one token and writing could not, and keeping two
-mechanisms for one provider would be two things to configure and two ways to be broken.
-
-**A person's token does two things, and background reading is not one of them.** It
-tells Mycel which projects that person may browse (`services/access.py`), and it writes
-as them. The sync runs on the deployment's service account instead: a sync carried by one
-person's consent stops the day they leave, and looks like a quiet week while it does.
-
-**Scopes are asked for narrowly, and one of them conditionally.** `manage:jira-project` is
-requested only where `JIRA_ALLOW_CREATE_PROJECT` is on, so a deployment that never creates
-a project never grants the right to. Asking for everything up front, in case, is how a
-consent screen comes to describe an app that does not exist.
-
-The shape of the consent round — `state` in Redis with a TTL and spent on first use, the
-token exchange, the Fernet-sealed refresh token — is `services/google_oauth.py`'s.
-This is the second provider through it rather than a second design.
-"""
+"""One person's standing permission to reach Jira as themselves."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -41,14 +19,10 @@ log = get_logger(__name__)
 AUTH_URL = "https://auth.atlassian.com/authorize"
 TOKEN_URL = "https://auth.atlassian.com/oauth/token"
 RESOURCES_URL = "https://api.atlassian.com/oauth/token/accessible-resources"
-#: Jira's own "who am I", on the chosen site. Not `api.atlassian.com/me`: that one needs the
-#: `read:me` scope from a second API, and answers 403 to a grant that has only Jira's.
+#: Jira's own "who am I", on the chosen site.
 MYSELF_URL = "https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/myself"
 
-#: What every connection asks for. Reading is the sync and the dashboard; `read:jira-user`
-#: is how "assign it to Nam" becomes an account id; `write:jira-work` covers a comment, a
-#: transition and a new issue alike. `offline_access` is the one without which there is no
-#: refresh token at all, and therefore no background sync.
+#: What every connection asks for.
 SCOPES = (
     "read:jira-work",
     "read:jira-user",
@@ -56,8 +30,7 @@ SCOPES = (
     "offline_access",
 )
 
-#: Creating a project needs admin on the site, and a project created by mistake cannot be
-#: removed over the API on many of them. Asked for only where the deployment has armed it.
+#: Creating a project needs site admin, and a mistaken project cannot be undone.
 PROJECT_SCOPE = "manage:jira-project"
 
 CALLBACK_PATH = "/auth/jira/callback"
@@ -72,12 +45,7 @@ class JiraAuthError(MycelError):
 
 
 class NotConnected(JiraAuthError):
-    """This person has no usable Jira account attached.
-
-    Either they never connected one, or the grant no longer works. Both are answered the
-    same way — connect it again in settings — and neither is a bug, which is why the tools
-    turn this into a sentence rather than letting it raise.
-    """
+    """This person has no usable Jira account attached."""
 
 
 @dataclass(frozen=True)
@@ -92,34 +60,20 @@ class Grant:
 
 
 def scopes() -> tuple[str, ...]:
-    """What this deployment asks for, which depends on one switch.
-
-    A function rather than a constant because the answer is configuration: a deployment
-    with project creation off must never have the admin scope on its consent screen.
-    """
+    """What this deployment asks for, which depends on one switch."""
     if get_settings().jira_allow_create_project:
         return (*SCOPES, PROJECT_SCOPE)
     return SCOPES
 
 
 def configured(settings: Settings | None = None) -> bool:
-    """Whether this deployment can connect an account at all.
-
-    All three: the client is who is asking, and the key is what keeps the answer secret. A
-    client with no key would store a refresh token in the clear, which counts as not
-    configured rather than as configured badly.
-    """
+    """Whether this deployment can connect an account at all."""
     cfg = settings or get_settings()
     return bool(cfg.jira_client_id and cfg.jira_client_secret and key_set(cfg))
 
 
 async def consent_url(user_id: int) -> str:
-    """Where to send someone so Atlassian can ask them.
-
-    `prompt=consent` is what returns a refresh token on a reconnect as well as on a first
-    connect. Without it a second round comes back with an access token and nothing to
-    store, and the account is connected in a way that stops working within the hour.
-    """
+    """Where to send someone so Atlassian can ask them."""
     client_id, _ = _client()
     state = await oauth.start_state(PROVIDER, user_id)
 
@@ -138,11 +92,7 @@ async def consent_url(user_id: int) -> str:
 
 
 async def spend_state(state: str) -> int:
-    """Whose consent round this callback belongs to. Raises `JiraAuthError` if it is none.
-
-    Spent on first use: a callback url that lands in a history file or a referrer header
-    cannot be replayed into a second connection.
-    """
+    """Whose consent round this callback belongs to. Raises `JiraAuthError` if it is none."""
     user_id = await oauth.spend_state(PROVIDER, state)
     if user_id is None:
         raise JiraAuthError("that consent link has expired; start again from settings")
@@ -150,13 +100,7 @@ async def spend_state(state: str) -> int:
 
 
 async def exchange(code: str) -> Grant:
-    """Turn the code Atlassian redirected with into something worth keeping.
-
-    Three calls, not one, and the two extra are not optional. Atlassian's token response
-    says nothing about *which site* the grant opens or *who* consented, and both are needed
-    before a write can carry a name: the cloud id is in the url of every subsequent call,
-    and the account id is what an assignment is written with.
-    """
+    """Turn the code Atlassian redirected with into something worth keeping."""
     client_id, client_secret = _client()
     payload = await _token_call(
         {
@@ -185,21 +129,13 @@ async def exchange(code: str) -> Grant:
         display_name=display_name,
         cloud_id=cloud_id,
         refresh_token=str(refresh_token),
-        # As granted, not as asked for: a site may hand back less, and a tool that assumes
-        # otherwise fails at the write rather than at the connect.
+        # As granted, not as asked for: a site may grant less.
         scope=str(payload.get("scope", "")),
     )
 
 
 async def access_token(refresh_token_encrypted: str) -> str:
-    """A fresh access token for one person, from the token kept for them.
-
-    Raises `NotConnected` when Atlassian refuses the grant — the one failure that is not a
-    fault: it means the person revoked access or an admin removed the app, and the answer
-    is to connect again rather than to retry.
-
-    Does not keep the rotated refresh token; `_access_for` is the caller that does.
-    """
+    """A fresh access token for one person, from the token kept for them."""
     token, _ = await _refresh(refresh_token_encrypted)
     return token
 
@@ -223,12 +159,7 @@ async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None]:
 
 
 async def _access_for(user_id: int) -> str:
-    """Refresh one person's grant and keep the successor, under a row lock.
-
-    **New Atlassian apps must rotate refresh tokens.** Every refresh returns the next one
-    and retires the last, so a refresh whose successor is thrown away works once and then
-    leaves a dead token in the row — the sync stops a few hours later, silently.
-    """
+    """Refresh one person's grant and keep the successor, under a row lock."""
     async with session_scope() as session:
         repo = AccountRepository(session)
         row = await repo.jira_account_locked(user_id)
@@ -267,22 +198,13 @@ async def connected(user_id: int) -> JiraAccountRow | None:
 
 
 async def disconnect(user_id: int) -> bool:
-    """Forget the grant here, and the project access it carried. Atlassian is not told.
-
-    Unlike Google, Atlassian publishes no revoke endpoint for a 3LO refresh token — the
-    person removes the app at id.atlassian.com. The row goes either way, which is what they
-    asked for; the settings screen says where to finish the job.
-    """
+    """Forget the grant here, and the project access it carried. Atlassian is not told."""
     async with session_scope() as session:
         return await AccountRepository(session).delete_jira_account(user_id)
 
 
 async def token_for(user_id: int) -> tuple[str, str]:
-    """An access token and cloud id for one person, or `NotConnected` with a sentence.
-
-    Fetched per use rather than cached: an access token lives under an hour, and a cache of
-    them would be a second place a credential sits.
-    """
+    """An access token and cloud id for one person, or `NotConnected` with a sentence."""
     row = await connected(user_id)
     if row is None:
         raise NotConnected("no Jira account is connected; connect one in settings")
@@ -300,11 +222,7 @@ def _unseal(refresh_token_encrypted: str) -> str:
 
 
 async def _token_call(data: dict[str, str]) -> dict[str, Any]:
-    """One POST to the token endpoint, with Atlassian's own error text kept.
-
-    The body is the only place it says *why*, and a refused grant there is the difference
-    between "connect again" and "something is broken".
-    """
+    """One POST to the token endpoint, with Atlassian's own error text kept."""
     try:
         status, payload = await oauth.post_token(TOKEN_URL, json=data)
     except httpx2.HTTPError as exc:
@@ -319,13 +237,7 @@ async def _token_call(data: dict[str, str]) -> dict[str, Any]:
 
 
 async def _cloud_id(access: str) -> str:
-    """Which site this grant opens.
-
-    One grant can cover several, and the API is addressed per site, so one has to be
-    chosen. The first is taken: a deployment syncs one project, and asking a person to pick
-    a site before they have seen the app is a question with no context to answer it in. A
-    second site is a later batch, not a silent default.
-    """
+    """Which site this grant opens."""
     sites = await _api(access, RESOURCES_URL)
     if not isinstance(sites, list) or not sites:
         raise JiraAuthError(
@@ -340,11 +252,7 @@ async def _cloud_id(access: str) -> str:
 
 
 async def _whoami(access: str, cloud_id: str) -> tuple[str, str]:
-    """Who consented: the account id a write is attributed to, and the name to show.
-
-    The name is a label — for the settings screen, and for reading an assignment back
-    before it is written. The id is the thing that identifies anybody.
-    """
+    """Who consented: the account id a write is attributed to, and the name to show."""
     me = await _api(access, MYSELF_URL.format(cloud_id=cloud_id))
     if not isinstance(me, dict):
         raise JiraAuthError("Atlassian answered with something unreadable")
@@ -370,11 +278,7 @@ async def _api(access: str, url: str) -> Any:
 
 
 def _client() -> tuple[str, str]:
-    """The client id and secret, or `ConfigError`.
-
-    Returns them rather than the settings object so the callers need no `assert` to
-    convince a type checker that a deployment `configured()` accepted has them.
-    """
+    """The client id and secret, or `ConfigError`."""
     cfg = get_settings()
     if not configured() or cfg.jira_client_id is None or cfg.jira_client_secret is None:
         raise ConfigError(

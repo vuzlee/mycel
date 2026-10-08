@@ -11,8 +11,7 @@ from mycel.core.exceptions import ConfigError
 
 class TestLoad:
     def test_every_registered_agent_has_a_prompt(self) -> None:
-        """An agent whose prompt module was renamed starts with no instructions at all —
-        and the model answers anyway, plausibly, off nothing."""
+        """An agent whose prompt module was renamed starts with no instructions at all."""
         for name in AGENTS:
             assert prompts.load(name)
 

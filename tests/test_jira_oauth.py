@@ -1,23 +1,4 @@
-"""One person's standing permission to reach Jira as themselves, and what guards it.
-
-The consent round is `services/google_oauth.py`'s, reused here. So what is pinned is
-what is *different* about Jira, which is four things:
-
-**The argument for per-person consent is authorship, not security.** Reading on a shared
-token was fine; writing on one puts the host's name on every comment, and Jira cannot
-correct the author of an event already written. Nothing in a test can assert that directly
-— what it can assert is that there is no shared-token path left to fall back to.
-
-**No person's grant carries the background sync.** It runs on the deployment's service
-account; a person's grant only asks Jira what they may browse and writes as them.
-
-**One scope is asked for conditionally.** A deployment that never creates a project must
-never grant the right to, because a consent screen that over-asks describes an app that
-does not exist.
-
-No network and no Redis: the token endpoint is a `MockTransport` and the state store is a
-dict. Postgres is the other half of this module and is covered in `test_postgres.py`.
-"""
+"""One person's standing permission to reach Jira as themselves, and what guards it."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -43,15 +24,7 @@ KEY = Fernet.generate_key().decode()
 
 
 def _routes(answers: dict[str, Any], status: int = 200) -> Any:
-    """Atlassian, answering by path fragment.
-
-    Several routes rather than one payload because an exchange is three calls — the token,
-    then the site, then who consented — and the interesting failures are in the last two.
-
-    Longest fragment first, because Atlassian nests one of these inside another:
-    `/oauth/token/accessible-resources` contains `/oauth/token`, so first-match order
-    would answer the site lookup with the token payload.
-    """
+    """Atlassian, answering by path fragment."""
 
     def handler(request: httpx2.Request) -> httpx2.Response:
         for fragment in sorted(answers, key=len, reverse=True):
@@ -103,8 +76,7 @@ class TestWhetherThisDeploymentCanConnectAnything:
     def test_a_client_without_a_key_is_not_configured(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Connecting anyway would store a refresh token readably, which is worse than
-        refusing — and this is the state a half-finished setup actually reaches."""
+        """Connecting anyway would store a refresh token readably, which is worse than refusing."""
         monkeypatch.setenv("JIRA_CLIENT_ID", "jira-client-id")
         monkeypatch.setenv("JIRA_CLIENT_SECRET", "jira-client-secret")
         monkeypatch.delenv("TOKEN_ENCRYPTION_KEY", raising=False)
@@ -124,8 +96,7 @@ class TestWhatTheConsentScreenAsksFor:
     async def test_the_four_everyday_scopes_are_always_asked_for(
         self, configured: None, redis: FakeRedis
     ) -> None:
-        """`offline_access` is the one without which there is no background sync at all —
-        no refresh token means a grant that stops working within the hour."""
+        """`offline_access` is the one without which there is no background sync at all."""
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
         assert query["scope"][0].split() == [
@@ -154,8 +125,7 @@ class TestWhatTheConsentScreenAsksFor:
         assert oauth.PROJECT_SCOPE in query["scope"][0]
 
     async def test_it_forces_the_consent_prompt(self, configured: None, redis: FakeRedis) -> None:
-        """Without it a reconnect comes back with an access token and nothing to store,
-        and the account is connected in a way that stops working within the hour."""
+        """Without it a reconnect comes back with an access token and nothing to store."""
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
         assert query["prompt"] == ["consent"]
@@ -180,8 +150,7 @@ class TestTheStateIsSpentOnce:
     async def test_a_replayed_callback_connects_nothing(
         self, configured: None, redis: FakeRedis
     ) -> None:
-        """A callback url lands in a history file and a referrer header, and neither may
-        be enough to attach a second account."""
+        """A callback url lands in a history file and a referrer header."""
         state = parse_qs(urlsplit(await oauth.consent_url(7)).query)["state"][0]
         await oauth.spend_state(state)
 
@@ -198,8 +167,7 @@ class TestExchangingTheCode:
     async def test_a_grant_carries_the_site_and_who_consented(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Neither is in the token response, and both are needed before a write can carry
-        a name: the cloud id addresses every later call, the account id is the author."""
+        """Neither is in the token response, and both are needed before a write can carry a name."""
         monkeypatch.setattr(httpx2, "AsyncClient", _routes(WHOLE_ROUND))
 
         grant = await oauth.exchange("code-from-atlassian")
@@ -214,8 +182,7 @@ class TestExchangingTheCode:
     async def test_a_response_with_no_refresh_token_names_the_way_out(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The failure worth naming: everything else about that response looks fine, and
-        the account would be connected in a way that stops syncing within the hour."""
+        """The failure worth naming: everything else about that response looks fine."""
         monkeypatch.setattr(
             httpx2, "AsyncClient", _routes({**WHOLE_ROUND, "/oauth/token": {"access_token": "at"}})
         )
@@ -226,8 +193,7 @@ class TestExchangingTheCode:
     async def test_an_account_that_can_reach_no_site_is_refused_clearly(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Connecting with the wrong Atlassian account is a thing people do, and the row
-        it would leave behind looks connected while reaching nothing."""
+        """Connecting with the wrong Atlassian account is a thing people do."""
         monkeypatch.setattr(
             httpx2, "AsyncClient", _routes({**WHOLE_ROUND, "accessible-resources": []})
         )
@@ -240,8 +206,7 @@ class TestRefreshing:
     async def test_a_lapsed_grant_reads_as_not_connected(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Revoking the app is a thing people do and it is not a fault — it has to reach
-        them as "connect it again" rather than as a traceback."""
+        """Revoking the app is a thing people do and it is not a fault."""
         monkeypatch.setattr(
             httpx2, "AsyncClient", _routes({"/oauth/token": {"error": "invalid_grant"}}, status=400)
         )
@@ -252,8 +217,7 @@ class TestRefreshing:
     async def test_any_other_refusal_is_not_a_reconnect(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A broken client is not a lapsed grant, and telling somebody to reconnect sends
-        them round a loop that cannot help."""
+        """A broken client is not a lapsed grant."""
         monkeypatch.setattr(
             httpx2,
             "AsyncClient",
@@ -275,8 +239,7 @@ class TestRefreshing:
 
 
 class TestARotatedTokenIsKept:
-    """New Atlassian apps rotate refresh tokens: a refresh that drops the successor works
-    once, and the sync stops silently a few hours later."""
+    """New Atlassian apps rotate refresh tokens."""
 
     async def test_the_successor_is_written_back(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
@@ -344,8 +307,7 @@ class TestTheTokenAtRest:
         assert unseal(sealed) == "rt-1"
 
     def test_one_key_covers_both_providers(self, configured: None) -> None:
-        """`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`. The old name said Google about
-        an Atlassian token, which sends the next reader to the wrong file."""
+        """`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`."""
         from mycel.services import google_oauth
 
         assert google_oauth.unseal(seal("rt-1")) == "rt-1"
@@ -360,8 +322,9 @@ class TestTheTokenAtRest:
     async def test_an_unreadable_token_reaches_the_person_as_reconnect(
         self, configured: None
     ) -> None:
-        """Raising `TokenUnreadable` out of a refresh would be a traceback for something
-        the person fixes with one click."""
+        """Raising `TokenUnreadable` out of a refresh would be a traceback for something the person
+        fixes with one click.
+        """
         stale = Fernet(Fernet.generate_key()).encrypt(b"rt-1").decode()
 
         with pytest.raises(NotConnected, match="connect your account again"):

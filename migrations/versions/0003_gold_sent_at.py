@@ -2,16 +2,6 @@
 
 Revision ID: 0003
 Revises: 0002
-
-One instant carried two names. `etl/progress.py` wrote `reported_at=message.sent_at` —
-the same value as silver's, renamed on the way through, so a query joining the two layers
-read as though it touched two different clocks.
-
-A column that survives a transform unchanged keeps its name. What gold adds is `status`
-and `task`, both genuinely new; the timestamp is not.
-
-RENAME, not drop-and-add: the values are already correct, and gold is rebuilt from silver
-but bronze is not rebuildable at all — Telegram drops an update after 24 hours.
 """
 
 from collections.abc import Sequence

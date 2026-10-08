@@ -1,8 +1,4 @@
-"""One client for every model: OpenAI Chat Completions to the LiteLLM gateway.
-
-Which provider answers a `model_name` is `config/litellm/config.yaml`'s business; these
-tests pin what the app sends, how a chain is built, and when it moves to the next model.
-"""
+"""One client for every model: OpenAI Chat Completions to the LiteLLM gateway."""
 
 import pytest
 from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, ModelHTTPError
@@ -118,12 +114,7 @@ class TestFallbackChain:
 
 
 class TestWhenTheWholeChainFails:
-    """`FallbackModel` raises a `FallbackExceptionGroup`, which is not a `ModelAPIError`.
-
-    Left untranslated it would walk straight past the model-error clause and arrive at
-    `tools/delegate.py` as an ordinary exception — narrated as prose, billed, marked done.
-    That is the model-error failure, re-opened by a different exception class.
-    """
+    """`FallbackModel` raises a `FallbackExceptionGroup`, which is not a `ModelAPIError`."""
 
     def test_it_becomes_a_transport_error_so_the_job_is_retried(self) -> None:
         group = FallbackExceptionGroup(
@@ -136,8 +127,7 @@ class TestWhenTheWholeChainFails:
         assert "cloud:gemini-3.5-flash-lite" in str(raised.value)
 
     def test_it_says_what_each_model_answered(self) -> None:
-        """One sentence per model. Which one was down and which was merely slow is the
-        first thing anyone reading the failure wants."""
+        """One sentence per model."""
         group = FallbackExceptionGroup(
             "All models from FallbackModel failed",
             [
@@ -159,8 +149,7 @@ class TestWhenTheWholeChainFails:
                 raise FallbackExceptionGroup("failed", [timed_out])
 
     def test_one_of_them_answering_503_is_not_a_timeout(self) -> None:
-        """ "did not respond in time" is the wrong sentence when a model answered; it sends
-        the reader looking at the network instead of at the provider's status page."""
+        """ "did not respond in time" is the wrong sentence when a model answered."""
         timed_out = ModelAPIError("a", "no answer")
         timed_out.__cause__ = TimeoutError()
         with pytest.raises(ModelCallFailed):

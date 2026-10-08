@@ -1,5 +1,3 @@
-"""Bucket declarations. Created on first use if missing."""
-
 from mycel.core.config import get_settings
 from mycel.infra.objects.client import s3
 
@@ -12,7 +10,7 @@ def documents() -> str:
 
 
 async def ensure(bucket: str) -> None:
-    """Create the bucket once per process. Safe when it already exists."""
+    """Create the bucket once per process; safe when it already exists."""
     if bucket in _ready:
         return
     async with s3() as client:

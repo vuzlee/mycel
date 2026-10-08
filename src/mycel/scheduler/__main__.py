@@ -1,9 +1,4 @@
-"""`python -m mycel.scheduler` — the third entrypoint, beside `api` and `worker`.
-
-Its own process because its failure mode is its own: a scheduler that is down loses data
-that a provider will not hand out twice, while an api that is down only loses requests
-someone can repeat.
-"""
+"""`python -m mycel.scheduler`: the scheduler process."""
 
 import asyncio
 
@@ -19,8 +14,7 @@ log = get_logger(__name__)
 async def _main() -> None:
     settings = get_settings()
     setup_logging(settings.log_level)
-    # One port above the worker's: the two never share a machine in compose, but they do
-    # on a laptop running both by hand.
+    # One port above the worker's, so both can run on one machine.
     metrics = await serve_metrics(settings.metrics_port + 1, settings.metrics_host)
     try:
         await run_forever()

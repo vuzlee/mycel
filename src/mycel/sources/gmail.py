@@ -1,15 +1,4 @@
-"""The Gmail connector: one person's recent message headers, and nothing else.
-
-**Whose inbox is a token, not a setting.** It used to log into one mailbox from `.env`, so
-every user who asked about "my mail" read the maintainer's. It now takes the asker's own
-Google access token (`services/google_oauth.py`), granted `gmail.readonly`, and reads
-their inbox through the Gmail API. No token, no mail.
-
-**Headers only, enforced in one parameter.** `format=metadata` with three `metadataHeaders`
-is the whole of the discipline: Gmail returns no body for it, whatever the scope allows.
-
-Unlike `jira.py` this writes nothing down. Headers go into a prompt and are gone.
-"""
+"""Gmail: the asker's recent message headers, never bodies."""
 
 import email.utils
 from dataclasses import dataclass
@@ -25,11 +14,10 @@ log = get_logger(__name__)
 
 API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
-#: Read but never parsed for content. Anything else would be a body by another name.
+#: Read but never parsed for content.
 HEADERS = ("From", "Subject", "Date")
 
-#: A message's permalink, which is what makes a mention of it checkable. The researcher
-#: rejects a claim without a source, and for mail this is the source.
+#: The message's permalink, the source an answer cites.
 PERMALINK = "https://mail.google.com/mail/u/0/#all/{id}"
 
 
@@ -45,11 +33,7 @@ class Header:
 
 @dataclass(frozen=True)
 class Mailbox:
-    """What one read of the mailbox found.
-
-    `total` is carried so an answer can say how many messages it looked past. Three
-    interesting out of forty-seven is a different statement from three out of three.
-    """
+    """What one read found; `total` is how many messages it looked past."""
 
     headers: list[Header]
     total: int

@@ -2,9 +2,6 @@
 
 Revision ID: 0020
 Revises: 0019
-
-Renames only: the column, its index, its unique constraint and its foreign key. No row
-is rewritten, and the downgrade renames everything back.
 """
 
 from collections.abc import Sequence

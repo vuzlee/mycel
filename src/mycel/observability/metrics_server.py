@@ -1,24 +1,4 @@
-"""A port to scrape, of its own, for every process.
-
-The worker, scheduler and ingest have nothing else listening. The api does, but `/metrics`
-is not a route on it: the api's port is the one made public, and a metrics endpoint has no
-authentication. So every process, api included, serves it here, at METRICS_PORT + an
-offset: worker +0, scheduler +1, ingest +2, api +3.
-
-**Measuring only the api is measuring half the system.** Requests come and go looking
-healthy while every job dies, because the dying part is in a process nobody asked.
-
-So: the smallest possible HTTP server, one route, no framework. `prometheus_client` ships
-one, but it starts a thread with its own WSGI server; an asyncio process already has a
-loop, and `asyncio.start_server` costs less than a second runtime.
-
-**Loopback by default, and the interface is a setting.** A metrics endpoint has no
-authentication — Prometheus carries no session token — so the only thing keeping it
-private is what it is bound to. A dev machine gets loopback and nothing else can reach it;
-compose sets `METRICS_HOST` to the container's own address, which is reachable from the
-scraper and from nothing outside the network. Neither case wants the port published to the
-internet.
-"""
+"""Minimal asyncio `/metrics` server, one per process, off the public app port."""
 
 import asyncio
 from contextlib import suppress
@@ -28,7 +8,6 @@ from mycel.observability.metrics import render
 
 log = get_logger(__name__)
 
-#: How long a scrape may take to send its request line.
 READ_TIMEOUT_S = 5.0
 
 _NOT_FOUND = b"HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
@@ -60,11 +39,7 @@ async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
 
 
 async def serve_metrics(port: int, host: str) -> asyncio.Server:
-    """Start listening, and hand back the server so the caller can close it.
-
-    `host` has no default on purpose: which interface this is reachable on is the whole of
-    its security, so every caller states it and reads it from settings.
-    """
+    """Start listening. `host` has no default: the bound interface is the only access control."""
     server = await asyncio.start_server(_handle, host, port)
     log.info("metrics endpoint listening", extra={"port": port, "host": host})
     return server

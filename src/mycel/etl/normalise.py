@@ -1,16 +1,4 @@
-"""Bronze to silver: a provider's issue payload becomes a row in the common shape.
-
-The first of two hops. This one unwraps the envelope and lands in silver;
-`etl/promote.py` takes silver to gold.
-
-Normalising only. Nothing is judged or dropped for its content — an issue nobody has
-touched is still tracked work, and silver is what remembers it exists.
-
-One function per source, because only the unwrapping differs; what comes out is always a
-`WorkItemRow` or a `WorklogRow`. Field names follow the source wherever the source has
-one, so a column downstream can be traced back to a payload in bronze without a
-translation table in someone's head.
-"""
+"""Bronze to silver: a provider's payload becomes a row in the common shape."""
 
 from datetime import UTC, datetime, time
 from typing import Any
@@ -20,9 +8,7 @@ from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 
 JIRA = "jira"
 
-#: Jira's issue type names, lowered, mapped to the four levels this system knows. An
-#: unrecognised type becomes `task`, which is the only honest guess: it is a unit of work
-#: that is not an epic and has no children we were told about.
+#: Jira issue type names, lowered; an unknown type becomes `task`.
 KINDS = {
     "epic": "epic",
     "story": "story",
@@ -32,18 +18,12 @@ KINDS = {
     "bug": "task",
 }
 
-#: Jira's own `statusCategory.key`. `new` and `indeterminate` are the API's names for what
-#: every board calls to-do and in-progress; renaming them here is the one place this
-#: module does not keep the source's word, because two of the three are unreadable.
+#: Jira's `statusCategory.key` mapped to readable names.
 CATEGORIES = {"new": "todo", "indeterminate": "doing", "done": "done"}
 
 
 def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None:
-    """One search result in, at most one row out.
-
-    Returns None for a payload with no key or no fields — a shape Jira does not produce
-    but a replay of half-written bronze can.
-    """
+    """One search result to a row, or None for a payload with no key or no fields."""
     key = payload.get("key")
     fields = payload.get("fields")
     if not key or not isinstance(fields, dict):
@@ -84,11 +64,7 @@ def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None
 
 
 def from_jira_worklog(payload: dict[str, Any], project: str) -> WorklogRow | None:
-    """One worklog entry in, at most one row out.
-
-    `issue_key` is put on the payload by the bronze repository: Jira serves worklogs from
-    a per-issue URL and does not repeat the key inside the entry.
-    """
+    """One worklog to a row; the bronze repository adds `issue_key` to the payload."""
     key = payload.get("issue_key")
     started = _stamp(payload.get("started"))
     if not key or started is None or not payload.get("id"):
@@ -109,15 +85,7 @@ def from_jira_worklog(payload: dict[str, Any], project: str) -> WorklogRow | Non
 
 
 def _sprint(value: Any) -> dict[str, Any]:
-    """Jira's sprint array, reduced to the sprint the item is in now.
-
-    The field is a list because an issue rolled over from one sprint to the next lists
-    both, oldest first. The last is the one it is in, and the only one a board should
-    count — an issue present in three sprints at once makes every total larger than the
-    board it describes.
-
-    An empty list and a missing field are the same answer: this item is in the backlog.
-    """
+    """The current sprint, the last in Jira's list; an empty list means backlog."""
     entries = [entry for entry in value or [] if isinstance(entry, dict)]
     if not entries:
         return {"sprint_id": None, "sprint_name": None, "sprint_state": None}
@@ -132,12 +100,7 @@ def _sprint(value: Any) -> dict[str, Any]:
 
 
 def _priority(value: Any) -> str | None:
-    """Jira's priority object, reduced to its name.
-
-    The site's own word, not a rank: one team's "Blocker" is another's "Highest", and a
-    number here would have to invent a mapping that only the UI could undo. None when the
-    field is hidden on the site, which is a normal configuration rather than missing data.
-    """
+    """The priority's name as the site spells it, or None when the field is hidden."""
     name = (value or {}).get("name") if isinstance(value, dict) else None
     return str(name) if name else None
 
@@ -154,13 +117,7 @@ def _stamp(value: Any) -> datetime | None:
 
 
 def _due(value: Any) -> datetime | None:
-    """A due date is a bare `YYYY-MM-DD`: no time, no zone.
-
-    Read as the end of that day rather than the start, so an item due today is not already
-    late at nine in the morning — and the end of the day in the *team's* zone, not UTC. A
-    UTC+7 team reading it as UTC gets seven hours in which overdue work still counts as on
-    time. Stored in UTC either way; only the moment the day ends moves.
-    """
+    """A bare due date, read as the end of that day in the team's zone, stored in UTC."""
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -171,12 +128,7 @@ def _due(value: Any) -> datetime | None:
 
 
 def _seconds(fields: dict[str, Any], flat: str, nested: str) -> int | None:
-    """Jira reports time twice: a top-level field and inside `timetracking`.
-
-    They can disagree — the top-level one is absent on a site where the field is hidden
-    from the screen while `timetracking` still carries it — so both are consulted and the
-    first that answers wins.
-    """
+    """A time field from the top level, or from `timetracking` when it is absent there."""
     value = fields.get(flat)
     if value is None:
         value = (fields.get("timetracking") or {}).get(nested)
@@ -184,11 +136,7 @@ def _seconds(fields: dict[str, Any], flat: str, nested: str) -> int | None:
 
 
 def _text(comment: Any) -> str | None:
-    """A worklog comment is Atlassian Document Format: a tree with the text at the leaves.
-
-    Flattened to a sentence rather than stored as a document, because the only consumer is
-    a prompt and a model reads prose better than it reads a node tree.
-    """
+    """Atlassian Document Format flattened to plain text."""
     if isinstance(comment, str):
         return comment or None
     if not isinstance(comment, dict):

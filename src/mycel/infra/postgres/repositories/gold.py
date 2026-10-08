@@ -1,12 +1,4 @@
-"""Business-aggregated tables. The only layer agents are allowed to read.
-
-All SQL for gold lives here: callers ask for `items_between(...)`, never assemble a query.
-Changing a column changes the contract those callers depend on — adding is free, dropping
-or redefining is a two-release move.
-
-Every aggregate is computed in the database. A project that has been running a year would
-otherwise drag every row across the wire to produce a table with one line per person.
-"""
+"""Gold reads and writes, the only layer agents may read. All gold SQL lives here."""
 
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
@@ -18,28 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.models import WorkItem, Worklog
 
-#: Jira's own status rollup, in the order a board reads left to right. Every caller gets
-#: all three even at zero, so a page renders a fixed set of columns without deciding what
-#: a missing key means.
+#: Jira status categories in board order; every caller gets all three, zeros included.
 CATEGORIES = ("todo", "doing", "done")
 
-#: Jira's default priority scheme, most urgent first. A site that renamed or added one
-#: still counts: an unrecognised name is kept and sorted after these, and an issue with no
-#: priority is counted under `UNPRIORITISED` rather than dropped.
+#: Jira's default priorities, most urgent first; unknown names sort after these.
 PRIORITIES = ("Highest", "High", "Medium", "Low", "Lowest")
 
-#: What an item with no priority set is counted as. A name rather than None, because the
-#: caller is a chart and a bar needs a label.
+#: Label for items with no priority.
 UNPRIORITISED = "None"
 
-#: What one work item is worth in a day, for turning seconds into man-days. Jira's own
-#: default working day, and the unit a plan is actually discussed in.
+#: Working seconds in one man-day (Jira's default working day).
 WORKDAY_SECONDS = 8 * 3600
 
 
 @dataclass(frozen=True)
 class WorkItemRow:
-    """One piece of tracked work, as callers outside the infra layer see it."""
+    """One piece of tracked work, as callers outside infra see it."""
 
     source: str
     project: str
@@ -51,8 +37,7 @@ class WorkItemRow:
     status: str
     status_category: str
     priority: str | None
-    #: The sprint the item is in *now*, not every sprint it has ever been in — see
-    #: migration 0011 for why the rollover history is dropped. None is the backlog.
+    #: The current sprint only; None is the backlog.
     sprint_id: int | None
     sprint_name: str | None
     sprint_state: str | None
@@ -83,21 +68,13 @@ class WorklogRow:
 
 
 class GoldRepository:
-    """Reads and writes gold, on a session someone else owns.
-
-    Takes the session rather than opening one, so a caller can put several repository
-    calls in a single transaction.
-    """
+    """Reads and writes gold on a caller-owned session."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def upsert_items(self, rows: Sequence[WorkItemRow]) -> int:
-        """Write work items, replacing any that share `(source, issue_key)`.
-
-        Upsert because a sync window overlaps the last one and because an issue is a
-        record that keeps changing — the second write of a key is the newer truth.
-        """
+        """Upsert work items on `(source, issue_key)`."""
         if not rows:
             return 0
         stmt = insert(WorkItem).values([asdict(row) for row in rows])
@@ -113,7 +90,7 @@ class GoldRepository:
         return len(rows)
 
     async def upsert_worklogs(self, rows: Sequence[WorklogRow]) -> int:
-        """Write logged entries, replacing any that share `(source, worklog_id)`."""
+        """Upsert worklogs on `(source, worklog_id)`."""
         if not rows:
             return 0
         stmt = insert(Worklog).values([asdict(row) for row in rows])
@@ -131,12 +108,7 @@ class GoldRepository:
     async def items_between(
         self, project: str, since: datetime, until: datetime | None = None
     ) -> list[WorkItemRow]:
-        """Everything that moved in a window, oldest first.
-
-        "Moved" is `updated_at`, not `created_at`: a story opened last month and finished
-        this week belongs in this week's report, and one opened this week and untouched
-        since does not stop belonging to it.
-        """
+        """Items whose `updated_at` falls in the window, oldest first."""
         query = select(WorkItem).where(WorkItem.project == project, WorkItem.updated_at >= since)
         if until is not None:
             query = query.where(WorkItem.updated_at < until)
@@ -144,11 +116,7 @@ class GoldRepository:
         return [to_row(row) for row in result]
 
     async def parents_of(self, project: str, keys: Sequence[str]) -> list[WorkItemRow]:
-        """The epics a window's items hang off, whether or not they moved themselves.
-
-        An epic rarely changes while its children do, so it falls outside the window and
-        the hierarchy would come back with holes where the parent names should be.
-        """
+        """Epics of the given items, whether or not they moved in the window."""
         if not keys:
             return []
         query = select(WorkItem).where(
@@ -157,13 +125,7 @@ class GoldRepository:
         return [to_row(row) for row in await self._session.scalars(query)]
 
     async def recently_updated(self, project: str, limit: int) -> list[WorkItemRow]:
-        """The last things to move, newest first, whole project.
-
-        Not windowed, unlike everything else that reads `updated_at`. A window that turns
-        up empty is an answer for a count and a wrong one here: "nothing happened" is what
-        a reader concludes about the project, when the truth is that the last thing to
-        happen was eight days ago and is worth naming.
-        """
+        """The most recently updated items, newest first, whole project."""
         query = (
             select(WorkItem)
             .where(WorkItem.project == project)
@@ -173,12 +135,7 @@ class GoldRepository:
         return [to_row(row) for row in await self._session.scalars(query)]
 
     async def children_of(self, project: str, keys: Sequence[str]) -> list[WorkItemRow]:
-        """Every child of the given epics, whole project rather than a window.
-
-        Same reason as `totals_all_time`: an epic's completion is a fraction of all its
-        children, and counting only the ones that moved this week makes a quiet epic look
-        finished.
-        """
+        """Every child of the given epics, whole project."""
         if not keys:
             return []
         query = select(WorkItem).where(
@@ -187,7 +144,7 @@ class GoldRepository:
         return [to_row(row) for row in await self._session.scalars(query)]
 
     async def epics(self, project: str) -> list[WorkItemRow]:
-        """Every epic in the project, whether or not anything under it moved."""
+        """Every epic in the project."""
         query = (
             select(WorkItem)
             .where(WorkItem.project == project, WorkItem.kind == "epic")
@@ -196,7 +153,7 @@ class GoldRepository:
         return [to_row(row) for row in await self._session.scalars(query)]
 
     async def projects(self) -> list[str]:
-        """Every project with work in it, for the picker."""
+        """Every project with work in it."""
         query: Select[tuple[str]] = select(WorkItem.project).distinct().order_by(WorkItem.project)
         return [str(p) for p in (await self._session.scalars(query)).all()]
 

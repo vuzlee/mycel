@@ -1,40 +1,7 @@
-"""Writing to Jira as the person asking, in two steps: read it back, then write it.
+"""Jira write tools, as the asker: draft and read back, then confirm. No principal writes nothing.
 
-Same shape as `tools/calendar.py`, and for the same reason. The difference is what is at
-stake in a wrong one — a calendar event is deleted in a second, and a Jira event carries a
-name that cannot be corrected afterwards.
-
-**Everything here runs on the asker's own consent.** `deps.principal` is who that is, and
-`None` reads nothing and writes nothing: a run with no principal is told to connect an
-account, exactly as `tools/query.py` scopes it to no rows. A forgotten principal must never
-borrow somebody else's name.
-
-**One draft tool, then one confirm tool.** `draft_jira_write` resolves everything a write
-needs — an assignee's name into an account id, a status into a transition the workflow
-actually allows — and returns a sentence with full names in it. Nothing reaches Jira. The
-person reads that sentence, says yes, and `confirm_jira_write` spends the draft. A draft
-lives ten minutes and belongs to one person; see `infra/redis/drafts.py`.
-
-**Resolving at draft time rather than at confirm time is the point.** If the account id
-were looked up after the yes, the person would have agreed to "Nam" and the system would
-have written to whichever Nam it found later — which is precisely the mistake the read-back
-exists to catch.
-
-**Not connecting an account is not a failure.** A person who has never consented gets a
-sentence telling them where to, and the turn answers whatever else was asked. The same
-shape `tools/calendar.py` and `tools/delegate.py` already use.
-
-**A write that is refused gives the draft back; one that times out does not.** The person
-has already read the change and agreed to it, so a refused connection should not cost them
-the whole round — `sources.NotWritten` means nothing can have landed, and the draft returns
-under its own id for a second yes. A timeout is different: the request may have arrived and
-only the answer been lost, so the draft stays spent and the person is told to check Jira.
-Retrying there would post the same comment twice.
-
-**No delete, of anything**, and `create_project` appears only where the deployment armed
-it. A tool the model cannot see is a tool it cannot be talked into using — which matters
-more here than anywhere else, because a project created by mistake is often not removable
-over the API at all.
+Lookups happen at draft time so the person agrees to exactly what is sent. A refused write
+restores the draft; a timeout does not, since it may have landed.
 """
 
 from dataclasses import dataclass
@@ -59,13 +26,11 @@ CONNECT = (
     "which is why there is no shared account to fall back on."
 )
 
-#: What the four writes are called where a person reads them. The model picks one of these
-#: strings, so they are the vocabulary of the tool rather than an internal enum.
+#: The write kinds the model picks from.
 KINDS = ("comment", "move", "issue", "project")
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    """Writing to Jira, as a toolset an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
     toolset.add_function(_find_jira_user, name="find_jira_user")
     toolset.add_function(_draft_jira_write, name="draft_jira_write")
@@ -189,8 +154,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
 
     draft = await drafts.take_jira(draft_id, user_id)
     if draft is None:
-        # Not a retry: there is no argument the model can fix, and the draft it holds
-        # is gone. Drafting again is the way forward and the sentence says so.
+        # Not a retry: the draft is gone and no argument can fix that.
         return (
             "That draft has expired or was already done. Nothing was written. "
             "Draft it again if they still want it."
@@ -203,9 +167,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
     try:
         done = await _apply(auth, draft)
     except NotWritten as exc:
-        # Certain that nothing landed, so the draft can come back under its own id and
-        # a second yes is a retry. The id has to be IN THE SENTENCE: without it the
-        # model drafts afresh, which is the whole round the person already did.
+        # Nothing landed: restore the draft, and name its id so the model retries it.
         await drafts.restore_jira(draft)
         raise ToolFailed(
             "confirm_jira_write",
@@ -213,8 +175,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
             f"call confirm_jira_write with draft_id={draft.draft_id} to try again.",
         ) from exc
     except (SourceError, JiraAuthError) as exc:
-        # A timeout or a 5xx. The request may have landed and only the answer been
-        # lost, so the draft stays spent: offering a retry here offers to write twice.
+        # May have landed: keep the draft spent so a retry cannot write twice.
         raise ToolFailed(
             "confirm_jira_write",
             f"{exc}. It is not known whether this was written — say so and tell them "
@@ -226,13 +187,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
 
 
 def offered() -> bool:
-    """Whether this deployment writes to Jira at all.
-
-    The toolset is not given to an agent when this is false. A tool that refuses every
-    call costs a turn to discover that, and on a free tier of twenty requests a day that
-    turn is worth not spending — the same argument that keeps `rag_search` behind
-    `QDRANT_URL`.
-    """
+    """Whether this deployment writes to Jira; when false the toolset is not offered."""
     from mycel.services.jira_oauth import configured
 
     return configured() and get_settings().jira_write_enabled
@@ -255,12 +210,7 @@ class Asked:
 async def _resolve(
     auth: jira.Auth, user_id: int, kind: str, asked: Asked
 ) -> tuple[str, dict[str, Any]]:
-    """Turn what the model said into what will be written, and a sentence saying so.
-
-    Every lookup happens here rather than after the person agrees, so what they read is
-    exactly what will be sent. A missing argument raises `ModelRetry`, which the model can
-    act on; a lookup that fails raises `SourceError`, which it cannot.
-    """
+    """Resolve the model's arguments into the payload and its read-back sentence."""
     return await _RESOLVERS[kind](auth, user_id, asked)
 
 
@@ -273,9 +223,7 @@ async def _resolve_comment(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str
 async def _resolve_move(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
     key = _required(a.issue_key, "issue_key", "move")
     wanted = _required(a.to_status, "to_status", "move").strip()
-    # Checked now, not at confirm time: a move the workflow forbids should be refused
-    # before somebody agrees to it, and the list of what is allowed is what tells the
-    # model which name to use instead.
+    # Checked before the person agrees; the allowed list tells the model what to use.
     moves = await jira.transitions_for(auth, key)
     if jira.find_transition(moves, wanted) is None:
         raise ModelRetry(
@@ -290,8 +238,7 @@ async def _resolve_issue(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, 
     title = _required(a.summary, "summary", "issue")
     who = "nobody"
     if a.assignee_account_id:
-        # By name, never by id. The id is what Jira needs and the name is what a person
-        # can check, and a draft that reads back an id catches nothing.
+        # Read back by name: an id is not something a person can check.
         who = await _name_of(auth, a.assignee_account_id)
     spelled = f"Create a {a.issue_type} in {proj}: {title!r}, assigned to {who}" + (
         f" — {a.text!r}" if a.text else ""
@@ -308,9 +255,7 @@ async def _resolve_issue(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, 
 async def _resolve_project(auth: jira.Auth, user_id: int, a: Asked) -> tuple[str, dict[str, Any]]:
     key = _required(a.project, "project", "project").upper()
     name = _required(a.project_name or a.summary, "project_name", "project")
-    # The lead is whoever consented, read from their own row rather than searched for: a
-    # project must have one, and anyone else would be handed responsibility for a project
-    # they did not create.
+    # The lead is whoever consented, never someone searched for.
     row = await connected(user_id)
     if row is None:
         raise ModelRetry("No Jira account is connected, so there is nobody to lead a project.")
@@ -331,7 +276,6 @@ _RESOLVERS = {
 
 
 async def _apply(auth: jira.Auth, draft: drafts.JiraDraft) -> str:
-    """Do the thing that was agreed to, and say what came of it."""
     p = draft.payload
     if draft.kind == "comment":
         await jira.add_comment(auth, p["issue_key"], p["text"])
@@ -357,12 +301,7 @@ async def _apply(auth: jira.Auth, draft: drafts.JiraDraft) -> str:
 
 
 async def _name_of(auth: jira.Auth, account_id: str) -> str:
-    """The display name behind an account id, for the sentence a person reads.
-
-    Looked up every time rather than cached. A name is the whole of what the read-back is
-    worth, so a stale one is worse than an extra call — and the call is one request on a
-    draft a person is about to spend a minute reading.
-    """
+    """The display name behind an account id, looked up fresh for the read-back."""
     for person in await jira.find_users(auth, account_id):
         if person.get("accountId") == account_id:
             return str(person.get("displayName") or account_id)
@@ -370,23 +309,17 @@ async def _name_of(auth: jira.Auth, account_id: str) -> str:
 
 
 def _required(value: str | None, field: str, kind: str) -> str:
-    """One argument the model left out, named so it can fill it in."""
     if value is None or not value.strip():
         raise ModelRetry(f"{field} is needed to draft a {kind}.")
     return value.strip()
 
 
 def _whose(deps: MycelDeps) -> int | None:
-    """Whose Jira this run may touch, or `None` for a run nobody is behind."""
     return deps.principal.id if deps.principal else None
 
 
 async def _auth(deps: MycelDeps) -> jira.Auth | None:
-    """The asker's own grant, or `None` when they have not connected one.
-
-    `None` rather than an exception: not having connected is a sentence to show somebody,
-    and raising would end a job over the half of it that is still answerable.
-    """
+    """The asker's own grant, or `None` when they have not connected one."""
     user_id = _whose(deps)
     if user_id is None:
         return None

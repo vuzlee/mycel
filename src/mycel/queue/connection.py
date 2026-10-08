@@ -1,18 +1,4 @@
-"""One broker connection per process, opened lazily and shared.
-
-A connection is a TCP socket plus an AMQP handshake. Opening one per publish turns a job
-that takes microseconds of work into one that takes a round trip, and leaves the broker
-holding hundreds of short-lived connections — the usual reason a healthy RabbitMQ starts
-refusing them.
-
-`robust_connect` reconnects on its own after a broker restart and re-declares whatever was
-declared through it, which is the whole reason to use aio-pika's robust variant rather than
-a plain connection: without it, a broker bounce leaves every worker silently idle.
-
-Callers get a **channel**, not the connection. Channels are the unit AMQP multiplexes over
-one socket, and a channel is not safe to share between concurrent publishers — each caller
-opens its own and closes it when done.
-"""
+"""One robust broker connection per process, opened lazily; each caller gets its own channel."""
 
 from types import TracebackType
 
@@ -28,11 +14,7 @@ _connection: AbstractRobustConnection | None = None
 
 
 async def get_connection() -> AbstractRobustConnection:
-    """The process-wide connection, opened on first use.
-
-    Not built at import: importing a module must not require a running broker, or every
-    test and every `--help` needs docker up.
-    """
+    """The process-wide connection, opened on first use so imports need no broker."""
     global _connection
     if _connection is None or _connection.is_closed:
         settings = get_settings()
@@ -42,7 +24,7 @@ async def get_connection() -> AbstractRobustConnection:
 
 
 async def close_connection() -> None:
-    """Close it on the way out. Safe to call when nothing was ever opened."""
+    """Close the connection; safe when none was opened."""
     global _connection
     if _connection is not None and not _connection.is_closed:
         await _connection.close()
@@ -50,12 +32,7 @@ async def close_connection() -> None:
 
 
 class channel:
-    """`async with channel() as ch:` — a channel of its own, closed on exit.
-
-    A context manager rather than a plain function because a leaked channel is invisible:
-    the process keeps working until the broker's per-connection channel limit is reached,
-    and only then does everything fail at once.
-    """
+    """A channel of its own, closed on exit."""
 
     def __init__(self) -> None:
         self._channel: aio_pika.abc.AbstractChannel | None = None

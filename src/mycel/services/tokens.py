@@ -1,19 +1,4 @@
-"""Encrypt and decrypt the refresh tokens this deployment keeps.
-
-One key, two providers. A refresh token — Google's or Atlassian's — opens one person's
-account until they revoke it, so the only thing Postgres ever holds is a ciphertext and a
-database dump is not a list of accounts.
-
-**`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`.** Google and Jira tokens share the
-same column shape and the same key, and a name that says Google about an Atlassian token is a name
-that sends the
-next reader looking in the wrong file.
-
-Rotating the key makes every stored token unreadable, which from the person's side is the
-same situation as a revoked grant — so it is reported the same way, and reconnecting fixes
-it. That reporting is each service's own: this module raises `TokenUnreadable` and lets
-the caller phrase it for the provider it belongs to.
-"""
+"""Encrypt and decrypt the refresh tokens this deployment keeps."""
 
 from cryptography.fernet import Fernet, InvalidToken
 
@@ -26,11 +11,7 @@ class TokenUnreadable(MycelError):
 
 
 def key_set(settings: Settings | None = None) -> bool:
-    """Whether this deployment can store a token at all.
-
-    A deployment with an OAuth client and no key would write a refresh token in the clear,
-    so it counts as not configured rather than as configured badly.
-    """
+    """Whether this deployment can store a token at all."""
     return (settings or get_settings()).token_encryption_key is not None
 
 

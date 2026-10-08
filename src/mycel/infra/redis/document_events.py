@@ -1,9 +1,4 @@
-"""A per-user signal that one of their documents changed state. Redis pub/sub.
-
-The worker publishes, the API's SSE route listens and re-reads the list from Postgres. The
-message carries nothing but "look again": Postgres stays the only place a status is read,
-and a missed message costs one refresh, never a wrong status.
-"""
+"""Per-user pub/sub signal that a document changed; listeners re-read Postgres."""
 
 import asyncio
 from collections.abc import AsyncIterator
@@ -21,11 +16,7 @@ async def changed(user_id: int) -> None:
 
 
 class Listener:
-    """A subscription that is live from the moment `open` returns.
-
-    A generator would subscribe only when first iterated, and a change published in that
-    gap is lost - the page would then show a document as processing until the next one.
-    """
+    """A subscription live from the moment `open` returns, so no change is missed."""
 
     def __init__(self, user_id: int) -> None:
         self._user_id = user_id
@@ -37,11 +28,7 @@ class Listener:
         return self
 
     async def next(self, timeout_s: float) -> bool:
-        """True when something changed, False when `timeout_s` passed in silence.
-
-        A loop, because `get_message` returns early with nothing when what it read was the
-        subscribe confirmation rather than a message.
-        """
+        """True when something changed, False when `timeout_s` passed in silence."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout_s
         while (left := deadline - loop.time()) > 0:

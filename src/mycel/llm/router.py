@@ -1,21 +1,4 @@
-"""Pick the backend for each LLM call.
-
-Boundary:
-  local  — high-volume work, short output, or sensitive data that should not leave
-           the machine. Classification, entity extraction, relevance scoring,
-           per-record summaries.
-  cloud  — final reasoning: synthesising multiple sources, writing reports,
-           decisions that need long context.
-
-Every LLM call elsewhere goes through here; never import a provider SDK directly. There is
-exactly one documented exception, `agents/core/model_builder.py`, which turns the spec this
-module parses into a real client. An absolute rule with a silent exception rots, so the
-exception is named here.
-
-A model is written `'<tier>:<name>'` — `local:qwen3-4b`, `cloud:claude-sonnet-5`. Switching
-model is then an environment variable, not a code change, and the tier is visible at the
-call site rather than buried in configuration.
-"""
+"""Parse a `'<tier>:<name>'` model spec (`local` or `cloud`)."""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -42,12 +25,7 @@ class ModelSpec:
 
 
 def resolve(spec: str) -> ModelSpec:
-    """Parse a model spec, or raise `ConfigError` naming what was wrong.
-
-    Fails loudly: a bad spec caught here is a startup error, while one that silently
-    defaults to a tier becomes a surprise bill or a leak of sensitive data to a cloud
-    provider.
-    """
+    """Parse a model spec, or raise `ConfigError` naming what was wrong."""
     tier_name, separator, model_name = spec.partition(SEPARATOR)
 
     if not separator:

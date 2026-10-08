@@ -1,8 +1,4 @@
-"""A request sent the instant login returns is already signed in.
-
-Needs a real server: `TestClient` waits for dependency teardown before handing back the
-response, which hides the race. Before the fix this failed about four times in five.
-"""
+"""A request sent the instant login returns is already signed in."""
 
 import asyncio
 import os

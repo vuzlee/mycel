@@ -17,9 +17,7 @@ from mycel.events.event import (
 if TYPE_CHECKING:
     from mycel.agents.core.deps import MycelDeps
 
-#: Enough to show what a tool was asked and what it said, not enough to leak a whole
-#: document into a browser. Raw model output does not go out at all — only `TextPart` and
-#: `ThinkingPart`, which are the agent's own prose.
+#: Enough to show a tool call, not enough to leak a whole document to the browser.
 PREVIEW_CHARS = 500
 
 
@@ -72,8 +70,7 @@ class RunEmitter:
                 if not streamed:
                     await self.emit(TEXT, text=part.content)
             elif isinstance(part, messages.ThinkingPart):
-                # `content` only: `signature` is a provider round-trip token, not prose,
-                # and sending it out would leak an opaque credential-ish blob to a browser.
+                # `content` only: `signature` is an opaque provider token, not prose.
                 await self.emit(THINKING, text=part.content)
             elif isinstance(part, messages.ToolCallPart):
                 await self.emit(
@@ -95,11 +92,7 @@ class RunEmitter:
 
 
 def _delta(event: object) -> str:
-    """The text this stream event adds, or "" for events that add none.
-
-    A part starts with whatever the first chunk held and grows by deltas, so both carry
-    prose; everything else on the stream is a tool call or a part the run emits whole.
-    """
+    """The text a stream event adds (part start or delta), or "" for none."""
     if isinstance(event, messages.PartStartEvent) and isinstance(event.part, messages.TextPart):
         return event.part.content
     if isinstance(event, messages.PartDeltaEvent) and isinstance(

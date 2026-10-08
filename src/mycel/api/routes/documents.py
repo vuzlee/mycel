@@ -1,15 +1,4 @@
-"""A user's documents, which the Knowledge chip reads.
-
-    POST    /documents                      upload one file
-    GET     /documents                      list mine, with status
-    GET     /documents/status               busy or not, live (SSE)
-    PATCH   /documents/{id}                 enable / disable, or rename
-    DELETE  /documents/{id}                 delete
-    GET     /documents/{id}/source          presigned URL to the original
-    GET     /chunks/{id}                    one passage, for a citation
-
-Someone else's document or chunk is 404, never 403.
-"""
+"""A user's documents, which the Knowledge chip reads."""
 
 import json
 from collections.abc import AsyncIterator
@@ -95,11 +84,7 @@ async def list_documents(user: User) -> list[DocumentOut]:
 
 @router.get("/documents/status")
 async def document_status(request: Request, user: User) -> StreamingResponse:
-    """The user's document list, sent again whenever one of them changes state (SSE).
-
-    Each frame is the whole list plus `busy`: the page never merges, it replaces. A
-    keepalive goes out every 15 s so a proxy does not close a quiet connection.
-    """
+    """The user's document list, sent again whenever one of them changes state (SSE)."""
     return StreamingResponse(
         _status_frames(request, user.id),
         media_type="text/event-stream",

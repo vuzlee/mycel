@@ -2,11 +2,6 @@
 
 Revision ID: 0016
 Revises: 0015
-
-Knowledge moves into the chat. Every thread of a user asks every one of their
-documents, so the notebook between a user and a document has no job left. Each document
-takes its notebook's owner, the notebook table goes, and the duplicate check becomes
-per user. Qdrant's payload was re-keyed once, after this migration, by a one-off script.
 """
 
 from collections.abc import Sequence
@@ -35,7 +30,7 @@ def upgrade() -> None:
         "UPDATE app.document d SET owner_id = n.owner_id FROM app.notebook n "
         "WHERE n.id = d.notebook_id"
     )
-    # A user who uploaded the same file into two notebooks keeps the older copy only.
+    # A file uploaded to two notebooks keeps only its older copy.
     op.execute(
         "DELETE FROM app.document d USING app.document e "
         "WHERE d.owner_id = e.owner_id AND d.sha256 = e.sha256 AND d.id > e.id"

@@ -85,7 +85,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Written now, while the tables are empty. Nobody writes a downgrade later.
     op.drop_index("ix_progress_update_reported_at", "progress_update", schema="gold")
     op.drop_table("progress_update", schema="gold")
     op.drop_index("ix_message_sent_at", "message", schema="silver")

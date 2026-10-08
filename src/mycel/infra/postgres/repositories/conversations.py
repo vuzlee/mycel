@@ -1,5 +1,3 @@
-"""Conversations and the turns inside them, in `app`."""
-
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -18,8 +16,6 @@ from mycel.infra.postgres.repositories._result import rowcount
 
 @dataclass(frozen=True)
 class ConversationRow:
-    """One conversation in the sidebar."""
-
     id: int
     user_id: int
     kind: str
@@ -30,8 +26,6 @@ class ConversationRow:
 
 @dataclass(frozen=True)
 class TurnRow:
-    """One question and what came back, as kept."""
-
     id: int
     conversation_id: int
     job_id: str
@@ -40,21 +34,18 @@ class TurnRow:
     answer: str | None
     error: str | None
     spent_usd: Decimal | None
-    #: The tool calls this turn made, as the stream sent them. `None` for a turn recorded
-    #: without steps, and for one that failed.
+    #: Tool calls as streamed; `None` when none were recorded or the turn failed.
     steps: list[Any] | None
     created_at: datetime
 
 
 class ConversationRepository:
-    """Reads and writes these tables on a session someone else owns, so callers can share
-    one transaction."""
+    """Reads and writes on a caller-owned session."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def create_conversation(self, user_id: int, kind: str, title: str) -> ConversationRow:
-        """Start a conversation."""
         row = Conversation(user_id=user_id, kind=kind, title=title)
         self._session.add(row)
         await self._session.flush()
@@ -63,21 +54,7 @@ class ConversationRepository:
     async def conversations_for(
         self, user_id: int, kind: str | None = None, limit: int = 50
     ) -> list[ConversationRow]:
-        """One person's sidebar, most recently spoken to first.
-
-        Ordered by the newest turn, not by when the conversation was opened. A conversation you went
-        back to this morning is the one you are working in, and ordering by `created_at`
-        buries it under every conversation opened since — which is the opposite of what a
-        history is for.
-
-        `COALESCE` because a conversation with no turns still has to sort: it was opened and the
-        worker never wrote a row, and its own `created_at` is the only time it has.
-
-        `updated_at` rather than `created_at`: a turn row is written when the question is
-        queued and written again when the run ends, and it is the ending people watch for.
-        Ordering on the first write leaves a conversation sitting where it was while its answer
-        lands somewhere down the list.
-        """
+        """One person's sidebar: pinned first, then by newest turn."""
         spoke = (
             select(Turn.conversation_id, func.max(Turn.updated_at).label("at"))
             .group_by(Turn.conversation_id)
@@ -100,14 +77,14 @@ class ConversationRepository:
         return [_conversation(row) for row in rows]
 
     async def conversation_by_id(self, conversation_id: int) -> ConversationRow | None:
-        """One conversation, whoever owns it. The caller checks that it is theirs."""
+        """One conversation, whoever owns it. The caller checks ownership."""
         row = await self._session.scalar(
             select(Conversation).where(Conversation.id == conversation_id)
         )
         return _conversation(row) if row else None
 
     async def pin_conversation(self, conversation_id: int, user_id: int, pinned: bool) -> bool:
-        """Pin or unpin a conversation. Scoped by `user_id` in the WHERE, like the delete."""
+        """Pin or unpin a conversation, scoped by `user_id`."""
         result = await self._session.execute(
             update(Conversation)
             .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
@@ -116,12 +93,7 @@ class ConversationRepository:
         return bool(rowcount(result))
 
     async def delete_conversation(self, conversation_id: int, user_id: int) -> bool:
-        """Forget a conversation, and every run under it.
-
-        `user_id` is in the WHERE rather than checked by the caller: a delete that scopes
-        itself cannot be made to delete someone else's row by a caller that forgot. The
-        turns go with it through `ON DELETE CASCADE`.
-        """
+        """Delete a conversation and its turns, scoped by `user_id` in the WHERE."""
         result = await self._session.execute(
             delete(Conversation).where(
                 Conversation.id == conversation_id, Conversation.user_id == user_id
@@ -140,15 +112,7 @@ class ConversationRepository:
         spent_usd: Decimal | None = None,
         steps: list[Any] | None = None,
     ) -> None:
-        """Write a turn's state, replacing whatever that job id last said.
-
-        Upsert because a job is written twice — once as `queued` when it is enqueued and
-        again when it finishes — and a third time if the broker redelivers it.
-
-        `updated_at` is set by hand. The model declares `onupdate`, but that is an ORM hook
-        and this is a Core `INSERT ... ON CONFLICT`, which never runs it — the column would
-        keep the moment the job was queued, and the sidebar orders on it.
-        """
+        """Write a turn's state, replacing what that job id last wrote."""
         stmt = insert(Turn).values(
             conversation_id=conversation_id,
             job_id=job_id,
@@ -167,8 +131,7 @@ class ConversationRepository:
                     "answer": stmt.excluded.answer,
                     "error": stmt.excluded.error,
                     "spent_usd": stmt.excluded.spent_usd,
-                    # Coalesced, not overwritten: a redelivery that ends in failure must
-                    # not wipe the steps a successful earlier attempt already wrote.
+                    # Coalesce: a failed redelivery must not wipe steps an earlier attempt wrote.
                     "steps": func.coalesce(stmt.excluded.steps, Turn.steps),
                     "updated_at": func.now(),
                 },
@@ -176,7 +139,7 @@ class ConversationRepository:
         )
 
     async def turn_by_job_id(self, job_id: str) -> TurnRow | None:
-        """What a job produced, however long ago — this is the record Redis is not."""
+        """What a job produced, the durable record behind Redis."""
         row = await self._session.scalar(select(Turn).where(Turn.job_id == job_id))
         return _turn(row) if row else None
 

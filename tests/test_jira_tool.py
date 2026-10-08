@@ -1,33 +1,4 @@
-"""The Jira write tools, and the draft store under them.
-
-One claim matters more than everything else here: **`draft_jira_write` writes nothing**.
-That is the whole reason the write is split in two, and the stake is higher than it is for
-the calendar — a wrong event is deleted in a second, while Jira records an author and
-offers no way to correct one. So the fake transport is asked not what it was sent but
-*whether it was called at all*.
-
-Around that:
-
-**A draft is resolved before it is read back, not after it is agreed to.** An account id
-looked up at confirm time would mean the person agreed to "Nam" and the system wrote to
-whichever Nam it found a minute later — exactly the mistake the read-back exists to catch.
-
-**A draft belongs to one person and is spent once.** The id travels through a prompt, which
-is the least trustworthy place in the system for one to travel.
-
-**Not connected is a sentence, not an exception.** A person who never consented still asked
-something, and raising would end the job over the half of it that is answerable.
-
-**A refused write gives the draft back; a timed-out one does not.** Those two are one
-line apart in the code and opposite in consequence — getting the second wrong posts the
-same comment twice, which is the exact thing the draft-then-confirm flow exists to prevent.
-
-**`create_project` is absent unless the deployment armed it**, and absent means absent: a
-tool the model cannot see is a tool it cannot be talked into using.
-
-No Redis and no network: the draft store gets an in-memory client, and Jira gets a
-transport that records rather than answers.
-"""
+"""The Jira write tools, and the draft store under them."""
 
 from decimal import Decimal
 from typing import Any
@@ -53,11 +24,7 @@ _REAL_CLIENT = httpx2.AsyncClient
 
 
 class Calls:
-    """Every request that reached Jira, with a canned answer per path.
-
-    Keyed by a fragment of the path rather than by the whole url, because the url carries
-    a cloud id and a test that asserts one is testing the wrong thing.
-    """
+    """Every request that reached Jira, with a canned answer per path."""
 
     def __init__(self, answers: dict[str, Any] | None = None, status: int = 200) -> None:
         self.requests: list[httpx2.Request] = []
@@ -200,8 +167,7 @@ class TestWhatTheDraftReadsBack:
     async def test_a_move_the_workflow_forbids_is_refused_before_anyone_agrees(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Checked at draft time: refusing after a yes is refusing too late, and the list
-        of allowed moves is what tells the model which word to use instead."""
+        """Checked at draft time: refusing after a yes is refusing too late."""
         moves = {"transitions": [{"id": "31", "to": {"name": "In Progress"}}]}
         monkeypatch.setattr(httpx2, "AsyncClient", Calls({"/transitions": moves}).client)
 
@@ -256,8 +222,7 @@ class TestConfirming:
     async def test_a_draft_cannot_be_spent_by_somebody_else(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The id travels through a prompt, so a leaked one must not write under a name
-        that never agreed to anything."""
+        """The id travels through a prompt."""
         calls = Calls({"/comment": {"id": "10200"}})
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
 
@@ -296,9 +261,7 @@ class TestConfirming:
 
 
 class TestWhatAFailedWriteCostsThePerson:
-    """A draft is spent before the write is attempted. What happens next depends on
-    whether the write can possibly have landed — and those two cases must not be
-    collapsed, in either direction."""
+    """A draft is spent before the write is attempted."""
 
     async def _drafted(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
@@ -312,8 +275,7 @@ class TestWhatAFailedWriteCostsThePerson:
     async def test_a_refused_write_gives_the_draft_back(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """They already read the change back and already agreed to it. A 403 should not
-        make them do the whole round again."""
+        """They already read the change back and already agreed to it."""
         draft_id = await self._drafted(tools, ctx, monkeypatch)
 
         monkeypatch.setattr(httpx2, "AsyncClient", Calls({}, status=403).client)
@@ -335,8 +297,7 @@ class TestWhatAFailedWriteCostsThePerson:
     async def test_a_timeout_does_not_give_the_draft_back(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The dangerous half. A timed-out request may well have landed, so offering a
-        retry is offering to post the same comment twice."""
+        """The dangerous half."""
         draft_id = await self._drafted(tools, ctx, monkeypatch)
 
         def slow(request: httpx2.Request) -> httpx2.Response:
@@ -437,8 +398,7 @@ class TestTheTwoSwitches:
     def test_the_admin_scope_is_asked_for_only_when_it_is_armed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Asking for everything up front, in case, is how a consent screen comes to
-        describe an app that does not exist."""
+        """Asking for everything up front."""
         from mycel.services.jira_oauth import PROJECT_SCOPE, scopes
 
         assert PROJECT_SCOPE not in scopes()

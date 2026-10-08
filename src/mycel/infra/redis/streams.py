@@ -1,9 +1,4 @@
-"""One Redis Stream per job, carrying that job's events to whoever is watching.
-
-Reads are non-destructive, so several clients can follow the same job and a client that
-reconnects resumes from the last id it saw. The stream is capped and expires: an event is
-worth a reload, never a record.
-"""
+"""One capped, expiring Redis Stream per job; readers resume from the last id seen."""
 
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -24,12 +19,7 @@ def _seq_key(job_id: str) -> str:
 
 
 async def exists(job_id: str) -> bool:
-    """Whether the job's stream is still there.
-
-    A run whose answer is kept but whose stream is gone has nothing left to send; a run that
-    just finished still has every event in the stream, and replaying them is the only way a
-    reader sees what it called. Telling those apart needs this question, not the record.
-    """
+    """Whether the job's stream still exists."""
     client = await get_client()
     return bool(await client.exists(_key(job_id)))
 
@@ -53,12 +43,7 @@ async def read(
     after: str = FIRST,
     block_ms: int = 5_000,
 ) -> AsyncGenerator[tuple[str, SequencedEvent] | None]:
-    """Yield `(id, event)` from `after` onwards, and `None` each time the wait times out.
-
-    The id is what a client sends back to resume. The `None` matters as much as the events:
-    it is the only moment the caller gets control back on a quiet job, and so the only
-    chance it has to notice a client that has gone away.
-    """
+    """Yield `(id, event)` after `after`, and `None` on each timeout."""
     client = await get_client()
     cursor = after
     while True:
@@ -73,11 +58,7 @@ async def read(
 
 
 class RedisEventChannel:
-    """An `EventChannel` writing to one job's stream.
-
-    `seq` is a Redis counter, so two workers running the same job still produce one
-    sequence rather than two that both start at 1.
-    """
+    """An `EventChannel` on one job's stream; `seq` is a Redis counter shared across workers."""
 
     def __init__(self, job_id: str) -> None:
         self.job_id = job_id

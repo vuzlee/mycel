@@ -19,11 +19,7 @@ SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 class FakeRedis:
-    """Enough of the client for a state round or a draft: set with a TTL, and read-and-delete.
-
-    The TTL is recorded rather than honoured — nothing here waits, and what a test wants to
-    know is that an expiry was asked for at all.
-    """
+    """Enough of the client for a state round or a draft: set with a TTL, and read-and-delete."""
 
     def __init__(self) -> None:
         self.values: dict[str, str] = {}
@@ -56,11 +52,7 @@ def google_token(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 async def session() -> AsyncIterator[AsyncSession]:
-    """A schema built from the models, dropped again when the test ends.
-
-    Built with `create_all` rather than `alembic upgrade`, so a bug in a migration cannot
-    make these pass — `test_postgres.py`'s migration tests hold the two together.
-    """
+    """A schema built from the models, dropped again when the test ends."""
     engine = create_async_engine(async_dsn(DSN))
     async with engine.begin() as conn:
         for schema in SCHEMAS:

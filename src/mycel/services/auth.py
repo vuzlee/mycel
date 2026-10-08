@@ -1,20 +1,4 @@
-"""Register, log in, log out, and say who a cookie belongs to.
-
-Every security decision in this system is in this file: how a password is stored, how long
-a session lives, and what a session token is made of. One file to read before trusting any
-of them, and one file to change when an answer stops being good enough.
-
-**Argon2id, not bcrypt.** bcrypt silently truncates at 72 bytes, so a long passphrase is
-only ever its first 72 bytes and nobody finds out. Argon2id has no such edge and is what
-the OWASP password-storage cheat sheet names first.
-
-**An opaque random token, not a JWT.** Revoking a JWT needs a server-side list of the
-revoked ones, which is a session table with extra steps — so this is a session table
-without them, and logging out deletes the row.
-
-**Expiry is checked here, on read.** The database holds `expires_at` and enforces nothing:
-a session one second past its expiry has to read as gone even when no sweeper has run.
-"""
+"""Register, log in, log out, and say who a cookie belongs to."""
 
 import hashlib
 import re
@@ -32,28 +16,22 @@ from mycel.core.exceptions import MycelError
 from mycel.infra import smtp
 from mycel.infra.postgres.repositories.identity import IdentityRepository, UserRow
 
-#: How long a session lives without being renewed. Two weeks: long enough that a person
-#: using this daily is never asked again, short enough that a forgotten laptop expires.
+#: How long a session lives without being renewed.
 SESSION_TTL = timedelta(days=14)
 
-#: Bytes of entropy in a session token. 32 bytes is 256 bits, hex-encoded to 64 characters
-#: — which is what `app.session.id` is sized for.
+#: Bytes of entropy in a session token.
 TOKEN_BYTES = 32
 
-#: Shortest password accepted. A length floor is the only rule here: composition rules
-#: push people towards `Password1!` and buy nothing, which is also the OWASP position.
+#: Shortest password accepted.
 MIN_PASSWORD = 8
 
-#: Bytes of entropy in a reset token. The same size as a session token, because it opens
-#: the same door for as long as it lives.
+#: Bytes of entropy in a reset token.
 RESET_BYTES = 32
 
 _hasher = PasswordHasher()
 
 
-#: An address a reset link can reach: one `@`, something before it, a dot after it. Not
-#: RFC 5322 — that admits addresses no mail server delivers to — just enough that a typo
-#: like "nam" or "nam@acme" is refused at sign-up rather than discovered at reset.
+#: An address a reset link can reach: one `@`, something before it, a dot after it.
 EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
@@ -63,11 +41,7 @@ class AuthError(MycelError):
 
 @dataclass(frozen=True)
 class Principal:
-    """Who is making a request. What `Depends(current_user)` hands a route.
-
-    Deliberately not `UserRow`: that one carries `password_hash`, and a hash that never
-    leaves this module cannot be leaked into a response by a careless `model_validate`.
-    """
+    """Who is making a request. What `Depends(current_user)` hands a route."""
 
     id: int
     email: str
@@ -76,13 +50,7 @@ class Principal:
 async def register(
     session: AsyncSession, email: str, password: str, invite_code: str | None = None
 ) -> Principal:
-    """Create an account, or raise `AuthError` if it is not allowed.
-
-    Registration is open by default, which is right for one machine on localhost and wrong
-    for anything reachable from outside it. Two settings close it — a domain allowlist and
-    a shared invite code — and both are checked here rather than in the route, so a second
-    caller cannot get in through a door the first one locked.
-    """
+    """Create an account, or raise `AuthError` if it is not allowed."""
     email = _normalise(email)
     if not EMAIL_SHAPE.fullmatch(email):
         raise AuthError("that is not an email address")
@@ -100,12 +68,7 @@ async def register(
 
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> Principal:
-    """Check an email and password, or raise `AuthError`.
-
-    The same error for an unknown address and a wrong password, and the hash is verified
-    even when nobody was found: telling the two apart, in the message or in how long the
-    answer takes, turns this endpoint into a list of who has an account.
-    """
+    """Check an email and password, or raise `AuthError`."""
     user = await IdentityRepository(session).user_by_email(_normalise(email))
     stored = user.password_hash if user else _hasher.hash("no such user")
 
@@ -118,8 +81,7 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Prin
         raise AuthError("wrong email or password")
 
     if _hasher.check_needs_rehash(user.password_hash):
-        # The cost parameters moved on since this hash was made. Rehash now, while the
-        # plaintext is in hand — there is no other moment when it will be.
+        # The cost parameters moved on since this hash was made.
         await IdentityRepository(session).set_password_hash(user.id, _hasher.hash(password))
     return _principal(user)
 
@@ -138,11 +100,7 @@ async def close_session(session: AsyncSession, token: str) -> None:
 
 
 async def session_user(session: AsyncSession, token: str) -> Principal | None:
-    """Who a cookie belongs to, or None if it names nothing usable.
-
-    Expired reads as absent, and the expired row is deleted on the way past: the cookie is
-    dead either way, and leaving the row behind means a sweeper has to exist.
-    """
+    """Who a cookie belongs to, or None if it names nothing usable."""
     repo = IdentityRepository(session)
     row = await repo.session_by_id(token)
     if row is None:
@@ -168,13 +126,7 @@ async def change_password(
     new_password: str,
     keep_token: str | None = None,
 ) -> int:
-    """Replace someone's password and end their other sessions. Returns how many ended.
-
-    The current password is required even though the caller already holds a live cookie: a
-    borrowed laptop is exactly the case this protects against. Every other session goes,
-    because the reason to change a password is that someone else may know the old one — and
-    a session already open does not care what the password is now.
-    """
+    """Replace someone's password and end their other sessions. Returns how many ended."""
     repo = IdentityRepository(session)
     user = await repo.user_by_id(user_id)
     if user is None:
@@ -193,15 +145,7 @@ async def change_password(
 
 
 async def begin_password_reset(session: AsyncSession, email: str) -> None:
-    """Send a reset link, if that address has an account.
-
-    Returns nothing either way, and the route answers the same either way: telling a
-    stranger whether an address is registered is the same leak `authenticate` is careful
-    not to be.
-
-    The link is stored as a hash. It is a password while it lives, and a database that can
-    be read must not be a list of ways in.
-    """
+    """Send a reset link, if that address has an account."""
     user = await IdentityRepository(session).user_by_email(_normalise(email))
     if user is None:
         return
@@ -223,12 +167,7 @@ async def begin_password_reset(session: AsyncSession, email: str) -> None:
 
 
 async def reset_password(session: AsyncSession, token: str, new_password: str) -> int:
-    """Spend a reset link and set a new password. Returns how many sessions ended.
-
-    Every session goes, including the one that asked: a person resetting a password does
-    not know which browsers are still logged in, and the reason to reset is that one of
-    them may not be theirs.
-    """
+    """Spend a reset link and set a new password. Returns how many sessions ended."""
     if len(new_password) < MIN_PASSWORD:
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")
 
@@ -237,8 +176,7 @@ async def reset_password(session: AsyncSession, token: str, new_password: str) -
     if row is None or row.used_at is not None or row.expires_at <= datetime.now(UTC):
         raise AuthError("that reset link is no longer usable")
 
-    # Spent under the same condition it was checked, so two clicks racing end with one
-    # winner rather than two password changes.
+    # Spent under the same condition it was checked, so two clicks racing end with one winner.
     if await repo.spend_password_reset(row.id, datetime.now(UTC)) == 0:
         raise AuthError("that reset link is no longer usable")
 
@@ -247,17 +185,12 @@ async def reset_password(session: AsyncSession, token: str, new_password: str) -
 
 
 def _digest(token: str) -> str:
-    """What is stored for a reset token. SHA-256 and not Argon2: the token is 256 random
-    bits, so there is no guessing to slow down, and a reset check is on a request path."""
+    """What is stored for a reset token."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 def _check_allowed(email: str, invite_code: str | None) -> None:
-    """Whether this address may register at all. Raises `AuthError` when it may not.
-
-    The same refusal for a wrong code and a wrong domain: two different messages would let
-    someone with neither work out which half they need to guess.
-    """
+    """Whether this address may register at all. Raises `AuthError` when it may not."""
     settings = get_settings()
 
     expected = settings.registration_invite_code
@@ -272,12 +205,7 @@ def _check_allowed(email: str, invite_code: str | None) -> None:
 
 
 async def sweep_expired_sessions(session: AsyncSession) -> int:
-    """Delete sessions that have already expired. Returns how many went.
-
-    Nothing depends on this running — `session_user` refuses an expired row and deletes it
-    on the way past. It exists so a row nobody ever reads again does not sit in the table
-    forever, which is the only way `app.session` grows without bound.
-    """
+    """Delete sessions that have already expired. Returns how many went."""
     return await IdentityRepository(session).delete_expired_sessions(datetime.now(UTC))
 
 

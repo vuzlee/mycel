@@ -1,8 +1,4 @@
-"""Degenerate-loop detection: the one guard pydantic-ai does not provide.
-
-Tested against hand-built message histories rather than a live run, so the ladder
-(warn once, then stop) is checked directly without spending a model call.
-"""
+"""Degenerate-loop detection: the one guard pydantic-ai does not provide."""
 
 from typing import Any
 
@@ -100,8 +96,7 @@ class TestGuardRepeat:
 
 
 class TestNumericCanonicalisation:
-    """A tool body sees coerced arguments while the history holds what was sent. If the
-    two fingerprint differently the guard never fires at all — silently."""
+    """A tool body sees coerced arguments while the history holds what was sent."""
 
     def test_int_and_float_fingerprint_the_same(self) -> None:
         assert fingerprint("t", {"n": 100}) == fingerprint("t", {"n": 100.0})

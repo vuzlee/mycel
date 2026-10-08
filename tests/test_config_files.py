@@ -1,5 +1,4 @@
-"""The YAML half of configuration: layered files merge at depth, bad files fail loudly, and
-an agent's settings come out of them rather than out of its module."""
+"""The YAML half of configuration."""
 
 from pathlib import Path
 
@@ -48,8 +47,7 @@ class TestLayering:
         assert load_config("dev", config_dir)["etl"]["batch_size"] == 50
 
     def test_the_overlay_keeps_its_siblings(self, config_dir: Path) -> None:
-        """The reason the merge is recursive: `dev.yaml` sets one key of `etl` and must
-        not take the rest of the block with it."""
+        """The reason the merge is recursive."""
         assert load_config("dev", config_dir)["etl"]["workers"] == 4
 
     def test_it_merges_at_every_depth(self, config_dir: Path) -> None:
@@ -59,8 +57,7 @@ class TestLayering:
         assert defaults["model_spec"] == "cloud:gemini-2.5-flash"
 
     def test_an_environment_with_no_overlay_is_fine(self, config_dir: Path) -> None:
-        """Not every environment differs from base, and inventing an empty file to say so
-        is noise."""
+        """Not every environment differs from base."""
         assert load_config("staging", config_dir)["etl"]["batch_size"] == 500
 
 
@@ -100,8 +97,7 @@ class TestAgentSettings:
         assert cfg.tool_calls_limit == 20
 
     def test_an_unknown_key_fails_with_the_real_names(self, config_dir: Path) -> None:
-        """A misspelt setting must not be silently ignored — that leaves an agent running on
-        a limit its YAML says it is not."""
+        """A misspelt setting must not be silently ignored."""
         (config_dir / AGENTS_SUBDIR / "analyst.yaml").write_text(
             "tool_call_limit: 30\n", encoding="utf-8"
         )
@@ -110,8 +106,7 @@ class TestAgentSettings:
 
 
 class TestTheRealConfigDir:
-    """The files actually committed must load — otherwise every test above passes on a tree
-    nobody ships."""
+    """The files actually committed must load."""
 
     def test_the_committed_config_loads(self) -> None:
         for env in ("dev", "prod"):

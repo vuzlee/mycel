@@ -1,12 +1,4 @@
-"""Call one connector in sources/, write the original payload down to bronze.
-
-No processing, no cleaning — keeping the original means a bad transform can be re-run
-from bronze instead of hitting the provider again.
-
-**The `Auth` arrives as an argument.** A timer has nobody signed in, so the sync reads as
-the deployment's service account (`domains/sync.py`). Passed in rather than built here, so
-one sync spends one identity across every call it makes.
-"""
+"""Call one connector in sources/, write the original payload down to bronze."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,24 +11,18 @@ from mycel.infra.postgres.models import JiraIssue
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.sources import jira
 
-#: Distinguishes "no argument" from an explicit None, which means read everything. A
-#: default of None would make the whole-project refetch unreachable.
+#: Distinguishes "no argument" from an explicit None, which means read everything.
 _UNSET: datetime = datetime.min
 
 log = get_logger(__name__)
 
-#: JQL date format. Minutes, because Jira's own grammar has no seconds and a window that
-#: overlaps by one minute costs nothing — every write below upserts.
+#: JQL date format.
 JQL_STAMP = "%Y-%m-%d %H:%M"
 
 
 @dataclass(frozen=True)
 class FetchResult:
-    """What one fetch brought in, and which issues it touched.
-
-    The keys are carried back rather than re-derived, so the transform replays exactly
-    this fetch instead of the whole of bronze.
-    """
+    """What one fetch brought in, and which issues it touched."""
 
     issues: int
     worklogs: int
@@ -46,20 +32,7 @@ class FetchResult:
 async def fetch_jira(
     session: AsyncSession, auth: jira.Auth, since: datetime | None = _UNSET
 ) -> FetchResult:
-    """Pull every issue that moved since the last sync, and its logged effort.
-
-    The watermark is the newest `fetched_at` in bronze rather than a cursor kept
-    elsewhere: what was stored *is* what was read, so the two can never drift apart. On an
-    empty table there is no watermark and the whole project is read once.
-
-    Worklogs cost one request per issue, which is why they are fetched only for the issues
-    this pass brought back and not for the project each tick.
-
-    `since` overrides the watermark, and passing None explicitly means "read everything" —
-    which is why it defaults to a sentinel rather than to None. `refetch_jira` uses it
-    after a new field is added, because the watermark cannot know that the question
-    changed rather than the data.
-    """
+    """Pull every issue that moved since the last sync, and its logged effort."""
     bronze = BronzeRepository(session)
     if since is _UNSET:
         since = await _watermark(session)
@@ -79,11 +52,7 @@ async def fetch_jira(
 
 
 def _jql(since: datetime | None) -> str:
-    """Which issues to ask for: everything the service account may browse, since a time.
-
-    Which projects is Jira's answer, not configuration — a project the account is added to
-    is synced from the next tick, and one it loses stops arriving.
-    """
+    """Which issues to ask for: everything the service account may browse, since a time."""
     if since is None:
         return "ORDER BY updated ASC"
     return f'updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'

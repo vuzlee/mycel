@@ -1,27 +1,4 @@
-"""The list of agents `orchestrator.py` is allowed to use.
-
-One place to declare them, so adding an agent is one line here and no change to any
-manager.
-
-**Classes, not instances.** `AGENTS` maps a name to a `BaseAgent` subclass rather than to
-a live `Agent`, because a module-level agent is a shared mutable object: whichever test or
-task overrides its model last wins, across everything else running in the same process.
-`build()` costs one call and removes the whole class of problem.
-
-The dict is keyed off each class's own `name`, so the registry cannot disagree with the
-class about what an agent is called — and therefore cannot send it to read another agent's
-`config/agents/<name>.yaml`.
-
-**This is where the orchestrator is kept out of reach, not the directory tree.** It lives
-in `agent/` with the specialists because it is one, so the only thing preventing a
-specialist from delegating back to its own caller is that `build_toolset` in
-`tools/delegate.py` names the specialists and nothing else.
-
-`analyst`, `orchestrator`, `researcher` and `summariser` are here because they run.
-`librarian` is not: it reads the knowledge base, which needs a vector store that does not
-exist yet. An agent appears here when it has code and not
-before, because a registry listing agents that cannot run is a lie told to the orchestrator.
-"""
+"""Registry of runnable agents, keyed by each class's own `name`."""
 
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -56,12 +33,7 @@ AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}
 
 
 def build(name: str, settings: AgentSettings | None = None) -> "Agent[MycelDeps, Any]":
-    """Build one agent by name, or raise `ConfigError` naming what is available.
-
-    The error lists the known names because the caller is usually a config string or a
-    queue message, and "unknown agent 'analyts'" next to the real list is the difference
-    between a one-second fix and a hunt.
-    """
+    """Build one agent by name, or raise `ConfigError` listing the known names."""
     try:
         agent_cls = AGENTS[name]
     except KeyError:
@@ -79,23 +51,9 @@ def build_deps(
     principal: Principal | None = None,
     chips: "frozenset[Chip] | None" = None,
 ) -> MycelDeps:
-    """Make the deps one job's runs share.
+    """Make the deps shared by every run in one job; call once per job so the budget is shared.
 
-    Every run in a job must be handed the *same* `MycelDeps`, because the budget lives on
-    it. Building fresh deps per run gives each run its own ceiling, which is not a budget
-    at all — so this is called once per job, at the edge, and passed down.
-
-    `ceiling_usd` accepts a string so callers can pass config values straight through
-    without a float ever touching money.
-
-    `budget` is for the caller that already knows what this job has spent — the worker,
-    which reads the running total out of Redis so a redelivered job does not start again
-    from zero. Left out, the job starts at its full ceiling, which is right for a script
-    or a test and wrong for anything that can be retried.
-
-    `principal` left out means nobody asked, which every tool that reads a team's data
-    reads as "granted nothing". A script that needs real data builds a `Principal` and says
-    so; the default is closed, because a forgotten argument must not be an open door.
+    `budget` carries what a retried job already spent. `principal=None` is granted nothing.
     """
     return MycelDeps(
         job_id=job_id,

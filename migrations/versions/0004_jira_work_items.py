@@ -2,21 +2,6 @@
 
 Revision ID: 0004
 Revises: 0003
-
-The `#done` / `#wip` / `#blocked` convention made a person do the parser's job and still
-could not answer anything worth asking. A tagged line knows a task is in progress; it does
-not know what it was estimated at, when it is due, or which epic it belongs to. Jira holds
-all of that already, so it becomes the source of record and Telegram becomes a notifier.
-
-`gold.progress_update` and `bronze.telegram_message` are dropped rather than deprecated.
-Keeping a table nothing writes to is keeping an open question about which one is real, and
-neither has ever held data from a production bot token.
-
-`silver.message` stays. It is source-agnostic and holds what somebody said, which is still
-true and still useful — it is only gold that was built on the convention.
-
-Not reversible in the sense that matters: `downgrade` recreates the tables, empty. The rows
-came from Telegram's 24-hour retention window and are not re-fetchable at any price.
 """
 
 from collections.abc import Sequence

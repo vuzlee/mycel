@@ -1,16 +1,4 @@
-"""Agent output schemas, importable from outside `agents/`.
-
-A schema named across a layer boundary belongs here rather than beside the agent that
-produces it: reaching into `agents/agent/summariser.py` to borrow one would make the
-borrowing layer depend on where an agent module happens to live. An output type nothing
-outside its own agent ever names stays beside that agent, next to the prompt that produces
-it.
-
-The orchestrator has no schema here. Its output is markdown — a chatbot answers in
-whatever shape the question deserves, and a `Report{findings, gaps}` would force every
-answer into one list. A `str` needs no schema, which is why this module now describes only
-the summariser's rows.
-"""
+"""Agent output schemas named outside `agents/`."""
 
 from typing import Literal
 
@@ -18,12 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class WorkLine(BaseModel):
-    """One ticket, as a row rather than a sentence.
-
-    Columns, not prose: a list of strings makes every renderer parse the model's sentence
-    back apart, and they disagree about how. `note` is the only free text, and it is the
-    only part that is a judgement.
-    """
+    """One ticket, as a row rather than a sentence."""
 
     key: str = Field(description="The issue key alone, e.g. 'PROJ-14'. Never with the title.")
     title: str = Field(description="The ticket's own title, shortened but not reworded.")
@@ -50,11 +33,7 @@ class WorkLine(BaseModel):
 
 
 class LoadLine(BaseModel):
-    """One person's estimated against spent, already in man-days.
-
-    Every figure is copied from what the prompt was given. The model chooses who is worth
-    a `note`, not what the numbers are.
-    """
+    """One person's estimated against spent, in man-days, copied from the prompt."""
 
     person: str = Field(description="Their display name, as the tracker spells it.")
     items: int = Field(default=0, description="How many tickets they carried in the window.")
@@ -68,21 +47,7 @@ class LoadLine(BaseModel):
 
 
 class ProgressSummary(BaseModel):
-    """What a team did over one window, in rows.
-
-    Rows rather than prose, because a standup answers a fixed set of questions and a
-    paragraph makes the reader find them. `at_risk` is the one the meeting exists for, so
-    it is a field of its own rather than a sentence somewhere in the middle.
-
-    The lists are structured rather than `list[str]`, which would have the model write
-    "PROJ-14 — Work dashboard (E2) — Nam" and every surface that wanted a table take that
-    sentence apart again. A column the model fills is a column a renderer can
-    align.
-
-    Still rows even though the orchestrator now answers in markdown: this is what the
-    summariser hands *up*, and a table the orchestrator was given as columns is a table it
-    can lay out. Flattening here would make it re-derive the columns from prose.
-    """
+    """What a team did over one window, in rows."""
 
     period: str = Field(description="The window in plain words, e.g. '15-21 September 2026'.")
     headline: str = Field(

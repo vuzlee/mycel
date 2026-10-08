@@ -1,9 +1,4 @@
-"""DoclingDocument to passages of ~N tokens, cut along the document's structure.
-
-Prose goes through docling's `HybridChunker`. Tables do not: it flattens them into
-"key = value" sentences and never repeats the header. A table is rendered as Markdown;
-one that fits stays whole, a longer one is split by rows with the header on every piece.
-"""
+"""DoclingDocument to token-bounded passages; tables rendered as Markdown, split by row."""
 
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass

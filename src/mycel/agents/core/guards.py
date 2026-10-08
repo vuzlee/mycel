@@ -1,22 +1,6 @@
-"""Stop an agent from burning money on its own.
+"""Detect a model repeating the same tool call, by scanning the run's message history.
 
-  runaway      too many loops or too many tool calls in one run — stop
-  degenerate   the model repeating itself (same tool, same arguments) — stop
-  retry_prompt off-schema output gets a re-prompt naming the exact error, not a blind retry
-
-**Two of those three are now configuration, not code.** pydantic-ai enforces runaway via
-`UsageLimits(request_limit=, tool_calls_limit=)`, which `runner.run` builds from
-`AgentSettings`, and retry_prompt via `output_type` + `ModelRetry` + `retries=`. Do not go
-looking in this file for a loop counter; there isn't one, and that is deliberate.
-
-Only **degenerate** needs real code, because nothing upstream detects it. This file is that.
-
-Different from `llm/budget.py`: budget counts money across a whole job, guards count
-behaviour within a single run. A broken loop hits a guard in seconds; by the time it hits
-the budget the money is already spent.
-
-Detection is a scan of `ctx.messages`, not a counter carried in deps — stateless, so it
-cannot drift out of sync with the real history, and it survives retries for free.
+Loop and tool-call limits are `UsageLimits`, built in `runner.run`.
 """
 
 import hashlib
@@ -30,15 +14,7 @@ if TYPE_CHECKING:
 
 
 def _canonical(value: Any) -> Any:
-    """Erase differences that are not differences.
-
-    A tool body sees arguments *after* pydantic has coerced them, so a model that sent
-    `100` is holding `100.0` by the time `guard_repeat` runs — while the history still
-    holds `100`. Left alone the two fingerprints never match and the guard silently never
-    fires. Widening every number to float makes the comparison see what the model
-    actually did. `bool` is excluded: it is an `int` in Python, but not a number the
-    model chose.
-    """
+    """Widen ints to float so coerced args (`100.0`) match the history (`100`); bools stay."""
     if isinstance(value, bool):
         return value
     if isinstance(value, int):
@@ -51,12 +27,7 @@ def _canonical(value: Any) -> Any:
 
 
 def fingerprint(tool: str, args: dict[str, Any]) -> str:
-    """A stable id for one (tool, arguments) pair.
-
-    Sorted keys so argument order does not matter, `default=str` so an unserialisable
-    value degrades to its repr instead of raising — a guard that crashes is worse than a
-    guard that is occasionally coarse.
-    """
+    """A stable hash of one (tool, arguments) pair; unserializable values fall back to str."""
     payload = json.dumps({"tool": tool, "args": _canonical(args)}, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()
 
@@ -79,13 +50,7 @@ def count_identical_calls(messages: "list[Any]", target: str) -> int:
 
 
 def guard_repeat(ctx: "RunContext[Any]", tool: str, threshold: int = 2, **args: Any) -> None:
-    """Call at the top of every tool body, before doing any work.
-
-    The ladder matters. On the first repeat the model is told, in words, what it already
-    did — often enough to break the loop. Only a repeat *after* being told is treated as
-    stuck, because a bare `ModelRetry` on every repeat is itself a loop, just a more
-    expensive one.
-    """
+    """Call first in every tool body: warn on the threshold repeat, raise `DegenerateLoop` after."""
     from pydantic_ai import ModelRetry
 
     calls = count_identical_calls(ctx.messages, fingerprint(tool, args))

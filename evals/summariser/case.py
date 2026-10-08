@@ -1,11 +1,4 @@
-"""One golden case, and the checks it asserts.
-
-A case is a prompt the summariser is given plus what a person decided a good answer must
-contain. Not a full expected output: two acceptable summaries word the same headline
-differently, and a diff against one of them scores the wording rather than the substance.
-What is checked is what would be *wrong* to get wrong — the verdict, which tickets are
-late, whether a truncated window admits it.
-"""
+"""One golden case, and the checks it asserts."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,8 +8,7 @@ import yaml
 
 from mycel.agents.schemas import ProgressSummary
 
-#: A headline is read on its own by someone who opens nothing else, so the schema asks for
-#: one sentence. Longer than this and it is a paragraph wearing a headline's name.
+#: A headline is read on its own, so the schema caps its length.
 HEADLINE_MAX = 140
 
 
@@ -35,21 +27,17 @@ class Case:
 
     name: str
     prompt: str
-    #: The window's verdict. The single most consequential field: a late project called
-    #: `on_track` is the failure the whole report exists to prevent.
+    #: The window's verdict, the most consequential field.
     health: str | None = None
     #: Issue keys that must appear in `at_risk`. Extra rows are allowed — judging *more*
-    #: things risky is a defensible call; missing a late one is not.
     at_risk_keys: list[str] = field(default_factory=list)
     #: Keys that must appear in `shipped`.
     shipped_keys: list[str] = field(default_factory=list)
-    #: Keys that must not appear anywhere. Work the prompt never mentioned, mostly: this
-    #: is the invention check.
+    #: Keys that must not appear anywhere.
     absent_keys: list[str] = field(default_factory=list)
     #: People who must have a row in `load`.
     load_people: list[str] = field(default_factory=list)
-    #: Substrings the `notes` list must carry, lowercased before comparing. A truncated
-    #: window that does not say so is a summary claiming completeness it does not have.
+    #: Substrings the `notes` list must carry, lowercased before comparing.
     notes_contain: list[str] = field(default_factory=list)
 
     def check(self, got: ProgressSummary) -> list[Check]:

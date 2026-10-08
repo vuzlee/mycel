@@ -1,22 +1,10 @@
-"""Collection declarations: name, dimensions, distance metric.
-
-**The dimension belongs to the model, so the name carries the model.** `bge-small` is 384
-and a larger model is 768 or 1024; writing one into a collection built for the other is
-refused by Qdrant, and the useful failure is at the name rather than at the write. Changing
-model therefore means a new collection and a full reindex — there is no way to mix two
-vector spaces in one, and no migration that converts between them.
-
-Cosine, not dot product: `bge` is trained with cosine similarity, and on vectors that are
-not unit-length the two disagree about which neighbour is nearest.
-"""
+"""Collection declarations; the name carries the model, since dimensions depend on it."""
 
 from dataclasses import dataclass
 
 from qdrant_client.models import Distance, VectorParams
 
-#: Dimensions per model. Hard-coded rather than read from the loaded model, because the
-#: collection has to be declared before anything is embedded — and a wrong guess here is
-#: a collection that rejects every write, which is better than one that accepts half.
+#: Dimensions per model, needed before anything is embedded.
 DIMENSIONS: dict[str, int] = {
     "BAAI/bge-small-en-v1.5": 384,
     "BAAI/bge-base-en-v1.5": 768,
@@ -37,11 +25,7 @@ class Collection:
 
 
 def work_items(model: str) -> Collection:
-    """The collection holding one point per gold work item.
-
-    The name is `work_items__<model>` with the slashes and dots flattened: Qdrant accepts
-    them, but a name that needs quoting in a URL is a name somebody will mistype.
-    """
+    """`work_items__<model>`, one point per gold work item, with URL-unsafe characters flattened."""
     return _named("work_items", model)
 
 

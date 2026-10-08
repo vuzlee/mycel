@@ -1,11 +1,4 @@
-"""Does a Knowledge answer cite the right passage, and decline when it should?
-
-    uv run python -m evals.rag.answers [--limit N]
-
-Runs the app's Knowledge path (search, passages in `<documents>`, one orchestrator call
-with only the Knowledge chip, marker check) for every question. Each result is saved as
-it lands, so a stopped run resumes without repeating a call.
-"""
+"""Does a Knowledge answer cite the right passage, and decline when it should?"""
 
 import argparse
 import asyncio

@@ -12,12 +12,10 @@ from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import sweep_expired_sessions
 
-#: The advisory lock name. Every process running this scheduler contends for the same one,
-#: which is the point: two replicas are for availability, not for twice the syncing.
+#: Advisory lock shared by every replica, so only one syncs at a time.
 SYNC_LOCK = "sync:jira"
 
-#: A second lock, so the sweep does not wait behind a long sync and vice versa. They share
-#: nothing and contend for nothing.
+#: Separate lock so the sweep and the sync never wait on each other.
 SWEEP_LOCK = "sweep:sessions"
 
 WATCHDOG_LOCK = "watchdog:documents"
@@ -27,13 +25,7 @@ log = get_logger(__name__)
 
 
 async def run_sync_once() -> None:
-    """One tick. Skips rather than waits if another process is mid-sync.
-
-    **A missing service account is logged at `error`, not `warning`.** Every other failure
-    here is the next tick's work — a provider was slow, a connection dropped — and the data
-    catches up. This one does not: every later tick fails the same way, and from the
-    dashboard a stale project is indistinguishable from a quiet week.
-    """
+    """One sync tick; skips if another process is syncing."""
     async with try_lock(SYNC_LOCK) as acquired:
         if not acquired:
             log.info("sync already running elsewhere, skipping this tick")
@@ -64,16 +56,7 @@ async def run_watchdog_once() -> None:
 
 
 async def run_forever() -> None:
-    """Tick both loops until the process is stopped.
-
-    A failed tick is logged and the loop continues. Stopping the scheduler because one
-    sync failed is how a transient provider outage turns into a permanent one. Nothing is
-    lost by a late tick — Jira keeps its own history — so a tick that fails is simply the
-    next tick's work.
-
-    The sweep runs on its own timer because it has nothing to do with freshness: syncing
-    every fifteen minutes and sweeping once a day are two different questions.
-    """
+    """Run the sync, sweep and watchdog timers until stopped."""
     settings = get_settings()
     log.info(
         "scheduler started",

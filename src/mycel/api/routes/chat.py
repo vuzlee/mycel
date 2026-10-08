@@ -1,21 +1,4 @@
-"""Ask something, and come back for the answer.
-
-The orchestrator does not run inside the request: a run takes minutes, and every proxy in front of
-this times out long
-before one finishes.
-
-So this is two endpoints rather than one:
-
-    POST /chat          queue a question, return 202 and a job id. Milliseconds.
-    GET  /chat/{id}     what happened to it: running, done with an answer, or failed.
-
-**202, not 200.** The status code is the contract: the server accepted the work and has not
-done it. A caller that treats 202 as "here is your answer" fails on the empty body rather
-than silently reading a half-answer.
-
-Redis answers the poll while a run is in flight, and `app.turn` answers it afterwards. The
-run is written to both, so once the Redis TTL expires the fallback is a row, not a 404.
-"""
+"""Ask something, and come back for the answer."""
 
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -38,11 +21,7 @@ log = get_logger(__name__)
 
 
 class ChatRequest(BaseModel):
-    """What a caller asks for.
-
-    Without `conversation_id` this is a first question and opens a conversation. With one it is
-    a follow-up, and the earlier turns of that conversation go to the agent with it.
-    """
+    """What a caller asks for."""
 
     question: str = Field(min_length=1, max_length=4000, description="What to find out.")
     conversation_id: int | None = Field(
@@ -50,19 +29,12 @@ class ChatRequest(BaseModel):
     )
     chips: list[Chip] | None = Field(
         default=None,
-        description=(
-            "Sources picked for this turn; an empty list means no tools are offered. "
-            "Absent means the caller does not pick: every tool stays."
-        ),
+        description="Sources for this turn; empty means no tools, absent means every tool.",
     )
 
 
 class AcceptedResponse(BaseModel):
-    """The receipt for queued work. Deliberately not an answer.
-
-    `conversation_id` comes back so the caller can ask the next question into the same
-    conversation without first looking the conversation up by the job id it just received.
-    """
+    """The receipt for queued work. Deliberately not an answer."""
 
     job_id: str
     conversation_id: int
@@ -70,20 +42,7 @@ class AcceptedResponse(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    """A job's state, and what it produced once there is something.
-
-    `answer` is markdown rather than a schema: a chatbot picks the shape its answer deserves — a
-    table where the data has columns, a sentence where it does not — and a schema had to
-    pick for it.
-
-    `spent_usd` is a string rather than a float: money is `Decimal` everywhere else in this
-    codebase, and serialising it through a float is how that care gets undone at the last
-    step.
-
-    `conversation_id` and `question` describe the run itself, not the conversation it sits in.
-    A page that read them off the conversation would caption every turn with the first question
-    asked, and would lose the conversation entirely for a link naming a middle run.
-    """
+    """A job's state, and what it produced once there is something."""
 
     job_id: str
     status: Literal["running", "done", "failed"]
@@ -92,8 +51,7 @@ class ChatResponse(BaseModel):
     error: str | None = None
     conversation_id: int | None = None
     question: str | None = None
-    #: The passages a Knowledge answer cites, so the page can open them. Empty otherwise,
-    #: and empty again once Redis has dropped them - the kept answer lists them in its text.
+    #: The passages a Knowledge answer cites, so the page can open them.
     sources: list[dict[str, Any]] = []
 
 
@@ -102,14 +60,7 @@ async def create_chat(
     body: ChatRequest,
     user: Annotated[Principal, Depends(current_user)],
 ) -> AcceptedResponse:
-    """Queue a question and hand back the id to poll with.
-
-    No `MycelDeps` and no budget here: the run happens in the worker, so the ceiling it
-    bills against is the worker's (`job_ceiling_usd`), not the API's.
-
-    A conversation that is not this caller's reads as 404, not 403: `ConversationNotFound` is one
-    exception for both cases so that a caller cannot learn which it was.
-    """
+    """Queue a question and hand back the id to poll with."""
     try:
         job_id, conversation_id = await request_chat(
             user.id,
@@ -127,12 +78,7 @@ async def create_chat(
 
 
 def _state_of(kept: TurnRow) -> Literal["running", "done", "failed"]:
-    """What a kept row means when Redis has nothing to say about the job.
-
-    `done` is itself. Everything else is a failure, unless the row is younger than the TTL
-    Redis would have had to outlive to lose the job — in which case the job has not been
-    picked up yet rather than lost.
-    """
+    """What a kept row means when Redis has nothing to say about the job."""
     if kept.status == "done":
         return "done"
     if kept.status != "queued":
@@ -146,29 +92,7 @@ async def get_chat(
     job_id: str,
     user: Annotated[Principal, Depends(current_user)],
 ) -> ChatResponse:
-    """Read what became of a job.
-
-    Redis first, because it is the only one of the two that knows a run is still going.
-    Past its TTL the row in `app.turn` answers instead, which is why an answer opened
-    tomorrow is an answer and not a 404.
-
-    A run still queued when Redis dropped it reads as `failed` rather than `running`: the
-    row says `queued`, and a caller told `running` would poll a job nobody will finish.
-
-    Except while it is too young for Redis to have dropped anything. A turn is written
-    `queued` at enqueue time, in the same transaction as the publish, and the worker's
-    `mark_running` is a broker hop later — so every run passes through a moment with a
-    `queued` row and no Redis key, and the page polls inside it, because it starts polling
-    the instant the POST returns. Read as `failed`, that moment puts "The run failed." on
-    screen over a run that is about to answer perfectly well. The row's age is what tells
-    the two apart: below the result TTL nothing can have expired yet, so a `queued` row
-    that young is a run still on its way to a worker.
-
-    The row is read either way, because `conversation_id` and `question` are only there.
-    `request_chat` writes it at queue time in the same transaction as the enqueue, so it
-    exists from before a worker picks the job up — the two fields are available for the
-    whole life of a run, not only once one has finished.
-    """
+    """Read what became of a job."""
     kept = await find_turn(job_id)
     result = await results.fetch(job_id)
 

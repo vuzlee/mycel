@@ -1,8 +1,4 @@
-"""Counts over gold for the dashboard and the summariser. Reads only.
-
-Every aggregate is computed in the database. A project that has been running a year would
-otherwise drag every row across the wire to produce a table with one line per person.
-"""
+"""Read-only aggregates over gold, computed in the database."""
 
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -22,18 +18,7 @@ from mycel.infra.postgres.repositories.gold import (
 
 @dataclass(frozen=True)
 class AssigneeLoad:
-    """One person's window: how much they took on, and how it compares to the estimate.
-
-    `spent` comes from the issues assigned to them rather than from worklogs, because the
-    question here is "is this person's plate over-full", not "who did the typing".
-
-    That has a consequence worth stating wherever these numbers are shown. The **window
-    chooses the issues**; the figures on each issue are Jira's running totals for its whole
-    life. A ticket touched yesterday brings in every hour ever logged against it, not the
-    hours logged this week. `effort_by_day` is the opposite — it sums worklogs *dated*
-    inside the window — so the two blocks can legitimately disagree, and a screen that
-    shows both owes the reader that sentence.
-    """
+    """One person's items in a window, estimated against spent from the issues assigned to them."""
 
     account_id: str | None
     name: str
@@ -44,13 +29,13 @@ class AssigneeLoad:
 
     @property
     def gap_seconds(self) -> int:
-        """Spent minus estimated. Positive means over, which is the number nobody has."""
+        """Spent minus estimated; positive means over."""
         return self.spent_seconds - self.estimated_seconds
 
 
 @dataclass(frozen=True)
 class KindTally:
-    """How much work of one kind there is, and how much of it is finished."""
+    """Work of one kind: how much, and how much is finished."""
 
     kind: str
     items: int
@@ -59,14 +44,7 @@ class KindTally:
 
 @dataclass(frozen=True)
 class SprintTally:
-    """One sprint and how much of it is finished.
-
-    `spent_seconds` is the effort logged against its issues over their whole life, not
-    inside the sprint's dates. The sprint chooses the issues; Jira's running total on each
-    issue is what it carries. Stated here because a sprint that adopts a half-finished
-    ticket inherits the hours already burnt on it, and a reader owed that sentence will
-    otherwise read the figure as this sprint's cost.
-    """
+    """One sprint, its completion, and lifetime effort logged on its issues."""
 
     sprint_id: int
     name: str
@@ -76,7 +54,7 @@ class SprintTally:
 
     @property
     def percent(self) -> int:
-        """How far along, 0-100. An empty sprint reads as 0, not as finished."""
+        """Completion percent, 0-100; an empty sprint reads as 0."""
         return round(100 * self.done / self.items) if self.items else 0
 
 
@@ -89,7 +67,7 @@ class DayEffort:
 
 
 class GoldStats:
-    """Aggregates over gold, on a session someone else owns."""
+    """Aggregates over gold on a caller-owned session."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -97,16 +75,7 @@ class GoldStats:
     async def count_by_category(
         self, project: str, since: datetime, until: datetime | None = None
     ) -> dict[str, int]:
-        """How many items sit in each status category. Every category, zeroes included.
-
-        Counts what moved in the window, by the category it is in *now* — not what changed
-        category during it. Jira stamps a transition with the moment of the API call, so
-        the second question cannot be answered honestly and is not asked.
-
-        Every issue type counts as one, epics included: an epic is a Jira issue with a
-        status like any other, and filtering it out here would make these totals disagree
-        with `load_by_assignee`, which does not filter either.
-        """
+        """Items that moved in the window, by their current status category, zeros included."""
         query = (
             select(WorkItem.status_category, func.count())
             .where(WorkItem.project == project, WorkItem.updated_at >= since)
@@ -120,11 +89,7 @@ class GoldStats:
     async def load_by_assignee(
         self, project: str, since: datetime, until: datetime | None = None
     ) -> list[AssigneeLoad]:
-        """Per person: how many items, how many finished, estimated against spent.
-
-        Busiest first. Unassigned work is a row of its own rather than being dropped —
-        a sprint with six unassigned tickets is exactly what a lead needs to see.
-        """
+        """Per person: items, finished, estimated vs spent. Busiest first; unassigned kept."""
         query = (
             select(
                 WorkItem.assignee_account_id,
@@ -156,12 +121,7 @@ class GoldStats:
         return sorted(rows, key=lambda r: (-r.items, r.name))
 
     async def overdue(self, project: str, asof: datetime) -> list[WorkItemRow]:
-        """Due before now and not done, soonest-due first — the most late at the top.
-
-        Nothing about status history is consulted, only the due date and the current
-        category: Jira stamps a transition with the moment of the API call, so for any
-        issue entered after the fact "how long has it been like this" would be a lie.
-        """
+        """Due before now and not done, soonest-due first."""
         query = (
             select(WorkItem)
             .where(
@@ -177,16 +137,7 @@ class GoldStats:
     async def effort_by_day(
         self, project: str, since: datetime, until: datetime | None = None
     ) -> list[DayEffort]:
-        """Seconds logged per day, oldest first.
-
-        From worklogs rather than from resolution dates. A worklog's `started` is whatever
-        it was told, so it survives a project filled in retroactively; `resolved_at` is
-        stamped by Jira and would put a month of work on the day it was entered.
-
-        Days with nothing logged get no row. The heatmap calls this over its own longer
-        span and draws its own calendar, so it has to fill the gaps anyway, and sending
-        three months of zeroes to say nothing happened is the wrong shape for the wire.
-        """
+        """Seconds logged per day from worklogs, oldest first."""
         day = func.date(Worklog.started_at).label("day")
         query = (
             select(day, func.coalesce(func.sum(Worklog.time_spent_seconds), 0))
@@ -202,38 +153,23 @@ class GoldStats:
         ]
 
     async def count_by_priority(self, project: str) -> dict[str, int]:
-        """Unfinished items by priority, whole project. Every known priority, zeroes included.
-
-        Unfinished rather than all: the question a priority answers is "what should be
-        picked up next", and a finished item has no next. Counting done work here would
-        make a project that shipped its urgent tickets look like it is drowning in them.
-
-        Whole project rather than a window, for the same reason `overdue` is: a Highest
-        nobody has touched in a month is exactly the one worth seeing.
-        """
+        """Unfinished items by priority, whole project, every known priority included."""
         query = (
             select(WorkItem.priority, func.count())
             .where(WorkItem.project == project, WorkItem.status_category != "done")
             .group_by(WorkItem.priority)
         )
-        # Grouped on the raw column and renamed here, not `coalesce`d in SQL: Postgres
-        # compares a GROUP BY expression to the selected one textually, and SQLAlchemy
-        # gives the two `coalesce` calls separate bind parameters, so they do not match.
+        # Group on the raw column: two `coalesce` calls get separate binds and won't match.
         counted = {
             (UNPRIORITISED if p is None else str(p)): int(n)
             for p, n in (await self._session.execute(query)).all()
         }
-        # Jira's own order first, then whatever the site added, so a renamed scheme still
-        # shows rather than being silently dropped to fit a fixed list.
+        # Known priorities first, then any the site added.
         known = {name: counted.pop(name, 0) for name in PRIORITIES}
         return {**known, **counted}
 
     async def count_by_kind(self, project: str) -> list[KindTally]:
-        """Every kind of work in the project, largest first, with how much is finished.
-
-        Whole project: a breakdown of what this team's work is *made of* does not change
-        because a week was quiet, and reading it through a window says it does.
-        """
+        """Every kind of work in the project, largest first, with how much is finished."""
         query = (
             select(
                 WorkItem.kind,
@@ -250,16 +186,7 @@ class GoldStats:
         return sorted(rows, key=lambda r: (-r.items, r.kind))
 
     async def count_by_sprint(self, project: str) -> list[SprintTally]:
-        """Every sprint with work in it, newest first, with how much of it is done.
-
-        The backlog is excluded rather than given a row: `sprint_id IS NULL` means "not
-        planned into anything", and a bar for it would sit beside real sprints claiming to
-        be one. How big the backlog is belongs to a block about the backlog.
-
-        Ordered by `sprint_id` descending, which is creation order and the closest thing
-        Jira gives to sprint sequence without reading the Agile API — a sprint's dates are
-        nowhere on the issue, and its name sorts "Sprint 10" before "Sprint 2".
-        """
+        """Every sprint with work in it, newest first, with completion; the backlog is excluded."""
         query = (
             select(
                 WorkItem.sprint_id,
@@ -284,12 +211,7 @@ class GoldStats:
         ]
 
     async def totals_all_time(self, project: str) -> dict[str, int]:
-        """Every item in the project by category, no window. Every category, zeroes included.
-
-        The denominator a progress bar needs. `count_by_category` counts what moved in a
-        window, which is the wrong bottom half of a fraction: a quiet week would draw the
-        project as nearly finished because only two tickets moved and one of them was done.
-        """
+        """Every item in the project by category, no window, zeros included."""
         query = (
             select(WorkItem.status_category, func.count())
             .where(WorkItem.project == project)

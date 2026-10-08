@@ -1,22 +1,4 @@
-"""The index against a real Qdrant — the half `test_vectors.py` cannot prove.
-
-The fake there believes whatever it is told. Only a server decides whether a 384-dimension
-vector is accepted by a collection declared for 384, whether upserting the same id twice
-leaves one point or two, and whether a filter applied *during* the search returns the right
-number of allowed neighbours rather than the allowed subset of a wrong ten.
-
-The last one is the reason this file exists. Post-filtering is indistinguishable from
-in-filtering whenever every result happens to be allowed, so a test that proves it needs
-more allowed neighbours than the limit, with forbidden ones nearer.
-
-Skipped unless `QDRANT_URL` points at one:
-
-    docker run -d --name mycel-test-qdrant -p 6334:6333 qdrant/qdrant:latest
-    QDRANT_URL=http://localhost:6334 uv run pytest tests/test_vectors_live.py
-
-The first run downloads the embedding model, which is ~130 MiB and happens once.
-No database and no model API: this is the index, not the work.
-"""
+"""The index against a real Qdrant — the half `test_vectors.py` cannot prove."""
 
 import os
 from collections.abc import AsyncIterator
@@ -67,11 +49,7 @@ def _item(key: str, title: str, updated: datetime, project: str = "MYC") -> Work
 
 @pytest.fixture
 async def clean() -> AsyncIterator[None]:
-    """A collection with nothing in it, dropped again afterwards.
-
-    Dropped rather than emptied: the name carries the model, so a leftover collection from
-    a different model is exactly the confusion this fixture exists to avoid.
-    """
+    """A collection with nothing in it, dropped again afterwards."""
     get_settings.cache_clear()
     collection = collections.work_items(get_settings().embedding_model)
     qdrant = client.client()
@@ -114,8 +92,7 @@ class TestTheIndex:
         assert [h.title for h in hits] == ["Session expires early on mobile"]
 
     async def test_the_vector_is_the_declared_size(self, clean: None) -> None:
-        """A dimension mismatch is refused by Qdrant, which is the point of naming the
-        collection after the model."""
+        """A dimension mismatch is refused by Qdrant."""
         await indexer.index_items([_item("MYC-1", "anything", WHEN)])
 
         collection = collections.work_items(get_settings().embedding_model)
@@ -125,8 +102,7 @@ class TestTheIndex:
 
 class TestSearch:
     async def test_meaning_beats_keywords(self, clean: None) -> None:
-        """The reason this tool exists at all: nobody typed "authentication" into either
-        of these, and the auth one still has to win."""
+        """The reason this tool exists at all."""
         await indexer.index_items(
             [
                 _item("MYC-1", "Session expires early on mobile", WHEN),
@@ -139,13 +115,7 @@ class TestSearch:
         assert [h.issue_key for h in hits] == ["MYC-1"]
 
     async def test_the_filter_runs_inside_the_search(self, clean: None) -> None:
-        """THE test of this file.
-
-        Three allowed items and three forbidden ones, with the forbidden ones worded to be
-        the nearer match. Post-filtering would search six, find the three forbidden ones
-        closest, drop them, and return fewer than asked. In-filtering never considers them
-        and returns three.
-        """
+        """THE test of this file."""
         await indexer.index_items(
             [
                 _item("OPS-1", "Login times out", WHEN, project="OPS"),

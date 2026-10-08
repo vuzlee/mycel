@@ -1,19 +1,4 @@
-"""The analyst's tools: percentages, growth, basic statistics.
-
-With a tool the model does not have to do arithmetic in its head — and arithmetic slips are
-the hardest error to spot in a report, because a wrong number reads exactly like a right one.
-
-Two halves, in one file because they are one capability:
-
-  the functions      pure — no `RunContext`, no I/O, unit-testable without an agent
-  `build_toolset()`  the same functions as a `FunctionToolset` an agent can be given
-
-The toolset lives here rather than in the agent so a second agent needing these numbers
-gets them by adding one line, not by copying wrappers.
-
-Every `ValueError` message is written **for the model to read**: `_guarded` turns it into a
-`ModelRetry`, so it has to say what to do instead, not just that something was invalid.
-"""
+"""Arithmetic tools for the analyst. `ValueError` messages are read by the model as retries."""
 
 import statistics
 from collections.abc import Callable, Mapping, Sequence
@@ -106,8 +91,6 @@ def summary_stats(values: Sequence[float]) -> SummaryStats:
         total=float(sum(values)),
         mean=statistics.fmean(values),
         median=statistics.median(values),
-        # Undefined for a single value — null rather than a fabricated 0.0, which would
-        # read as "no variance" instead of "not enough data".
         stdev=statistics.stdev(values) if len(values) > 1 else None,
         minimum=float(min(values)),
         maximum=float(max(values)),

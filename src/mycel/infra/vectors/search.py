@@ -1,16 +1,4 @@
-"""Queries: nearest neighbours, filtered inside Qdrant.
-
-**The filter runs in Qdrant, not after the results come back.** Fetching the ten nearest
-and then dropping the ones the asker may not see can leave two — and two is a wrong answer,
-not a short one, because the eight that would have filled the gap were never asked for.
-Qdrant applies the filter during the search, so ten asked for is ten allowed returned when
-ten allowed exist.
-
-The allowed projects come from `services/permission.py`, the same `app.membership` rule
-`run_sql` is bounded by. One rule, read in two places — not two rules that must agree.
-
-Agents reach this through `agents/tools/rag_search.py`, never by importing it.
-"""
+"""Nearest-neighbor queries, filtered by permission inside Qdrant."""
 
 import asyncio
 from collections.abc import Sequence
@@ -25,8 +13,7 @@ from mycel.infra.vectors.client import client, embed
 
 log = get_logger(__name__)
 
-#: The most neighbours one query may ask for. Beyond this a search stops being a search and
-#: becomes a listing, which SQL does better and without a model in the loop.
+#: Max neighbors per query.
 MAX_LIMIT = 20
 
 
@@ -50,26 +37,18 @@ async def search(
     limit: int,
     status_category: str | None = None,
 ) -> list[Hit]:
-    """The nearest work items to `query`, from projects the asker may read.
-
-    An empty `projects` returns nothing rather than everything. That is the whole of the
-    permission model here, and it is written as an early return rather than as an empty
-    filter — an empty `MatchAny` matches nothing in Qdrant today, but relying on that is
-    relying on a detail of someone else's query planner.
-    """
+    """Nearest work items to `query` among readable `projects`; empty `projects` returns nothing."""
     if not projects or not query.strip():
         return []
 
     collection = collections.work_items(get_settings().embedding_model)
     qdrant = client()
     if not await qdrant.collection_exists(collection.name):
-        # Nothing indexed yet. Not an error: a deployment that has never run the indexer
-        # has no answers, and saying so beats a stack trace in the middle of a run.
+        # Nothing indexed yet: no answers, not an error.
         log.info("searched before indexing", extra={"collection": collection.name})
         return []
 
-    # Typed as the union Filter takes, not as list[FieldCondition]: a list is invariant,
-    # so the narrower type is rejected at the call below.
+    # Typed as Filter's union: list is invariant, so list[FieldCondition] is rejected.
     conditions: list[Condition] = [
         FieldCondition(key="project", match=MatchAny(any=list(projects)))
     ]

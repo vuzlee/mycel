@@ -1,11 +1,4 @@
-"""Which conversations a person has.
-
-The sidebar cannot show a history without knowing whose it is. A query, so it answers
-inside the request — same reason as `domains/dashboard`.
-
-The other list a UI needs, which projects have data, moved to `domains/dashboard` when
-Jira became the source: it is a gold question now, and it belongs beside the other one.
-"""
+"""Which conversations a person has."""
 
 from dataclasses import dataclass
 
@@ -16,8 +9,7 @@ from mycel.infra.postgres.repositories.conversations import (
 )
 from mycel.infra.postgres.session import session_scope
 
-#: Most conversations one sidebar shows. Beyond this the list is an archive, and an archive
-#: needs paging rather than a longer page.
+#: Most conversations one sidebar shows.
 HISTORY_LIMIT = 50
 
 
@@ -31,13 +23,7 @@ class ConversationSummary:
 
 
 async def list_conversations(user_id: int, limit: int = HISTORY_LIMIT) -> list[ConversationSummary]:
-    """One person's sidebar, newest first.
-
-    Each conversation carries its latest job id so clicking one can reopen the run without a
-    second round-trip. A conversation whose run never finished has `None` for both — it was
-    queued and the worker never got to it, which the page should show as such rather
-    than hide.
-    """
+    """One person's sidebar, newest first."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
         summaries = []
@@ -55,13 +41,7 @@ async def list_conversations(user_id: int, limit: int = HISTORY_LIMIT) -> list[C
 
 
 async def conversation_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
-    """Every run in one conversation, oldest first. Empty if it is not this person's.
-
-    The page needs this because a conversation is now more than one turn: `?job=` names the
-    run being watched, and the turns before it were never in this tab's memory. Empty
-    rather than an exception for a conversation that is not theirs — same answer as a conversation
-    that is not there, for the same reason as `forget_conversation`.
-    """
+    """Every run in one conversation, oldest first. Empty if it is not this person's."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
         conversation = await repo.conversation_by_id(conversation_id)
@@ -71,11 +51,7 @@ async def conversation_turns(user_id: int, conversation_id: int) -> list[TurnRow
 
 
 async def forget_conversation(user_id: int, conversation_id: int) -> bool:
-    """Delete one conversation and its runs. False if it is not this person's, or not there.
-
-    The two cases are one answer on purpose: telling a caller that a conversation exists but
-    belongs to someone else is telling them something they did not have.
-    """
+    """Delete one conversation and its runs. False if it is not this person's, or not there."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
         return await repo.delete_conversation(conversation_id, user_id)

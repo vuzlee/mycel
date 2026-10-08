@@ -1,20 +1,4 @@
-"""What is configured, what is broken, and what is off on purpose.
-
-The three states are the point, and the value is in telling the last two apart. An absent
-`rag_search` looks exactly like a broken one from outside, and somebody who has just cloned
-the repo cannot tell whether to go fixing or to relax.
-
-    OK       it answered
-    BROKEN   configured, and it did not answer
-    OFF      not configured — the feature it belongs to is simply not there
-
-**Nothing here writes.** No table, no file, no edit to `.env`. That is also why this beats a
-setup screen for an app whose operator has a shell: a screen has to store what it collects,
-and storing means configuration lives in two places that can disagree.
-
-Every probe has a short timeout and swallows its own failure. A doctor that hangs on a dead
-host, or dies on the first one, is a doctor nobody runs twice.
-"""
+"""What is configured, what is broken, and what is off on purpose."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -46,13 +30,10 @@ class Check:
     detail: str
 
 
-#: Long enough for a local container, short enough that a wrong host does not look like a
-#: hang. A doctor is something people run while deciding whether to wait.
+#: Long enough for a local container, short enough that a wrong host does not look like a hang.
 TIMEOUT = 3.0
 
-#: For anything across the internet. Three seconds is right for a container on this machine
-#: and wrong for Atlassian: a healthy Jira answering in four would be reported BROKEN, which
-#: is the one mistake this file must not make — a false alarm costs more than a slow report.
+#: For anything across the internet.
 REMOTE_TIMEOUT = 15.0
 
 #: One HTTP call to the gateway or a self-hosted model, on this machine or the LAN.
@@ -67,16 +48,7 @@ async def _probe(
     missing: str | None,
     timeout: float = TIMEOUT,
 ) -> Check:
-    """Run one probe, or report why it was not run.
-
-    `missing` is the sentence for a feature that is not configured: present means OFF, and
-    the probe is never attempted. That distinction is the whole file.
-
-    Takes a CALLABLE rather than a coroutine, and that is not style. A coroutine built at
-    the call site is built whether or not it is awaited — so an OFF check left one hanging
-    unawaited, which Python reports as a RuntimeWarning from somewhere unrelated. A
-    callable is not called at all.
-    """
+    """Run one probe, or report why it was not run."""
     if missing is not None:
         return Check(group, name, State.OFF, missing)
     try:
@@ -85,8 +57,7 @@ async def _probe(
     except TimeoutError:
         return Check(group, name, State.BROKEN, f"no answer in {timeout:.0f}s")
     except Exception as exc:
-        # The class name as well as the message: an empty OSError says nothing, and
-        # "ConnectionRefusedError" alone is usually enough to know what to do.
+        # The class name too: an empty OSError message says nothing.
         message = str(exc).strip() or type(exc).__name__
         return Check(group, name, State.BROKEN, message.splitlines()[0][:90])
 
@@ -103,7 +74,7 @@ async def _postgres(settings: Settings) -> str:
                 "where table_schema in ('bronze','silver','gold','app')"
             )
         )
-        # Whether this role could drop the schema it reads. The owner can; mycel_app cannot.
+        # Whether this role could drop the schema it reads.
         owner = await session.scalar(
             text(
                 "select count(*) from pg_tables where schemaname = 'gold' "
@@ -136,8 +107,7 @@ async def _redis(settings: Settings) -> str:
         policy = (await client.config_get("maxmemory-policy")).get("maxmemory-policy", "?")
     finally:
         await client.aclose()
-    # noeviction is load-bearing: an evicted budget reads back as a full ceiling, which
-    # silently refunds a job. Worth saying out loud rather than only in a docstring.
+    # noeviction matters: an evicted budget reads back as a full ceiling.
     if policy != "noeviction":
         return f"connected, but policy is {policy} — an evicted budget refunds a job"
     return "connected, noeviction"
@@ -175,11 +145,7 @@ async def _parser(settings: Settings) -> str:
 
 
 async def _jira(settings: Settings) -> str:
-    """Whether the sync's own identity works, and how its last run went.
-
-    Asked with the service account's token, the one the sync uses — a person's working
-    token says nothing about whether the background reads can run. Free: one project list.
-    """
+    """Whether the sync's own identity works, and how its last run went."""
     from mycel.domains.sync import service_auth
     from mycel.infra.postgres.repositories.accounts import AccountRepository
     from mycel.infra.postgres.session import session_scope
@@ -222,11 +188,7 @@ async def _gateway(settings: Settings) -> str:
 
 
 async def _upstreams(settings: Settings) -> str:
-    """Whether each self-hosted upstream behind the gateway answers at all.
-
-    No model is called, so this costs no quota. Hosted APIs (no `api_base`) are skipped:
-    their reachability is the provider's, not ours.
-    """
+    """Whether each self-hosted upstream behind the gateway answers at all."""
     import httpx2
 
     bases: dict[str, str] = {}
@@ -240,8 +202,7 @@ async def _upstreams(settings: Settings) -> str:
     down: list[str] = []
     async with httpx2.AsyncClient(timeout=GATEWAY_TIMEOUT) as client:
         for base, model in sorted(bases.items(), key=lambda kv: kv[1]):
-            # Any HTTP answer, 401 included, means the host is up: the app holds no
-            # provider key, so it cannot ask for more than that without spending one.
+            # Any HTTP answer, 401 included, means the host is up.
             try:
                 await client.get(f"{base.rstrip('/')}/models")
             except Exception:  # no answer at all is the one failure
@@ -325,12 +286,7 @@ async def run(settings: Settings | None = None) -> list[Check]:
 
 
 def _declared(env: Settings) -> list[Check]:
-    """Things that are settings rather than connections.
-
-    `models` is a count, not a call: asking a provider whether a key works costs a request
-    from a free tier of twenty a day, and the common failure is an absent key rather than
-    an invalid one.
-    """
+    """Things that are settings rather than connections."""
     out: list[Check] = []
 
     out.append(
@@ -363,8 +319,7 @@ def _declared(env: Settings) -> list[Check]:
             else "not configured — the calendar and mail tools are not offered",
         )
     )
-    # Two switches, and off is a decision rather than a gap. A deployment that reads Jira
-    # and does not write to it is a whole valid deployment, so writing OFF is not a fault.
+    # Two switches, and off is a decision rather than a gap.
     writes = jira_oauth.configured(env) and env.jira_write_enabled
     out.append(
         Check(

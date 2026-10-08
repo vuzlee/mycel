@@ -1,7 +1,4 @@
-"""Per-job cost accumulation: the ceiling that stops a stuck agent burning the month.
-
-Arithmetic only — `runner.run` wiring is covered in test_runner.py.
-"""
+"""Per-job cost accumulation: the ceiling that stops a stuck agent burning the month."""
 
 from decimal import Decimal
 
@@ -81,8 +78,7 @@ class TestLimits:
 
 
 class TestPricingFromTheTable:
-    """pydantic-ai cannot price a model named by the gateway, so the job budget
-    falls back to the per-million-token table in config."""
+    """pydantic-ai cannot price a model named by the gateway."""
 
     def test_a_listed_model_is_priced_per_million_tokens(self) -> None:
         from pydantic_ai.usage import RunUsage

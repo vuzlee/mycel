@@ -1,30 +1,14 @@
-"""Turn a query result into the text an agent is given.
-
-The boundary between a query result and a prompt. `gather.py` reads the database, this
-renders what it read — so the agent module stays a prompt and a schema, and nothing under
-`agents/` ever imports a service.
-
-Rendering only. The summariser is reached as a tool, and `delegate.py` calls `render` on
-its way there.
-"""
+"""Turn a query result into the text an agent is given."""
 
 from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow
 from mycel.services.gather import ProgressWindow
 
-#: Date format in the prompt. ISO with a space: unambiguous to a model, and short enough
-#: that a few hundred rows do not spend the context on timestamps.
+#: Date format in the prompt.
 STAMP = "%Y-%m-%d"
 
 
 def render(window: ProgressWindow) -> str:
-    """The window as the prompt the summariser reads.
-
-    Plain lines rather than JSON: the model copies people's own words out of this, and a
-    quoted-and-escaped blob is one more thing between it and them.
-
-    Seconds become days here and nowhere else. Gold stores what Jira stores; a unit a
-    person reads is a display decision, and this is the display.
-    """
+    """The window as the prompt the summariser reads."""
     period = f"{window.since.strftime(STAMP)} to {window.until.strftime(STAMP)}"
     lines = [f"Project {window.project}, {period}", ""]
 
@@ -103,16 +87,7 @@ def _effort(window: ProgressWindow) -> list[str]:
 
 
 def _item(row: WorkItemRow) -> str:
-    """One work item on one line, as named fields the output schema also names.
-
-    `key=... title=...` rather than a sentence with the parts in a fixed order. The model
-    copies these into a row of the same names, and a label it can match beats a position
-    it has to count — the first version wrote the kind immediately before the title and
-    got back titles reading "story: 003 — API skeleton".
-
-    A field the row does not carry is omitted rather than written as zero. An estimate of
-    zero reads as one that was met; a missing estimate is a ticket nobody sized.
-    """
+    """One work item on one line, as named fields the output schema also names."""
     parts = [
         f"key={row.issue_key}",
         f"status={row.status}",

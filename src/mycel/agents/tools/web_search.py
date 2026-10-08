@@ -1,24 +1,4 @@
-"""The researcher's tool: search the open web and bring back passages with their URLs.
-
-Backed by Tavily, which is built for this caller. A general search API answers with a page
-of links, and an agent handed ten links has to fetch and read each one before it can say
-anything — ten round trips, ten pages of navigation chrome, and a context window spent on
-markup. Tavily returns the relevant passage from each page instead, so one call is enough
-to write a sourced statement.
-
-**Every passage keeps its URL, and that is the point of the tool.** A finding the report
-cannot attribute is indistinguishable from one the model invented, so `SearchResult` has no
-shape in which a passage exists without the place it came from.
-
-**Failures here are not the model's to fix.** `compute.py` raises `ModelRetry` because its
-errors are argument errors — wrong numbers, fixable by calling again. An exhausted quota or
-a search API that is down is not: re-prompting walks the model round the same loop until
-`max_retries` turns an outage into an unreadable run error. Those raise `ToolFailed`, and
-the one genuinely fixable case — an empty query — stays `ModelRetry`.
-
-No results is a *result*, not a failure: the model is told the search was empty so it can
-say the web has nothing on this, which is a legitimate finding.
-"""
+"""Tool: search the web via Tavily, returning passages with their URLs."""
 
 from typing import Any
 
@@ -33,12 +13,10 @@ from mycel.core.config import get_settings
 
 _ENDPOINT = "https://api.tavily.com/search"
 
-#: Ranked by relevance, so the tail of a long list is mostly noise the model still pays
-#: for in context. Five is enough to cross-check a claim against more than one source.
+#: Enough to cross-check a claim; the ranked tail is mostly noise.
 _MAX_RESULTS = 5
 
-#: Tavily's own codes for "your plan is spent" — distinct from 429, which is a rate limit
-#: that would pass on its own. Neither is recoverable inside this run.
+#: Tavily's "plan spent" codes, distinct from a 429 rate limit.
 _QUOTA_EXHAUSTED = (432, 433)
 
 
@@ -65,7 +43,6 @@ class SearchResult(BaseModel):
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    """The web search capability as a toolset an agent can be given."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
     @toolset.tool(name="web_search")
@@ -90,9 +67,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
                     content=item.get("content", ""),
                     published=item.get("published_date"),
                 )
-                # A result without a url cannot be cited, and an uncitable passage is
-                # exactly what this tool exists to prevent — so it is dropped rather
-                # than passed on with an empty source.
+                # Uncitable without a url, so dropped.
                 for item in payload.get("results", [])
                 if item.get("url")
             ],
@@ -102,7 +77,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
 
 async def _post(query: str, timeout_s: float) -> dict[str, Any]:
-    """One call to Tavily, with every failure named in terms the caller can act on."""
+    """One call to Tavily; every failure raises `ToolFailed`."""
     settings = get_settings()
     if settings.tavily_api_key is None:
         raise ToolFailed("web_search", "TAVILY_API_KEY is not set")
@@ -128,11 +103,7 @@ async def _post(query: str, timeout_s: float) -> dict[str, Any]:
 
 
 def _raise_for_status(response: "httpx2.Response") -> None:
-    """Turn Tavily's status codes into failures that say what to do about them.
-
-    Split by who can fix it: a key or quota problem is the operator's, and saying which one
-    is the difference between rotating a key and topping up an account.
-    """
+    """Turn Tavily's status codes into failures that say what to do about them."""
     if response.is_success:
         return
 

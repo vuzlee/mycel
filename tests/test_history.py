@@ -1,10 +1,4 @@
-"""What a follow-up carries from the turns before it.
-
-The trimming is Mycel's, not the framework's — the history goes into the prompt as text
-rather than as `message_history` — so the caps and the "omitted" line are behaviour worth
-pinning down here. No database and no model: `_recall` takes rows and returns a string,
-which is the shape that makes it testable at all.
-"""
+"""What a follow-up carries from the turns before it."""
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -46,8 +40,7 @@ class TestWhatIsRemembered:
         assert "MYC shipped four tickets." in text
 
     def test_a_failed_turn_is_not_remembered(self) -> None:
-        """A run that went wrong has nothing to recall, and showing a model how a run
-        failed is an example to follow rather than context."""
+        """A run that went wrong has nothing to recall."""
         assert _recall([_turn(1, "how is MYC?", "", status="failed")]) == ""
 
 
@@ -71,8 +64,7 @@ class TestTheCeilings:
         assert "2 earlier turn(s) omitted" in text
 
     def test_the_newest_turn_is_kept_even_when_it_is_over_the_ceiling(self) -> None:
-        """A follow-up is about the turn just before it. Dropping that one to respect a
-        character count would leave the history that matters least."""
+        """A follow-up is about the turn just before it."""
         assert "q0" in _recall([_turn(0, "q0", "x" * (HISTORY_CHARS * 2))])
 
 

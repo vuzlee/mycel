@@ -1,18 +1,4 @@
-"""The job layer, against fakes rather than a running broker.
-
-No RabbitMQ and no Redis: `docker compose up` is not a precondition for `pytest`, or the
-suite stops being something anyone runs before pushing. What is worth pinning down here is
-the failure behaviour, because every one of these fails *silently* in production — a job
-acked too early is simply gone, and a job requeued at the head of the queue looks like a
-busy worker rather than a spinning one.
-
-`test_queue_live.py` is the other half: it runs against a real broker, where these fakes
-cannot tell the truth about routing, and skips when there is none.
-
-The agent is faked at `domains/chat.runner.run` rather than at the consumer, because
-what a job *means* lives in the domain: the consumer now receives, dispatches
-and acks, and that is all it is tested for here.
-"""
+"""The job layer, against fakes rather than a running broker."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -73,11 +59,7 @@ async def _no_turn(job_id: str) -> None:
 
 @pytest.fixture(autouse=True)
 def asker(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Who the job belongs to, without the `app.user` lookup behind it.
-
-    The lookup is real work in production — a job whose account was deleted must not run —
-    but it is a round trip to Postgres, and every test in this file is about the queue.
-    """
+    """Who the job belongs to, without the `app.user` lookup behind it."""
 
     async def _who(job: Job) -> Principal:
         user_id = job.payload.get("user_id")
@@ -91,11 +73,7 @@ def asker(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def spent(monkeypatch: pytest.MonkeyPatch) -> dict[str, Decimal]:
-    """A budget store that keeps the running total in a dict instead of in Redis.
-
-    It merges the same way the Lua script does — larger wins — so a test can show an
-    attempt inheriting what the one before it spent.
-    """
+    """A budget store that keeps the running total in a dict instead of in Redis."""
     totals: dict[str, Decimal] = {}
 
     async def load(job_id: str, ceiling_usd: Decimal | str) -> JobBudget:
@@ -111,10 +89,7 @@ def spent(monkeypatch: pytest.MonkeyPatch) -> dict[str, Decimal]:
 
 @pytest.fixture
 def store(monkeypatch: pytest.MonkeyPatch, spent: dict[str, Decimal]) -> dict[str, Any]:
-    """Capture what the worker would have written, instead of writing to Redis.
-
-    Depends on `spent` so no test in this file can reach a real Redis by forgetting it.
-    """
+    """Capture what the worker would have written, instead of writing to Redis."""
     written: dict[str, Any] = {}
 
     async def mark_running(job_id: str) -> None:
@@ -268,13 +243,7 @@ class TestFailures:
     async def test_a_thread_deleted_mid_run_does_not_strand_the_job(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
-        """The row the run would be written to went with the thread it hung off.
-
-        Both the success path and the failure path write that same row, so an exception
-        here escapes `_handle` entirely: the message is never acked and the broker
-        redelivers it at `consumer_timeout` to fail the same way. Recorded as a warning
-        instead, and the job is acked and done with.
-        """
+        """The row the run would be written to went with the thread it hung off."""
         _runs(monkeypatch, _ANSWER)
         monkeypatch.setattr(chat_domain, "session_scope", _no_session)
         monkeypatch.setattr(chat_domain, "ConversationRepository", _GoneThread)
@@ -307,9 +276,7 @@ class TestAKindThisWorkerDoesNotKnow:
     async def test_a_kind_this_worker_does_not_know_is_an_unreadable_body(
         self, store: dict[str, Any]
     ) -> None:
-        """A worker older than the producer that queued the job. `JobKind` rejects it while
-        parsing, before any handler is chosen, and it goes straight to the dead letters —
-        another attempt on the same worker would fail the same way."""
+        """A worker older than the producer that queued the job."""
         dlx = FakeExchange()
         body = b'{"kind":"librarian","payload":{},"job_id":"job-1"}'
 
@@ -373,11 +340,7 @@ class TestWhatTravelsWithAFailedJob:
 
 
 class TestTheBudgetSurvivesARetry:
-    """The ceiling is per job, and a job is up to `MAX_ATTEMPTS` attempts.
-
-    Every case here used to pass while costing three times what it was allowed to, because
-    each attempt built a fresh `JobBudget` starting at zero.
-    """
+    """The ceiling is per job, and a job is up to `MAX_ATTEMPTS` attempts."""
 
     async def test_an_attempt_starts_from_what_the_job_has_already_spent(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
@@ -423,18 +386,14 @@ class TestTheBudgetSurvivesARetry:
     async def test_a_job_out_of_money_is_refused_before_the_model_is_called(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], spent: dict[str, Decimal]
     ) -> None:
-        """Seeded over the ceiling, `runner.run`'s own `budget.check()` stops the attempt.
-
-        `runner.run` is real here — faking it would fake away the thing being tested.
-        """
+        """Seeded over the ceiling, `runner.run`'s own `budget.check()` stops the attempt."""
         spent["job-1"] = Decimal("0.99")
         dlx = FakeExchange()
         message = _message()
 
         await consumer.handle(message, dlx)  # type: ignore[arg-type]
 
-        # Straight to the dead-letter queue: another attempt spends money the job has not
-        # got, so this is not a transient failure.
+        # Straight to the dead-letter queue: another attempt spends money the job lacks.
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert store["job-1"]["status"] == "failed"
 

@@ -59,14 +59,7 @@ async def run(
 
 
 async def _drive(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter) -> None:
-    """Walk one agent loop, emitting as it goes.
-
-    One node per step: prompt, model request, tool calls, back to the model. A model request
-    is opened as a stream so its prose goes out while it is written; everything else is
-    emitted from the finished node. A model that cannot stream raises on `stream()` before
-    doing any work, and the ordinary iteration runs the node instead — the answer then
-    arrives as one `TEXT` event, which reads the same.
-    """
+    """Walk one agent loop, streaming model requests where the model supports it."""
     async for node in agent_run:
         if Agent.is_model_request_node(node) and _can_stream(agent_run.ctx.deps.model):
             async with node.stream(agent_run.ctx) as chunks:
@@ -75,28 +68,19 @@ async def _drive(agent_run: "AgentRun[MycelDeps, OutputT]", emitter: RunEmitter)
 
 
 def _can_stream(model: "Model") -> bool:
-    """Whether opening this model as a stream is safe to try.
-
-    Asking has to happen before the attempt, not after: `stream()` marks the node as
-    streamed on its way to failing, and the node cannot then be run the ordinary way.
-    `FunctionModel`, which the tests use, declares `request_stream` and then asserts on a
-    `stream_function` it was not given — hence the second question.
-    """
+    """Whether `stream()` is safe to try; a failed attempt leaves the node unrunnable."""
     if type(model).request_stream is Model.request_stream:
         return False
     return getattr(model, "stream_function", False) is not None
 
 
 def _name_of(agent: "Agent[MycelDeps, OutputT]") -> str:
-    """The agent's registry name, which is what a client groups events by."""
     return agent.name or "agent"
 
 
 def _charge(deps: "MycelDeps", cfg: "AgentSettings", usage: "RunUsage") -> BudgetExceeded | None:
     """Record one run's spend, returning the overdraft rather than raising it."""
-    # The same place and for the same reason as the budget: `usage` here already carries
-    # every delegated token, so counting at the delegation site too would double it. The
-    # label is the spec, not the job — a job id would mint a series per job forever.
+    # `usage` already includes delegated tokens, so count only here.
     tokens_spent_total.labels(model=cfg.model_spec, direction="input").inc(usage.input_tokens)
     tokens_spent_total.labels(model=cfg.model_spec, direction="output").inc(usage.output_tokens)
 

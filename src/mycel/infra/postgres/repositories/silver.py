@@ -1,12 +1,4 @@
-"""Read bronze, write silver: the provider's envelope removed and nothing else.
-
-All SQL for silver lives here. Silver answers to the source — a Jira field appearing or a
-status being renamed changes this layer — which is what separates it from gold, where the
-questions the product asks are what change.
-
-Deduplicate on the source's natural key, not on a hash of the whole record: a provider
-editing one field changes the hash and the row becomes a second row.
-"""
+"""Read bronze, write silver: the provider's envelope removed and nothing else."""
 
 from collections.abc import Sequence
 from dataclasses import asdict
@@ -21,35 +13,29 @@ from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 
 
 class SilverRepository:
-    """Reads and writes silver, on a session someone else owns."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def upsert_items(self, rows: Sequence[WorkItemRow]) -> int:
-        """Write work items, replacing any that share `(source, issue_key)`."""
+        """Upsert work items on `(source, issue_key)`."""
         return await self._upsert(
             SilverWorkItem, rows, "uq_silver_work_item_natural_key", "issue_key"
         )
 
     async def upsert_worklogs(self, rows: Sequence[WorklogRow]) -> int:
-        """Write logged entries, replacing any that share `(source, worklog_id)`."""
+        """Upsert worklogs on `(source, worklog_id)`."""
         return await self._upsert(
             SilverWorklog, rows, "uq_silver_worklog_natural_key", "worklog_id"
         )
 
     async def items(self, keys: Sequence[str] | None = None) -> list[WorkItemRow]:
-        """Work items, so a promotion can read what silver actually holds.
-
-        `keys` limits the replay to what one sync brought in. Passing nothing rebuilds
-        gold from the whole layer, which is a supported operation rather than a repair.
-        """
+        """Silver work items; `keys` narrows to one sync, none means all."""
         query = self._narrow(select(SilverWorkItem), SilverWorkItem.issue_key, keys)
         result = await self._session.scalars(query.order_by(SilverWorkItem.issue_key))
         return [WorkItemRow(**_fields(row)) for row in result]
 
     async def worklogs(self, keys: Sequence[str] | None = None) -> list[WorklogRow]:
-        """Logged entries, narrowed by the issue they belong to."""
+        """Worklog entries, narrowed by the issue they belong to."""
         query = self._narrow(select(SilverWorklog), SilverWorklog.issue_key, keys)
         result = await self._session.scalars(query.order_by(SilverWorklog.worklog_id))
         return [WorklogRow(**_fields(row)) for row in result]
@@ -75,9 +61,5 @@ class SilverRepository:
 
 
 def _fields(row: Any) -> dict[str, Any]:
-    """A mapped row as the plain dataclass fields, without `id`.
-
-    `id` is the table's surrogate key and means nothing outside it — the natural key is
-    what callers identify a row by, and it is already in the columns.
-    """
+    """A mapped row as dataclass fields, without the surrogate `id`."""
     return {name: getattr(row, name) for name in row.__table__.columns.keys() if name != "id"}

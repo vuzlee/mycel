@@ -1,10 +1,4 @@
-"""Download the RAG benchmark corpus and check every hash.
-
-    uv run python -m evals.rag.fetch_corpus
-
-Writes to `.cache/rag-corpus/`. Stops on the first mismatch: a changed document silently
-invalidates every label in evals/rag/questions.yaml.
-"""
+"""Download the RAG benchmark corpus and check every hash."""
 
 import argparse
 import hashlib

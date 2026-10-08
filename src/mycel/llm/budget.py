@@ -1,22 +1,7 @@
-"""Per-job cost ceiling.
+"""Per-job cost ceiling, accumulated across every run in the job.
 
-Accumulate spend by job_id and raise instead of calling again once the ceiling is hit —
-one agent stuck in a loop must not burn the monthly budget.
-
-**Not "count tokens before sending".** That was the original design, and it is not
-implementable once pydantic-ai owns the request: there is no seam between "prompt built"
-and "prompt sent". The honest equivalent, and what this does:
-
-  check()   refuse to *start* a run that has no headroom left — no call is made at all
-  limits()  convert the job's remaining money into a per-run `cost_limit`, so pydantic-ai
-            kills the run mid-flight rather than letting it run to completion
-
-A single in-flight request can still overshoot slightly, because the ceiling is checked
-between requests and not mid-token. That is accepted: the alternative is reimplementing
-the provider's own accounting, and the overshoot is bounded by one request.
-
-Different from `agents/core/guards.py`: this counts money across a whole job, guards count
-behaviour within one run.
+`check()` refuses to start a run with no headroom; `limits()` turns what is left into a
+per-run `cost_limit`. One in-flight request may overshoot.
 """
 
 from dataclasses import dataclass
@@ -32,11 +17,7 @@ DEFAULT_CEILING_USD = Decimal("1.00")
 
 
 class RunLimits(Protocol):
-    """The per-run ceilings `limits()` needs, without importing `agents/`.
-
-    `AgentSettings` satisfies this structurally. Stating it as a Protocol keeps the
-    dependency pointing one way: `agents/` imports `llm/`, never the reverse.
-    """
+    """Per-run ceilings `limits()` needs; `AgentSettings` fits, without importing `agents/`."""
 
     @property
     def request_limit(self) -> int: ...
@@ -47,11 +28,7 @@ class RunLimits(Protocol):
 
 
 class BudgetExceeded(MycelError):
-    """A job hit its cost ceiling. Raised instead of making another model call.
-
-    Lives here rather than in `agents/`, because `llm/` sits below `agents/` and may not
-    import upwards. Agents re-raise it unchanged.
-    """
+    """A job hit its cost ceiling. Raised instead of making another model call."""
 
     def __init__(self, job_id: str, spent: Decimal, ceiling: Decimal) -> None:
         super().__init__(
@@ -65,11 +42,7 @@ class BudgetExceeded(MycelError):
 
 @dataclass
 class JobBudget:
-    """What one job is allowed to spend, and what it has spent so far.
-
-    A job is many runs — the orchestrator's, each specialist's. `UsageLimits` dies at the
-    end of each run, so accumulating across them is Mycel's own job.
-    """
+    """What one job may spend and has spent, across all of its runs."""
 
     job_id: str
     ceiling_usd: Decimal = DEFAULT_CEILING_USD
@@ -87,13 +60,9 @@ class JobBudget:
             raise BudgetExceeded(self.job_id, self.spent_usd, self.ceiling_usd)
 
     def limits(self, cfg: RunLimits, spent: "RunUsage | None" = None) -> "UsageLimits":
-        """Per-run ceilings: the agent's own limits, capped by the job's remaining money.
+        """The agent's limits, capped by the job's remaining money.
 
-        `spent` is for a delegated run, which continues the caller's counters rather than
-        starting its own — see `runner.delegate`. Its limits are added to what those
-        counters already hold, so `tool_calls_limit: 30` means thirty calls in *this* run
-        whichever run spent what came before. Left out, the counters start at zero and the
-        agent's own numbers are the ceiling as written.
+        `spent` is a delegated run's inherited counters; limits are added on top of them.
         """
         from pydantic_ai.usage import UsageLimits
 
@@ -108,34 +77,16 @@ class JobBudget:
         )
 
     def record(self, usage: "RunUsage", fallback_cost: Decimal | None = None) -> None:
-        """Charge one completed top-level run.
-
-        Called from `runner.run` and nowhere else. Sub-agent tokens are already merged into
-        the parent's `RunUsage` by `usage=ctx.usage` at the delegation site, so charging
-        per-run would count every delegated token twice.
-
-        Raises if this run took the job over — the run already happened and is paid for,
-        but the next one must not start.
-        """
+        """Charge one top-level run (sub-agent usage is already merged in); raise if over."""
         self.tokens += usage.total_tokens
         self.requests += usage.requests
-        # `cost` is None when pydantic-ai cannot price the model, which is every model behind
-        # the gateway; the caller's price table fills in. Neither known: tokens only.
+        # pydantic-ai cannot price gateway models; the caller's price table fills in.
         cost = usage.cost if usage.cost is not None else fallback_cost
         if cost is not None:
             self.spent_usd += Decimal(cost)
 
         if self.spent_usd >= self.ceiling_usd:
             raise BudgetExceeded(self.job_id, self.spent_usd, self.ceiling_usd)
-
-
-# There is no `BudgetStore` abstraction here. There was one — a `Protocol` with `get`/`put`
-# and an in-memory implementation — and it was never wired into anything, because by the
-# time a job really did outlive a process the answer it needed was async, keyed by
-# `job_id`, and had to merge rather than overwrite. See `infra/redis/budgets.py`, which
-# seeds a `JobBudget` at the start of an attempt and writes the larger total back at the
-# end. An interface with one implementation and no second caller is a guess about the
-# future; this file keeps the arithmetic and lets the store live next to Redis.
 
 
 def price_usd(

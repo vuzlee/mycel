@@ -1,15 +1,4 @@
-"""Registering, signing in, and what a cookie is worth afterwards.
-
-Against a real Postgres, for the same reason `test_postgres.py` is: the uniqueness of an
-email address is a constraint, not a Python check, and a fake session would not have one.
-Without `DATABASE_URL` these skip.
-
-The questions here are the ones a login gets wrong quietly:
-
-  - does a second registration on the same address actually fail, under a race
-  - does a wrong password and an unknown address look the same from outside
-  - does a session that is one second past its expiry read as gone
-"""
+"""Registering, signing in, and what a cookie is worth afterwards."""
 
 import asyncio
 from collections.abc import Iterator
@@ -41,17 +30,9 @@ PASSWORD = "correct horse battery"
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
-    """The app against the test database, each request opening its own session.
-
-    Not sharing the async `session` fixture: that one is driven by anyio and `TestClient`
-    runs its own loop in a portal, so the two cannot hold the same connection. This makes
-    the HTTP tests the honest version anyway — a cookie has to survive a *committed*
-    session written by one request and read by the next.
-    """
+    """The app against the test database, each request opening its own session."""
     asyncio.run(_build_schema())
-    # `TestClient` runs its own event loop, and the cached engine may hold connections
-    # opened on an anyio loop that has since closed — every query on one then fails as an
-    # internal error that looks nothing like its cause.
+    # `TestClient` runs its own loop; cached engine connections from a closed loop would fail.
     get_engine.cache_clear()
     app = create_app(Settings(otel_enabled=False))
     try:
@@ -82,8 +63,7 @@ async def _drop_schema() -> None:
 @needs_postgres
 class TestRegistering:
     async def test_an_address_can_only_be_taken_once(self, session: AsyncSession) -> None:
-        """The index is what enforces this, not a prior SELECT — two racing registrations
-        both pass a check and only one passes the constraint."""
+        """The index is what enforces this, not a prior SELECT."""
         await auth.register(session, "a@example.com", PASSWORD)
         await session.commit()
 
@@ -151,8 +131,7 @@ class TestSessions:
         assert (await auth.session_user(session, token)) == user
 
     async def test_an_expired_session_reads_as_gone(self, session: AsyncSession) -> None:
-        """Expiry is enforced on read, not by the database — a session one second past its
-        expiry must be dead even though no sweeper has run."""
+        """Expiry is enforced on read, not by the database."""
         user = await auth.register(session, "g@example.com", PASSWORD)
         past = datetime.now(UTC) - timedelta(seconds=1)
         await IdentityRepository(session).create_session("expired-token", user.id, past)
@@ -184,8 +163,7 @@ class TestOverHttp:
     """The round trip a browser actually makes."""
 
     def test_registering_does_not_sign_you_in(self, client: TestClient) -> None:
-        """Registering and signing in are separate decisions. The account exists; the
-        browser holds nothing, and the next screen is the login form."""
+        """Registering and signing in are separate decisions."""
         created = client.post(
             "/auth/register", json={"email": "j@example.com", "password": PASSWORD}
         )
@@ -196,8 +174,7 @@ class TestOverHttp:
         assert client.get("/auth/me").status_code == 401
 
     def test_registering_twice_says_the_address_is_taken(self, client: TestClient) -> None:
-        """The second attempt is the common one — someone who already has an account and
-        picked the wrong form. It has to say so, not fail as a 500."""
+        """The second attempt is the common one."""
         client.post("/auth/register", json={"email": "taken@example.com", "password": PASSWORD})
 
         again = client.post(
@@ -290,8 +267,7 @@ class TestChangingPassword:
     async def test_other_sessions_end_and_the_named_one_survives(
         self, session: AsyncSession
     ) -> None:
-        """The point of changing a password is that someone else may know the old one — a
-        session already open does not care what the password is now."""
+        """The point of changing a password is that someone else may know the old one."""
         user = await auth.register(session, "pw4@example.com", PASSWORD)
         mine = await auth.open_session(session, user.id)
         theirs = await auth.open_session(session, user.id)
@@ -425,8 +401,7 @@ class TestMembership:
 
 @needs_postgres
 class TestForgottenPasswords:
-    """A one-shot token, mailed to the address on the account. The token is never stored —
-    only a hash of it, because a link is a password for as long as it lives."""
+    """A one-shot token, mailed to the address on the account."""
 
     @pytest.fixture
     def outbox(self, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
@@ -507,8 +482,7 @@ class TestForgottenPasswords:
     async def test_every_session_ends_including_the_one_asking(
         self, session: AsyncSession, outbox: list[tuple[str, str, str]]
     ) -> None:
-        """A person resetting does not know which browsers are still open, and the reason
-        to reset is that one of them may not be theirs."""
+        """A person resetting does not know which browsers are still open."""
         user = await auth.register(session, "sessions@example.com", PASSWORD)
         await auth.open_session(session, user.id)
         await auth.open_session(session, user.id)
@@ -521,12 +495,7 @@ class TestForgottenPasswords:
 
 @needs_postgres
 class TestTheGoogleRoutesOverHttp:
-    """Four routes, and what matters about them is where they send a browser.
-
-    The two `GET`s are address-bar traffic rather than calls from the page — consent happens
-    on Google's own screen — so the thing to pin is that neither ever answers with an error
-    body a person would be left staring at.
-    """
+    """Four routes, and what matters about them is where they send a browser."""
 
     @staticmethod
     def _sign_in(client: TestClient, email: str = "cal@example.com") -> None:
@@ -537,8 +506,7 @@ class TestTheGoogleRoutesOverHttp:
     def test_an_unconfigured_deployment_says_so_rather_than_offering_a_button(
         self, client: TestClient
     ) -> None:
-        """`configured` is about the machine, not the person: with no OAuth client there is
-        nothing to connect, and the panel has to say that instead of linking to an error."""
+        """`configured` is about the machine, not the person."""
         self._sign_in(client)
 
         body = client.get("/auth/google").json()
@@ -551,8 +519,7 @@ class TestTheGoogleRoutesOverHttp:
         assert client.get("/auth/google/start", follow_redirects=False).status_code == 503
 
     def test_a_cancelled_consent_comes_back_to_the_app(self, client: TestClient) -> None:
-        """Somebody pressed Cancel on Google's screen. That is an answer, not an error page —
-        this url is in an address bar, so the outcome rides back in the query string."""
+        """Somebody pressed Cancel on Google's screen."""
         response = client.get(
             "/auth/google/callback", params={"error": "access_denied"}, follow_redirects=False
         )
@@ -567,9 +534,7 @@ class TestTheGoogleRoutesOverHttp:
         assert "google_error=cancelled" in response.headers["location"]
 
     def test_the_callback_needs_no_cookie(self, client: TestClient) -> None:
-        """Deliberately not behind `current_user`: the request is a redirect from Google and
-        `state` is what says whose round it is. Requiring a cookie as well would break a
-        consent that finished in a window whose session had since been replaced."""
+        """Deliberately not behind `current_user`."""
         response = client.get(
             "/auth/google/callback",
             params={"code": "c", "state": "never-issued"},

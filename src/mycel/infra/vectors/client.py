@@ -1,17 +1,4 @@
-"""One shared Qdrant client and one shared embedding model, both opened on first use.
-
-This is the only file that imports Qdrant's SDK or fastembed — the same confinement that
-keeps every provider SDK inside `agents/core/model_builder.py`. Swapping either leaves the
-rest of the system unaware.
-
-**Not at import.** Importing this package must not require Qdrant to be up or a 130 MiB
-model to be on disk, or every test and every `--help` needs both. `infra/redis/client.py`
-makes the same choice for the same reason.
-
-**Loading the model is slow once, then free.** fastembed reads ONNX weights off disk and
-starts a runtime session; doing that per call would cost seconds on every search. One
-instance per process, held for the life of it.
-"""
+"""Shared Qdrant client and fastembed models, opened on first use; the only SDK import site."""
 
 from collections.abc import Sequence
 from functools import lru_cache
@@ -31,16 +18,11 @@ class VectorsUnavailable(RuntimeError):
 
 
 def configured(settings: Settings | None = None) -> bool:
-    """Whether this deployment has somewhere to search.
-
-    Checked before a tool is offered rather than inside it: a tool the model can see is a
-    tool it will call, and a tool that fails every time costs a model turn to learn that.
-    """
+    """Whether this deployment has Qdrant, checked before a search tool is offered."""
     return bool((settings or get_settings()).qdrant_url.strip())
 
 
 def client() -> AsyncQdrantClient:
-    """The shared client. Opened on first use, never at import."""
     global _client
     if _client is None:
         url = get_settings().qdrant_url.strip()
@@ -52,7 +34,7 @@ def client() -> AsyncQdrantClient:
 
 
 async def close() -> None:
-    """Let a process exit without leaving a connection open. Safe to call twice."""
+    """Close the client. Safe to call twice."""
     global _client
     if _client is not None:
         await _client.close()
@@ -69,11 +51,7 @@ def _model(name: str):  # type: ignore[no-untyped-def]  # fastembed ships no stu
 
 
 def embed(texts: Sequence[str], model: str | None = None) -> list[list[float]]:
-    """Text to vectors, in the order given.
-
-    Synchronous and CPU-bound — an async caller wraps it in `asyncio.to_thread`.
-    `model` defaults to the gold-search model.
-    """
+    """Text to vectors, in order. CPU-bound; async callers use `asyncio.to_thread`."""
     if not texts:
         return []
     name = model or get_settings().embedding_model

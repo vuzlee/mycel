@@ -1,23 +1,4 @@
-"""Sign up, sign in, sign out, and ask who you are.
-
-    POST /auth/register   create an account, without signing in with it
-    POST /auth/login      exchange email and password for a session cookie
-    POST /auth/logout     delete the session, whichever one the cookie names
-    POST /auth/password   change the password, ending every other session
-    POST /auth/forgot     ask for a reset link, whether or not the address is known
-    POST /auth/reset      spend a reset link and set a new password
-    GET  /auth/me         who the cookie belongs to, or 401
-
-Connected Google and Jira accounts live in `connections.py`, under the same prefix.
-
-**The token goes in a cookie, not in the body.** A token a page can read is a token a
-cross-site script can steal, so it is set `HttpOnly` and the browser is the only thing
-that ever handles it. `SameSite=Lax` keeps it off cross-site POSTs, which is the CSRF
-defence this needs while every mutating call comes from the app's own pages.
-
-`secure` follows the environment: a cookie marked secure is never sent over plain HTTP,
-which would make local development fail in a way that looks like a login bug.
-"""
+"""Sign up, sign in, sign out, and ask who you are."""
 
 from typing import Annotated
 
@@ -39,8 +20,7 @@ log = get_logger(__name__)
 class Credentials(BaseModel):
     """An email and a password. The same shape signs up and signs in."""
 
-    #: Not `EmailStr`: that pulls in `email-validator` to enforce a spec nobody logs in
-    #: by. The address is an identifier here, and `services/auth.py` lowercases it.
+    #: Not `EmailStr`: that pulls in `email-validator` to enforce a spec nobody logs in by.
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
 
@@ -53,7 +33,7 @@ class Registration(Credentials):
 
 
 class PasswordChange(BaseModel):
-    """The old password and the new one. Both, always — see the route."""
+    """The old password and the new one. Both are required."""
 
     current_password: str = Field(min_length=1, max_length=1024)
     new_password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
@@ -84,12 +64,7 @@ async def register(
     body: Registration,
     session: Db,
 ) -> UserResponse:
-    """Create an account. No session: the new account has to be signed into.
-
-    Deliberately not signing in here. Registering and signing in are separate decisions,
-    and a form that silently does both leaves someone unsure which password went in —
-    the first thing they do with a new account should be prove it works.
-    """
+    """Create an account. No session: the new account has to be signed into."""
     user = await auth.register(session, body.email, body.password, body.invite_code)
     log.info("user registered", extra={"user_id": user.id})
     return UserResponse(id=user.id, email=user.email)
@@ -113,11 +88,7 @@ async def logout(
     session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> None:
-    """End the session. Deliberately not behind `current_user`.
-
-    Logging out with a cookie that has already expired must still clear the cookie — a
-    401 here would leave a browser holding a token it can never get rid of.
-    """
+    """End the session. Deliberately not behind `current_user`."""
     if mycel_session:
         await auth.close_session(session, mycel_session)
     response.delete_cookie(SESSION_COOKIE, path="/")
@@ -130,12 +101,7 @@ async def change_password(
     session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> None:
-    """Change the password. The current one is required even though the cookie is valid.
-
-    Every other session of this user ends; this one survives, so the person doing it is not
-    logged out of the tab they are typing in. A forgotten password is `/auth/forgot` and
-    `/auth/reset` below.
-    """
+    """Change the password. The current one is required even though the cookie is valid."""
     ended = await auth.change_password(
         session, user.id, body.current_password, body.new_password, keep_token=mycel_session
     )
@@ -147,13 +113,7 @@ async def forgot_password(
     body: ForgotRequest,
     session: Db,
 ) -> None:
-    """Ask for a reset link. 202 whether or not the address has an account.
-
-    Answering differently would make this endpoint a list of who is registered, which is
-    the leak `authenticate` already refuses to be. A deployment with no SMTP configured
-    refuses outright instead: a link that is never sent is worse than a feature that says
-    it is off.
-    """
+    """Ask for a reset link. 202 whether or not the address has an account."""
     if not smtp.configured():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
     await auth.begin_password_reset(session, body.email)

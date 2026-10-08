@@ -1,8 +1,4 @@
-"""The arithmetic the model is not allowed to do in its head.
-
-These are the numbers that end up in a report, so the edge cases matter more than the
-happy path: a wrong number reads exactly like a right one.
-"""
+"""The arithmetic the model is not allowed to do in its head."""
 
 import math
 

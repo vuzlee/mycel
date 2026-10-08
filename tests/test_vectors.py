@@ -1,24 +1,4 @@
-"""Search over gold: the id, the skip, the filter, and the tool around them.
-
-Four claims, and none of them is about whether the embeddings are any good.
-
-**The id must be stable.** It is what makes a second pass overwrite rather than duplicate,
-which is what makes "run it again" a safe answer to any doubt about the index.
-
-**Only what moved may be embedded.** The scheduler ticks every fifteen minutes; a pass that
-re-embeds everything is ninety-six full passes a day, and the whole of the saving rests on
-one `updated_at` comparison that a refactor could quietly invert.
-
-**The permission filter must reach Qdrant.** Filtering after the search leaves holes — ten
-asked for, the forbidden ones dropped, two returned — so the test asserts on what the
-client was *handed*, not on what came back.
-
-**An empty result has two meanings.** "You may see nothing" and "nothing is like this" read
-identically to a model unless the text says which, and the first reported as the second is
-the system claiming work does not exist when the asker simply cannot see it.
-
-No Qdrant here. `test_vectors_live.py` covers what only a real server can decide.
-"""
+"""Search over gold: the id, the skip, the filter, and the tool around them."""
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -65,10 +45,7 @@ def _item(key: str, updated: datetime, title: str = "Login times out on mobile")
 
 
 class FakeQdrant:
-    """Enough of the async client to answer, and to record what it was asked.
-
-    `points` is what a previous pass is pretending to have left behind, keyed by id.
-    """
+    """Enough of the async client to answer, and to record what it was asked."""
 
     def __init__(self, points: dict[str, dict[str, Any]] | None = None) -> None:
         self.points = points or {}
@@ -196,8 +173,7 @@ class TestWhatGetsEmbedded:
 
 class TestTheFilterReachesQdrant:
     async def test_the_projects_are_a_filter_not_a_post_step(self, fake: FakeQdrant) -> None:
-        """Asserted on what the client was handed: dropping rows after the search is what
-        turns ten results into two."""
+        """Asserted on what the client was handed."""
         fake.points["x"] = {"issue_key": "MYC-1", "title": "t", "project": "MYC"}
 
         await search.search("flaky login", projects=["MYC", "OPS"], limit=5)
@@ -209,8 +185,7 @@ class TestTheFilterReachesQdrant:
         )
 
     async def test_no_projects_searches_nothing(self, fake: FakeQdrant) -> None:
-        """Written as an early return, not as an empty filter: an empty MatchAny matching
-        nothing is a detail of someone else's query planner."""
+        """Written as an early return, not as an empty filter."""
         fake.points["x"] = {"issue_key": "MYC-1", "title": "t", "project": "MYC"}
 
         assert await search.search("anything", projects=[], limit=5) == []
@@ -226,8 +201,7 @@ class TestTheFilterReachesQdrant:
     async def test_an_unindexed_collection_is_empty_not_an_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A deployment that has never run the indexer has no answers, and saying so beats
-        a stack trace halfway through a run."""
+        """A deployment that has never run the indexer has no answers."""
         empty = FakeQdrant()
         monkeypatch.setattr(search, "client", lambda: empty)
         monkeypatch.setattr(search, "embed", lambda texts: [[0.1] * 384])
@@ -237,8 +211,7 @@ class TestTheFilterReachesQdrant:
 
 class TestTheCollectionName:
     def test_the_name_carries_the_model(self) -> None:
-        """The dimension belongs to the model, so switching model must not write into the
-        collection built for the other one."""
+        """The dimension belongs to the model."""
         small = collections.work_items("BAAI/bge-small-en-v1.5")
         base = collections.work_items("BAAI/bge-base-en-v1.5")
         assert small.name != base.name
@@ -275,8 +248,7 @@ class TestTheTool:
         return build_toolset().tools["rag_search"].function
 
     async def test_no_principal_searches_nothing(self, tool: Any, fake: FakeQdrant) -> None:
-        """The same fail-closed direction run_sql takes: a path that forgets to pass a
-        principal reads nothing rather than all of gold."""
+        """The same fail-closed direction run_sql takes."""
         out = await _call(tool, query="flaky login")
         assert "No projects are readable" in out
         assert fake.filters == []
@@ -290,8 +262,9 @@ class TestTheTool:
             await _call(tool, query="x", limit=0)
 
     async def test_the_two_empty_cases_read_differently(self) -> None:
-        """ "You may see nothing" reported as "nothing exists" is the system claiming work
-        is absent when the asker simply cannot see it."""
+        """ "You may see nothing" reported as "nothing exists" is the system claiming work is absent
+        when the asker simply cannot see it.
+        """
         from mycel.agents.tools.rag_search import _render
 
         forbidden = _render([], query="q", asked=5, capped=5, scoped=False)

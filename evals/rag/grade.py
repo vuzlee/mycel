@@ -1,14 +1,4 @@
-"""Does a Knowledge answer say the right thing, judged against a reference answer?
-
-    uv run python -m evals.rag.grade [--limit N] [--fresh]
-
-`answers.py` checks that an answer cites the right passage; it cannot tell a cited answer
-that misreads the passage from one that reads it right. This asks a model to compare each
-saved answer with the reference in `questions.yaml`; the grader runs on the
-orchestrator's model, the same one that answered. Answers are re-asked only with
-`--fresh`; otherwise the saved `answers.jsonl` is graded as it stands. Each verdict is saved
-as it lands, so a stopped run resumes without repeating a call.
-"""
+"""Does a Knowledge answer say the right thing, judged against a reference answer?"""
 
 import argparse
 import asyncio

@@ -1,9 +1,4 @@
-"""Which projects have work in them, for the picker.
-
-    GET  /projects       project keys this person may read
-
-Behind `current_user`: it names the projects this deployment reads, which is not public.
-"""
+"""Which projects have work in them, for the picker."""
 
 from typing import Annotated
 
@@ -18,9 +13,5 @@ router = APIRouter(tags=["projects"])
 
 @router.get("/projects", response_model=list[str])
 async def read_projects(user: Annotated[Principal, Depends(current_user)]) -> list[str]:
-    """Projects with work in them, filtered to the ones this person may read.
-
-    A list of keys and nothing else. A project has no attributes of its own in gold — its
-    counts belong to a window, and asking for a window is what `/dashboard` is for.
-    """
+    """Projects with work in them, filtered to the ones this person may read."""
     return await known_projects(user)

@@ -1,5 +1,4 @@
-"""The JSON formatter: valid line out every time, trace context when there is a span,
-and never an exception that takes the caller down with it."""
+"""The JSON formatter: valid line out every time."""
 
 import json
 import logging

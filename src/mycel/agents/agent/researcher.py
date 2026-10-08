@@ -1,35 +1,4 @@
-"""Agent that finds out what is currently true about a topic, and cites where it read it.
-
-The counterpart to the analyst: that one reasons over figures it is given, this one goes
-and gets what the prompt does not contain. Both hand back statements with sources and
-neither writes prose, which is what lets the orchestrator treat them interchangeably.
-
-**Sources are enforced, not requested.** `validate_output` rejects any claim whose `sources`
-list is empty and re-prompts naming it. Without that the agent degrades into answering from
-the model's own memory — fluent, undated, and indistinguishable from a search result until
-someone checks. The tool cannot prevent this on its own: it can only guarantee that what it
-*returns* carries urls, not that the model used them.
-
-**The mailbox and the calendar are outside this system too.** `tools/mail.py` and
-`tools/calendar.py` joined the toolset for the same reason `web_search` is here: all three
-fetch what the prompt does not contain, and all three fail the same way when the model
-answers from memory instead. The enforcement above needs no change to cover them — a Gmail
-message has a permalink and a calendar event has its `htmlLink`, so a claim about either has
-a source in exactly the sense `validate_output` already means.
-
-**And the calendar is the first thing this agent can *change*.** Everything else here reads.
-The write is split into a draft and a confirmation inside `tools/calendar.py`, so what makes
-it safe is that tool rather than anything in this file — but it is why the researcher's
-prompt now has a section about reading a time back before booking it.
-
-Searching is `tools/web_search.py`, reading mail is `tools/mail.py`, the calendar is
-`tools/calendar.py`, finding work by subject is `tools/rag_search.py`; this file only says
-which toolsets the researcher gets.
-
-`rag_search` is the one that is conditional: it appears only when `QDRANT_URL` is set,
-because a tool with nothing behind it is worse than an absent one — the model spends a turn
-calling it before it learns that.
-"""
+"""Agent that reads the web, mail, calendar and documents, and cites every claim."""
 
 from pydantic import BaseModel, Field
 from pydantic_ai import ModelRetry, RunContext
@@ -74,8 +43,6 @@ class Research(BaseModel):
 
 
 class Researcher(BaseAgent[Research]):
-    """Searches the web, reports what it says, cites every claim."""
-
     name = "researcher"
     instructions = load("researcher")
     output_type = Research
@@ -87,16 +54,14 @@ class Researcher(BaseAgent[Research]):
             mail.build_toolset(),
             calendar.build_toolset(),
         ]
-        # Offered only where there is something to search. A tool the model can see is a
-        # tool it will call, and one that fails every time costs a turn to learn that —
-        # on a free tier of twenty requests a day, that turn is worth not spending.
+        # A visible tool gets called; one with nothing behind it wastes a turn.
         if vectors_configured():
             sets.append(rag_search.build_toolset())
         return sets
 
     @classmethod
     def validate_output(cls, ctx: RunContext[MycelDeps], output: Research) -> Research:
-        """Reject uncited claims. This is the enforcement of the module docstring."""
+        """Reject claims with no source."""
         uncited = [c.statement for c in output.claims if not [s for s in c.sources if s.strip()]]
         if uncited:
             raise ModelRetry(

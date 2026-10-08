@@ -17,8 +17,7 @@ class TestBuild:
         assert isinstance(build("analyst"), Agent)
 
     def test_every_registered_name_actually_builds(self) -> None:
-        """A registry entry that raises on build is worse than no entry: the failure
-        surfaces at run time, inside a job, instead of here."""
+        """A registry entry that raises on build is worse than no entry."""
         for name in AGENTS:
             assert isinstance(build(name), Agent), name
 
@@ -49,16 +48,14 @@ class TestBuildDeps:
         assert build_deps("j", Decimal("0.10")).budget.ceiling_usd == Decimal("0.10")
 
     def test_one_budget_object_is_shared_by_the_job(self) -> None:
-        """Building deps per run would give each run its own ceiling, which is not a
-        budget. This test pins the contract that callers build deps once."""
+        """Building deps per run would give each run its own ceiling, which is not a budget."""
         deps = build_deps("job-1", "1.00")
         assert deps.budget is deps.budget
         assert build_deps("job-1", "1.00").budget is not deps.budget
 
 
 def test_analyst_output_type_is_analysis() -> None:
-    """The registry's job is to hand back something the orchestrator can use, and the
-    analyst's contract is a structured Analysis, not free text."""
+    """The registry's job is to hand back something the orchestrator can use."""
     assert build("analyst").output_type is Analysis
 
 

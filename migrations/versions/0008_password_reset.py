@@ -2,15 +2,6 @@
 
 Revision ID: 0008
 Revises: 0007
-
-Changing a password needed the old one, which is no help to the one person who needs it
-most. This is the other half: a one-shot token, mailed to the address on the account.
-
-The column holds a SHA-256 of the token rather than the token. A reset link is a password
-for as long as it lives, and a database someone can read must not be a list of ways in.
-
-`used_at` rather than deleting the row on use: a second click on the same link is a
-mistake to answer clearly, and a missing row cannot be told from one that never existed.
 """
 
 from collections.abc import Sequence

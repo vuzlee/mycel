@@ -1,12 +1,4 @@
-"""Does Knowledge document search find the right passage at all?
-
-    uv run python -m evals.rag.fetch_corpus
-    uv run python -m evals.rag.retrieval [--keep]
-
-Ingests the corpus through the same parse / chunk / embed code as the worker into one
-eval owner id, asks every question for its top 20, and reports Recall@5/10/20, MRR,
-latency and a suggested no-answer threshold. Makes no model call.
-"""
+"""Does Knowledge document search find the right passage at all?"""
 
 import argparse
 import asyncio

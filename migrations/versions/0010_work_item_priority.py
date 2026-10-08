@@ -2,22 +2,6 @@
 
 Revision ID: 0010
 Revises: 0009
-
-Gold was built to answer "how far are we" and "who is over their estimate". Neither needs
-a priority, so `etl/normalise.py` never asked Jira for one. The dashboard asks a third
-question — "of the work that is not done, what matters most" — and that one cannot be
-answered from a status category, because a category says where an item is and never how
-much it is worth getting there.
-
-A name, not a rank. One site's "Blocker" is another's "Highest", and an integer here would
-be a mapping only this file knows and only the UI could undo. The order priorities are
-read in is a display decision, and `PRIORITIES` in the gold repository is where it lives.
-
-Both layers, because silver is what a replay rebuilds gold from: adding it to gold alone
-would make every promotion write a null over a value the source had.
-
-Nullable, and null is honest twice over — for every row written before this revision, and
-for a site that hides the priority field, which is an ordinary configuration.
 """
 
 from collections.abc import Sequence

@@ -1,10 +1,4 @@
-"""Building MCP toolsets from `config/mcp/servers.yaml`.
-
-Nothing here connects to anything: `MCPToolset` opens its transport when an agent runs, so
-construction is exactly the part that can be tested offline — and it is the part that
-carries the decisions worth protecting. Which servers get loaded is prompt input, and a
-token read from the wrong place is a secret in the wrong file.
-"""
+"""Building MCP toolsets from `config/mcp/servers.yaml`."""
 
 from pathlib import Path
 from typing import Any
@@ -46,8 +40,7 @@ class TestWhichServersLoad:
         assert [t.id for t in toolsets] == ["b"]
 
     def test_asking_for_an_undeclared_server_raises(self, tmp_path: Path) -> None:
-        """Returning fewer toolsets than asked for is a capability silently missing —
-        which is the failure this module is arranged against."""
+        """Returning fewer toolsets than asked for is a capability silently missing."""
         path = _config(tmp_path, "servers:\n  a: {url: https://a.example/mcp}\n")
         with pytest.raises(ConfigError, match="typo"):
             clients.build_toolsets(["typo"], config_path=path)
@@ -81,8 +74,9 @@ class TestSecrets:
     def test_an_unset_token_fails_at_build_rather_than_as_a_401(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The file asked for auth, so continuing without it turns a forgotten variable
-        into a confusing 401 several layers from the deployment that forgot it."""
+        """The file asked for auth, so continuing without it turns a forgotten variable into a
+        confusing 401 several layers from the deployment that forgot it.
+        """
         monkeypatch.delenv("ACME_MCP_TOKEN", raising=False)
         path = _config(
             tmp_path,
@@ -109,8 +103,7 @@ class TestBadConfig:
             clients.build_toolsets(config_path=path)
 
     def test_a_name_yaml_turned_into_a_boolean_is_rejected(self, tmp_path: Path) -> None:
-        """A server named `on` arrives as the key `True` and matches nothing an agent asks
-        for. Saying so is cheaper than the hunt."""
+        """A server named `on` arrives as the key `True` and matches nothing an agent asks for."""
         path = _config(tmp_path, "servers:\n  on: {url: https://a.example/mcp}\n")
         with pytest.raises(ConfigError, match="Quote it"):
             clients.build_toolsets(config_path=path)
@@ -123,6 +116,5 @@ class TestBadConfig:
 
 class TestTheCommittedFile:
     def test_the_repo_s_own_config_builds(self) -> None:
-        """`config/mcp/servers.yaml` declares nothing yet, and that must stay loadable rather than
-        becoming a file nobody parses until the first server is added."""
+        """`config/mcp/servers.yaml` declares nothing yet."""
         assert clients.build_toolsets() == []

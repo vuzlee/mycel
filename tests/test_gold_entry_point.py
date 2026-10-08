@@ -1,10 +1,4 @@
-"""Nothing reads gold for a person except through `services/permission.py`.
-
-The database limits only `run_sql`; every other read is limited by its caller remembering a
-check, and the next endpoint to forget would read every project. So the rule is checked on
-the source: a module that serves a person and touches gold must go through `require` or
-`readable` (or pass `readable_projects` down, as `run_sql` and `rag_search` do).
-"""
+"""Nothing reads gold for a person except through `services/permission.py`."""
 
 from pathlib import Path
 
@@ -12,8 +6,7 @@ import pytest
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "mycel"
 
-#: Reads gold on behalf of nobody: the sync, the transform, the indexer, and the services
-#: whose only callers are the gated ones below.
+#: Reads gold on behalf of nobody.
 NOT_PERSON_FACING = {
     "domains/sync.py",
     "services/transform.py",

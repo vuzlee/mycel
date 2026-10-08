@@ -1,4 +1,4 @@
-"""Document status values. The tables themselves are `Document` and `Chunk` in `models.py`."""
+"""Document status values."""
 
 UPLOADED = "uploaded"
 PARSING = "parsing"

@@ -1,7 +1,4 @@
-"""File to `DoclingDocument`. OCR off, pictures skipped, table structure on.
-
-docling is imported inside the function: only the ingest worker installs it.
-"""
+"""File to `DoclingDocument`; docling is imported lazily, only the ingest worker has it."""
 
 from functools import lru_cache
 from pathlib import Path
@@ -40,7 +37,6 @@ def _converter() -> Any:
 
 
 def parse(path: Path) -> Any:
-    """The parsed document. Raises `ParseError` for files that cannot be used."""
     max_pages = get_settings().document_max_pages
     try:
         result = _converter().convert(path, max_num_pages=max_pages, raises_on_error=True)

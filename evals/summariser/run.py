@@ -1,12 +1,4 @@
-"""Run the summariser golden set and report what it scored.
-
-    uv run python -m evals.summariser.run                     run every case, print the table
-    uv run python -m evals.summariser.run --compare-baseline  also fail if the score dropped
-    uv run python -m evals.summariser.run --save-baseline     record this run as the baseline
-
-Every case is a real model call through the gateway; an eval that mocks the model
-measures the mock. An empty golden set exits 0 and says so.
-"""
+"""Run the summariser golden set and report what it scored."""
 
 import argparse
 import asyncio
@@ -62,11 +54,7 @@ async def run_case(case: Case) -> Result:
 
 
 async def run_all(cases: list[Case]) -> list[Result]:
-    """Every case, one after another.
-
-    Sequential rather than gathered: a burst that trips a rate limit reports as a quality
-    failure when it is a scheduling one.
-    """
+    """Every case, one after another."""
     return [await run_case(case) for case in cases]
 
 

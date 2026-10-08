@@ -1,8 +1,4 @@
-"""One ingest job, and one delete job. Runs on the ingest worker only.
-
-Order matters. Qdrant is written before Postgres marks the document ready, so a question
-never sees a ready document whose passages cannot be found. Every step can run twice.
-"""
+"""One ingest job, and one delete job. Runs on the ingest worker only."""
 
 import asyncio
 import tempfile

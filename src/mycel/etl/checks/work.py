@@ -1,12 +1,4 @@
-"""What a row must satisfy before it is allowed into gold.
-
-Pure functions over rows already in memory. They run between the transform and the write,
-so a bad row is refused at the boundary rather than found later by someone reading a
-report.
-
-Each check returns a reason, or None when the row is fine. A reason is a sentence, because
-it ends up in a log line that someone has to act on.
-"""
+"""Pure checks a row must pass before it is written to gold."""
 
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -15,9 +7,7 @@ from mycel.core.exceptions import MycelError
 from mycel.etl.normalise import CATEGORIES
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 
-#: How far ahead of now a *timestamp about the past* may claim to be. Clock skew between a
-#: provider and this machine is normal and small; a day is not skew, it is a parsing bug.
-#: Due dates are exempt — being in the future is the entire point of one.
+#: How far a past timestamp may sit ahead of now (clock skew); due dates are exempt.
 FUTURE_TOLERANCE = timedelta(minutes=5)
 
 VALID_CATEGORIES = frozenset(CATEGORIES.values())
@@ -28,7 +18,6 @@ class CheckFailed(MycelError):
 
 
 def check_item(row: WorkItemRow) -> str | None:
-    """Everything one work item must be true about itself."""
     if not row.issue_key.strip():
         return "issue_key is empty"
     if not row.title.strip():
@@ -49,11 +38,7 @@ def check_item(row: WorkItemRow) -> str | None:
 
 
 def check_worklog(row: WorklogRow) -> str | None:
-    """Everything one logged entry must be true about itself.
-
-    A back-dated `started` is allowed and is why this source was chosen; a *future* one is
-    not, because nobody logs effort they have not spent yet.
-    """
+    """A back-dated `started` is allowed; a future one is not."""
     if not row.issue_key.strip():
         return "issue_key is empty"
     if row.time_spent_seconds <= 0:
@@ -66,11 +51,7 @@ def check_worklog(row: WorklogRow) -> str | None:
 
 
 def check_items(rows: Sequence[WorkItemRow]) -> list[str]:
-    """Every reason found, across every row. All of them, not the first.
-
-    One bad row usually means a class of bad rows, and fixing them one exception per run
-    is the slowest possible way to find that out.
-    """
+    """Every reason across every row, not just the first."""
     return [
         f"{row.source}:{row.issue_key} — {reason}"
         for row in rows
@@ -79,7 +60,6 @@ def check_items(rows: Sequence[WorkItemRow]) -> list[str]:
 
 
 def check_worklogs(rows: Sequence[WorklogRow]) -> list[str]:
-    """Every reason found, across every logged entry."""
     return [
         f"{row.source}:{row.issue_key}:{row.worklog_id} — {reason}"
         for row in rows

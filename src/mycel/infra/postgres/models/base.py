@@ -1,7 +1,4 @@
-"""The declarative base and the four schema names.
-
-One schema per layer, so a grant can follow the layer boundary.
-"""
+"""The declarative base and one schema name per layer."""
 
 from sqlalchemy.orm import DeclarativeBase
 
@@ -12,4 +9,4 @@ APP = "app"
 
 
 class Base(DeclarativeBase):
-    """Declarative base. `alembic` autogenerates against this metadata."""
+    """Declarative base; alembic autogenerates against its metadata."""

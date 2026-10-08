@@ -1,8 +1,4 @@
-"""Write the original payload from a provider. Called only by `sources/`.
-
-No transforms, no schema validation — malformed data is written too, because the point of
-bronze is being able to replay it when the transform logic turns out to be wrong.
-"""
+"""Write raw provider payloads, untransformed, so later stages can be replayed."""
 
 from collections.abc import Sequence
 from typing import Any
@@ -15,17 +11,11 @@ from mycel.infra.postgres.models import JiraIssue, JiraWorklog
 
 
 class BronzeRepository:
-    """Writes bronze, on a session someone else owns."""
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def save_issues(self, issues: Sequence[dict[str, Any]]) -> int:
-        """Store issues under Jira's own `id`.
-
-        Overwrite rather than skip: a Jira issue is a *record* and a second
-        fetch is a later, better version of it.
-        """
+        """Store issues under Jira's `id`, overwriting older fetches."""
         rows = [
             {"issue_id": str(i["id"]), "issue_key": i["key"], "payload": i}
             for i in issues
@@ -43,22 +33,14 @@ class BronzeRepository:
         return await self._upsert(JiraWorklog, rows, "worklog_id")
 
     async def issue_payloads(self, keys: Sequence[str] | None = None) -> list[dict[str, Any]]:
-        """Stored issues, so a transform can re-read what arrived.
-
-        `keys` limits the replay to what one sync brought in. Passing nothing rebuilds
-        gold from the whole table, which is the reason bronze keeps the payloads at all.
-        """
+        """Stored issue payloads; `keys` narrows to one sync, none means all."""
         query = select(JiraIssue.payload).order_by(JiraIssue.issue_id)
         if keys is not None:
             query = query.where(JiraIssue.issue_key.in_(keys))
         return [dict(p) for p in (await self._session.scalars(query)).all()]
 
     async def worklog_payloads(self, keys: Sequence[str] | None = None) -> list[dict[str, Any]]:
-        """Stored worklogs, paired with the issue they belong to.
-
-        The issue key is not in Jira's worklog payload — it is only in the URL the worklog
-        was fetched from — so it is carried in its own column and joined back on here.
-        """
+        """Stored worklogs with their issue key, which the payload itself lacks."""
         query = select(JiraWorklog.issue_key, JiraWorklog.payload).order_by(JiraWorklog.worklog_id)
         if keys is not None:
             query = query.where(JiraWorklog.issue_key.in_(keys))

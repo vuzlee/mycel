@@ -1,8 +1,4 @@
-"""A follow-up's Knowledge search runs on a rewritten question; the answer sees the original.
-
-No database and no model: the rewriter and the search are replaced, so what is pinned is
-which text goes where and what happens when the rewrite fails.
-"""
+"""A follow-up's Knowledge search runs on a rewritten question; the answer sees the original."""
 
 from typing import Any
 

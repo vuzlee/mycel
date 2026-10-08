@@ -1,4 +1,4 @@
-"""put / get / delete. Streamed, never read whole into memory."""
+"""Streamed put / download / delete."""
 
 from pathlib import Path
 from typing import BinaryIO
@@ -18,7 +18,6 @@ async def put(bucket: str, key: str, body: BinaryIO, content_type: str) -> None:
 
 
 async def download(bucket: str, key: str, target: Path) -> None:
-    """Stream an object to a local file."""
     async with s3() as client:
         response = await client.get_object(Bucket=bucket, Key=key)
         with target.open("wb") as out:

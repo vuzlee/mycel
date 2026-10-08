@@ -1,18 +1,4 @@
-"""The calendar transport: reading one person's week, and writing one event to it.
-
-What is worth pinning:
-
-**`timeZone` on every `dateTime`.** Drop it and Google falls back to the calendar's default,
-so a UTC host books every meeting seven hours off — silently, in the right format, at the
-wrong time. That is the one bug here a person would only find by missing a meeting, so it is
-asserted in both directions.
-
-**`singleEvents`.** Without it a weekly standup comes back once, as the rule that makes it,
-and "what have I got tomorrow" quietly omits it.
-
-No request leaves the machine: `httpx2.MockTransport` answers for the API, and the token is
-patched because `services/google_oauth.py` owns that half.
-"""
+"""The calendar transport: reading one person's week, and writing one event to it."""
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -25,8 +11,7 @@ from mycel.sources import google_calendar
 
 pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("bangkok", "google_token")]
 
-#: Captured before any test patches the name, so the factory below builds a real client
-#: rather than recursing into its own replacement.
+#: Captured before patching, so the factory builds a real client.
 _REAL_CLIENT = httpx2.AsyncClient
 
 
@@ -100,8 +85,9 @@ class TestReadingAWeek:
         assert events[0].link.startswith("https://calendar.google.com/")
 
     async def test_an_all_day_entry_is_marked_as_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Google's `date` against its `dateTime` is how "Tuesday" differs from "Tuesday at
-        three", and printing midnight for the first would invent a precision."""
+        """Google's `date` against its `dateTime` is how "Tuesday" differs from "Tuesday at three",
+        and printing midnight for the first would invent a precision.
+        """
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [_item(all_day=True)]}))
 
         events = await google_calendar.list_events(1, hours=48)
@@ -128,8 +114,7 @@ class TestReadingAWeek:
 
 class TestWritingOne:
     async def test_the_zone_is_sent_with_both_edges(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The bug this whole module carries `timeZone` around to avoid: without it the event
-        lands at the calendar's default offset, which on a UTC host is seven hours out."""
+        """The bug this whole module carries `timeZone` around to avoid."""
         sink: list[httpx2.Request] = []
         monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, _item(hour=15)))
         starts = datetime.fromisoformat("2026-10-02T15:00:00+07:00")
@@ -159,8 +144,7 @@ class TestWhenGoogleWillNotAnswer:
     async def test_a_refusal_raises_rather_than_returning_nothing(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Unlike the sync this replaced, there is a person waiting: "no events" would be a
-        lie where "the calendar could not be reached" is the answer."""
+        """Unlike the sync this replaced, there is a person waiting."""
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {}, status=500))
 
         with pytest.raises(GoogleError):

@@ -1,12 +1,4 @@
-"""One person's conversations, for the sidebar.
-
-    GET     /conversations             this person's conversations, for the sidebar
-    GET     /conversations/{id}/turns  every run in one conversation, oldest first
-    PUT     /conversations/{id}/pin    pin or unpin one, so it stays at the top
-    DELETE  /conversations/{id}        forget one, and every run under it
-
-Behind `current_user`: every row here is personal.
-"""
+"""One person's conversations, for the sidebar."""
 
 from datetime import datetime
 from typing import Annotated, Any
@@ -23,12 +15,7 @@ router = APIRouter(tags=["conversations"])
 
 
 class ConversationResponse(BaseModel):
-    """One row in the sidebar.
-
-    `job_id` is null for a conversation whose run has not produced anything yet. The page shows
-    that as a queued run rather than hiding the row — a job the worker never picked up is
-    exactly what someone needs to see.
-    """
+    """One row in the sidebar."""
 
     id: int
     kind: str
@@ -40,16 +27,7 @@ class ConversationResponse(BaseModel):
 
 
 class TurnResponse(BaseModel):
-    """One run inside a conversation, as the page replays it.
-
-    `answer` comes back whole rather than summarised: it is markdown the page already
-    knows how to render, and shortening it here would be a second opinion about the same
-    text.
-
-    `steps` is the tool calls that turn made, in the same shape the live stream sends —
-    so the page replays a finished turn with the builder it already has. Null for a turn
-    recorded without steps, and for one that failed.
-    """
+    """One run inside a conversation, as the page replays it."""
 
     job_id: str
     question: str
@@ -66,8 +44,7 @@ async def read_conversations(
     user: Annotated[Principal, Depends(current_user)],
     limit: int = Query(default=HISTORY_LIMIT, ge=1, le=HISTORY_LIMIT),
 ) -> list[ConversationResponse]:
-    """This person's conversations, newest first. The sidebar, and it follows them to any
-    browser — which is the whole reason `localStorage` stopped being where it lived."""
+    """This person's conversations, newest first."""
     summaries = await domain.list_conversations(user.id, limit)
     return [
         ConversationResponse(
@@ -87,11 +64,7 @@ async def read_conversations(
 async def read_turns(
     conversation_id: int, user: Annotated[Principal, Depends(current_user)]
 ) -> list[TurnResponse]:
-    """Every run in one conversation, oldest first.
-
-    An empty list for a conversation that is not theirs, same as one with no runs yet. The
-    distinction is the one thing someone walking ids would want, and no page needs it.
-    """
+    """Every run in one conversation, oldest first."""
     return [
         TurnResponse(
             job_id=turn.job_id,
@@ -125,11 +98,7 @@ async def pin_conversation(
 async def delete_conversation(
     conversation_id: int, user: Annotated[Principal, Depends(current_user)]
 ) -> Response:
-    """Forget a conversation. The turns under it go too, by cascade.
-
-    404 covers both "no such conversation" and "not yours": the difference is the one thing
-    someone probing ids would want to learn.
-    """
+    """Forget a conversation. The turns under it go too, by cascade."""
     if not await domain.forget_conversation(user.id, conversation_id):
         raise HTTPException(status_code=404, detail="no such conversation")
     return Response(status_code=204)
