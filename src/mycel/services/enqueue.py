@@ -20,6 +20,7 @@ async def enqueue_chat(
     user_id: int | None = None,
     chips: list[str] | None = None,
     previous: str = "",
+    context: str = "",
 ) -> str:
     """Queue a question and return the job id to poll with.
 
@@ -45,6 +46,7 @@ async def enqueue_chat(
             "user_id": user_id,
             "chips": sorted(chips) if chips is not None else None,
             "previous": previous,
+            "context": context,
         },
     )
     return await publish(job)

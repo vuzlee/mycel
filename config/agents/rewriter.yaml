@@ -1,0 +1,12 @@
+# Anything left out here falls back to `agents.defaults` in base.yaml.
+
+# One short sentence out, so the cheapest model first.
+model_spec: cloud:gemini-3.5-flash-lite
+
+# No tools. One call, one question.
+tool_calls_limit: 0
+request_limit: 2
+timeout_s: 15.0
+
+fallback_specs:
+  - cloud:gemini-3.6-flash

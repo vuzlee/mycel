@@ -1,4 +1,5 @@
-"""The Knowledge chip: find the user's passages before the model runs. No model here.
+"""The Knowledge chip: find the user's passages before the model runs. No model here;
+the follow-up rewrite happens in `chat` before `retrieve` is called.
 
 Retrieval is code: Qdrant top k, nothing below `document_min_score`. What it finds goes
 into the orchestrator's prompt inside `<documents>`, labelled `c1`..`cN`, as data.
@@ -31,9 +32,8 @@ def search_text(question: str, previous: str) -> str:
     return f"{previous}\n{question}" if previous else question
 
 
-async def retrieve(user_id: int, question: str, previous: str = "") -> Retrieved:
+async def retrieve(user_id: int, query: str) -> Retrieved:
     settings = get_settings()
-    query = search_text(question, previous.strip()[: settings.ask_max_chars])
     async with session_scope() as session:
         repo = DocumentRepository(session)
         if await repo.busy(user_id):

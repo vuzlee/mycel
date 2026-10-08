@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 from mycel.agents.agent.analyst import Analyst
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.agent.researcher import Researcher
+from mycel.agents.agent.rewriter import Rewriter
 from mycel.agents.agent.summariser import Summariser
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.chips import Chip
@@ -47,6 +48,7 @@ _DECLARED: tuple[type[BaseAgent[Any]], ...] = (
     Analyst,
     Orchestrator,
     Researcher,
+    Rewriter,
     Summariser,
 )
 

@@ -17,12 +17,14 @@ is still there next week. `infra/redis/results.py` calls itself a holding area r
 a record, and this is where the record is kept.
 """
 
+from dataclasses import replace
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.agent.orchestrator import Orchestrator
+from mycel.agents.agent.rewriter import Rewriter
 from mycel.agents.core import runner
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.chips import parse as parse_chips
@@ -32,7 +34,7 @@ from mycel.agents.registry import build_deps
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains import knowledge
-from mycel.events.channel import EventChannel, RecordingChannel
+from mycel.events.channel import EventChannel, NullChannel, RecordingChannel
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
     ConversationRow,
@@ -61,6 +63,10 @@ HISTORY_TURNS = 6
 #: And a ceiling in characters, because one long answer outweighs six short turns. Counting
 #: turns alone does not bound anything.
 HISTORY_CHARS = 6000
+
+#: What the rewriter reads for a follow-up's search: "it" points at something recent.
+REWRITE_QUESTIONS = 3
+REWRITE_ANSWER_CHARS = 500
 
 
 class ConversationNotFound(Exception):
@@ -99,11 +105,18 @@ async def request_chat(
             conversation = await _conversation_of(repo, user_id, conversation_id)
             history = _recall(await repo.turns_for_conversation(conversation.id))
 
-        previous = ""
+        previous = context = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
-            previous = _last_question(await repo.turns_for_conversation(conversation.id))
+            turns = await repo.turns_for_conversation(conversation.id)
+            previous, context = _last_question(turns), _rewrite_context(turns)
         job_id = await enqueue_chat(
-            question, conversation.id, history, user_id=user_id, chips=chips, previous=previous
+            question,
+            conversation.id,
+            history,
+            user_id=user_id,
+            chips=chips,
+            previous=previous,
+            context=context,
         )
         await repo.upsert_turn(conversation.id, job_id, question, status="queued")
     return job_id, conversation.id
@@ -112,6 +125,18 @@ async def request_chat(
 def _last_question(turns: list[TurnRow]) -> str:
     """The question before this one, for a follow-up's search. Empty on a first question."""
     return turns[-1].question if turns else ""
+
+
+def _rewrite_context(turns: list[TurnRow]) -> str:
+    """What the rewriter reads: the last few questions and the head of the last answer."""
+    if not turns:
+        return ""
+    asked = "\n".join(f"- {t.question}" for t in turns[-REWRITE_QUESTIONS:])
+    said = [t.answer for t in turns if t.status == "done" and t.answer]
+    text = f"Earlier questions:\n{asked}"
+    if said:
+        text += f"\n\nStart of the last answer:\n{said[-1][:REWRITE_ANSWER_CHARS]}"
+    return text
 
 
 async def _conversation_of(
@@ -182,21 +207,22 @@ async def run(job: Job) -> None:
     principal = await _who_asked(job)
     chips = parse_chips(job.payload.get("chips"))
 
+    settings = AgentSettings.from_config(Orchestrator.name)
+    recorder = RecordingChannel(RedisEventChannel(job.job_id))
+    deps = await _deps(job, settings, recorder, principal, chips)
+
     found: knowledge.Retrieved | None = None
     if chips is not None and Chip.KNOWLEDGE in chips:
-        found = await knowledge.retrieve(
-            principal.id, question, str(job.payload.get("previous", ""))
-        )
+        query = await _search_query(job, question, deps)
+        found = await knowledge.retrieve(principal.id, query)
         if await _answer_without_model(job, question, principal.id, chips, found):
+            await budgets.save(deps.budget)
             return
 
     prompt = f"{history}\n\nThe question now:\n{question}" if history else question
     if found is not None and found.labelled:
         prompt = f"{knowledge.render(found.labelled)}\n\n{prompt}"
 
-    settings = AgentSettings.from_config(Orchestrator.name)
-    recorder = RecordingChannel(RedisEventChannel(job.job_id))
-    deps = await _deps(job, settings, recorder, principal, chips)
     _log_start(job, settings, deps)
     try:
         answer = await runner.run(Orchestrator.build(settings), prompt, deps)
@@ -229,6 +255,25 @@ async def run(job: Job) -> None:
             "spent_usd": str(deps.budget.spent_usd),
         },
     )
+
+
+async def _search_query(job: Job, question: str, deps: MycelDeps) -> str:
+    """The follow-up rewritten to stand alone; the stitched text if the rewrite fails."""
+    previous = str(job.payload.get("previous", "")).strip()
+    context = str(job.payload.get("context", "")).strip()
+    stitched = knowledge.search_text(question, previous[: get_settings().ask_max_chars])
+    if not context:
+        return stitched
+    settings = AgentSettings.from_config(Rewriter.name)
+    rewrite_deps = replace(deps, settings=settings, events=NullChannel())
+    prompt = f"{context}\n\nThe question now:\n{question}"
+    try:
+        rewritten = await runner.run(Rewriter.build(settings), prompt, rewrite_deps)
+    except Exception as exc:
+        log.warning("rewrite failed", extra={"job_id": job.job_id, "error": str(exc)})
+        return stitched
+    rewritten = rewritten.strip()[: get_settings().ask_max_chars]
+    return rewritten or stitched
 
 
 async def _answer_without_model(
