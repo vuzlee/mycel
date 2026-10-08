@@ -53,13 +53,13 @@ Run them by hand, and say how many calls before you do.
 
 | Field | Value |
 |---|---|
-| Date | 2026-10-07 |
-| Commit | after `dea056e`, with the prompt rule that a "not covered" sentence carries no label |
+| Date | 2026-10-08 |
+| Commit | after `2662251`: a refusal cites nothing, and a few late items is `at_risk` |
 | Models | `claude-sonnet-5` for answers, grades and the summariser (the grader is the answerer's own model) |
 | Corpus size | 8 documents, 31 questions (26 answerable, 5 not) |
 | Recall@5 / @10 / @20 | 0.962 / 0.962 / 1.0 |
 | MRR | 0.793 |
 | Grounded | 25/26 (`a01` misses: Adam's defaults rank 11th) |
-| Declined | 4/5 (`u05` declines but still labels the passages) |
-| Grades (correct / partly / wrong) | 28 / 1 / 2 |
-| Summariser | 0.929 over 6 cases, saved to `evals/summariser/baseline.json` |
+| Declined | 5/5 |
+| Grades (correct / partly / wrong) | 29 / 1 / 1 (`a01`) |
+| Summariser | 0.976 over 6 cases (one miss: `MYC-62`, far over estimate, left out of `at_risk`), saved to `evals/summariser/baseline.json` |
