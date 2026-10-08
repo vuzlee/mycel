@@ -27,14 +27,9 @@ for extra in "$@"; do
   esac
 done
 
-log "starting containers: ${INFRA[*]}"
-docker compose up -d "${INFRA[@]}"
-wait_for_stores
+start_stores
 
-# From the host, against the host's .env: the app containers have not started yet, and one
-# of them running this would be the race described above.
-log "applying migrations"
-uv run alembic upgrade head
+migrate
 
 log "starting the application"
 docker compose "${profiles[@]}" up -d

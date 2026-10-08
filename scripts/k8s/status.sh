@@ -10,7 +10,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 
 need kubectl
 
-if ! minikube status --format '{{.Host}}' 2>/dev/null | grep -q Running; then
+if ! minikube_running; then
   echo "minikube is not running — scripts/stack.sh k8s up"
   exit 0
 fi

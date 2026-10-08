@@ -79,7 +79,7 @@ data layer. Said here because the alternative is somebody finding out by deployi
 ## Quickstart
 
 ```bash
-cp .env.example .env      # five lines to fill in; the rest already works
+cp .env.example .env      # fill in the keys you have; scripts/stack.sh doctor says what is missing
 scripts/stack.sh doctor   # says what is missing and what each absence costs
 scripts/stack.sh dev up   # containers, migrations, api, worker, ingest, scheduler
 ```
@@ -204,7 +204,7 @@ Migrations alone run as the owner. Both steps happen inside `up`.
 - **"Book the review, 3pm tomorrow, half an hour"** — it reads the time back in words and
   books nothing until you agree.
 - **"What does the spec say about retries?"** — upload PDFs, Word or Markdown under
-  Knowledge; `answerer` replies from those passages only and cites each one.
+  Knowledge; the answer uses those passages only and cites each one.
 
 Two things are true by construction, not by prompt: `run_sql` runs inside
 `SET TRANSACTION READ ONLY`, so a question that would change work data is refused by
@@ -248,5 +248,4 @@ scripts/       stack.sh and one folder per run mode
 | **[docs/architecture.html](docs/architecture.html)** | How the system is put together — read this first |
 | **[docs/using-mycel.html](docs/using-mycel.html)** | Sign up, connect Jira, ask in chat |
 | [docs/database.html](docs/database.html) | Schemas, tables, every column, with diagrams |
-| [deploy/envs/](deploy/envs/README.md) | Environment variables, dev and minikube |
-| [deploy/inference/](deploy/inference/README.md) | Hardware constraints for the local model |
+| [deploy/](deploy/README.md) | minikube, the chart, monitoring, local inference |

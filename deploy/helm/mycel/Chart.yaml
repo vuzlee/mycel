@@ -1,9 +1,8 @@
 apiVersion: v2
 name: mycel
-description: Multi-agent system that builds reports from multiple data sources
+description: Chat with agents over your team's Jira, mail, calendar and documents
 type: application
 
-# version = the chart's version (bump it when templates change)
-# appVersion = the image's commit SHA (CI overwrites it at build time)
+# version: the chart. The image is chosen with --set image.tag=<sha>.
 version: 0.1.0
 appVersion: "0.1.0"

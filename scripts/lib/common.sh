@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
-#
-# What every script under scripts/ needs. Sourced, never run.
-#
-# One copy of `die` rather than three, and — more to the point — one copy of `wait_for`.
-# Ready means "answers a query", not "the container is up": Postgres accepts TCP several
-# seconds before it will serve one, and alembic in that window fails with a message about
-# the database rather than about the wait.
+# Shared by every script under scripts/. Sourced, never run.
 
 set -euo pipefail
 
-# The repository root, whatever directory the caller was in. Every path below is relative
-# to it, so `scripts/dev/up.sh` and `cd scripts && ./dev/up.sh` behave the same.
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 
 RUN="$ROOT/.run"
-
 PG_PORT=5433
 API_PORT=8000
 
-#: The compose services that are infrastructure. Named rather than left to a bare `up`, so
-#: adding a service to docker-compose.yml does not silently start it here.
+# Named so a new compose service is never started by accident.
 INFRA=(postgres redis rabbitmq qdrant minio litellm)
 
 log()  { printf '\033[36m==\033[0m %s\n' "$*"; }
@@ -33,14 +23,9 @@ require_env() {
   [[ -f "$ROOT/.env" ]] || die ".env is missing — copy .env.example and fill in the tokens"
 }
 
-# Whatever compose called the container for a service. Every `docker exec` goes through
-# this rather than hardcoding a name: the name is compose's to choose, and it changes with
-# the project name and the replica number.
 cid() { docker compose ps -q "$1" 2>/dev/null | head -1; }
 
-# Compose's own healthchecks say the same thing, but `up -d` without `--wait` does not
-# block on them, and `--wait` gives one opaque timeout for all three instead of naming the
-# one that hung.
+# Ready means it answers, not that the container is up.
 wait_for() {
   local name=$1 probe=$2 tries=${3:-60}
   for _ in $(seq "$tries"); do
@@ -50,26 +35,34 @@ wait_for() {
   die "$name did not come up in ${tries}s — try: docker compose logs $name"
 }
 
-wait_for_stores() {
+start_stores() {
+  log "starting containers: ${INFRA[*]}"
+  docker compose up -d "${INFRA[@]}"
   wait_for postgres "docker exec $(cid postgres) pg_isready -U mycel"
   wait_for redis    "docker exec $(cid redis) redis-cli ping"
-  # `check_port_connectivity`, not `ping`: ping only asks whether the Erlang node is alive,
-  # and it answers yes a good few seconds before the AMQP listener accepts a connection. In
-  # that window a worker starts, is reset mid-handshake, and dies — which reads as a broken
-  # worker rather than a stack started half a second too early.
+  # `ping` answers before the AMQP listener accepts connections.
   wait_for rabbitmq "docker exec $(cid rabbitmq) rabbitmq-diagnostics -q check_port_connectivity" 90
   wait_for qdrant   "curl -sf http://localhost:6333/readyz"
   wait_for minio    "curl -sf http://localhost:9000/minio/health/ready"
   wait_for litellm  "curl -sf http://localhost:4000/health/liveliness" 90
 }
 
-# Whoever is listening on a port, if anyone. Tells "nothing is running" apart from
-# "something we did not start is running" — the second reads as the first in `status`,
-# while curl happily answers from a process old enough to be missing half the routes.
-#
-# Empty output, never a failure. `grep` exits 1 on no match, and under `set -e` a command
-# substitution that fails takes the whole script with it, so a free port would kill the
-# caller. A port with nobody on it is the normal case, not an error.
+stop_stores() {
+  docker compose stop "${INFRA[@]}"
+  log "data kept in volumes: $(data_volumes)"
+}
+
+data_volumes() {
+  docker compose config --format json \
+    | python3 -c "import json,sys; print(' '.join(v['name'] for v in json.load(sys.stdin)['volumes'].values() if 'data' in v['name']))"
+}
+
+migrate() {
+  log "applying migrations"
+  uv run alembic upgrade head
+}
+
+# Pid listening on a port, or nothing. Never fails: a free port is the normal case.
 holder() {
   ss -ltnp 2>/dev/null \
     | awk -v p=":$1\$" '$4 ~ p {print $NF}' \
@@ -77,8 +70,6 @@ holder() {
     | head -1 | cut -d= -f2 || true
 }
 
-# The project any synced data belongs to, for printing a dashboard link. Empty when
-# nothing has synced, which the caller words rather than guessing at.
 synced_project() {
   local pg; pg=$(cid postgres)
   [[ -n $pg ]] || return 0
@@ -86,5 +77,16 @@ synced_project() {
     'select project from gold.work_item limit 1' 2>/dev/null | tr -d '[:space:]' || true
 }
 
-# The named volumes that hold the data, for the "data kept" line every `down` prints.
-DATA_VOLUMES="mycel-pgdata, mycel-rabbitdata, mycel_qdrantdata, mycel_miniodata"
+print_links() {
+  local project; project=$(synced_project)
+  echo
+  echo "sign in    http://localhost:$API_PORT/app/login"
+  if [[ -n $project ]]; then
+    echo "dashboard  http://localhost:$API_PORT/app/dashboard?project=$project"
+  else
+    echo "dashboard  http://localhost:$API_PORT/app/dashboard  (nothing synced yet)"
+  fi
+  echo "api docs   http://localhost:$API_PORT/docs"
+}
+
+minikube_running() { minikube status --format '{{.Host}}' 2>/dev/null | grep -q Running; }

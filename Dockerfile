@@ -6,48 +6,31 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
-FROM python:3.11-slim AS app
-
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+FROM python:3.11-slim AS base
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH="/app/.venv/bin:$PATH"
 COPY --from=ghcr.io/astral-sh/uv:0.8.0 /uv /usr/local/bin/uv
-
 WORKDIR /app
-
-# Install dependencies first, copy source after - a code change skips the reinstall
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-default-groups --no-install-project
 
+FROM base AS app
+# Dependencies before source, so a code change skips the reinstall.
+RUN uv sync --locked --no-default-groups --no-install-project
 COPY src/ src/
 COPY config/ config/
-# Both halves of alembic, or neither works: migrations/ holds the versions, alembic.ini
-# holds script_location that points at it. Without the ini, `alembic upgrade head` fails
-# with "No 'script_location' key found" - which reads like a broken config file rather
-# than a missing one.
 COPY migrations/ migrations/
 COPY alembic.ini ./
 RUN uv sync --locked --no-default-groups
-
-# Last: only the built assets cross over, and only `app.py::WEB_DIST` looks for them.
 COPY --from=web /web/dist/ web/dist/
 
-ENV PATH="/app/.venv/bin:$PATH"
-
-# The ingest worker: the same app plus docling (torch), and its models baked in so a
-# restart never downloads gigabytes. Only this target carries the weight.
-FROM python:3.11-slim AS ingest
-ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
-# OpenCV, pulled in by docling's table model, links against these; slim has none of them.
+# The app plus docling (torch) with its models baked in.
+FROM base AS ingest
+# OpenCV, pulled in by docling's table model, needs these.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libxcb1 libgl1 libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:0.8.0 /uv /usr/local/bin/uv
-WORKDIR /app
-COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-default-groups --group ingest --no-install-project
 COPY src/ src/
 COPY config/ config/
 RUN uv sync --locked --no-default-groups --group ingest
-ENV PATH="/app/.venv/bin:$PATH"
 RUN docling-tools models download layout tableformer
 CMD ["python", "-m", "mycel.queue.consumer", "--queue", "ingest"]
-

@@ -1,15 +1,4 @@
-{{/*
-Prometheus: the thing that asks every 15 seconds how each process is doing.
-
-THE WHOLE POINT OF THIS FILE is the scrape config below. The compose version
-(`deploy/otel/prometheus.yaml`) names three addresses by hand — `api:8000`, `worker:9100`,
-`scheduler:9101`. Those are compose network names: inside the cluster they point nowhere,
-which is the break this template exists to fix.
-
-Here it asks the cluster instead. A pod replaced by a new one with a new IP is found on the
-next refresh, and nobody edits anything. That is the property worth having, and it is also
-the one to actually test: delete a worker pod and watch the target come back.
-*/}}
+{{/* Prometheus with Kubernetes service discovery; compose names its targets in deploy/monitoring/prometheus.yaml. */}}
 {{- if .Values.monitoring.enabled }}
 apiVersion: v1
 kind: ConfigMap
@@ -57,9 +46,7 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  # Named `prometheus` with no release prefix on purpose: Grafana's provisioned datasource
-  # in deploy/grafana/ says http://prometheus:9090, and that string is correct on BOTH the
-  # compose network and here. One fewer thing that differs between the two.
+  # No release prefix: files/datasources.yaml names http://prometheus:9090 on both networks.
   name: prometheus
   labels:
     {{- include "mycel.labels" . | nindent 4 }}

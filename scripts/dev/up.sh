@@ -13,12 +13,9 @@ source "$ROOT/scripts/lib/hostproc.sh"
 
 require_env
 
-log "starting containers: ${INFRA[*]}"
-docker compose up -d "${INFRA[@]}"
-wait_for_stores
+start_stores
 
-log "applying migrations"
-uv run alembic upgrade head
+migrate
 
 squatter=$(holder "$API_PORT")
 if [[ -n $squatter ]] && ! alive api; then

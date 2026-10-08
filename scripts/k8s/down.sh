@@ -29,6 +29,5 @@ log "secret removed"
 if $ALL; then
   log "stopping minikube"
   minikube stop
-  docker compose stop "${INFRA[@]}"
-  log "data kept in volumes $DATA_VOLUMES"
+  stop_stores
 fi

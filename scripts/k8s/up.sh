@@ -25,7 +25,7 @@ for extra in "$@"; do
   esac
 done
 
-if ! minikube status --format '{{.Host}}' 2>/dev/null | grep -q Running; then
+if ! minikube_running; then
   log "starting minikube"
   minikube start --driver=docker
 fi
@@ -37,9 +37,7 @@ if ! kubectl get ingressclass nginx >/dev/null 2>&1; then
   minikube addons enable ingress
 fi
 
-log "starting the stores in compose — they live outside the cluster on purpose"
-docker compose up -d "${INFRA[@]}"
-wait_for_stores
+start_stores
 
 images=$(minikube image ls 2>/dev/null)
 for image in mycel:dev mycel-ingest:dev; do

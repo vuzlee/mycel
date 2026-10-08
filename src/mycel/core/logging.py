@@ -1,7 +1,7 @@
 """Structured logs: one JSON object per line on stdout, always carrying `trace_id`.
 
 Nothing here knows Loki exists. Promtail collects container stdout and ships it; changing
-log backend is an edit to `deploy/otel/promtail.yaml`, not to this file.
+log backend is an edit to `deploy/monitoring/promtail.yaml`, not to this file.
 
 `trace_id` is the one piece of wiring we do by hand. The logger cannot know it on its own,
 so the formatter reads the current OTel span on every record — that is what lets you jump

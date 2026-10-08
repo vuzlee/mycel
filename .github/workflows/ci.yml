@@ -59,11 +59,6 @@ jobs:
           VIRTUAL_ENV=/tmp/prod uv sync --locked --no-default-groups --active
           /tmp/prod/bin/python -c "import mycel.api.app, mycel.queue.consumer, mycel.scheduler, mycel.doctor"
 
-      # The three Grafana files exist twice, because Helm's .Files.Get does not follow
-      # symlinks - see `scripts/stack.sh grafana-sync`. Drift is otherwise invisible until
-      # somebody opens whichever of the two was not updated.
-      - name: Grafana files match
-        run: scripts/stack.sh grafana-sync --check
 
       - name: Type check
         run: uv run mypy

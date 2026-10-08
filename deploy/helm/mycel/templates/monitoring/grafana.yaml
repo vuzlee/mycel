@@ -1,13 +1,4 @@
-{{/*
-Grafana: the screen. It reads both of the others and owns no data of its own.
-
-The datasources and the dashboard are the SAME FILES compose provisions, loaded with
-.Files.Get rather than copied: two copies of a dashboard drift, and the one that drifts is
-always the one nobody is looking at.
-
-That works because the Service names above are `prometheus` and `loki` with no release
-prefix, so `http://prometheus:9090` is correct on the compose network and here.
-*/}}
+{{/* Grafana, provisioned from files/: the same files compose mounts. */}}
 {{- if .Values.monitoring.enabled }}
 apiVersion: v1
 kind: ConfigMap

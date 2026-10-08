@@ -14,5 +14,4 @@ reap worker
 reap ingest
 reap scheduler
 sweep
-docker compose stop "${INFRA[@]}"
-log "data kept in volumes $DATA_VOLUMES"
+stop_stores

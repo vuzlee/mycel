@@ -1,7 +1,7 @@
 [project]
 name = "mycel"
 version = "0.1.0"
-description = "Multi-agent system that builds reports and dashboards from multiple data sources"
+description = "Chat with agents over your team's Jira, mail, calendar and documents"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"

@@ -32,8 +32,7 @@ services:
       interval: 5s
       retries: 10
 
-  # In development the API runs on the host (`uvicorn --reload`), so it stays out of the
-  # default `up`: docker compose --profile api up -d builds and runs it in a container.
+  # In dev the API runs on the host; `--profile api` runs it in a container.
   api:
     build: {context: ., target: app}
     profiles: [api]
@@ -52,14 +51,8 @@ services:
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
 
-  # Ticks `domains/sync.py` every SYNC_INTERVAL_SECONDS: Jira -> bronze -> silver -> gold.
-  # Its own process because its failure mode is its own: a tick that overruns or dies
-  # must not take a request with it.
-  # Two replicas are safe: the tick takes a Postgres advisory lock and the loser skips.
-  # Out of the default `up` for the same reason as `api`: these are the application, not
-  # the infrastructure a dev machine wants in the background. The scheduler ticks every
-  # SYNC_INTERVAL_SECONDS and writes gold, which is not something to start by surprise
-  # while the tables are being changed. docker compose --profile app up -d
+  # Jira -> bronze -> silver -> gold every SYNC_INTERVAL_SECONDS. An advisory lock makes a
+  # second replica skip. `--profile app`.
   scheduler:
     build: {context: ., target: app}
     profiles: [app]
@@ -143,7 +136,7 @@ services:
       interval: 10s
       retries: 10
 
-  # --- Durable stores ---
+  # --- Stores and gateway ---
 
   # The one gateway every model call goes through. Models and keys: config/litellm/.
   # The app speaks OpenAI Chat Completions to it; the provider keys never reach the app.
@@ -155,7 +148,6 @@ services:
     environment:
       GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
       CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_API_KEY:-sk-mycel-dev}
     volumes:
       - ./config/litellm/config.yaml:/app/config.yaml:ro
@@ -199,7 +191,7 @@ services:
   # Without it, every LLM call goes to the cloud.
 
   vllm:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:v0.8.5
     profiles: [local-llm]
     command: >
       --model Qwen/Qwen2.5-3B-Instruct-AWQ
@@ -228,34 +220,34 @@ services:
   # ceiling the OOM killer picks a victim by size, which is postgres rather than whatever
   # actually leaked.
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.1.0
     profiles: [monitoring]
     # Fifteen days of samples is the default and more than a dev box has questions for.
     command:
       - "--config.file=/etc/prometheus/prometheus.yaml"
       - "--storage.tsdb.retention.time=7d"
-    volumes: ["./deploy/otel:/etc/prometheus", "promdata:/prometheus"]
+    volumes: ["./deploy/monitoring:/etc/prometheus", "promdata:/prometheus"]
     ports: ["9090:9090"]
     mem_limit: 1g
 
   # Prometheus answers "is something broken" and Loki "why". "Where" is Langfuse's
   # question now, and it is not part of this stack.
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.3.2
     profiles: [monitoring]
     command: ["-config.file=/etc/loki/loki.yaml"]
-    volumes: ["./deploy/otel:/etc/loki", "lokidata:/loki"]
+    volumes: ["./deploy/helm/mycel/files/loki.yaml:/etc/loki/loki.yaml:ro", "lokidata:/loki"]
     ports: ["3100:3100"]
     mem_limit: 512m
 
   # Collects container stdout and ships it to Loki. The app only prints JSON logs to
   # stdout and sends them nowhere itself.
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:3.3.2
     profiles: [monitoring]
     command: ["-config.file=/etc/promtail/promtail.yaml"]
     volumes:
-      - ./deploy/otel:/etc/promtail
+      - ./deploy/monitoring:/etc/promtail
       - /var/log:/var/log
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
@@ -263,12 +255,15 @@ services:
     mem_limit: 128m
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.5.1
     profiles: [monitoring]
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-    volumes: ["./deploy/grafana:/etc/grafana/provisioning"]
+    volumes:
+      - ./deploy/helm/mycel/files/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./deploy/helm/mycel/files/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./deploy/helm/mycel/files/mycel.json:/etc/grafana/provisioning/dashboards/mycel.json:ro
     ports: ["3000:3000"]
     depends_on: [prometheus, loki]
     # 512m, not 256m: measured at 196 MiB idle with one dashboard, which leaves no room
@@ -283,7 +278,9 @@ volumes:
   rabbitdata:
     name: mycel-rabbitdata
   qdrantdata:
+    name: mycel_qdrantdata
   miniodata:
+    name: mycel_miniodata
   lokidata:
   promdata:
   hfcache:

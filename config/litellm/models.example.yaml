@@ -4,7 +4,7 @@
 model_list:
   # Anthropic directly.
   - model_name: claude-sonnet-5
-    litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/ANTHROPIC_API_KEY}
+    litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/CLAUDE_API_KEY_1}
 
   # Google Gemini. Several keys under one name spread load and cool down a key out of quota.
   - model_name: gemini-3.6-flash

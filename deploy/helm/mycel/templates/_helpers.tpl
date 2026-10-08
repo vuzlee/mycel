@@ -41,17 +41,8 @@ app.kubernetes.io/component: {{ .component }}
 {{- end -}}
 
 {{/*
-Every container's environment, identical across the three. Both sources are mounted whole
-rather than key by key: a new setting then reaches the pods by changing one ConfigMap, not
-by editing three Deployments and remembering all of them.
-
-ORDER MATTERS, and it cost a debugging round. The Secret is created with
-`--from-env-file=.env`, so it carries ALL of that file — the settings as well as the keys —
-and `secretRef` listed second wins every collision. A value the ConfigMap sets for cluster
-conditions is therefore silently replaced by whatever the developer's own .env said.
-
-Anything that MUST hold regardless goes in the container's own `env:`, which outranks both.
-METRICS_HOST is the case that found this.
+ConfigMap, then Secret. The Secret holds all of .env and wins collisions, so a value that
+must hold in the cluster goes in the container's own `env:` (mycel.env).
 */}}
 {{- define "mycel.envFrom" -}}
 envFrom:
@@ -62,16 +53,8 @@ envFrom:
 {{- end -}}
 
 {{/*
-Where the stores outside the cluster are, as each container's own `env:`.
-
-Here and not in the ConfigMap, for the reason METRICS_HOST found: the Secret carries the
-whole of .env, where these three say localhost, and secretRef outranks configMapRef. Only
-`env:` outranks both. Inside a pod localhost is that pod, so a value that lost to .env would
-look correct and refuse every connection.
-
-`externalStores.host` must be set; the chart fails to render rather than deploy pods that
-reach themselves. Call with the metrics host when the container serves /metrics:
-  include "mycel.env" (dict "ctx" . "metrics" true)
+Store hosts and METRICS_HOST as container `env:`, which outranks the Secret. Fails to render
+without externalStores.host. Usage: include "mycel.env" (dict "ctx" . "metrics" true)
 */}}
 {{- define "mycel.env" -}}
 {{- $host := required "externalStores.host must name where the stores run" .ctx.Values.externalStores.host -}}

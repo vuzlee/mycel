@@ -33,15 +33,7 @@ printf '%-12s %-9s parsing and embedding documents\n' ingest \
 printf '%-12s %-9s every SYNC_INTERVAL_SECONDS\n' scheduler \
   "$(alive scheduler && echo running || echo stopped)"
 
-project=$(synced_project)
-echo
-echo "sign in    http://localhost:$API_PORT/app/login"
-if [[ -n $project ]]; then
-  echo "dashboard  http://localhost:$API_PORT/app/dashboard?project=$project"
-else
-  echo "dashboard  http://localhost:$API_PORT/app/dashboard  (nothing synced yet)"
-fi
-echo "api docs   http://localhost:$API_PORT/docs"
+print_links
 if [[ $api_state == foreign ]]; then
   echo
   echo "warning    pid $squatter holds :$API_PORT and this script did not start it."
