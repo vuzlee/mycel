@@ -4,13 +4,10 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from mycel.core.exceptions import MycelError
-from mycel.etl.normalise import CATEGORIES
-from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
+from mycel.infra.postgres.repositories.gold import CATEGORIES, WorkItemRow, WorklogRow
 
 #: How far a past timestamp may sit ahead of now (clock skew); due dates are exempt.
 FUTURE_TOLERANCE = timedelta(minutes=5)
-
-VALID_CATEGORIES = frozenset(CATEGORIES.values())
 
 
 class CheckFailed(MycelError):
@@ -22,8 +19,8 @@ def check_item(row: WorkItemRow) -> str | None:
         return "issue_key is empty"
     if not row.title.strip():
         return "title is empty"
-    if row.status_category not in VALID_CATEGORIES:
-        return f"status_category {row.status_category!r} is not one of {sorted(VALID_CATEGORIES)}"
+    if row.status_category not in CATEGORIES:
+        return f"status_category {row.status_category!r} is not one of {list(CATEGORIES)}"
     if row.parent_key == row.issue_key:
         return "parent_key points at the item itself"
     if row.created_at.tzinfo is None:

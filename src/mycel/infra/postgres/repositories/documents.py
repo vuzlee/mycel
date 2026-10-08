@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.documents import DELETING, FAILED, IN_FLIGHT, PARSING, READY
 from mycel.infra.postgres.models import Chunk, Document
-from mycel.infra.postgres.repositories._result import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount
 
 
 @dataclass(frozen=True, slots=True)

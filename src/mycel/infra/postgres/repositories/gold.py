@@ -1,14 +1,14 @@
 """Gold reads and writes, the only layer agents may read. All gold SQL lives here."""
 
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import Select, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.models import WorkItem, Worklog
+from mycel.infra.postgres.repositories._sql import upsert
 
 #: Jira status categories in board order; every caller gets all three, zeros included.
 CATEGORIES = ("todo", "doing", "done")
@@ -74,36 +74,10 @@ class GoldRepository:
         self._session = session
 
     async def upsert_items(self, rows: Sequence[WorkItemRow]) -> int:
-        """Upsert work items on `(source, issue_key)`."""
-        if not rows:
-            return 0
-        stmt = insert(WorkItem).values([asdict(row) for row in rows])
-        stmt = stmt.on_conflict_do_update(
-            constraint="uq_work_item_natural_key",
-            set_={
-                name: getattr(stmt.excluded, name)
-                for name in asdict(rows[0])
-                if name not in ("source", "issue_key")
-            },
-        )
-        await self._session.execute(stmt)
-        return len(rows)
+        return await upsert(self._session, WorkItem, rows, "uq_work_item_natural_key", "issue_key")
 
     async def upsert_worklogs(self, rows: Sequence[WorklogRow]) -> int:
-        """Upsert worklogs on `(source, worklog_id)`."""
-        if not rows:
-            return 0
-        stmt = insert(Worklog).values([asdict(row) for row in rows])
-        stmt = stmt.on_conflict_do_update(
-            constraint="uq_worklog_natural_key",
-            set_={
-                name: getattr(stmt.excluded, name)
-                for name in asdict(rows[0])
-                if name not in ("source", "worklog_id")
-            },
-        )
-        await self._session.execute(stmt)
-        return len(rows)
+        return await upsert(self._session, Worklog, rows, "uq_worklog_natural_key", "worklog_id")
 
     async def items_between(
         self, project: str, since: datetime, until: datetime | None = None

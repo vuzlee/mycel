@@ -18,8 +18,8 @@ KINDS = {
     "bug": "task",
 }
 
-#: Jira's `statusCategory.key` mapped to readable names.
-CATEGORIES = {"new": "todo", "indeterminate": "doing", "done": "done"}
+#: Jira's `statusCategory.key` mapped to gold's CATEGORIES.
+JIRA_CATEGORIES = {"new": "todo", "indeterminate": "doing", "done": "done"}
 
 
 def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None:
@@ -44,7 +44,7 @@ def from_jira_issue(payload: dict[str, Any], project: str) -> WorkItemRow | None
         parent_key=(fields.get("parent") or {}).get("key"),
         title=str(fields.get("summary") or key),
         status=str(status.get("name") or "unknown"),
-        status_category=CATEGORIES.get(
+        status_category=JIRA_CATEGORIES.get(
             str((status.get("statusCategory") or {}).get("key", "")).lower(), "todo"
         ),
         priority=_priority(fields.get("priority")),

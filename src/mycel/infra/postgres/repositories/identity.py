@@ -11,7 +11,7 @@ from mycel.infra.postgres.models import (
     Session,
     User,
 )
-from mycel.infra.postgres.repositories._result import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount
 
 
 @dataclass(frozen=True)

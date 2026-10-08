@@ -14,7 +14,7 @@ from mycel.infra.postgres.models import (
     Membership,
     SyncState,
 )
-from mycel.infra.postgres.repositories._result import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount
 
 
 @dataclass(frozen=True)
