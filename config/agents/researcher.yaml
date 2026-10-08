@@ -1,16 +1,8 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
-# Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
-model_spec: cloud:claude-sonnet-5
-
 # Searching is one call per angle on the question, and cross-checking a contested claim
 # costs another. `request_limit` is declared alongside it and one higher, so this file
 # decides where the run stops rather than the environment's `agents.defaults` — see
 # `config/agents/analyst.yaml`.
 tool_calls_limit: 12
 request_limit: 13
-
-# A second provider: if Claude is unreachable or out of quota, Gemini answers instead.
-fallback_specs:
-  - cloud:gemini-3.5-flash-lite
-  - cloud:gemini-3.6-flash

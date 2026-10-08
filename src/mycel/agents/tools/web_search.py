@@ -52,7 +52,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         Use for anything the prompt does not contain and that may have changed recently.
         Cite the url of every passage you rely on.
         """
-        guard_repeat(ctx, "web_search", threshold=ctx.deps.settings.repeat_threshold, query=query)
+        guard_repeat(ctx, "web_search", query=query)
 
         if not query.strip():
             raise ModelRetry("web_search needs a non-empty query; say what to search for")

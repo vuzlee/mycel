@@ -136,7 +136,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
 def _guarded(ctx: RunContext[MycelDeps], name: str, fn: Callable[..., T], **kwargs: Any) -> T:
     """Guard against repetition, call the function, turn refusals into re-prompts."""
-    guard_repeat(ctx, name, threshold=ctx.deps.settings.repeat_threshold, **kwargs)
+    guard_repeat(ctx, name, **kwargs)
     try:
         return fn(**kwargs)
     except ValueError as exc:

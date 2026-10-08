@@ -3,14 +3,14 @@
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Protocol
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.services import access, auth, google_oauth, jira_oauth
+from mycel.services import access, google_oauth, jira_oauth
 from mycel.services.permission import readable_projects
 
 router = APIRouter(prefix="/auth", tags=["connections"])
@@ -34,7 +34,7 @@ class GoogleStatus(BaseModel):
 
 
 @router.get("/google", response_model=GoogleStatus)
-async def google_status(user: Annotated[auth.Principal, Depends(current_user)]) -> GoogleStatus:
+async def google_status(user: CurrentUser) -> GoogleStatus:
     """Which Google account this person has connected, if any."""
     if not google_oauth.configured():
         return GoogleStatus(configured=False)
@@ -46,7 +46,7 @@ async def google_status(user: Annotated[auth.Principal, Depends(current_user)]) 
 
 @router.get("/google/start")
 async def google_start(
-    user: Annotated[auth.Principal, Depends(current_user)],
+    user: CurrentUser,
 ) -> RedirectResponse:
     """Send the browser to Google's consent screen."""
     if not google_oauth.configured():
@@ -67,7 +67,7 @@ async def google_callback(
 
 
 @router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
-async def google_disconnect(user: Annotated[auth.Principal, Depends(current_user)]) -> None:
+async def google_disconnect(user: CurrentUser) -> None:
     """Disconnect. Google is asked to forget the grant, and the row goes either way."""
     removed = await google_oauth.disconnect(user.id)
     log.info("google account disconnected", extra={"user_id": user.id, "removed": removed})
@@ -83,7 +83,7 @@ class JiraStatus(BaseModel):
 
 
 @router.get("/jira", response_model=JiraStatus)
-async def jira_status(user: Annotated[auth.Principal, Depends(current_user)]) -> JiraStatus:
+async def jira_status(user: CurrentUser) -> JiraStatus:
     """Which Jira account this person has connected, if any, and what it lets them read."""
     if not jira_oauth.configured():
         return JiraStatus(configured=False)
@@ -99,7 +99,7 @@ async def jira_status(user: Annotated[auth.Principal, Depends(current_user)]) ->
 
 
 @router.get("/jira/start")
-async def jira_start(user: Annotated[auth.Principal, Depends(current_user)]) -> RedirectResponse:
+async def jira_start(user: CurrentUser) -> RedirectResponse:
     """Send the browser to Atlassian's consent screen."""
     if not jira_oauth.configured():
         raise HTTPException(
@@ -122,7 +122,7 @@ async def jira_callback(
 
 
 @router.delete("/jira", status_code=status.HTTP_204_NO_CONTENT)
-async def jira_disconnect(user: Annotated[auth.Principal, Depends(current_user)]) -> None:
+async def jira_disconnect(user: CurrentUser) -> None:
     """Disconnect."""
     removed = await jira_oauth.disconnect(user.id)
     log.info("jira account disconnected", extra={"user_id": user.id, "removed": removed})

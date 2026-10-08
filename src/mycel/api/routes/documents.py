@@ -4,19 +4,16 @@ import json
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.infra.postgres.repositories.documents import DocumentRow
 from mycel.infra.redis import document_events
 from mycel.services import documents as service
-from mycel.services.auth import Principal
 
 router = APIRouter(tags=["documents"])
-
-User = Annotated[Principal, Depends(current_user)]
 
 
 class DocumentOut(BaseModel):
@@ -68,7 +65,7 @@ def _refused(exc: service.DocumentError) -> HTTPException:
 
 
 @router.post("/documents", response_model=DocumentOut, status_code=202)
-async def upload_document(user: User, file: Annotated[UploadFile, File()]) -> DocumentOut:
+async def upload_document(user: CurrentUser, file: Annotated[UploadFile, File()]) -> DocumentOut:
     data = await file.read(service.max_bytes() + 1)
     try:
         doc = await service.upload(user.id, service.Upload(file.filename or "document", data))
@@ -78,12 +75,12 @@ async def upload_document(user: User, file: Annotated[UploadFile, File()]) -> Do
 
 
 @router.get("/documents", response_model=list[DocumentOut])
-async def list_documents(user: User) -> list[DocumentOut]:
+async def list_documents(user: CurrentUser) -> list[DocumentOut]:
     return [_document(d) for d in await service.list_documents(user.id)]
 
 
 @router.get("/documents/status")
-async def document_status(request: Request, user: User) -> StreamingResponse:
+async def document_status(request: Request, user: CurrentUser) -> StreamingResponse:
     """The user's document list, sent again whenever one of them changes state (SSE)."""
     return StreamingResponse(
         _status_frames(request, user.id),
@@ -109,7 +106,7 @@ async def _status_frames(request: Request, user_id: int) -> AsyncIterator[str]:
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)
-async def patch_document(document_id: int, body: DocumentPatch, user: User) -> DocumentOut:
+async def patch_document(document_id: int, body: DocumentPatch, user: CurrentUser) -> DocumentOut:
     try:
         doc = None
         if body.filename is not None:
@@ -124,7 +121,7 @@ async def patch_document(document_id: int, body: DocumentPatch, user: User) -> D
 
 
 @router.delete("/documents/{document_id}", status_code=202)
-async def delete_document(document_id: int, user: User) -> Response:
+async def delete_document(document_id: int, user: CurrentUser) -> Response:
     try:
         await service.delete_document(user.id, document_id)
     except service.DocumentError as exc:
@@ -133,7 +130,7 @@ async def delete_document(document_id: int, user: User) -> Response:
 
 
 @router.get("/documents/{document_id}/source", response_model=SourceOut)
-async def document_source(document_id: int, user: User) -> SourceOut:
+async def document_source(document_id: int, user: CurrentUser) -> SourceOut:
     try:
         return SourceOut(url=await service.source_url(user.id, document_id))
     except service.DocumentError as exc:
@@ -141,7 +138,7 @@ async def document_source(document_id: int, user: User) -> SourceOut:
 
 
 @router.get("/chunks/{chunk_id}", response_model=ChunkOut)
-async def read_chunk(chunk_id: int, user: User) -> ChunkOut:
+async def read_chunk(chunk_id: int, user: CurrentUser) -> ChunkOut:
     try:
         c = await service.chunk(user.id, chunk_id)
     except service.DocumentError as exc:

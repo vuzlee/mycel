@@ -2,11 +2,11 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.api.dependencies import SESSION_COOKIE, Db, current_user
+from mycel.api.dependencies import SESSION_COOKIE, CurrentUser, Db
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra import smtp
@@ -97,7 +97,7 @@ async def logout(
 @router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
     body: PasswordChange,
-    user: Annotated[auth.Principal, Depends(current_user)],
+    user: CurrentUser,
     session: Db,
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> None:
@@ -130,7 +130,7 @@ async def reset_password(
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(user: Annotated[auth.Principal, Depends(current_user)]) -> UserResponse:
+async def me(user: CurrentUser) -> UserResponse:
     """Who the cookie belongs to. The call the UI makes on load to decide what to show."""
     return UserResponse(id=user.id, email=user.email)
 

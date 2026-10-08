@@ -47,7 +47,7 @@ async def _read_events(ctx: RunContext[MycelDeps], hours: int = 12) -> str:
         hours: How far ahead to look. This afternoon is 12, today 24, this week 168,
             this month 720, which is also the most that can be asked for.
     """
-    guard_repeat(ctx, "read_events", threshold=ctx.deps.settings.repeat_threshold, hours=hours)
+    guard_repeat(ctx, "read_events", hours=hours)
     if hours < 1:
         raise ModelRetry("read_events needs a window of at least one hour.")
 
@@ -82,7 +82,6 @@ async def _draft_event(
     guard_repeat(
         ctx,
         "draft_event",
-        threshold=ctx.deps.settings.repeat_threshold,
         summary=summary,
         starts_at=starts_at,
     )

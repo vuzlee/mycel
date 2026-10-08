@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
 
 #: Long enough to confirm, short enough that an abandoned draft is gone.
@@ -33,25 +34,19 @@ async def put(user_id: int, summary: str, starts_at: datetime, ends_at: datetime
         starts_at=starts_at,
         ends_at=ends_at,
     )
-    client = await get_client()
-    await client.set(_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
+    await _kv.put(await get_client(), _key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_S)
     return draft
 
 
 async def take(draft_id: str, user_id: int) -> Draft | None:
     """Spend a draft, or `None` if this person has no such draft. Deleted on read."""
-    client = await get_client()
-    raw = await client.getdel(_key(draft_id))
-    if raw is None:
-        return None
-    draft = Draft.model_validate_json(raw)
-    if draft.user_id != user_id:
-        return None
-    return draft
+    found = await _kv.take(await get_client(), _key(draft_id))
+    draft = None if found is None else Draft.model_validate(found)
+    return draft if draft is not None and draft.user_id == user_id else None
 
 
 def _key(draft_id: str) -> str:
-    return f"mycel:draft:event:{draft_id}"
+    return _kv.key("draft", "event", draft_id)
 
 
 class JiraDraft(BaseModel):
@@ -78,26 +73,23 @@ async def put_jira(user_id: int, kind: str, spelled: str, payload: dict[str, Any
         spelled=spelled,
         payload=payload,
     )
-    client = await get_client()
-    await client.set(_jira_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
+    await restore_jira(draft)
     return draft
 
 
 async def take_jira(draft_id: str, user_id: int) -> JiraDraft | None:
     """Spend a Jira draft, or `None` if this person has no such draft. Deleted on read."""
-    client = await get_client()
-    raw = await client.getdel(_jira_key(draft_id))
-    if raw is None:
-        return None
-    draft = JiraDraft.model_validate_json(raw)
-    return draft if draft.user_id == user_id else None
+    found = await _kv.take(await get_client(), _jira_key(draft_id))
+    draft = None if found is None else JiraDraft.model_validate(found)
+    return draft if draft is not None and draft.user_id == user_id else None
 
 
 async def restore_jira(draft: JiraDraft) -> None:
     """Put a spent draft back under its own id, for a write that cannot have landed."""
-    client = await get_client()
-    await client.set(_jira_key(draft.draft_id), draft.model_dump_json(), ex=DRAFT_TTL_S)
+    await _kv.put(
+        await get_client(), _jira_key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_S
+    )
 
 
 def _jira_key(draft_id: str) -> str:
-    return f"mycel:draft:jira:{draft_id}"
+    return _kv.key("draft", "jira", draft_id)

@@ -49,10 +49,11 @@ def count_identical_calls(messages: "list[Any]", target: str) -> int:
     return seen
 
 
-def guard_repeat(ctx: "RunContext[Any]", tool: str, threshold: int = 2, **args: Any) -> None:
+def guard_repeat(ctx: "RunContext[Any]", tool: str, **args: Any) -> None:
     """Call first in every tool body: warn on the threshold repeat, raise `DegenerateLoop` after."""
     from pydantic_ai import ModelRetry
 
+    threshold = ctx.deps.settings.repeat_threshold
     calls = count_identical_calls(ctx.messages, fingerprint(tool, args))
 
     if calls > threshold:

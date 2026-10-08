@@ -1,8 +1,5 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
-# Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
-model_spec: cloud:claude-sonnet-5
-
 # One call per specialist per angle, and a report usually has a few angles.
 tool_calls_limit: 8
 
@@ -11,8 +8,3 @@ tool_calls_limit: 8
 # the budget honest and is also why this number cannot be the shared default. Two
 # specialists doing two model calls each already exceed `dev.yaml`'s 8.
 request_limit: 40
-
-# A second provider: if Claude is unreachable or out of quota, Gemini answers instead.
-fallback_specs:
-  - cloud:gemini-3.5-flash-lite
-  - cloud:gemini-3.6-flash

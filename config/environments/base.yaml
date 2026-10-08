@@ -4,6 +4,10 @@ agents:
   # Overridden per agent in config/agents/<name>.yaml.
   defaults:
     model_spec: cloud:claude-sonnet-5
+    # Tried in order when the primary is unavailable (see model_builder.py).
+    fallback_specs:
+      - cloud:gemini-3.5-flash-lite
+      - cloud:gemini-3.6-flash
     # The gateway drops it for models that reject sampling parameters (Gemini 3).
     temperature: 0.0
     timeout_s: 60.0

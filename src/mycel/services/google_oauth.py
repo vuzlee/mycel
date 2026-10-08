@@ -1,18 +1,16 @@
 """One person's standing permission to reach their own Google calendar."""
 
 from dataclasses import dataclass
-from urllib.parse import urlencode
 
 import httpx2
 
 from mycel.core.config import Settings, get_settings
-from mycel.core.exceptions import ConfigError, MycelError
+from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import oauth
-from mycel.services.tokens import TokenUnreadable, key_set, seal
-from mycel.services.tokens import unseal as _unseal_token
+from mycel.services.tokens import key_set, seal
 
 log = get_logger(__name__)
 
@@ -30,7 +28,6 @@ SCOPES = (
 
 CALLBACK_PATH = "/auth/google/callback"
 PROVIDER = "google"
-STATE_TTL_S = oauth.STATE_TTL_S
 
 
 class GoogleError(MycelError):
@@ -59,29 +56,20 @@ def configured(settings: Settings | None = None) -> bool:
 async def consent_url(user_id: int) -> str:
     """Where to send someone so Google can ask them."""
     client_id, _ = _client()
-    state = await oauth.start_state(PROVIDER, user_id)
-
-    query = urlencode(
-        {
-            "client_id": client_id,
-            "redirect_uri": _redirect_uri(),
-            "response_type": "code",
-            "scope": " ".join(SCOPES),
-            "access_type": "offline",
-            "prompt": "consent",
-            "include_granted_scopes": "true",
-            "state": state,
-        }
-    )
-    return f"{AUTH_URL}?{query}"
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _redirect_uri(),
+        "response_type": "code",
+        "scope": " ".join(SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+        "include_granted_scopes": "true",
+    }
+    return await oauth.consent_url(PROVIDER, AUTH_URL, user_id, params)
 
 
 async def spend_state(state: str) -> int:
-    """Whose consent round this callback belongs to. Raises `GoogleError` if it is not one."""
-    user_id = await oauth.spend_state(PROVIDER, state)
-    if user_id is None:
-        raise GoogleError("that consent link has expired; start again from settings")
-    return user_id
+    return await oauth.owner_of(PROVIDER, state, GoogleError)
 
 
 async def exchange(code: str) -> Grant:
@@ -177,28 +165,19 @@ async def token_for(user_id: int) -> str:
 
 
 def unseal(refresh_token_encrypted: str) -> str:
-    """Decrypt a stored refresh token, phrased for the person who has to fix it."""
-    try:
-        return _unseal_token(refresh_token_encrypted)
-    except TokenUnreadable as exc:
-        raise NotConnected(
-            "the stored Google token cannot be read; connect your account again"
-        ) from exc
+    return oauth.unseal_for(refresh_token_encrypted, "Google", NotConnected)
 
 
 async def _token_call(data: dict[str, str]) -> dict[str, object]:
-    """One POST to the token endpoint, with Google's own error text kept."""
-    try:
-        status, payload = await oauth.post_token(TOKEN_URL, data=data)
-    except httpx2.HTTPError as exc:
-        raise GoogleError(f"Google could not be reached: {exc}") from exc
-
-    if status >= 400:
-        error = str(payload.get("error", status))
-        if error == "invalid_grant":
-            raise NotConnected("your Google account is no longer connected; connect it again")
-        raise GoogleError(f"Google refused the request: {error}")
-    return payload
+    return await oauth.token_call(
+        TOKEN_URL,
+        data,
+        as_json=False,
+        name="Google",
+        error=GoogleError,
+        revoked=NotConnected,
+        revoked_codes=("invalid_grant",),
+    )
 
 
 def _email_from(payload: dict[str, object]) -> str:
@@ -219,14 +198,8 @@ def _email_from(payload: dict[str, object]) -> str:
 
 
 def _client() -> tuple[str, str]:
-    """The client id and secret, or `ConfigError`."""
     cfg = get_settings()
-    if not configured() or cfg.google_client_id is None or cfg.google_client_secret is None:
-        raise ConfigError(
-            "this deployment has no Google client configured; "
-            "set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and TOKEN_ENCRYPTION_KEY"
-        )
-    return cfg.google_client_id, cfg.google_client_secret.get_secret_value()
+    return oauth.credentials(cfg.google_client_id, cfg.google_client_secret, configured(), "GOOGLE")
 
 
 def _redirect_uri() -> str:

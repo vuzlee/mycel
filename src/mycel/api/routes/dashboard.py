@@ -1,15 +1,13 @@
 """Read one project's progress: the part of this system a person can just look at."""
 
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.domains.dashboard import DEFAULT_DAYS, get_dashboard
 from mycel.infra.postgres.repositories.gold import WorkItemRow
-from mycel.services.auth import Principal
 from mycel.services.permission import NotReadable
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -132,7 +130,7 @@ class DashboardResponse(BaseModel):
 @router.get("/{project}", response_model=DashboardResponse)
 async def read_dashboard(
     project: str,
-    user: Annotated[Principal, Depends(current_user)],
+    user: CurrentUser,
     days: int = Query(default=DEFAULT_DAYS, ge=1, le=MAX_DAYS),
 ) -> DashboardResponse:
     """The numbers for one project."""

@@ -75,7 +75,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
                 `gold.work_item` and `gold.worklog`. Add your own LIMIT when you want
                 fewer than 200 rows.
         """
-        guard_repeat(ctx, "run_sql", threshold=ctx.deps.settings.repeat_threshold, query=query)
+        guard_repeat(ctx, "run_sql", query=query)
         if refusal := _reject(query):
             raise ModelRetry(refusal)
         scope = await _scope(ctx.deps)

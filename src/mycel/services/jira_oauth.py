@@ -2,17 +2,16 @@
 
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urlencode
 
 import httpx2
 
 from mycel.core.config import Settings, get_settings
-from mycel.core.exceptions import ConfigError, MycelError
+from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import oauth
-from mycel.services.tokens import TokenUnreadable, key_set, seal, unseal
+from mycel.services.tokens import key_set, seal
 
 log = get_logger(__name__)
 
@@ -35,9 +34,6 @@ PROJECT_SCOPE = "manage:jira-project"
 
 CALLBACK_PATH = "/auth/jira/callback"
 PROVIDER = "jira"
-HTTP_TIMEOUT_S = oauth.HTTP_TIMEOUT_S
-
-STATE_TTL_S = oauth.STATE_TTL_S
 
 
 class JiraAuthError(MycelError):
@@ -75,28 +71,19 @@ def configured(settings: Settings | None = None) -> bool:
 async def consent_url(user_id: int) -> str:
     """Where to send someone so Atlassian can ask them."""
     client_id, _ = _client()
-    state = await oauth.start_state(PROVIDER, user_id)
-
-    query = urlencode(
-        {
-            "audience": "api.atlassian.com",
-            "client_id": client_id,
-            "scope": " ".join(scopes()),
-            "redirect_uri": _redirect_uri(),
-            "state": state,
-            "response_type": "code",
-            "prompt": "consent",
-        }
-    )
-    return f"{AUTH_URL}?{query}"
+    params = {
+        "audience": "api.atlassian.com",
+        "client_id": client_id,
+        "scope": " ".join(scopes()),
+        "redirect_uri": _redirect_uri(),
+        "response_type": "code",
+        "prompt": "consent",
+    }
+    return await oauth.consent_url(PROVIDER, AUTH_URL, user_id, params)
 
 
 async def spend_state(state: str) -> int:
-    """Whose consent round this callback belongs to. Raises `JiraAuthError` if it is none."""
-    user_id = await oauth.spend_state(PROVIDER, state)
-    if user_id is None:
-        raise JiraAuthError("that consent link has expired; start again from settings")
-    return user_id
+    return await oauth.owner_of(PROVIDER, state, JiraAuthError)
 
 
 async def exchange(code: str) -> Grant:
@@ -132,12 +119,6 @@ async def exchange(code: str) -> Grant:
         # As granted, not as asked for: a site may grant less.
         scope=str(payload.get("scope", "")),
     )
-
-
-async def access_token(refresh_token_encrypted: str) -> str:
-    """A fresh access token for one person, from the token kept for them."""
-    token, _ = await _refresh(refresh_token_encrypted)
-    return token
 
 
 async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None]:
@@ -212,28 +193,19 @@ async def token_for(user_id: int) -> tuple[str, str]:
 
 
 def _unseal(refresh_token_encrypted: str) -> str:
-    """Decrypt, turning a rotated key into the sentence it means for a person."""
-    try:
-        return unseal(refresh_token_encrypted)
-    except TokenUnreadable as exc:
-        raise NotConnected(
-            "the stored Jira token cannot be read; connect your account again"
-        ) from exc
+    return oauth.unseal_for(refresh_token_encrypted, "Jira", NotConnected)
 
 
 async def _token_call(data: dict[str, str]) -> dict[str, Any]:
-    """One POST to the token endpoint, with Atlassian's own error text kept."""
-    try:
-        status, payload = await oauth.post_token(TOKEN_URL, json=data)
-    except httpx2.HTTPError as exc:
-        raise JiraAuthError(f"Atlassian could not be reached: {exc}") from exc
-
-    if status >= 400:
-        error = str(payload.get("error", status))
-        if error in ("invalid_grant", "unauthorized_client", "access_denied"):
-            raise NotConnected("your Jira account is no longer connected; connect it again")
-        raise JiraAuthError(f"Atlassian refused the request: {error}")
-    return payload
+    return await oauth.token_call(
+        TOKEN_URL,
+        data,
+        as_json=True,
+        name="Atlassian",
+        error=JiraAuthError,
+        revoked=NotConnected,
+        revoked_codes=("invalid_grant", "unauthorized_client", "access_denied"),
+    )
 
 
 async def _cloud_id(access: str) -> str:
@@ -265,7 +237,7 @@ async def _whoami(access: str, cloud_id: str) -> tuple[str, str]:
 async def _api(access: str, url: str) -> Any:
     """One authorised GET during the consent round, before any account row exists."""
     try:
-        async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
+        async with httpx2.AsyncClient(timeout=oauth.HTTP_TIMEOUT_S) as client:
             response = await client.get(
                 url, headers={"authorization": f"Bearer {access}", "accept": "application/json"}
             )
@@ -278,14 +250,8 @@ async def _api(access: str, url: str) -> Any:
 
 
 def _client() -> tuple[str, str]:
-    """The client id and secret, or `ConfigError`."""
     cfg = get_settings()
-    if not configured() or cfg.jira_client_id is None or cfg.jira_client_secret is None:
-        raise ConfigError(
-            "this deployment has no Jira OAuth client configured; "
-            "set JIRA_CLIENT_ID, JIRA_CLIENT_SECRET and TOKEN_ENCRYPTION_KEY"
-        )
-    return cfg.jira_client_id, cfg.jira_client_secret.get_secret_value()
+    return oauth.credentials(cfg.jira_client_id, cfg.jira_client_secret, configured(), "JIRA")
 
 
 def _redirect_uri() -> str:

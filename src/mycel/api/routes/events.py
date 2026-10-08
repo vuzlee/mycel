@@ -1,17 +1,15 @@
 """Follow a running job's events over SSE."""
 
 from collections.abc import AsyncIterator
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Header, Request
 from fastapi.responses import StreamingResponse
 
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.core.logging import get_logger
 from mycel.domains.chat import find_turn
 from mycel.events.event import RUN_FINISHED, SequencedEvent
 from mycel.infra.redis import streams
-from mycel.services.auth import Principal
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -28,7 +26,7 @@ FINISHED = frozenset({"done", "failed"})
 async def stream_events(
     request: Request,
     job_id: str,
-    user: Annotated[Principal, Depends(current_user)],
+    user: CurrentUser,
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> StreamingResponse:
     """Stream the job's events, resuming after `Last-Event-ID` when the client reconnects."""

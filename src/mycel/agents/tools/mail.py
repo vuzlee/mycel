@@ -37,7 +37,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             hours: How far back to look. Today is 24, this week 168, this month 720,
                 which is also the most that can be asked for.
         """
-        guard_repeat(ctx, "read_mail", threshold=ctx.deps.settings.repeat_threshold, hours=hours)
+        guard_repeat(ctx, "read_mail", hours=hours)
 
         if hours < 1:
             raise ModelRetry("read_mail needs a window of at least one hour.")

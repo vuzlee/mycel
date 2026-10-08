@@ -1,15 +1,14 @@
 """One person's conversations, for the sidebar."""
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
 
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.domains import conversations as domain
 from mycel.domains.conversations import HISTORY_LIMIT
-from mycel.services.auth import Principal
 
 router = APIRouter(tags=["conversations"])
 
@@ -41,7 +40,7 @@ class TurnResponse(BaseModel):
 
 @router.get("/conversations", response_model=list[ConversationResponse])
 async def read_conversations(
-    user: Annotated[Principal, Depends(current_user)],
+    user: CurrentUser,
     limit: int = Query(default=HISTORY_LIMIT, ge=1, le=HISTORY_LIMIT),
 ) -> list[ConversationResponse]:
     """This person's conversations, newest first."""
@@ -61,9 +60,7 @@ async def read_conversations(
 
 
 @router.get("/conversations/{conversation_id}/turns", response_model=list[TurnResponse])
-async def read_turns(
-    conversation_id: int, user: Annotated[Principal, Depends(current_user)]
-) -> list[TurnResponse]:
+async def read_turns(conversation_id: int, user: CurrentUser) -> list[TurnResponse]:
     """Every run in one conversation, oldest first."""
     return [
         TurnResponse(
@@ -85,9 +82,7 @@ class PinRequest(BaseModel):
 
 
 @router.put("/conversations/{conversation_id}/pin", status_code=204)
-async def pin_conversation(
-    conversation_id: int, body: PinRequest, user: Annotated[Principal, Depends(current_user)]
-) -> Response:
+async def pin_conversation(conversation_id: int, body: PinRequest, user: CurrentUser) -> Response:
     """Pin or unpin a conversation. 404 for "not yours" as well, same as the delete."""
     if not await domain.pin_conversation(user.id, conversation_id, body.pinned):
         raise HTTPException(status_code=404, detail="no such conversation")
@@ -95,9 +90,7 @@ async def pin_conversation(
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)
-async def delete_conversation(
-    conversation_id: int, user: Annotated[Principal, Depends(current_user)]
-) -> Response:
+async def delete_conversation(conversation_id: int, user: CurrentUser) -> Response:
     """Forget a conversation. The turns under it go too, by cascade."""
     if not await domain.forget_conversation(user.id, conversation_id):
         raise HTTPException(status_code=404, detail="no such conversation")

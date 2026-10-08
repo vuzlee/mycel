@@ -1,12 +1,12 @@
 """A finished job's answer, held with a TTL until polled; Postgres holds the record."""
 
-import json
 from typing import Literal
 
 from pydantic import BaseModel
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
 
 log = get_logger(__name__)
@@ -23,7 +23,7 @@ class JobResult(BaseModel):
 
 
 def _key(job_id: str) -> str:
-    return f"mycel:result:{job_id}"
+    return _kv.key("result", job_id)
 
 
 async def mark_running(job_id: str) -> None:
@@ -42,18 +42,15 @@ async def store_failure(job_id: str, error: str) -> None:
 
 async def fetch(job_id: str) -> JobResult | None:
     """A job's state, or `None` if unknown or expired."""
-    client = await get_client()
-    raw = await client.get(_key(job_id))
-    if raw is None:
-        return None
-    return JobResult.model_validate(json.loads(raw))
+    found = await _kv.get(await get_client(), _key(job_id))
+    return None if found is None else JobResult.model_validate(found)
 
 
 async def _write(result: JobResult) -> None:
     """Single write path, refreshing the TTL on every state."""
-    client = await get_client()
-    await client.set(
+    await _kv.put(
+        await get_client(),
         _key(result.job_id),
         result.model_dump_json(),
-        ex=get_settings().result_ttl_seconds,
+        get_settings().result_ttl_seconds,
     )

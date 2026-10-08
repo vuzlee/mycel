@@ -47,7 +47,7 @@ async def _find_jira_user(ctx: RunContext[MycelDeps], name: str) -> str:
     Args:
         name: Part of a name or an email address, as the person said it.
     """
-    guard_repeat(ctx, "find_jira_user", threshold=ctx.deps.settings.repeat_threshold, name=name)
+    guard_repeat(ctx, "find_jira_user", name=name)
     auth = await _auth(ctx.deps)
     if auth is None:
         return CONNECT
@@ -104,7 +104,6 @@ async def _draft_jira_write(
     guard_repeat(
         ctx,
         "draft_jira_write",
-        threshold=ctx.deps.settings.repeat_threshold,
         kind=kind,
         issue_key=issue_key,
         summary=summary,

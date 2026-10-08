@@ -41,7 +41,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             limit: How many to return. Five is usually enough; twenty is the most.
             status_category: Optionally narrow to `todo`, `doing` or `done`.
         """
-        guard_repeat(ctx, "rag_search", threshold=ctx.deps.settings.repeat_threshold, query=query)
+        guard_repeat(ctx, "rag_search", query=query)
 
         if not query.strip():
             raise ModelRetry("rag_search needs something to search for.")

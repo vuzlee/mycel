@@ -1,19 +1,18 @@
 """Ask something, and come back for the answer."""
 
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from mycel.agents.core.chips import Chip
-from mycel.api.dependencies import current_user
+from mycel.api.dependencies import CurrentUser
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains.chat import ConversationNotFound, find_turn, request_chat
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
-from mycel.services.auth import Principal
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -58,7 +57,7 @@ class ChatResponse(BaseModel):
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=AcceptedResponse)
 async def create_chat(
     body: ChatRequest,
-    user: Annotated[Principal, Depends(current_user)],
+    user: CurrentUser,
 ) -> AcceptedResponse:
     """Queue a question and hand back the id to poll with."""
     try:
@@ -90,7 +89,7 @@ def _state_of(kept: TurnRow) -> Literal["running", "done", "failed"]:
 @router.get("/{job_id}", response_model=ChatResponse)
 async def get_chat(
     job_id: str,
-    user: Annotated[Principal, Depends(current_user)],
+    user: CurrentUser,
 ) -> ChatResponse:
     """Read what became of a job."""
     kept = await find_turn(job_id)

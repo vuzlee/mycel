@@ -160,7 +160,7 @@ class TestTheStateIsSpentOnce:
     async def test_the_state_expires_on_its_own(self, configured: None, redis: FakeRedis) -> None:
         await oauth.consent_url(7)
 
-        assert list(redis.ttls.values()) == [oauth.STATE_TTL_S]
+        assert list(redis.ttls.values()) == [shared_oauth.STATE_TTL_S]
 
 
 class TestExchangingTheCode:
@@ -212,7 +212,7 @@ class TestRefreshing:
         )
 
         with pytest.raises(NotConnected):
-            await oauth.access_token(seal("rt-1"))
+            await _access_token(seal("rt-1"))
 
     async def test_any_other_refusal_is_not_a_reconnect(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
@@ -225,7 +225,7 @@ class TestRefreshing:
         )
 
         with pytest.raises(JiraAuthError) as caught:
-            await oauth.access_token(seal("rt-1"))
+            await _access_token(seal("rt-1"))
 
         assert not isinstance(caught.value, NotConnected)
 
@@ -235,7 +235,7 @@ class TestRefreshing:
         routes = _routes({"/oauth/token": {"access_token": "at"}})
         monkeypatch.setattr(httpx2, "AsyncClient", routes)
 
-        assert await oauth.access_token(seal("rt-1")) == "at"
+        assert await _access_token(seal("rt-1")) == "at"
 
 
 class TestARotatedTokenIsKept:
@@ -328,4 +328,9 @@ class TestTheTokenAtRest:
         stale = Fernet(Fernet.generate_key()).encrypt(b"rt-1").decode()
 
         with pytest.raises(NotConnected, match="connect your account again"):
-            await oauth.access_token(stale)
+            await _access_token(stale)
+
+
+async def _access_token(sealed: str) -> str:
+    token, _ = await oauth._refresh(sealed)
+    return token

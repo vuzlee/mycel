@@ -1,5 +1,6 @@
 """Degenerate-loop detection: the one guard pydantic-ai does not provide."""
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -11,10 +12,11 @@ from mycel.agents.core.guards import count_identical_calls, fingerprint, guard_r
 
 
 class _Ctx:
-    """Stand-in for RunContext — guard_repeat only ever reads `.messages`."""
+    """Stand-in for RunContext: messages and a repeat threshold."""
 
-    def __init__(self, messages: list[Any]) -> None:
+    def __init__(self, messages: list[Any], threshold: int = 2) -> None:
         self.messages = messages
+        self.deps = SimpleNamespace(settings=SimpleNamespace(repeat_threshold=threshold))
 
 
 def _call(tool: str, **args: Any) -> ModelResponse:
@@ -83,8 +85,8 @@ class TestGuardRepeat:
         assert exc.value.count == 3
 
     def test_threshold_is_configurable(self) -> None:
-        ctx = _Ctx([_call("growth", previous=1, current=2)] * 3)
-        result = guard_repeat(ctx, "growth", threshold=5, previous=1, current=2)  # type: ignore[arg-type,func-returns-value]
+        ctx = _Ctx([_call("growth", previous=1, current=2)] * 3, threshold=5)
+        result = guard_repeat(ctx, "growth", previous=1, current=2)  # type: ignore[arg-type,func-returns-value]
         assert result is None
 
     def test_message_tells_the_model_what_to_do(self) -> None:

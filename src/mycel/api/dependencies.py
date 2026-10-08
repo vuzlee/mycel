@@ -36,3 +36,6 @@ async def current_user(
             headers={"WWW-Authenticate": "Cookie"},
         )
     return user
+
+
+CurrentUser = Annotated[Principal, Depends(current_user)]

@@ -4,11 +4,12 @@ import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
+from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
 
 
 def _channel(user_id: int) -> str:
-    return f"documents:{user_id}"
+    return _kv.key("documents", user_id)
 
 
 async def changed(user_id: int) -> None:
