@@ -27,7 +27,9 @@ _DECLINE = re.compile(
 class Checked:
     answer: str
     cited: list[str]
+    #: Markers naming a passage that was not sent: invented. Not the ones a refusal loses.
     dropped: list[str]
+    declined: bool = False
 
 
 def declines(text: str) -> bool:
@@ -38,7 +40,7 @@ def declines(text: str) -> bool:
 def check(text: str, labels: Collection[str]) -> Checked:
     """Keep markers whose label was sent, strip the rest. `cited` follows passage order."""
     if declines(text):
-        labels = ()
+        return Checked(answer=_MARKER.sub("", text).strip(), cited=[], dropped=[], declined=True)
     dropped: list[str] = []
 
     def keep_or_drop(match: re.Match[str]) -> str:

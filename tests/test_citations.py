@@ -50,7 +50,8 @@ class TestARefusalCitesNothing:
 
         assert out.cited == []
         assert "[c1]" not in out.answer
-        assert out.dropped == ["c1", "c2"]
+        assert out.declined
+        assert out.dropped == [], "a refusal's markers are not invented citations"
 
     def test_the_usual_wordings_count_as_a_refusal(self) -> None:
         for text in (
