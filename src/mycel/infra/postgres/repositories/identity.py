@@ -11,7 +11,7 @@ from mycel.infra.postgres.models import (
     Session,
     User,
 )
-from mycel.infra.postgres.repositories._sql import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount, to_row
 
 
 @dataclass(frozen=True)
@@ -129,22 +129,12 @@ class IdentityRepository:
 
 
 def _user(row: User) -> UserRow:
-    return UserRow(
-        id=row.id, email=row.email, password_hash=row.password_hash, created_at=row.created_at
-    )
+    return to_row(UserRow, row)
 
 
 def _session(row: Session) -> SessionRow:
-    return SessionRow(
-        id=row.id,
-        user_id=row.user_id,
-        created_at=row.created_at,
-        expires_at=row.expires_at,
-        last_seen_at=row.last_seen_at,
-    )
+    return to_row(SessionRow, row)
 
 
 def _reset(row: PasswordReset) -> PasswordResetRow:
-    return PasswordResetRow(
-        id=row.id, user_id=row.user_id, expires_at=row.expires_at, used_at=row.used_at
-    )
+    return to_row(PasswordResetRow, row)

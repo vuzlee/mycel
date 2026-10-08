@@ -60,19 +60,12 @@ def _document(row: DocumentRow) -> DocumentResponse:
     )
 
 
-def _refused(exc: service.DocumentError) -> HTTPException:
-    return HTTPException(exc.status, exc.message)
-
-
 @router.post("/documents", response_model=DocumentResponse, status_code=202)
 async def upload_document(
     user: CurrentUser, file: Annotated[UploadFile, File()]
 ) -> DocumentResponse:
     data = await file.read(service.max_bytes() + 1)
-    try:
-        doc = await service.upload(user.id, service.Upload(file.filename or "document", data))
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
+    doc = await service.upload(user.id, service.Upload(file.filename or "document", data))
     return _document(doc)
 
 
@@ -111,14 +104,11 @@ async def _status_frames(request: Request, user_id: int) -> AsyncIterator[str]:
 async def update_document(
     document_id: int, body: DocumentUpdateRequest, user: CurrentUser
 ) -> DocumentResponse:
-    try:
-        doc = None
-        if body.filename is not None:
-            doc = await service.rename(user.id, document_id, body.filename)
-        if body.enabled is not None:
-            doc = await service.set_enabled(user.id, document_id, body.enabled)
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
+    doc = None
+    if body.filename is not None:
+        doc = await service.rename(user.id, document_id, body.filename)
+    if body.enabled is not None:
+        doc = await service.set_enabled(user.id, document_id, body.enabled)
     if doc is None:
         raise HTTPException(422, "Nothing to change.")
     return _document(doc)
@@ -126,27 +116,18 @@ async def update_document(
 
 @router.delete("/documents/{document_id}", status_code=202)
 async def delete_document(document_id: int, user: CurrentUser) -> Response:
-    try:
-        await service.delete_document(user.id, document_id)
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
+    await service.delete_document(user.id, document_id)
     return Response(status_code=202)
 
 
 @router.get("/documents/{document_id}/source", response_model=SourceResponse)
 async def get_document_source(document_id: int, user: CurrentUser) -> SourceResponse:
-    try:
-        return SourceResponse(url=await service.source_url(user.id, document_id))
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
+    return SourceResponse(url=await service.source_url(user.id, document_id))
 
 
 @router.get("/chunks/{chunk_id}", response_model=ChunkResponse)
 async def get_chunk(chunk_id: int, user: CurrentUser) -> ChunkResponse:
-    try:
-        c = await service.chunk(user.id, chunk_id)
-    except service.DocumentError as exc:
-        raise _refused(exc) from exc
+    c = await service.chunk(user.id, chunk_id)
     return ChunkResponse(
         id=c.id,
         document_id=c.document_id,

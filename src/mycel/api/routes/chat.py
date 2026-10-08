@@ -12,7 +12,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
-from mycel.services.chat import ConversationNotFound, find_turn, request_chat
+from mycel.services.chat import find_turn, request_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -60,18 +60,12 @@ async def create_chat(
     user: CurrentUser,
 ) -> AcceptedResponse:
     """Queue a question and hand back the id to poll with."""
-    try:
-        job_id, conversation_id = await request_chat(
-            user.id,
-            body.question,
-            body.conversation_id,
-            chips=[str(c) for c in body.chips] if body.chips is not None else None,
-        )
-    except ConversationNotFound as missing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"no conversation {missing.args[0]}",
-        ) from missing
+    job_id, conversation_id = await request_chat(
+        user.id,
+        body.question,
+        body.conversation_id,
+        chips=[str(c) for c in body.chips] if body.chips is not None else None,
+    )
     log.info("chat queued", extra={"job_id": job_id, "conversation_id": conversation_id})
     return AcceptedResponse(job_id=job_id, conversation_id=conversation_id)
 

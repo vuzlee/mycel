@@ -14,7 +14,7 @@ from mycel.infra.postgres.models import (
     Membership,
     SyncState,
 )
-from mycel.infra.postgres.repositories._sql import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount, to_row
 
 
 @dataclass(frozen=True)
@@ -193,22 +193,8 @@ class AccountRepository:
 
 
 def _google(row: GoogleAccount) -> GoogleAccountRow:
-    return GoogleAccountRow(
-        user_id=row.user_id,
-        email=row.email,
-        refresh_token_encrypted=row.refresh_token_encrypted,
-        scope=row.scope,
-        connected_at=row.connected_at,
-    )
+    return to_row(GoogleAccountRow, row)
 
 
 def _jira(row: JiraAccount) -> JiraAccountRow:
-    return JiraAccountRow(
-        user_id=row.user_id,
-        account_id=row.account_id,
-        display_name=row.display_name,
-        cloud_id=row.cloud_id,
-        refresh_token_encrypted=row.refresh_token_encrypted,
-        scope=row.scope,
-        connected_at=row.connected_at,
-    )
+    return to_row(JiraAccountRow, row)

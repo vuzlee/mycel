@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.documents import DELETING, FAILED, IN_FLIGHT, PARSING, READY
 from mycel.infra.postgres.models import Chunk, Document
-from mycel.infra.postgres.repositories._sql import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount, to_row
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,21 +244,7 @@ class DocumentRepository:
 
 
 def _document(row: Document) -> DocumentRow:
-    return DocumentRow(
-        row.id,
-        row.user_id,
-        row.filename,
-        row.mime,
-        row.size,
-        row.sha256,
-        row.object_key,
-        row.status,
-        row.fail_reason,
-        row.enabled,
-        row.pages,
-        row.attempts,
-        row.updated_at,
-    )
+    return to_row(DocumentRow, row)
 
 
 def _chunk(row: Chunk, doc: Document) -> ChunkRow:

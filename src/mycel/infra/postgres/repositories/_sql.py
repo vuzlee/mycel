@@ -1,9 +1,16 @@
 from collections.abc import Sequence
-from dataclasses import asdict
-from typing import Any
+from dataclasses import asdict, fields
+from typing import Any, TypeVar
 
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
+RowT = TypeVar("RowT")
+
+
+def to_row(cls: type[RowT], row: Any) -> RowT:
+    """A dataclass from an ORM row, field by field by name."""
+    return cls(**{f.name: getattr(row, f.name) for f in fields(cls)})  # type: ignore[arg-type]
 
 
 def rowcount(result: Any) -> int:

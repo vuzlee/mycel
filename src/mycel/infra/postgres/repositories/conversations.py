@@ -11,7 +11,7 @@ from mycel.infra.postgres.models import (
     Conversation,
     Turn,
 )
-from mycel.infra.postgres.repositories._sql import rowcount
+from mycel.infra.postgres.repositories._sql import rowcount, to_row
 
 
 @dataclass(frozen=True)
@@ -152,26 +152,8 @@ class ConversationRepository:
 
 
 def _conversation(row: Conversation) -> ConversationRow:
-    return ConversationRow(
-        id=row.id,
-        user_id=row.user_id,
-        kind=row.kind,
-        title=row.title,
-        created_at=row.created_at,
-        pinned_at=row.pinned_at,
-    )
+    return to_row(ConversationRow, row)
 
 
 def _turn(row: Turn) -> TurnRow:
-    return TurnRow(
-        id=row.id,
-        conversation_id=row.conversation_id,
-        job_id=row.job_id,
-        question=row.question,
-        status=row.status,
-        answer=row.answer,
-        error=row.error,
-        spent_usd=row.spent_usd,
-        steps=row.steps,
-        created_at=row.created_at,
-    )
+    return to_row(TurnRow, row)

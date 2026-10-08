@@ -32,6 +32,8 @@ from mycel.llm.budget import BudgetExceeded
 from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.services.auth import AuthError
+from mycel.services.chat import ConversationNotFound
+from mycel.services.documents import DocumentError
 
 log = get_logger(__name__)
 
@@ -163,6 +165,14 @@ def _install_error_handlers(app: FastAPI) -> None:
     async def _agent(request: Request, exc: AgentError) -> JSONResponse:
         log.warning("agent run failed", extra={"detail": str(exc)})
         return problem(502, "agent_failed", str(exc))
+
+    @app.exception_handler(DocumentError)
+    async def _document(request: Request, exc: DocumentError) -> JSONResponse:
+        return problem(exc.status, "document_refused", exc.message)
+
+    @app.exception_handler(ConversationNotFound)
+    async def _no_conversation(request: Request, exc: ConversationNotFound) -> JSONResponse:
+        return problem(404, "not_found", f"no conversation {exc.args[0]}")
 
     @app.exception_handler(MycelError)
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:
