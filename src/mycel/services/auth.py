@@ -124,12 +124,12 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Prin
     return _principal(user)
 
 
-async def open_session(session: AsyncSession, user_id: int) -> tuple[str, datetime]:
+async def open_session(session: AsyncSession, user_id: int) -> str:
     """Start a session and return the cookie value and when it stops working."""
     token = secrets.token_hex(TOKEN_BYTES)
     expires_at = datetime.now(UTC) + SESSION_TTL
     await IdentityRepository(session).create_session(token, user_id, expires_at)
-    return token, expires_at
+    return token
 
 
 async def close_session(session: AsyncSession, token: str) -> None:

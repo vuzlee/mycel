@@ -62,16 +62,8 @@ log = get_logger(__name__)
 DEFAULT_WINDOW_DAYS = 7
 
 
-def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[MycelDeps]:
-    """The agents, as tools another agent may be given.
-
-    Not the orchestrator's private toolbox: whichever agent a flow puts first gets this
-    toolset, and a flow may give it to more than one.
-
-    `settings` configures the *caller*; each delegated agent reads its own
-    `config/agents/<name>.yaml`, because a delegated agent's model and limits are its own
-    property rather than something inherited from whoever called it.
-    """
+def build_toolset() -> FunctionToolset[MycelDeps]:
+    """The specialists as tools. Each reads its own config/agents/<name>.yaml."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
     @toolset.tool(name="researcher")
@@ -82,7 +74,7 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
             question: One self-contained question. The researcher cannot see this run's
                 prompt or any earlier answer.
         """
-        return await _delegate(ctx, Researcher, "researcher", question)
+        return await _delegate(ctx, Researcher, question)
 
     @toolset.tool(name="analyst")
     async def _analyst(ctx: RunContext[MycelDeps], question: str) -> str:
@@ -92,7 +84,7 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
             question: One self-contained question. The analyst reads gold itself, so ask
                 in plain words; include any numbers of your own that it should use.
         """
-        return await _delegate(ctx, Analyst, "analyst", question)
+        return await _delegate(ctx, Analyst, question)
 
     @toolset.tool(name="summariser")
     async def _summariser(
@@ -108,7 +100,7 @@ def build_toolset(settings: AgentSettings | None = None) -> FunctionToolset[Myce
         until = datetime.now(UTC)
         async with session_scope() as session:
             window = await gather_progress(session, project, until - timedelta(days=days), until)
-        return await _delegate(ctx, Summariser, "summariser", render(window))
+        return await _delegate(ctx, Summariser, render(window))
 
     return toolset
 
@@ -133,7 +125,6 @@ async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
 async def _delegate(
     ctx: RunContext[MycelDeps],
     agent_cls: type[BaseAgent[Any]],
-    name: str,
     prompt: str,
 ) -> str:
     """Run one delegated agent on the caller's budget.
@@ -145,6 +136,7 @@ async def _delegate(
     the delegated agent's schema is what keeps statements attached to their sources across
     that boundary.
     """
+    name = agent_cls.name
     cfg = AgentSettings.from_config(name)
     try:
         output = await runner.delegate(agent_cls.build(cfg), prompt, ctx, cfg)

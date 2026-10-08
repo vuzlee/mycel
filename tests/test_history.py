@@ -78,8 +78,7 @@ class TestTheCeilings:
 
 class TestTheWorkerUsesIt:
     async def test_the_history_reaches_the_prompt(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The payload carries it, so the worker never re-reads it from the database —
-        see `enqueue_chat` for why the idempotency key makes that mandatory."""
+        """The payload carries the history; the worker never re-reads it."""
         seen: list[str] = []
 
         async def fake_run(agent: object, prompt: str, deps: Any) -> Any:
@@ -93,6 +92,7 @@ class TestTheWorkerUsesIt:
         monkeypatch.setattr(domain.budgets, "save", lambda *a, **k: _noop())
         # Who asked is read back out of `app.user`, which this test has no database for.
         monkeypatch.setattr(domain, "_who_asked", lambda job: _somebody())
+        monkeypatch.setattr(domain, "find_turn", lambda job_id: _noop())
 
         job = Job(
             kind=JobKind.CHAT,

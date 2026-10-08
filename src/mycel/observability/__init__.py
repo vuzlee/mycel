@@ -1,7 +1,6 @@
 """Structured logging, OpenTelemetry traces, Prometheus metrics.
 
   tracing.py     set up OTel + OTLP export, once at startup
-  llm_trace.py   LLM attributes on spans (readable by Langfuse)
   logging.py     JSON logs carrying job_id, trace_id — printed to stdout, Promtail ships
                  them to Loki
   metrics.py     counters and histograms for Prometheus

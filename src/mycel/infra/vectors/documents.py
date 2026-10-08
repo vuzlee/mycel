@@ -45,10 +45,6 @@ def _collection() -> collections.Collection:
     return collections.documents(get_settings().document_embedding_model)
 
 
-def collection_name() -> str:
-    return _collection().name
-
-
 async def ensure() -> str:
     """Create the collection and its payload indexes once per process."""
     global _ready
@@ -112,12 +108,6 @@ async def set_enabled(document_id: int, enabled: bool) -> None:
 async def delete(document_id: int) -> None:
     name = await ensure()
     await client().delete(name, points_selector=FilterSelector(filter=_by_document(document_id)))
-
-
-async def count(document_id: int) -> int:
-    name = await ensure()
-    result = await client().count(name, count_filter=_by_document(document_id), exact=True)
-    return result.count
 
 
 async def search(user_id: int, query: str, limit: int) -> list[Hit]:

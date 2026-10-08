@@ -48,9 +48,6 @@ async def publish(job: Job) -> str:
             delivery_mode=DeliveryMode.PERSISTENT,
             headers=headers,
             message_id=job.job_id,
-            # The broker does not deduplicate on this; it is here so a message sitting in
-            # `jobs.dlq` can be matched to the work it represents without parsing the body.
-            correlation_id=job.idempotency_key,
         )
 
         # aio-pika waits for the broker's confirm by default, so this returning means the
@@ -59,6 +56,6 @@ async def publish(job: Job) -> str:
 
     log.info(
         "job published",
-        extra={"job_id": job.job_id, "kind": str(job.kind), "key": job.idempotency_key},
+        extra={"job_id": job.job_id, "kind": str(job.kind)},
     )
     return job.job_id

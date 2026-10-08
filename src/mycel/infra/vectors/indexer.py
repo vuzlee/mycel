@@ -177,16 +177,9 @@ async def index_items(items: Sequence[WorkItemRow]) -> IndexResult:
     return IndexResult(seen=len(items), embedded=embedded, skipped=skipped)
 
 
-async def index_project(
-    session: AsyncSession, project: str, since: datetime | None = None
-) -> IndexResult:
-    """One project's work items, from `since` onwards. None means everything.
-
-    `since` is an optimisation, not the correctness mechanism: passing None still embeds
-    only what changed, because `index_items` compares every item against what Qdrant holds.
-    It is there so a routine pass need not load fifty-two rows to discover it has nothing
-    to do.
-    """
-    repo = GoldRepository(session)
-    window = since or datetime(1970, 1, 1, tzinfo=UTC)
-    return await index_items(await repo.items_between(project, since=window))
+async def index_project(session: AsyncSession, project: str) -> IndexResult:
+    """Embed a project's items; `index_items` skips what Qdrant already holds unchanged."""
+    items = await GoldRepository(session).items_between(
+        project, since=datetime(1970, 1, 1, tzinfo=UTC)
+    )
+    return await index_items(items)

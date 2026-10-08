@@ -57,11 +57,6 @@ class AgentSettings:
     # Counted as attempts *after* the first, so 0 disables retrying.
     transient_retries: int = 2
 
-    # Ceiling on the backoff between those retries. Only google-genai lets a caller set it;
-    # the Anthropic and OpenAI clients cap their own backoff and expose no knob, so this is
-    # a ceiling where it can be one rather than a promise across every backend.
-    retry_max_delay_s: float = 20.0
-
     # Handed to pydantic-ai as `UsageLimits`. `tool_calls_limit` is checked *before* a tool
     # runs, so it is a real circuit breaker rather than a post-mortem.
     request_limit: int = 12

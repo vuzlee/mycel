@@ -17,7 +17,6 @@ import uvicorn
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from mycel.api import dependencies
 from mycel.api.app import create_app
 from mycel.core.config import Settings
 from mycel.infra.postgres.engine import async_dsn, get_engine
@@ -49,7 +48,6 @@ def _free_port() -> int:
 @pytest.fixture
 def server() -> Iterator[str]:
     asyncio.run(_schema(create=True))
-    dependencies.reset_caches()
     get_engine.cache_clear()
     port = _free_port()
     config = uvicorn.Config(
@@ -68,7 +66,6 @@ def server() -> Iterator[str]:
     finally:
         running.should_exit = True
         thread.join(timeout=10)
-        dependencies.reset_caches()
         get_engine.cache_clear()
         asyncio.run(_schema(create=False))
 

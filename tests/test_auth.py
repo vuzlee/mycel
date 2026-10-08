@@ -20,7 +20,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from mycel.api import dependencies
 from mycel.api.app import create_app
 from mycel.api.dependencies import SESSION_COOKIE
 from mycel.core.config import Settings, get_settings
@@ -50,7 +49,6 @@ def client() -> Iterator[TestClient]:
     session written by one request and read by the next.
     """
     asyncio.run(_build_schema())
-    dependencies.reset_caches()
     # `TestClient` runs its own event loop, and the cached engine may hold connections
     # opened on an anyio loop that has since closed — every query on one then fails as an
     # internal error that looks nothing like its cause.
@@ -60,7 +58,6 @@ def client() -> Iterator[TestClient]:
         with TestClient(app, raise_server_exceptions=False) as running:
             yield running
     finally:
-        dependencies.reset_caches()
         get_engine.cache_clear()
         asyncio.run(_drop_schema())
 
@@ -149,7 +146,7 @@ class TestSigningIn:
 class TestSessions:
     async def test_a_fresh_token_names_its_owner(self, session: AsyncSession) -> None:
         user = await auth.register(session, "f@example.com", PASSWORD)
-        token, _ = await auth.open_session(session, user.id)
+        token = await auth.open_session(session, user.id)
 
         assert (await auth.session_user(session, token)) == user
 
@@ -173,7 +170,7 @@ class TestSessions:
 
     async def test_logging_out_kills_the_token(self, session: AsyncSession) -> None:
         user = await auth.register(session, "i@example.com", PASSWORD)
-        token, _ = await auth.open_session(session, user.id)
+        token = await auth.open_session(session, user.id)
 
         await auth.close_session(session, token)
         assert await auth.session_user(session, token) is None
@@ -296,8 +293,8 @@ class TestChangingPassword:
         """The point of changing a password is that someone else may know the old one — a
         session already open does not care what the password is now."""
         user = await auth.register(session, "pw4@example.com", PASSWORD)
-        mine, _ = await auth.open_session(session, user.id)
-        theirs, _ = await auth.open_session(session, user.id)
+        mine = await auth.open_session(session, user.id)
+        theirs = await auth.open_session(session, user.id)
 
         ended = await auth.change_password(
             session, user.id, PASSWORD, "a longer new one", keep_token=mine
@@ -331,7 +328,7 @@ class TestChangingPassword:
 class TestSweepingSessions:
     async def test_only_expired_rows_go(self, session: AsyncSession) -> None:
         user = await auth.register(session, "sw@example.com", PASSWORD)
-        live, _ = await auth.open_session(session, user.id)
+        live = await auth.open_session(session, user.id)
         past = datetime.now(UTC) - timedelta(seconds=1)
         await IdentityRepository(session).create_session("stale", user.id, past)
 

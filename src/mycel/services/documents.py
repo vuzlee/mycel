@@ -74,12 +74,6 @@ async def list_documents(user_id: int) -> list[DocumentRow]:
         return await DocumentRepository(session).documents(user_id)
 
 
-async def busy(user_id: int) -> bool:
-    """Whether any of the user's documents is still being processed."""
-    async with session_scope() as session:
-        return await DocumentRepository(session).busy(user_id)
-
-
 async def upload(user_id: int, file: Upload) -> DocumentRow:
     """Check, store the original, record it, queue the ingest job."""
     settings = get_settings()

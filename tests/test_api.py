@@ -20,7 +20,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from mycel.agents.core.exceptions import AgentError, ModelTimeout, RunawayStopped
-from mycel.api import dependencies
 from mycel.api.app import WEB_DIST, create_app
 from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
@@ -57,12 +56,10 @@ def _signed_in(app: FastAPI) -> None:
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """An app with tracing off, so tests neither export spans nor need credentials."""
-    dependencies.reset_caches()
     app = create_app(Settings(otel_enabled=False))
     _signed_in(app)
     with TestClient(app, raise_server_exceptions=False) as running:
         yield running
-    dependencies.reset_caches()
 
 
 def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
@@ -509,7 +506,6 @@ class TestTheThingsThatFailSilently:
 
         monkeypatch.setattr("mycel.api.routes.chat.request_chat", one_span)
 
-        dependencies.reset_caches()
         app = create_app(Settings(otel_enabled=False))
         _signed_in(app)
         with TestClient(app) as client:
@@ -881,11 +877,9 @@ class TestWhatNeedsALogin:
     @pytest.fixture
     def stranger(self) -> Iterator[TestClient]:
         """The same app with nobody signed in. No override, no cookie."""
-        dependencies.reset_caches()
         app = create_app(Settings(otel_enabled=False))
         with TestClient(app, raise_server_exceptions=False) as running:
             yield running
-        dependencies.reset_caches()
 
     @pytest.mark.parametrize(
         ("method", "path", "body"),

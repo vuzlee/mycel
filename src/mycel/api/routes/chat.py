@@ -52,7 +52,7 @@ class ChatRequest(BaseModel):
         default=None,
         description=(
             "Sources picked for this turn; an empty list means no tools are offered. "
-            "Absent means the caller does not pick (an older client): every tool stays."
+            "Absent means the caller does not pick: every tool stays."
         ),
     )
 

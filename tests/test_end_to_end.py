@@ -29,7 +29,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from mycel.agents.core import runner
-from mycel.api import dependencies
 from mycel.api.app import create_app
 from mycel.core.config import Settings, get_settings
 from mycel.domains import chat as chat_domain
@@ -76,7 +75,6 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
     monkeypatch.setenv("REDIS_URL", CACHE)
     get_settings.cache_clear()
     get_engine.cache_clear()
-    dependencies.reset_caches()
 
     await _reset_schema()
     await _purge_queues()
@@ -102,7 +100,6 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
         await asyncio.wait_for(worker, timeout=5)
         await close_connection()
         await close_clients()
-        dependencies.reset_caches()
         await _drop_schema()
 
 

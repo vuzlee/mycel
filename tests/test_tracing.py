@@ -12,10 +12,8 @@ from mycel.observability import tracing
 
 
 @pytest.fixture(autouse=True)
-def _reset() -> "object":
-    tracing.reset_for_tests()
-    yield
-    tracing.reset_for_tests()
+def _reset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(tracing, "_configured", False)
 
 
 def _settings(**kw: Any) -> Settings:

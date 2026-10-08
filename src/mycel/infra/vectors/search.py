@@ -47,7 +47,7 @@ class Hit:
 async def search(
     query: str,
     projects: Sequence[str],
-    limit: int = 5,
+    limit: int,
     status_category: str | None = None,
 ) -> list[Hit]:
     """The nearest work items to `query`, from projects the asker may read.

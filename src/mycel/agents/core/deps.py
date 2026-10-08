@@ -14,7 +14,7 @@ No repeat-counter lives here: `guards.py` reads the real message history instead
 cannot drift out of sync with what actually happened.
 """
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
@@ -44,14 +44,3 @@ class MycelDeps:
     #: The chips the person picked for this turn. `None` keeps every tool (scripts, tests,
     #: scheduled work); an empty set is a person who picked none, and gets no tools.
     chips: "frozenset[Chip] | None" = None
-
-    # session: AsyncSession — added when infra/ lands. Deliberately absent from this
-    # slice, which computes rather than queries.
-
-    def child(self) -> "MycelDeps":
-        """Deps for a sub-agent.
-
-        Same `job_id` and the **same budget object**, because money is a per-job quantity
-        and a delegated call spends the same pot.
-        """
-        return replace(self)

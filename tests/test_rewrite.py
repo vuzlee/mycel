@@ -55,6 +55,7 @@ async def _run(monkeypatch: pytest.MonkeyPatch, context: str, rewrite: Any) -> d
     monkeypatch.setattr(domain.budgets, "load", noop)
     monkeypatch.setattr(domain.budgets, "save", noop)
     monkeypatch.setattr(domain, "_who_asked", somebody)
+    monkeypatch.setattr(domain, "find_turn", noop)
 
     job = Job(
         kind=JobKind.CHAT,
@@ -100,3 +101,17 @@ class TestSearch:
     async def test_no_context_makes_no_call(self, monkeypatch: pytest.MonkeyPatch) -> None:
         seen = await _run(monkeypatch, "", lambda p: "unused")
         assert seen["rewrites"] == 0
+
+
+async def test_an_answered_job_is_not_run_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    from types import SimpleNamespace
+
+    async def answered(job_id: str) -> object:
+        return SimpleNamespace(status="done")
+
+    async def must_not_run(*a: object, **k: object) -> None:
+        raise AssertionError("the model was called for an answered job")
+
+    monkeypatch.setattr(domain, "find_turn", answered)
+    monkeypatch.setattr(domain.runner, "run", must_not_run)
+    await domain.run(Job(kind=JobKind.CHAT, payload={"question": "q", "user_id": 1}))

@@ -14,7 +14,6 @@ agents:
     # Transport failures (408, 429, 5xx, dropped connection), retried by the provider's own
     # client. Counted as attempts after the first, so 0 disables retrying.
     transient_retries: 2
-    retry_max_delay_s: 20.0
     request_limit: 12
     tool_calls_limit: 20
     repeat_threshold: 2

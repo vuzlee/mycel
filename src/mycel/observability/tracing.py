@@ -148,9 +148,3 @@ def instrument_agents(capture_content: bool = False) -> None:
     Agent.instrument_all(
         InstrumentationSettings(include_content=capture_content, include_binary_content=False)
     )
-
-
-def reset_for_tests() -> None:
-    """Forget that setup ran. Tests only — a process does not un-configure tracing."""
-    global _configured
-    _configured = False

@@ -52,7 +52,7 @@ from starlette.types import Scope
 
 from mycel import REPO_ROOT
 from mycel.agents.core.exceptions import AgentError, RunawayStopped
-from mycel.api import dependencies, health
+from mycel.api import health
 from mycel.api.middleware import RequestIdMiddleware
 from mycel.api.routes import (
     auth,
@@ -100,7 +100,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """
     cfg = settings or get_settings()
     setup_logging(cfg.log_level)
-    dependencies.reset_caches()
 
     # Before instrumenting, as the docstring above says: instrumenting first attaches the
     # HTTP spans to the default no-op provider, and they vanish with no error.

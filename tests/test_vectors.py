@@ -213,13 +213,13 @@ class TestTheFilterReachesQdrant:
         nothing is a detail of someone else's query planner."""
         fake.points["x"] = {"issue_key": "MYC-1", "title": "t", "project": "MYC"}
 
-        assert await search.search("anything", projects=[]) == []
+        assert await search.search("anything", projects=[], limit=5) == []
         assert fake.filters == []
 
     async def test_a_status_narrows_further(self, fake: FakeQdrant) -> None:
         fake.points["x"] = {"issue_key": "MYC-1", "title": "t", "project": "MYC"}
 
-        await search.search("q", projects=["MYC"], status_category="done")
+        await search.search("q", projects=["MYC"], limit=5, status_category="done")
 
         assert any(getattr(c, "key", None) == "status_category" for c in fake.filters[0].must)
 
@@ -232,7 +232,7 @@ class TestTheFilterReachesQdrant:
         monkeypatch.setattr(search, "client", lambda: empty)
         monkeypatch.setattr(search, "embed", lambda texts: [[0.1] * 384])
 
-        assert await search.search("q", projects=["MYC"]) == []
+        assert await search.search("q", projects=["MYC"], limit=5) == []
 
 
 class TestTheCollectionName:

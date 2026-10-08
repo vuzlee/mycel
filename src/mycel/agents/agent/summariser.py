@@ -14,10 +14,7 @@ not this module's: an agent that imported a service would reverse the direction 
 other agent points in, and the shape of the data is the caller's concern anyway.
 """
 
-from pydantic_ai.toolsets import AbstractToolset
-
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
 from mycel.agents.schemas import ProgressSummary
 
@@ -28,8 +25,3 @@ class Summariser(BaseAgent[ProgressSummary]):
     name = "summariser"
     instructions = load("summariser")
     output_type = ProgressSummary
-
-    @classmethod
-    def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        """None. The data is in the prompt — see the module docstring."""
-        return []

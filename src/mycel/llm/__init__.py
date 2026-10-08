@@ -2,7 +2,6 @@
 
   router.py   parse a '<tier>:<model_name>' spec and say which backend it means
   budget.py   per-job cost ceiling, accumulated across every run in the job
-  cache.py    repeated prompts do not call out again — not built yet
 
 Much smaller than it was. Calling the provider, counting tokens and counting usage are
 pydantic-ai's job now (`Model`, `RunUsage`), so `client.py`, `tokens.py`, `usage.py` and

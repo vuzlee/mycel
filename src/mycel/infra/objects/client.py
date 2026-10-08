@@ -38,10 +38,13 @@ async def s3() -> AsyncIterator[Any]:
         yield client
 
 
-async def presign(bucket: str, key: str, seconds: int = 300) -> str:
+PRESIGN_SECONDS = 300
+
+
+async def presign(bucket: str, key: str) -> str:
     """A time-limited GET URL, so the file never passes through the API."""
     async with s3() as client:
         url: str = await client.generate_presigned_url(
-            "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=seconds
+            "get_object", Params={"Bucket": bucket, "Key": key}, ExpiresIn=PRESIGN_SECONDS
         )
         return url

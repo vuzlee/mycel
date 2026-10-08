@@ -9,7 +9,6 @@ import pytest
 from pydantic_ai.usage import RunUsage
 
 from mycel.agents.core.config import AgentSettings
-from mycel.agents.core.deps import MycelDeps
 from mycel.llm.budget import BudgetExceeded, JobBudget
 
 
@@ -79,19 +78,6 @@ class TestLimits:
         """The run is capped mid-flight, not just checked before it starts."""
         b = JobBudget("j", Decimal("1.00"), spent_usd=Decimal("0.60"))
         assert b.limits(AgentSettings()).cost_limit == Decimal("0.40")
-
-
-class TestDeps:
-    def test_child_shares_the_budget_object(self) -> None:
-        """The whole point: a delegated call spends the same pot as its parent."""
-        parent = MycelDeps(job_id="j", budget=JobBudget("j", Decimal("1.00")))
-        child = parent.child()
-        assert child.budget is parent.budget
-        assert child.job_id == parent.job_id
-
-    def test_child_is_a_separate_object(self) -> None:
-        parent = MycelDeps(job_id="j", budget=JobBudget("j", Decimal("1.00")))
-        assert parent.child() is not parent
 
 
 class TestPricingFromTheTable:

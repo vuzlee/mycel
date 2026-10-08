@@ -67,6 +67,10 @@ def _message(question: str = "how many?", **headers: Any) -> FakeMessage:
     return FakeMessage(job.model_dump_json().encode(), dict(headers))
 
 
+async def _no_turn(job_id: str) -> None:
+    return None
+
+
 @pytest.fixture(autouse=True)
 def asker(monkeypatch: pytest.MonkeyPatch) -> None:
     """Who the job belongs to, without the `app.user` lookup behind it.
@@ -82,6 +86,7 @@ def asker(monkeypatch: pytest.MonkeyPatch) -> None:
         return Principal(id=user_id, email="someone@example.com")
 
     monkeypatch.setattr(chat_domain, "_who_asked", _who)
+    monkeypatch.setattr(chat_domain, "find_turn", _no_turn)
 
 
 @pytest.fixture
@@ -155,32 +160,6 @@ class _GoneThread:
 
     async def upsert_turn(self, *args: Any, **kwargs: Any) -> None:
         raise IntegrityError("INSERT INTO app.turn", {}, Exception("foreign key"))
-
-
-class TestIdempotencyKey:
-    """The one thing at-least-once delivery makes mandatory."""
-
-    def test_the_same_work_gets_the_same_key(self) -> None:
-        a = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
-        b = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
-        assert a.idempotency_key == b.idempotency_key
-        # ...while still being two distinct attempts, so both callers can poll.
-        assert a.job_id != b.job_id
-
-    def test_key_order_does_not_change_the_key(self) -> None:
-        """Two dicts equal in Python must not hash differently, or the key is useless."""
-        a = Job(kind=JobKind.CHAT, payload={"a": 1, "b": 2})
-        b = Job(kind=JobKind.CHAT, payload={"b": 2, "a": 1})
-        assert a.idempotency_key == b.idempotency_key
-
-    def test_different_work_gets_a_different_key(self) -> None:
-        a = Job(kind=JobKind.CHAT, payload={"question": "revenue?"})
-        b = Job(kind=JobKind.CHAT, payload={"question": "headcount?"})
-        assert a.idempotency_key != b.idempotency_key
-
-    def test_a_caller_may_supply_its_own(self) -> None:
-        job = Job(kind=JobKind.CHAT, payload={"q": 1}, idempotency_key="nightly-2026-09-18")
-        assert job.idempotency_key == "nightly-2026-09-18"
 
 
 class TestSuccess:
@@ -332,7 +311,7 @@ class TestAKindThisWorkerDoesNotKnow:
         parsing, before any handler is chosen, and it goes straight to the dead letters —
         another attempt on the same worker would fail the same way."""
         dlx = FakeExchange()
-        body = b'{"kind":"librarian","payload":{},"job_id":"job-1","idempotency_key":"k"}'
+        body = b'{"kind":"librarian","payload":{},"job_id":"job-1"}'
 
         await consumer.handle(FakeMessage(body), dlx)  # type: ignore[arg-type]
 

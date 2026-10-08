@@ -83,36 +83,25 @@ async def request_chat(
     conversation_id: int | None = None,
     chips: list[str] | None = None,
 ) -> tuple[str, int]:
-    """Queue a question and return the job id with the conversation it landed in.
-
-    With a `conversation_id` the question joins that conversation and carries what it has said
-    so far; without one it opens a new conversation, which is what a first question does.
-
-    The history is read here and travels in the payload rather than being looked up by the
-    worker. `idempotency_key` hashes kind plus payload, so the same words asked twice at
-    different points in a conversation are different work and must hash differently — a worker
-    that re-read the history would make the second job a duplicate of the first and drop
-    it.
-    """
+    """Queue a question; returns the job id and its conversation (new if none is given)."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
         if conversation_id is None:
             conversation = await repo.create_conversation(
                 user_id, kind="chat", title=question[:TITLE_CHARS]
             )
-            history = ""
+            turns = []
         else:
             conversation = await _conversation_of(repo, user_id, conversation_id)
-            history = _recall(await repo.turns_for_conversation(conversation.id))
+            turns = await repo.turns_for_conversation(conversation.id)
 
         previous = context = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
-            turns = await repo.turns_for_conversation(conversation.id)
             previous, context = _last_question(turns), _rewrite_context(turns)
         job_id = await enqueue_chat(
             question,
             conversation.id,
-            history,
+            _recall(turns),
             user_id=user_id,
             chips=chips,
             previous=previous,
@@ -192,17 +181,14 @@ async def find_turn(job_id: str) -> TurnRow | None:
 
 
 async def run(job: Job) -> None:
-    """Do the work a job asks for, and record what came back.
-
-    Raises on anything that goes wrong: the consumer owns the retry decision, and a domain
-    that swallowed the failure would take that decision away from it.
-
-    No dispatch on `job.kind` — there is one kind, and an empty `if` is not worth keeping
-    for the next one.
-    """
+    """Answer the job's question and record it. Raises; the consumer decides on retry."""
     question = str(job.payload.get("question", "")).strip()
     if not question:
         raise ValueError("chat job has no question")
+    done = await find_turn(job.job_id)
+    if done is not None and done.status == "done":
+        log.info("chat job already answered", extra={"job_id": job.job_id})
+        return
     history = str(job.payload.get("history", "")).strip()
     principal = await _who_asked(job)
     chips = parse_chips(job.payload.get("chips"))
@@ -324,17 +310,10 @@ async def record_failure(job: Job, error: str) -> None:
 
 
 async def _who_asked(job: Job) -> Principal:
-    """The person this job belongs to, read back out of the payload.
-
-    Raises rather than falling back to `None`. A job with no `user_id` is one queued by an
-    older release — still in flight or sitting in the DLQ at deploy time — and running it would
-    run it as nobody. `None` means "granted nothing" everywhere else, so it would not leak;
-    it would produce an answer that says it could see no data, which reads as the data
-    being gone. Failing is the honest outcome and the queue can retry it after a requeue.
-    """
+    """The person who queued the job. Raises instead of running as nobody."""
     user_id = job.payload.get("user_id")
     if not isinstance(user_id, int):
-        raise ValueError("chat job has no user_id; it predates per-user jobs and cannot be run")
+        raise ValueError("chat job has no user_id")
     async with session_scope() as session:
         user = await IdentityRepository(session).user_by_id(user_id)
     if user is None:

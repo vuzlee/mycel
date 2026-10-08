@@ -177,7 +177,7 @@ async def me(user: Annotated[auth.Principal, Depends(current_user)]) -> UserResp
 
 async def _issue_cookie(session: AsyncSession, response: Response, user_id: int) -> None:
     """Open a session and attach it to the response."""
-    token, expires_at = await auth.open_session(session, user_id)
+    token = await auth.open_session(session, user_id)
     response.set_cookie(
         SESSION_COOKIE,
         token,
