@@ -1,7 +1,4 @@
-/**
- * The user's documents, live. One SSE stream for the whole app: the server sends the full
- * list again whenever a document changes state, so the page never polls and never merges.
- */
+/** The user's documents, live over one SSE stream that resends the full list on change. */
 
 import { useEffect, useState } from "react";
 import type { DocumentRow, DocumentStatus } from "../api";

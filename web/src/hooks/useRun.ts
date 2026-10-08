@@ -1,11 +1,4 @@
-/**
- * One run, watched two ways at once.
- *
- * The stream says what the agent is doing; the result endpoint says what it produced.
- * Neither alone is enough — a run reopened after its stream expired has no events at all,
- * and a run that crashes leaves the stream silent, which looks exactly like a slow one.
- * The spend is only ever on the result, never on the stream.
- */
+/** One run, watched two ways at once. */
 
 import { useEffect, useMemo, useState } from "react";
 import type { ChatResult } from "../api";

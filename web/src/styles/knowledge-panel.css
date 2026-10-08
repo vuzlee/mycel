@@ -1,0 +1,257 @@
+/* ------------------------------------------------------------ chips + knowledge panel */
+
+/* The shell grows a third column when the knowledge panel is open; the column and the
+   panel move together, so it slides in from the right and back out. */
+:root {
+  --kb-w: 22rem;
+}
+
+.shell:has(> .kb-panel) {
+  grid-template-columns: var(--rail) minmax(0, 1fr) 0px;
+  overflow: hidden;
+  transition: grid-template-columns 0.32s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.shell:has(> .kb-panel[data-open="true"]) {
+  grid-template-columns: var(--rail) minmax(0, 1fr) var(--kb-w);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell:has(> .kb-panel),
+  .kb-panel {
+    transition: none;
+  }
+}
+
+:root[data-kb-drag] .shell,
+:root[data-kb-drag] .kb-panel {
+  transition: none;
+  user-select: none;
+  cursor: col-resize;
+}
+
+.header-actions {
+  margin-left: auto;
+}
+
+.kb-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.kb-toggle:hover,
+.kb-toggle[aria-pressed="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.kb-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: var(--kb-w);
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  border-left: 1px solid var(--rule);
+  background: var(--surface);
+  outline: none;
+  transform: translateX(0);
+  transition:
+    transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1),
+    opacity 0.2s ease;
+}
+
+.kb-panel[data-open="false"] {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kb-resize {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.kb-resize:hover,
+:root[data-kb-drag] .kb-resize {
+  background: var(--accent-line);
+}
+
+.kb-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kb-panel h2 {
+  margin: 0;
+  font: 400 22px/1.2 var(--display);
+}
+
+.composer form[data-over="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.composer-row {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.composer-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chip-anchor {
+  position: relative;
+  align-self: flex-end;
+}
+
+.add-source {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-2);
+}
+
+.chip-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 15rem;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.chip-menu button {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  column-gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.chip-menu button:hover:not(:disabled) {
+  background: var(--sunk);
+}
+
+.chip-menu button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chip-menu b {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.chip-menu small {
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.chip-menu .tick {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--accent);
+}
+
+.add-source {
+  position: relative;
+}
+
+.add-source[data-on="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.source-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+}
+
+.composer .hint.note {
+  color: var(--flag);
+}
+
+@media (max-width: 1100px) {
+  .shell:has(> .kb-panel),
+  .shell:has(> .kb-panel[data-open="true"]) {
+    grid-template-columns: var(--rail) minmax(0, 1fr);
+  }
+
+  .kb-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 30;
+    width: min(var(--kb-w), 100vw);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.pdf-view {
+  max-height: 66vh;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+.pdf-stage {
+  position: relative;
+  width: max-content;
+}
+.pdf-stage canvas {
+  display: block;
+}
+.pdf-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* The page is paper in either theme, so its mark is the light one, multiplied into the ink. */
+.pdf-mark {
+  position: absolute;
+  background: rgb(110 86 207 / 30%);
+  mix-blend-mode: multiply;
+  border-radius: 2px;
+}
+.kb-passage mark {
+  background: var(--quote-mark);
+  color: inherit;
+  border-radius: 2px;
+}

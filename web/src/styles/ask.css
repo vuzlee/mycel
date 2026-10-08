@@ -1,0 +1,501 @@
+/* ---------------------------------------------------------------- messages */
+
+/* A turn that already finished, above the one being watched. Dimmed and separated so the
+   conversation reads as history-then-now rather than as one long answer: the run on screen is
+   the one the page is still following, and it should be the one the eye lands on. */
+.past {
+  scroll-margin-top: 24px;
+  margin-bottom: 34px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--rule);
+  opacity: 0.72;
+}
+
+.past:hover {
+  opacity: 1;
+}
+
+.past .answer {
+  margin-top: 20px;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* The turn being watched, with a floor of one viewport.
+
+   Asking scrolls the question to the top of the body, and a scroll needs somewhere to go:
+   at the moment the question is sent there is nothing under it yet, so the browser scrolls
+   as far as the content allows — a couple of lines — and the question stops short of the
+   top. The floor is the room that scroll uses. `min-height`, not `height`, so it stops
+   mattering the moment the answer is taller than the screen.
+
+   Measured against the scroll box, not the window: the body sits under a header and above
+   the composer, so a `vh` figure would overshoot by however tall those are. `cqh` asks the
+   container named on `.scroll`, so nothing here has to be kept in step with a change to
+   either of them.
+
+   `min-height`, not `flex: 1`. Grow only divides what is left over, and when the turns
+   above are taller than the screen there is nothing left over — which is the ordinary case,
+   reopening a conversation and asking. A floor holds whether or not anything is above it: the
+   conversation then overflows by the height of the history, which is exactly what should scroll.
+
+   The conversation's own bottom padding is subtracted, or the floor and that padding would stack
+   into a screen that scrolls past the end of the answer by 48px of nothing. */
+.live {
+  min-height: calc(100cqh - 48px);
+  flex-shrink: 0;
+}
+
+.turn.user {
+  /* The map and the composer both scroll a turn to the top of the body. Without this it
+     lands flush against the edge, reading as a page cut off rather than a turn begun. */
+  scroll-margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 28px;
+}
+
+.turn.user .bubble {
+  max-width: 82%;
+  padding: 11px 16px;
+  border-radius: 16px 16px 5px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.items > * {
+  margin-bottom: 12px;
+  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Markdown: the model picks the shape and this styles whatever it picked.
+   `white-space` is back to normal — the line breaks are the markdown's now, and
+   pre-wrap would double every blank line between paragraphs. */
+.prose {
+  max-width: 78ch;
+  color: var(--ink);
+  font-size: 16.5px;
+  line-height: 1.65;
+}
+
+.prose > *:first-child {
+  margin-top: 0;
+}
+
+.prose > *:last-child {
+  margin-bottom: 0;
+}
+
+.prose p {
+  margin: 0 0 14px;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  margin: 24px 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.prose li {
+  margin-bottom: 6px;
+}
+
+.prose li::marker {
+  color: var(--accent);
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 0.86em;
+}
+
+.prose pre {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+}
+
+.prose pre code {
+  padding: 0;
+  background: none;
+}
+
+.prose blockquote {
+  margin: 0 0 14px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent-line);
+  color: var(--ink-2);
+}
+
+.prose hr {
+  margin: 20px 0;
+  border: none;
+  border-top: 1px solid var(--rule);
+}
+
+/* A table is what most answers about tickets or people turn out to be, so it is styled
+   as a first-class shape rather than as a fallback. Wider than the prose measure it sits
+   in: columns are compared across, and wrapping every cell to reading width is what made
+   the old dashboard tables unreadable. It scrolls rather than squeezes. */
+.prose table {
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose .table-scroll {
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+  padding: 8px 14px 8px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
+}
+
+.prose th {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.prose tr:last-child td {
+  border-bottom: none;
+}
+
+.prose td:last-child,
+.prose th:last-child {
+  padding-right: 0;
+}
+
+.chevron {
+  flex: none;
+  transition: rotate 0.16s ease;
+  color: var(--faint);
+}
+
+details[open] > summary .chevron {
+  rotate: 90deg;
+}
+
+.nested {
+  margin-top: 14px;
+  padding-left: 16px;
+  border-left: 2px solid var(--accent-line);
+}
+
+.nested > * {
+  margin-bottom: 12px;
+}
+
+.nested > *:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- answer */
+
+/* The answer is markdown now, so `.prose` below carries almost all of it. What is left
+   here is the spend, and the rule above it for a turn reopened from a link — where the
+   stream carried nothing and this section is the answer rather than a footnote. */
+.answer {
+  margin-top: 30px;
+  animation: rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.answer .prose {
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Offered only while the bottom is off screen. Nothing scrolls the conversation on its own
+   any more, so new work below the fold would otherwise be invisible. */
+.jump {
+  position: absolute;
+  bottom: 104px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  box-shadow: var(--shadow-md);
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.jump:hover {
+  color: var(--ink);
+  border-color: var(--accent-line);
+}
+
+/* ---------------------------------------------------------------- gap + error */
+
+.gap,
+.failure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in oklab, var(--flag) 30%, transparent);
+  background: var(--flag-soft);
+  color: var(--flag);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.failure {
+  margin-top: 20px;
+}
+
+/* ---------------------------------------------------------------- composer */
+
+.composer {
+  padding: 0 24px 22px;
+  background: linear-gradient(to top, var(--ground) 62%, transparent);
+}
+
+.composer form {
+  max-width: var(--conversation);
+  margin: 0 auto;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 9px 9px 9px 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: 18px;
+  background: var(--raised);
+  box-shadow: var(--shadow-md);
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.composer form:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+}
+
+.composer textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  max-height: 180px;
+  padding: 5px 0;
+}
+
+.composer textarea::placeholder {
+  color: var(--faint);
+}
+
+.send {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  transition:
+    background 0.14s ease,
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.send:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.send .spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.composer .hint {
+  max-width: var(--conversation);
+  margin: 9px auto 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.composer .hint kbd {
+  font-family: inherit;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- empty state */
+
+/* Centred rather than top-aligned: with nothing below it, a block pinned to the top
+   leaves a dead half-screen under the seeds. */
+.blank {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  max-width: var(--conversation);
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+}
+
+.blank h1 {
+  margin: 0 0 14px;
+  font-family: var(--display);
+  font-size: 2.9rem;
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.blank h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.blank > p {
+  margin: 0 0 32px;
+  max-width: 46ch;
+  font-size: 15.5px;
+  color: var(--muted);
+}
+
+.blank .label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+/* Two columns once there is room: seven prompts in one column reads as a wall, and the
+   point of the list is that a capability is spotted at a glance. */
+.seeds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 9px;
+}
+
+.seeds button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 14px;
+  text-align: left;
+  color: var(--ink-2);
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.seeds button:hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.seeds button .arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--faint);
+  transition:
+    color 0.16s ease,
+    translate 0.16s ease;
+}
+
+.seeds button:hover .arrow {
+  color: var(--accent);
+  translate: 2px 0;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+/* The hamburger and the scrim exist only in the drawer layout below. The asking scrim is
+   the exception: a confirmation covers the page at every width, so it opts back in. */
+.reveal,
+.shut,
+.scrim {
+  display: none;
+}

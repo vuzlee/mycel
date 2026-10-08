@@ -1,13 +1,4 @@
-/**
- * A run, as the page shows it: the trail of what it did, then what it wrote.
- *
- * One renderer for both a live run and a finished one: a kept turn stores its steps in
- * the shape the stream sent them, so it builds the same `Item` tree and must read
- * the same way.
- *
- * The orchestrator's own text is the answer and stays outside the fold. Everything else —
- * thinking, tool calls, a sub-agent's words — is the trail.
- */
+/** A run, as the page shows it: the trail of what it did, then what it wrote. */
 
 import { hideMarkers } from "../lib/citations";
 import type { Item } from "../lib/buildConversation";

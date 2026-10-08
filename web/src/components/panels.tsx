@@ -1,10 +1,4 @@
-/**
- * What the account menu opens: the account, the settings, and how to use this.
- *
- * Panels rather than pages — each is a few blocks someone reads and dismisses, and all
- * three live here because they are the same size and the same shape. A file each would
- * be three files of twenty lines.
- */
+/** What the account menu opens: the account, the settings, and how to use this. */
 
 import { useEffect, useState } from "react";
 import type { ConversationSummary } from "../api";

@@ -1,16 +1,4 @@
-/**
- * Who is signed in, for the whole app.
- *
- * Registering is not here: `POST /auth/register` issues no cookie, so creating an account
- * changes nothing about who is signed in. `pages/Register.tsx` calls the API directly.
- *
- * One `me()` call on mount, then context. The cookie is `HttpOnly`, so this is the only
- * way the page can know — it cannot read the session itself, which is the point.
- *
- * `user === undefined` means "not asked yet" and is deliberately distinct from `null`,
- * "nobody". Collapsing the two flashes the login page at a signed-in person on every
- * reload, which reads as being logged out.
- */
+/** Who is signed in, for the whole app. */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";

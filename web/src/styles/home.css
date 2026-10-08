@@ -1,0 +1,289 @@
+/* The one page that renders signed out, so it has no rail to sit beside and sets its own
+   measure. Wider than `--conversation`: that width is for reading a run, and this is a page of
+   blocks rather than a column of prose. */
+/* `min-height`, not the `height: 100%` the app shell wants: this is the one page taller
+   than the viewport, and a fixed height would cut its background off at the fold. */
+/* ==================================================================== the home page
+ *
+ * The only page with a look of its own. Everything else in the app is a tool someone
+ * already decided to use; this one has to make the case, so it is the one place that
+ * spends a full-bleed ground, a serif at display size and motion on arrival.
+ *
+ * Two widths, not one. `--page` holds the bands that are read; the header, the hero
+ * ground and the footer run the full window and hold their contents to it. An earlier
+ * version capped the whole page at 68rem, which on a wide screen left two broad empty
+ * margins and made the page look like a document rather than a product.
+ */
+
+.home {
+  --page: 74rem;
+  --gutter: clamp(20px, 5vw, 56px);
+  min-height: 100%;
+  background: var(--ground);
+  overflow-x: clip;
+}
+
+/* -------------------------------------------------- the bar */
+
+/* Transparent over the hero and only drawing a rule once the page has moved under it,
+   so the first screen is one field of color with nothing cutting across it. */
+.home > header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 14px var(--gutter);
+}
+
+/* The bar itself is held to the column, but its glass and its rule run to the window
+   edge — a blurred strip that stops two thirds of the way across reads as a card that
+   happens to be stuck, not as a bar. */
+.home > header::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: color-mix(in oklab, var(--ground) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--rule);
+}
+
+.home nav.sections {
+  margin-left: 30px;
+  margin-right: auto;
+}
+
+.home nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.home nav.account {
+  gap: 14px;
+}
+
+/* Padded rather than bare, so a pointer finds a target rather than a word. */
+.home nav a:not(.primary) {
+  padding: 7px 11px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  transition:
+    color 0.14s ease,
+    background 0.14s ease;
+}
+
+.home nav a:not(.primary):hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.home a.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.14s ease,
+    translate 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.home a.primary:hover {
+  background: var(--accent-hover);
+  translate: 0 -1px;
+  box-shadow: var(--shadow-md);
+}
+
+/* -------------------------------------------------- bands */
+
+.home section {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 88px var(--gutter);
+  scroll-margin-top: 72px;
+}
+
+/* One rule between bands, drawn inside the gutter so it stops where the text does. */
+.home section + section {
+  border-top: 1px solid var(--rule);
+}
+
+/* The sticky bar is positioned, so its full-bleed glass needs a containing block that
+   is the page rather than the nearest scroller. */
+.home {
+  position: relative;
+}
+
+.home section > h2 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.home section > h2 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+/* -------------------------------------------------- the hero */
+
+.home .lead {
+  position: relative;
+  padding-top: 64px;
+  padding-bottom: 96px;
+  text-align: center;
+  border-top: 0;
+}
+
+/* Bled past the column to the window edge. It is the only colored ground on the page:
+   a second one further down would make this one ordinary. */
+.home .lead::before {
+  content: "";
+  position: absolute;
+  inset: -200px calc(50% - 50vw) 0;
+  z-index: -1;
+  background:
+    radial-gradient(52rem 30rem at 50% 4%, var(--accent-soft), transparent 70%),
+    radial-gradient(
+      34rem 22rem at 84% 0%,
+      color-mix(in oklab, var(--flag) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      30rem 20rem at 12% 12%,
+      color-mix(in oklab, var(--accent) 7%, transparent),
+      transparent 72%
+    );
+}
+
+/* A grid, fading out before it reaches the copy. It is what stops the wash reading as a
+   gradient someone applied and starts it reading as a surface. */
+.home .lead::after {
+  content: "";
+  position: absolute;
+  inset: -200px calc(50% - 50vw) 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(46rem 26rem at 50% 8%, #000, transparent 72%);
+  opacity: 0.55;
+}
+
+.home .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 26px;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--surface) 76%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.home .ping {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.home .ping::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  animation: ping 2.6s ease-out infinite;
+}
+
+@keyframes ping {
+  0% {
+    opacity: 0.7;
+    scale: 0.6;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    scale: 1.7;
+  }
+}
+
+.home .lead h1 {
+  margin: 0 auto 20px;
+  max-width: 17ch;
+  font-family: var(--display);
+  font-size: clamp(2.7rem, 6.4vw, 4.6rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.home .lead h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.home .lead > p {
+  margin: 0 auto;
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.home .acts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.home a.primary.big {
+  padding: 14px 24px;
+  font-size: 15.5px;
+  box-shadow: var(--shadow-md);
+}
+
+.home .ghost {
+  padding: 14px 22px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  font-size: 15.5px;
+  color: var(--ink-2);
+  transition:
+    border-color 0.14s ease,
+    color 0.14s ease,
+    translate 0.14s ease;
+}
+
+.home .ghost:hover {
+  border-color: var(--accent-line);
+  color: var(--accent);
+  translate: 0 -1px;
+}

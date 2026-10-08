@@ -1,7 +1,4 @@
-/**
- * A cited source. A PDF shows the cited page in the app with the quote marked; other files
- * show the passage with the quote marked. The original is one click away either way.
- */
+/** A cited source, with the quote marked; the original is one click away. */
 
 import { lazy, Suspense, useEffect, useState } from "react";
 import { fetchPassage, fetchSourceUrl, type Passage, type SourceRef } from "../../api";

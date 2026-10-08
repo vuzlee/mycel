@@ -1,10 +1,4 @@
-/**
- * The email-and-password form, shared by signing in and signing up.
- *
- * The two pages differ in what submitting means and in what happens afterwards, not in
- * what they ask for — so the fields live here and the outcome lives with each page. Two
- * separately written forms is how the two drift apart.
- */
+/** The email-and-password form, shared by signing in and signing up. */
 
 import { useState } from "react";
 import { Spinner } from "./icons";

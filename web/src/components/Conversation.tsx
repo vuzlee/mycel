@@ -1,8 +1,4 @@
-/**
- * The conversation: the question asked, then everything the run did about it.
- *
- * The steps themselves render in `Steps`, which a finished turn reuses.
- */
+/** The conversation: the question asked, then everything the run did about it. */
 
 import type { Item } from "../lib/buildConversation";
 import { Steps } from "./Steps";

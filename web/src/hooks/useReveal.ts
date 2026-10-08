@@ -1,14 +1,4 @@
-/**
- * A section appears as it is reached, once.
- *
- * Observed rather than tied to scroll position: a scroll handler runs on every frame of
- * every scroll for the whole life of the page, and this needs to fire once per element.
- * The observer stops watching an element the moment it has fired.
- *
- * Nothing here is load-bearing. The element is visible with no JavaScript at all — the
- * class only removes a starting offset — so a failed observer costs the animation, never
- * the content.
- */
+/** A section appears as it is reached, once. */
 
 import { useLayoutEffect, useRef } from "react";
 

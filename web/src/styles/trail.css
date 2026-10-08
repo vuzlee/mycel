@@ -1,0 +1,180 @@
+/* ------------------------------------------------- trail: what a run did, folded */
+
+.trail > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--muted);
+  list-style: none;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.trail > summary::-webkit-details-marker,
+.trail .step > summary::-webkit-details-marker {
+  display: none;
+}
+
+.trail > summary:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.trail > summary b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.trail[data-live="true"] > summary b {
+  background: linear-gradient(90deg, var(--ink-2) 30%, var(--accent) 50%, var(--ink-2) 70%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.trail .rest {
+  color: var(--accent);
+}
+
+.trail-meta {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
+.trail-meta:empty {
+  display: none;
+}
+
+.trail-steps {
+  margin: 6px 0 0 15px;
+  padding: 2px 0 2px 14px;
+  border-left: 1px solid var(--rule-2);
+  list-style: none;
+}
+
+.trail-steps.nested {
+  margin: 2px 0 4px 6px;
+}
+
+.step > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  list-style: none;
+  cursor: pointer;
+}
+
+.step > summary:hover {
+  background: var(--sunk);
+}
+
+.step .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.step .dot.think {
+  border: 1px solid var(--faint);
+}
+.step .dot.tool {
+  background: var(--accent);
+}
+.step .dot.say {
+  background: var(--faint);
+}
+
+.step .what {
+  flex: none;
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.step .peek {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.step .done {
+  flex: none;
+  color: var(--faint);
+  font-size: 11px;
+}
+
+.step-body {
+  margin: 4px 0 8px 14px;
+  font-size: 13px;
+}
+
+.step-body.thought {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 84ch;
+}
+
+.step-body .label {
+  display: block;
+  margin: 8px 0 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.step-body pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.json .j-key {
+  color: var(--accent);
+}
+.json .j-str {
+  color: var(--ink);
+}
+.json .j-num {
+  color: var(--doing);
+}
+.json .j-lit {
+  color: var(--late);
+}

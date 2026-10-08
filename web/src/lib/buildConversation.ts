@@ -1,16 +1,4 @@
-/**
- * Turns a flat event list into the tree the conversation renders.
- *
- * Nesting is by `parent_tool_call_id`, never by arrival time. `next-slice.html` §05 is
- * explicit about why: ordering holds within one agent and never across two running in
- * parallel, so a flat timeline of a delegating run is a lie that reads as noise.
- *
- * Consecutive `text` and `thinking` events from the same agent are merged: a model streams
- * prose in pieces, and one bubble per piece is unreadable.
- *
- * Nothing is filtered out: the answer arrives as `text` events, so every tool call left
- * is work the run did.
- */
+/** Turns a flat event list into the tree the conversation renders. */
 
 import type { SequencedEvent } from "./types";
 import {

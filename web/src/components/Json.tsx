@@ -1,9 +1,4 @@
-/**
- * A tool's arguments or result, pretty-printed when it is JSON and left alone when not.
- *
- * Results are often prose or a Python repr; only text that parses is re-indented and
- * colored, so nothing a tool returned is ever rewritten into something it did not say.
- */
+/** A tool's arguments or result, pretty-printed when it is JSON and left alone when not. */
 
 const TOKEN =
   /("(?:\\.|[^"\\])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;

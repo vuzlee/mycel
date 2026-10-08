@@ -1,0 +1,295 @@
+/* ---------------------------------------------------------------- shell */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- sidebar */
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sunk);
+  border-right: 1px solid var(--rule);
+}
+
+.rail > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 18px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* It is a link now, so it has to say so on hover — the mark brightening is enough,
+   an underline under a wordmark reads as a mistake. */
+a.brand {
+  color: inherit;
+}
+
+a.brand:hover .mark {
+  filter: brightness(1.12);
+}
+
+.brand .mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1.5px solid var(--mark-ink);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--mark-ink);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.icon-button:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.new-run {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 6px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule-2);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition:
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.new-run:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.new-run:active {
+  transform: translateY(1px);
+}
+
+.new-run kbd {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+/* The board link is a destination, not an action, so it is quieter than the button above
+   it: no border, no surface, no shadow. Lit only when you are on it. */
+.board-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 24px);
+  margin: 0 12px 20px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.board-link:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--sunk));
+  color: var(--ink);
+}
+
+.board-link[aria-current="true"] {
+  background: color-mix(in oklab, var(--accent) 10%, var(--sunk));
+  color: var(--accent);
+}
+
+.rail h2 {
+  margin: 0 18px 8px;
+}
+
+/* Pinned and Recent scroll together, so a long pinned list never hides Recent. */
+.rail .conversations {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.rail .conversations h2 + ol,
+.rail .conversations h2 + .empty {
+  margin-bottom: 14px;
+}
+
+.rail ol {
+  margin: 0;
+  padding: 0 8px;
+  list-style: none;
+}
+
+.rail li {
+  position: relative;
+}
+
+.rail li > button {
+  display: block;
+  width: 100%;
+  padding: 8px 54px 8px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.rail li > button:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--sunk));
+  color: var(--ink);
+}
+
+.rail li > button[aria-current="true"] {
+  background: color-mix(in oklab, var(--accent) 10%, var(--sunk));
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.rail li .row-actions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  display: flex;
+  gap: 2px;
+}
+
+.rail li .pin,
+.rail li .drop {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--faint);
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    color 0.14s ease;
+}
+
+.rail li:hover .pin,
+.rail li:hover .drop,
+.rail li .pin:focus-visible,
+.rail li .drop:focus-visible {
+  opacity: 1;
+}
+
+.rail li .pin:hover {
+  color: var(--accent);
+}
+
+.rail li .drop:hover {
+  color: var(--flag);
+}
+
+.rail .empty {
+  margin: 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- main */
+
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--ground);
+}
+
+.main > header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  height: 53px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Named so `.live` can size itself against this box. A percentage cannot: it resolves
+     against `.conversation`, whose own height is `auto`, and an auto height gives a percentage
+     nothing to resolve against. `cqh` resolves against the container, which is this. */
+  container: body / size;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-2) transparent;
+}
+
+.scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--rule-2);
+  border: 3px solid var(--ground);
+  border-radius: 999px;
+}
+
+.conversation {
+  max-width: var(--conversation);
+  margin: 0 auto;
+  padding: 36px 28px 48px;
+  font-size: 15.5px;
+  /* Column so `.live` can be given a floor measured against the scroll box rather than
+     against the window: the body sits under a header and above the composer, so a `vh`
+     figure would overshoot by however tall those are. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}

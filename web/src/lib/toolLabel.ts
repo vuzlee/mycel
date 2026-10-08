@@ -1,14 +1,4 @@
-/**
- * What a tool call says it is doing.
- *
- * A row in a conversation is read by someone waiting for an answer, not by someone debugging a
- * call, so it carries an activity rather than a function name. The table lives here and
- * not beside either caller because both the running line and the folded row ask the same
- * question, and two tables answering it would drift apart.
- *
- * Present participles: one string has to read correctly under a spinner and beside a
- * finished call.
- */
+/** What a tool call says it is doing. */
 
 const LABELS: Record<string, string> = {
   // Delegation. A tool that wraps an agent carries that agent's own name.

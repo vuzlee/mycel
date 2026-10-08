@@ -1,20 +1,4 @@
-/**
- * The product, running, above the fold.
- *
- * A landing page can describe a thing or show it. This shows it: a question arrives, the
- * steps it takes appear in the order the real orchestrator would call them, and an answer
- * writes itself out. Then it holds, and moves to the next question.
- *
- * Scripted, not live. A real run needs an account, a Jira board and a model key, which is
- * three things a reader does not have yet — and it would cost a model request per visit.
- * The script is honest about shape: these are the real tool names behind `labelFor`, in
- * an order the orchestrator actually produces.
- *
- * The panel is a fixed height and the question is always whole. An earlier version typed
- * it a character at a time, which meant the first thing anyone saw was a window holding
- * the single letter H — a demo of a product is worth nothing if its first frame looks
- * broken. The motion is now in what the run *does*, which is the part worth watching.
- */
+/** The product, running, above the fold. */
 
 import { useEffect, useMemo, useState } from "react";
 import { labelFor } from "../lib/toolLabel";

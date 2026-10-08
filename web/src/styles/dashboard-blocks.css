@@ -1,0 +1,243 @@
+/* Epics as bars, not as a table. A plan is read as "how far along is each piece", and
+   two columns of integers makes the reader divide one by the other on every row. */
+.board .epics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.board .epics li {
+  padding: 13px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.board .epics .row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.board .epics .key {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.board .epics .title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board .epics .tally {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .epics .pct {
+  min-width: 3.5ch;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .epics .track {
+  height: 6px;
+  margin: 10px 0 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .epics .track .fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.board .epics li[data-status="done"] .track .fill {
+  background: var(--done);
+}
+
+.board .epics .moved {
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+[data-status="todo"] b,
+td[data-status="todo"] {
+  color: var(--todo);
+}
+
+[data-status="doing"] b,
+td[data-status="doing"] {
+  color: var(--doing);
+}
+
+[data-status="done"] b,
+td[data-status="done"] {
+  color: var(--done);
+}
+
+[data-status="late"] b,
+td[data-status="late"] {
+  color: var(--late);
+}
+
+.board table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.board th,
+.board td {
+  text-align: left;
+  padding: 9px 10px 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13.5px;
+}
+
+.board tr:last-child td {
+  border-bottom: 0;
+}
+
+.board th {
+  padding-top: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--faint);
+}
+
+.board td.n,
+.board th.n {
+  text-align: right;
+  width: 4.5rem;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board td.who,
+.board th.who {
+  width: 9rem;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.board td.when,
+.board th.when {
+  text-align: right;
+  width: 7rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.board td.key,
+.board th.key {
+  width: 5.5rem;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* A labelled bar per row: priorities, and what the work is made of. One grid rather than
+   a flex row per line, so every label column and every figure lines up down the block —
+   bars that each start where their own label ended are a set of bars you cannot compare.
+
+   The bar is a share of the largest row, not of the total: a breakdown whose biggest
+   slice is 40% would leave most of the block empty and read as less work than there is. */
+.board .breakdown {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) 1fr auto auto;
+  align-items: center;
+  gap: 7px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .breakdown li {
+  display: contents;
+}
+
+.board .breakdown .what {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-transform: capitalize;
+}
+
+.board .breakdown .track {
+  height: 9px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .breakdown .fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.board .breakdown li[data-status="late"] .fill {
+  background: var(--late);
+}
+
+.board .breakdown li[data-status="doing"] .fill {
+  background: var(--doing);
+}
+
+.board .breakdown li[data-status="todo"] .fill {
+  background: var(--todo);
+}
+
+.board .breakdown li[data-status="done"] .fill {
+  background: var(--done);
+}
+
+/* A row at zero keeps its place in the ladder and stops competing for attention: the
+   useful fact is that it is empty, not what it is called. */
+.board .breakdown li[data-empty="true"] .what,
+.board .breakdown li[data-empty="true"] .n,
+.board .breakdown li[data-empty="true"] .note {
+  color: var(--faint);
+}
+
+.board .breakdown .n {
+  min-width: 2ch;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.board .breakdown .note {
+  min-width: 4ch;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}

@@ -1,12 +1,4 @@
-/**
- * The page of a PDF a quote sits on, drawn in the app, with the quote highlighted.
- *
- * pdf.js is imported only when a PDF source is opened, so the chat page does not carry it.
- * A passage can run across pages, so each page from `first` to `last` is searched and the
- * first that holds the quote is shown. Matching ignores spaces and punctuation: pdf.js splits
- * maths into items ("β", "1", "= 0", ".", "9") that the passage text joins differently. When
- * the quote cannot be placed the first page still shows, unhighlighted.
- */
+/** The page of a PDF a quote sits on, drawn in the app, with the quote highlighted. */
 
 import { useEffect, useRef, useState } from "react";
 import type { PDFPageProxy } from "pdfjs-dist";

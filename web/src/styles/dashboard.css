@@ -1,0 +1,356 @@
+/* ---------------------------------------------------------------- pages */
+
+/* The dashboard. Wide, because it is all tables. */
+.page {
+  max-width: var(--board);
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}
+
+/* The run's reasoning still reads at prose width, left-aligned under the picker rather
+   than centred — a centred column inside a wide page reads as a second, floating page. */
+.page .conversation {
+  margin-left: 0;
+  padding-inline: 0;
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.picker label {
+  flex: 1 1 12rem;
+}
+
+.picker .primary {
+  flex: none;
+}
+
+.windows {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+}
+
+.windows button {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.windows button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.note {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.note code {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--sunk);
+}
+
+/* ---------------------------------------------------------------- dashboard */
+
+/* The lede: the one question a dashboard is opened to answer, answered before any
+   scrolling. Whole-project, which is why it sits apart from the window blocks below
+   rather than as a first tile among them. */
+.board .lede {
+  margin: 20px 0 20px;
+  padding: 20px 22px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.board .lede .figure {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.board .lede .figure > b {
+  font-family: var(--display);
+  font-size: 3.2rem;
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .of {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board .lede .of .big {
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .of .big i {
+  font-style: normal;
+  color: var(--faint);
+}
+
+.board .lede .of .sub {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+/* Past due, pulled out of the row of window tiles it used to sit in. It is the only
+   whole-project alarm on the page, so it belongs beside the whole-project figure. */
+.board .lede .flag {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--late);
+  border-radius: 999px;
+  background: var(--flag-soft);
+}
+
+.board .lede .flag b {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--late);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .flag span {
+  font-size: 12px;
+  color: var(--late);
+}
+
+/* One bar, three segments in the order work moves. Segments rather than a single fill:
+   the gap between "done" and "everything else" is the number, and splitting the rest
+   into to-do and in-progress costs nothing and says where the rest actually is. */
+.board .lede .track {
+  display: flex;
+  height: 10px;
+  margin: 18px 0 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--sunk);
+}
+
+.board .lede .track .fill {
+  transition: width 0.3s ease;
+}
+
+.board .lede .track .fill[data-status="todo"] {
+  background: var(--rule-2);
+}
+
+.board .lede .track .fill[data-status="doing"] {
+  background: var(--doing);
+}
+
+.board .lede .track .fill[data-status="done"] {
+  background: var(--done);
+}
+
+/* What each segment is. A bar with three colors and no key is a bar the reader guesses
+   at, and the guess is usually that the longest one is the important one. */
+.board .lede .legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.board .lede .legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board .lede .legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.board .lede .legend [data-status="todo"] i {
+  background: var(--rule-2);
+}
+
+.board .lede .legend [data-status="doing"] i {
+  background: var(--doing);
+}
+
+.board .lede .legend [data-status="done"] i {
+  background: var(--done);
+}
+
+/* Heading, count and scope on one line. Scope is a word rather than the paragraph it
+   used to be: which range a block covers is a label, and a label people read. */
+/* Blocks tile. Two per row where one fits a column, full width where it is a table —
+   five blocks stacked in one column meant scrolling past four to reach the fifth on a
+   screen with room for two abreast. */
+.board .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.board .block {
+  min-width: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.board .block.wide {
+  grid-column: 1 / -1;
+}
+
+/* A heading inside a block has the block's own padding above it already. */
+.board .block h2.label {
+  margin-top: 0;
+}
+
+.board .block > :last-child {
+  margin-bottom: 0;
+}
+
+/* Three abreast needs the width for three; below that two, then one. A bar chart in a
+   quarter-width column is a set of stubs. */
+@media (max-width: 1180px) {
+  .board .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .board .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.board h2.label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 34px 0 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.board h2 .count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sunk);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-align: center;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.board h2 .count[data-status="late"] {
+  background: var(--flag-soft);
+  color: var(--late);
+}
+
+.board h2 .scope {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  text-transform: none;
+}
+
+/* Only where the figures are genuinely misreadable without it, and never longer than
+   what it labels. The full reasoning lives in the API schema's field descriptions. */
+.board .caption {
+  max-width: 64ch;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+.board .caption b {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.board .totals {
+  display: flex;
+  gap: 10px;
+}
+
+/* No border and no second background: these already sit inside a bordered block, and a
+   card inside a card is the thing that makes a dashboard look busy. A tinted left rule
+   carries the status instead, which is one mark rather than a whole frame. */
+.board .total {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0 10px 12px;
+  border-left: 2px solid var(--rule-2);
+}
+
+.board .total[data-status="done"] {
+  border-left-color: var(--done);
+}
+
+.board .total[data-status="doing"] {
+  border-left-color: var(--doing);
+}
+
+.board .total[data-status="todo"] {
+  border-left-color: var(--todo);
+}
+
+.board .total b {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.board .total span {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}

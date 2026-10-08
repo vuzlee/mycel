@@ -1,0 +1,303 @@
+/* ---------------------------------------------------------------- asking */
+
+.scrim.asking {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  padding: 24px;
+  background: rgb(12 9 18 / 0.44);
+  /* Stated, not inherited: the drawer's media query hides and fades `.scrim`, and a
+     confirmation that fades out under it would be a dialog nobody can answer. */
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ask-card {
+  width: 100%;
+  max-width: 21rem;
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.ask-card h2 {
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.ask-card p {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ask-card .choices {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.ask-card .choices button:not(.primary) {
+  padding: 10px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.ask-card .choices button:not(.primary):hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+
+/* -------------------------------------------------- working (the run's own mark) */
+
+/*
+ * Three hyphae reaching out of a node, drawn in and retracted on a stagger. A spinner
+ * would say "waiting"; a delegating run is searching, so the mark grows outward instead.
+ */
+
+.grow {
+  flex: none;
+  color: var(--accent);
+}
+
+.grow .dormant {
+  opacity: 0.26;
+}
+
+.grow .hypha {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  animation: reach 2.4s ease-in-out infinite;
+}
+
+.grow .hypha:nth-of-type(2) {
+  animation-delay: 0.35s;
+}
+
+.grow .hypha:nth-of-type(3) {
+  animation-delay: 0.7s;
+}
+
+.grow circle {
+  transform-origin: 8px 8.6px;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes reach {
+  0% {
+    stroke-dashoffset: 14;
+  }
+  45%,
+  70% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 14;
+  }
+}
+
+/* Label fading in step with the .grow mark beside it. */
+.breathe {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  45%,
+  70% {
+    opacity: 1;
+  }
+}
+
+/* Three dots typed out one at a time {
+  content: "";
+  animation: dots 1.6s steps(4, jump-none) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75%,
+  100% {
+    content: "...";
+  }
+}
+
+/* The rail is 272px and the conversation is 58rem, so below roughly this the gutter left over
+   is a few dozen pixels — too narrow for a label to be anything but an ellipsis. The map
+   floats beside the prose or it does not appear; it has no second place to go. */
+@media (max-width: 1500px) {
+  .topics {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Off-canvas, not hidden: the history is the only way back to a past run. */
+  .rail {
+    position: fixed;
+    z-index: 20;
+    inset: 0 auto 0 0;
+    width: min(var(--rail), 84vw);
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 0 40px rgb(0 0 0 / 0.18);
+  }
+
+  .rail[data-open="true"] {
+    transform: none;
+  }
+
+  .scrim {
+    display: block;
+    position: fixed;
+    z-index: 19;
+    inset: 0;
+    background: rgb(12 9 18 / 0.44);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+
+  .scrim[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .reveal,
+  .shut {
+    display: inline-flex;
+  }
+
+  .conversation,
+  .composer,
+  .blank {
+    padding-inline: 16px;
+  }
+
+  .blank {
+    padding-top: 64px;
+  }
+
+  .blank h1 {
+    font-size: 2.2rem;
+  }
+
+  .main > header {
+    padding-inline: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------- topics */
+
+/* One entry per turn of the conversation, floating in the gutter to the right of the prose.
+
+   It takes no column. A column would push the conversation off centre the moment a second
+   question is asked — the page would rearrange itself as a reward for continuing, which
+   is the opposite of what a map is for. So it is absolutely positioned in the space the
+   centred conversation already leaves empty, transparent, and out of the way: no panel, no
+   border, no background. Nothing but the line and the words.
+
+   Pointer events are off on the box and on again for the buttons, so the empty space it
+   spans never swallows a click meant for the page. */
+.topics {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  /* Half of what the centred conversation leaves over, minus a gutter each side. Written as
+     the measurement rather than a guess, so it stays clear of the prose at every width
+     between 1120px and a very wide monitor. */
+  right: 20px;
+  width: min(168px, calc((100% - var(--conversation)) / 2 - 40px));
+  transform: translateY(-50%);
+  max-height: 60vh;
+  overflow-y: auto;
+  pointer-events: none;
+  scrollbar-width: none;
+  /* It is a map, not a thing you read. Dim until the cursor comes near. */
+  opacity: 0.5;
+  transition: opacity 0.16s ease;
+}
+
+.topics::-webkit-scrollbar {
+  display: none;
+}
+
+.topics:hover {
+  opacity: 1;
+}
+
+.topics ol {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The line down the left is the conversation itself: every entry sits on it, and the one you
+   are reading lights its own segment. A dot per row would be a second alphabet. */
+.topics li {
+  border-left: 2px solid var(--rule-2);
+}
+
+.topics button {
+  display: block;
+  width: 100%;
+  padding: 5px 9px;
+  pointer-events: auto;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.14s ease;
+}
+
+.topics button:hover {
+  color: var(--ink);
+}
+
+.topics li:has(button[aria-current="true"]) {
+  border-left-color: var(--accent);
+}
+
+.topics button[aria-current="true"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* The state of a run that is not done, beside its title in the rail. */
+.rail li .state {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}

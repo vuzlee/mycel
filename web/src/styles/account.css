@@ -1,0 +1,405 @@
+/* ---------------------------------------------------------------- account menu */
+
+/* One menu, two homes: a pill in the home page's bar and a strip at the foot of the
+   rail. The difference is where it opens from and how wide it sits, not what is in it —
+   an account menu that is somewhere else on another page is one people stop trusting. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu .me {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  transition: border-color 0.14s ease;
+}
+
+.account-menu .me:hover {
+  border-color: var(--accent-line);
+}
+
+.account-menu[data-where="rail"] {
+  margin-top: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Full width in the rail: it is the only thing on that row, and a pill floating in a
+   strip reads as unfinished. */
+.account-menu[data-where="rail"] .me {
+  width: 100%;
+  border-radius: var(--radius);
+}
+
+.account-menu .avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1.5px solid var(--mark-ink);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  color: var(--mark-ink);
+  box-shadow: 0 0 10px -2px color-mix(in oklab, var(--accent) 45%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-menu .named {
+  display: grid;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.account-menu .as {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Truncated rather than wrapped — a long address must not push the caret off the row. */
+.account-menu .addr {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.account-menu .caret {
+  flex: none;
+  margin-left: auto;
+  color: var(--faint);
+}
+
+.account-menu .menu {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  display: grid;
+  gap: 1px;
+  min-width: 15rem;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Above in the rail, below in the bar — each opens into the room it has. */
+.account-menu[data-where="bar"] .menu {
+  top: calc(100% + 8px);
+}
+
+.account-menu[data-where="rail"] .menu {
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% - 4px);
+}
+
+/* The address again, at the top of the menu: the pill truncates, and this is where
+   someone checks the whole thing before signing out of the wrong account. */
+.account-menu .menu .head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.account-menu .menu .head .addr {
+  max-width: 13rem;
+  font-size: 13px;
+}
+
+.account-menu .menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  text-align: left;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.account-menu .menu button:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.account-menu .menu button svg {
+  flex: none;
+  color: var(--faint);
+}
+
+/* Ruled off, because it is the one item here that cannot be undone by clicking again. */
+.account-menu .menu .out {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.account-menu .menu .out:hover {
+  color: var(--flag);
+}
+
+.account-menu .menu .out:hover svg {
+  color: var(--flag);
+}
+
+/* ---------------------------------------------------------------- dialogs */
+
+/* What the account menu opens. Same card as the sign-out question, given a header and
+   room to hold a few blocks instead of one sentence. Capped in height and scrolled
+   inside, so a long panel on a short screen does not push its own close button off. */
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 26rem;
+  max-height: min(84vh, 40rem);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal.wide {
+  max-width: 52rem;
+  max-height: 90vh;
+}
+
+.modal > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.modal > header > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.modal h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 400;
+}
+
+.modal > header p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.modal > header .icon-button {
+  margin-left: auto;
+  flex: none;
+}
+
+.modal .body {
+  display: grid;
+  gap: 22px;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modal .body section {
+  display: grid;
+  gap: 10px;
+}
+
+.modal .body h3.label {
+  margin: 0;
+}
+
+.modal .body .muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.modal .body .muted a {
+  color: var(--accent);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.identity > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.identity b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.identity .muted {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.avatar.big {
+  width: 42px;
+  height: 42px;
+  font-size: 17px;
+}
+
+/* Three across even in the dialog: they are a number and a word each, and stacking them
+   would make a short fact list look like a long one. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--rule);
+}
+
+.facts > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  background: var(--surface);
+}
+
+.facts dt {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Three tiles in a row, not three rows of prose. An icon and one word say what a
+   sentence said before, and at this size the three sit side by side without wrapping. */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.theme-picker button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 14px 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.theme-picker button:hover {
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+
+.theme-picker button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* One of three,
+and which one is on is stated by the border rather than a dot: the
+   whole row is the target {
+  display: grid;
+  gap: 8px;
+}
+
+/* Who may read a project. A row per person {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.steps {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  display: grid;
+  gap: 5px;
+  padding-left: 34px;
+  position: relative;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.steps b {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.steps .muted {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- home */

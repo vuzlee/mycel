@@ -1,20 +1,4 @@
-/**
- * Where you are, and everything you have run.
- *
- * Two destinations above the history and one list below it: a new chat, the board, and
- * every conversation. The board is not a conversation and never appears in that list — it has no
- * history of its own, it is the same screen every time you open it.
- *
- * The history comes from `GET /conversations` now, not `localStorage`: it is the same
- * list on a second machine, which is the whole reason it moved to Postgres.
- *
- * The theme button that used to sit beside the wordmark is gone: a setting belongs in
- * the settings, and a rail header holding a wordmark, a theme and a close reads as three
- * unrelated things at the same rank.
- *
- * Below 760px the rail slides in over the page instead of taking a column, so the
- * history stays reachable on a phone rather than disappearing with the layout.
- */
+/** Where you are, and everything you have run. */
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { ConversationSummary } from "../api";

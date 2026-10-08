@@ -1,16 +1,4 @@
-/**
- * Who you are signed in as, and everything you can do about it.
- *
- * One component, used by the rail and by the home page, so the same four items are under
- * the same address on every page. Two copies would drift, and an account menu that is
- * elsewhere on one page is a menu people stop trusting.
- *
- * Everything it opens is a dialog over the page rather than a route: these are things
- * you check and dismiss, and a page for each would drop the run you were watching.
- *
- * Signing out asks first: the button sits under the cursor's resting place, and an
- * accidental sign-out costs a password to undo.
- */
+/** Who you are signed in as, and everything you can do about it. */
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/auth";

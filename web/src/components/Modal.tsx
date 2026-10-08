@@ -1,13 +1,4 @@
-/**
- * A dialog over whatever page you were on.
- *
- * Profile, settings and help are things you check and dismiss, not places you go — a
- * route for each would drop the run you were watching and give the browser a back button
- * to undo it. They open here, over the page, and close where you left off.
- *
- * Escape closes it, and so does the scrim; a dialog that can only be dismissed by its own
- * button is one people click around.
- */
+/** A dialog over whatever page you were on. */
 
 import { useEffect } from "react";
 import { Close } from "./icons";

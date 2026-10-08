@@ -1,0 +1,145 @@
+/* ---------------------------------------------------------------- the gate */
+
+/* Nothing on screen while `me()` is in flight. A spinner here flashes on every reload
+   for the length of one local request, which reads as slowness rather than loading. */
+.waiting {
+  height: 100%;
+  background: var(--ground);
+}
+
+.gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 32px 16px;
+  background: var(--ground);
+}
+
+.gate .card {
+  width: 100%;
+  max-width: 24rem;
+  display: grid;
+  gap: 14px;
+  padding: 28px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.gate .brand {
+  margin-bottom: 2px;
+}
+
+.gate h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.8rem;
+  font-weight: 400;
+}
+
+.gate .lede {
+  margin: -6px 0 4px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.gate .switch {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gate .switch a {
+  color: var(--accent);
+}
+
+.gate .switch a:hover {
+  color: var(--accent-hover);
+}
+
+/* The fields are their own component now, so the card's gap does not reach them. */
+.gate form {
+  display: grid;
+  gap: 14px;
+}
+
+/* An outcome, not a failure: the account exists and the next step is this form. Stated
+   in the accent rather than the flag color, which everywhere else means something went
+   wrong. */
+.gate .notice {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* The gate's error sits between the fields and the button, where the card's own gap
+   already spaces it — the conversation's 20px top margin would open a hole here. */
+.gate .failure {
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------- form parts */
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+label .label {
+  display: block;
+}
+
+label .hint {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+input,
+select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+button.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.14s ease;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

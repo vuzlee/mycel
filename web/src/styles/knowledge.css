@@ -1,0 +1,250 @@
+/* ------------------------------------------------------------ knowledge */
+
+/* Two links share the rail's destination block; only the last keeps the gap below. */
+.board-link + .board-link {
+  margin-top: -16px;
+}
+
+.kb-list .drop {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--faint);
+  transition:
+    color 0.14s ease,
+    opacity 0.14s ease;
+}
+
+.kb-list .drop:hover {
+  color: var(--flag);
+}
+
+.kb-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1.5px dashed var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: left;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease;
+}
+
+.kb-drop:hover,
+.kb-drop[data-over="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.kb-drop span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kb-drop b {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.kb-drop small,
+.kb-name small {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.kb-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.kb-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.kb-list li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.kb-rename {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.kb-rename:hover {
+  text-decoration: underline dotted;
+}
+
+.kb-list li[data-enabled="false"] .kb-rename,
+.kb-list li[data-enabled="false"] .kb-name > span {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+.kb-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.kb-name > span {
+  font-size: 13.5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kb-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+
+.kb-failed,
+.kb-error {
+  color: var(--flag);
+}
+
+.kb-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--flag-soft);
+  font-size: 13px;
+}
+
+.kb-switch {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 18px;
+}
+
+.kb-switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.kb-switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--rule-2);
+  transition: background 0.14s ease;
+  pointer-events: none;
+}
+
+.kb-switch span::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: translate 0.14s ease;
+}
+
+.kb-switch input:checked + span {
+  background: var(--accent);
+}
+
+.kb-switch input:checked + span::after {
+  translate: 12px 0;
+}
+
+.kb-switch input:focus-visible + span {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.kb-sources {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kb-sources button {
+  padding: 1px 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.kb-sources button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.kb-sources b {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.kb-sources small {
+  color: var(--ink-3, var(--ink-2));
+}
+
+.prose .cite {
+  margin-left: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.prose .cite:hover {
+  text-decoration: underline;
+}
+
+.kb-passage {
+  max-height: 50vh;
+  overflow: auto;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  font: 13px/1.6 var(--sans);
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+
+@media (max-width: 1100px) {
+}
+
+@media (max-width: 760px) {
+}

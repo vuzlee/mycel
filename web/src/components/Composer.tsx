@@ -1,9 +1,4 @@
-/**
- * Ask a question. Enter sends, Shift+Enter breaks the line.
- *
- * Sources are ticked in the sources menu (or after `@`); the box never changes size, and its
- * button shows how many are on. A file dropped on the composer goes into the user's documents.
- */
+/** Ask a question. Enter sends, Shift+Enter breaks the line. */
 
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Chip } from "../api";

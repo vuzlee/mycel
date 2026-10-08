@@ -1,7 +1,4 @@
-/**
- * The sources a turn may use, picked as chips. With none picked the model gets no tools:
- * it answers from what it knows, and asking about Jira without the Jira chip gets nothing.
- */
+/** The sources a turn may use, picked as chips; with none picked the model gets no tools. */
 
 import type { Chip } from "../api";
 

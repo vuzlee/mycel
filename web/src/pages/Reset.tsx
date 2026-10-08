@@ -1,12 +1,4 @@
-/**
- * Set a new password from a link.
- *
- * The token is in the query string, which is where a link can carry it. It is not put in
- * any field: it is not something to type, and showing it invites pasting it somewhere.
- *
- * Every session of the account ends here, this browser included, so the page sends you to
- * the sign-in form rather than pretending you are already in.
- */
+/** Set a new password from a link. */
 
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";

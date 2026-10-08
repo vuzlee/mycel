@@ -1,0 +1,255 @@
+/**
+ * One violet hue (272°) carries the whole interface. Everything else — ground, surface,
+ * rule, text — is that same hue at very low saturation, so the greys read as belonging to
+ * the accent rather than sitting next to it. That is where the "expensive" look comes
+ * from: restraint, not more color.
+ */
+
+:root {
+  --mark-ink: #6e56cf;
+  --ground: #faf9fc;
+  --surface: #ffffff;
+  --sunk: #f3f1f8;
+  --raised: #ffffff;
+
+  --ink: #17141f;
+  --ink-2: #3d3d4a;
+  --muted: #6f6782;
+  --faint: #9d96ae;
+
+  --rule: #e7e3f0;
+  --rule-2: #c8c6d8;
+
+  --accent: #6e56cf;
+  --accent-hover: #654dc4;
+  --accent-ink: #ffffff;
+  --accent-soft: #f4f0fe;
+  --accent-line: #d4cafe;
+  /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
+     a selection lands on are already tinted — the question bubble is `--accent-soft` —
+     and a tint over a tint is not a mark. The pair is the one combination that reads on
+     every background the app has. */
+  --select: #6e56cf;
+  --select-ink: #ffffff;
+  /* A cited quote, marked over text: the accent, thin enough to read through. */
+  --quote-mark: rgb(110 86 207 / 20%);
+
+  --flag: #a63d6b;
+  --flag-soft: #fdeef4;
+
+  /* Jira's status categories, as colors, plus the one state it has no category for.
+     Tokens rather than literals because the dashboard they came from hardcoded a green
+     and a red that were invisible in dark mode.
+
+     Chosen against the violet, not against a traffic light. A signal color only has to
+     be *distinct*; nothing makes it have to be the reddest red available, and a page
+     built on one low-chroma hue is exactly where a saturated green and a fire-engine red
+     look borrowed from another product.
+
+     Teal and gold were the first attempt and were still two hues the page does not
+     otherwise use — distinct, but distinct the way a sticker is. These are an ANALOGOUS
+     SWEEP THROUGH THE ACCENT'S OWN QUARTER of the wheel instead: indigo for in-progress,
+     the accent's violet for done, magenta-rose for late, and a desaturated lavender-grey
+     for not-started. Nothing on the screen is a hue the brand does not already own, and
+     the three still separate, because they separate by POSITION ALONG ONE ARC rather than
+     by being unrelated colors. Done gets the accent's own hue on purpose: it is the one
+     the page is asking you to want. */
+  --todo: #8b84a3;
+  --doing: #4f5bc7;
+  --done: #8340cf;
+  --late: #c03c78;
+
+  /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
+     accent: a translucent cell picks up whatever is behind it, and these sit on two
+     different surfaces. */
+  --heat-0: #f4f0fe;
+  --heat-1: #e1d9ff;
+  --heat-2: #c2b5f5;
+  --heat-3: #aa99ec;
+  --heat-4: #6e56cf;
+
+  --shadow-sm: 0 1px 2px rgb(23 20 31 / 0.05);
+  --shadow-md: 0 4px 16px -4px rgb(23 20 31 / 0.1), 0 1px 3px rgb(23 20 31 / 0.05);
+  --shadow-lg: 0 16px 40px -12px rgb(45 27 85 / 0.18);
+
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --display: "Instrument Serif", Georgia, serif;
+
+  --rail: 272px;
+  /* Two content widths, because there are two kinds of content. `--conversation` is prose and
+     stops where a line stops being comfortable to read. `--board` is tables and figures,
+     which are compared side by side and lose nothing by being wide — holding them at
+     reading width is what left a wide screen mostly empty.
+
+     A run is not only prose: tool arguments and their results are code, and code wrapped
+     at a paragraph's measure reads worse, not better. So `--conversation` is set by the widest
+     thing in the conversation rather than by the narrowest. */
+  --conversation: 58rem;
+  --board: 78rem;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground: #0b0910;
+    --surface: #131019;
+    --sunk: #0f0d15;
+    --raised: #1a1622;
+
+    --ink: #f0edf7;
+    --ink-2: #c9cad8;
+    --muted: #8f87a3;
+    --faint: #6b6380;
+
+    --rule: #241f30;
+    --rule-2: #3a3d52;
+
+    --mark-ink: #d4c8ff;
+    --accent: #baa7ff;
+    --accent-hover: #e2ddfe;
+    --accent-ink: #14101d;
+    --accent-soft: #291f43;
+    --accent-line: #473876;
+    --select: #baa7ff;
+    --select-ink: #14101d;
+    --quote-mark: rgb(186 167 255 / 30%);
+
+    --flag: #f090b4;
+    --flag-soft: #2a1520;
+
+    --todo: #9992b0;
+    --doing: #8b95f0;
+    --done: #b87cf0;
+    --late: #f18ab4;
+
+    --heat-0: #1b1525;
+    --heat-1: #33255b;
+    --heat-2: #473876;
+    --heat-3: #6958ad;
+    --heat-4: #baa7ff;
+
+    --shadow-sm: none;
+    --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #0b0910;
+  --surface: #131019;
+  --sunk: #0f0d15;
+  --raised: #1a1622;
+
+  --ink: #f0edf7;
+  --ink-2: #c9cad8;
+  --muted: #8f87a3;
+  --faint: #6b6380;
+
+  --rule: #241f30;
+  --rule-2: #3a3d52;
+
+  --mark-ink: #d4c8ff;
+  --accent: #baa7ff;
+  --accent-hover: #e2ddfe;
+  --accent-ink: #14101d;
+  --accent-soft: #291f43;
+  --accent-line: #473876;
+  --select: #baa7ff;
+  --select-ink: #14101d;
+  --quote-mark: rgb(186 167 255 / 30%);
+
+  --flag: #f090b4;
+  --flag-soft: #2a1520;
+
+  --todo: #9992b0;
+  --doing: #8b95f0;
+  --done: #b87cf0;
+  --late: #f18ab4;
+
+  --heat-0: #1b1525;
+  --heat-1: #33255b;
+  --heat-2: #473876;
+  --heat-3: #6958ad;
+  --heat-4: #baa7ff;
+
+  --shadow-sm: none;
+  --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* The in-page links on the home page jump; smooth makes it read as moving down one
+   page rather than as a new page arriving. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.006em;
+  font-feature-settings: "ss01", "cv05";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Underlines off once, here, rather than in every rule that styles a link. A link in
+   this app is told apart by color and by where it sits, and an underline under a
+   wordmark or a nav row reads as a mistake. */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--select);
+  color: var(--select-ink);
+}
+
+/* A label in small caps monospace. Used for every structural heading. */
+.label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}

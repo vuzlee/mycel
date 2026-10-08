@@ -1,22 +1,4 @@
-/**
- * Ask anything, and watch the run happen.
- *
- * The job id lives in the query string, not in state: a run is a thing you can link to
- * and reopen, and the sidebar reopens one by navigating rather than by lifting state up
- * through a router that is already carrying it.
- *
- * A conversation is more than one turn. `?conversation=` rides beside `?job=`: the job is the
- * run being watched, the conversation is what the next question joins. `?thread=`, its old
- * name, is still read so a saved link keeps working. A reload with only
- * a job still works — the run itself names its conversation.
- *
- * Which means a reload arrives with a job and no question — the question was only ever
- * in this component's state. The stream does not carry it either: a stream is tool calls
- * and reasoning, not the prompt that started them. So the poll carries both:
- * `GET /chat/{id}` returns the run's own `question` and `conversation_id`, which the
- * sidebar cannot supply. A conversation's title is the question that *opened* it, and its job
- * id is the *latest* run — both are the wrong answer from the second turn on.
- */
+/** Ask anything, and watch the run happen. */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";

@@ -1,24 +1,4 @@
-/**
- * What this is, before you have an account.
- *
- * The only page that renders signed out as well as signed in, so it takes neither the
- * `Shell` nor the `Gate`: someone arriving here may have nothing, and a rail full of
- * their runs is the wrong first screen for a person who has none.
- *
- * It says what Mycel gives you and what it costs you to get it. Not how: there are no
- * layers, agents or pipelines on this page, because a reader deciding whether they want
- * this does not yet care how it is built. `docs/architecture.html` is for that.
- *
- * The page shows the product before it describes it. `Demo` runs a scripted question at
- * the top, because the fastest way to answer "what is this" is to let someone watch one
- * question go in and an answer come out, and every sentence after it is then a caption
- * on something already seen rather than a claim taken on trust.
- *
- * Motion is a reveal on scroll and nothing else. Nothing moves that a reader did not
- * scroll to, nothing loops except the demo, and every animation is an offset being
- * removed — so the page is complete and readable with no JavaScript and with reduced
- * motion on.
- */
+/** What this is, before you have an account. */
 
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/auth";
@@ -33,9 +13,7 @@ import { useReveal } from "../hooks/useReveal";
  *  route here. */
 const REPO = "https://github.com/vuzlee/mycel";
 
-/** Three moments, not three features. Each is one line of prose and one line someone
- *  would actually type — an earlier version carried a third sentence explaining the
- *  first, which is how a page ends up with more words than a reader has patience. */
+/** Three moments, not three features: one line of prose, one line someone would type. */
 const USES = [
   {
     when: "Monday",
@@ -54,9 +32,7 @@ const USES = [
   },
 ];
 
-/** Four promises the code keeps, not the prompt. An earlier version gave each one a
- *  sentence, and four sentences in a row is a paragraph nobody reads — so each is now a
- *  claim and the three words that make it checkable. */
+/** Four promises the code keeps, not the prompt: a claim and the words that make it checkable. */
 const GUARANTEES = [
   { big: "Read-only", small: "enforced by Postgres" },
   { big: "Self-hosted", small: "your database, your keys" },

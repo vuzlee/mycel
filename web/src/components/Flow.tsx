@@ -1,18 +1,4 @@
-/**
- * Three panels off one week's data.
- *
- * This used to be a picture of the pipeline: three fake Jira rows on the left, an arrow,
- * two grey sheets on the right. It read as a diagram of the plumbing, which is the one
- * thing the page had already decided not to talk about.
- *
- * Now it is the product's own output — a donut, a bar chart and a heatmap — because a
- * reader deciding whether they want this is deciding whether they want the figures, and
- * a figure shown is worth a paragraph promising one.
- *
- * Drawn, not screenshotted: a screenshot is out of date the next time the layout moves
- * and unreadable at this size anyway. Every color is a token — the four Jira status
- * categories and the accent — so the panels are the app's palette, not a chart library's.
- */
+/** Three panels off one week's data. */
 
 /** Twelve weeks of logged hours, Monday to Sunday. Small cells and a long run, because a
  *  heatmap only reads as one when there is somewhere sparse to compare the dense part to:

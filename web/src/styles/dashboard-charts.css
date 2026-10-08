@@ -1,0 +1,373 @@
+/* Two views of one subject, side by side. A heatmap and a bar chart of the same
+   worklogs answer different questions — the rhythm and the amount — and each is too
+   short to hold a row alone, which is how a dashboard grows half-empty rows. */
+.board .effort-pair .two-up {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem 2rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .board .effort-pair .two-up {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A sub-heading, not a second block heading: smaller and quieter than `.label`, so the
+   pair still reads as one block that happens to have two halves. */
+.board .sub {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Twelve weeks as a grid of days: the one block that shows a rhythm rather than a
+   snapshot. Columns are weeks and rows are weekdays, so a team that never logs on Fridays
+   draws an empty row and says so without a caption. */
+.board .heatmap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 8px;
+  align-items: start;
+}
+
+.board .heatmap .weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .heatmap .weekdays li {
+  display: flex;
+  align-items: center;
+  height: 13px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+/* Months across the top. The weekday labels say where you are inside a week and nothing
+   about WHICH week, so without these the grid is twelve anonymous columns. It sits in the
+   second column of the heatmap's own grid, so its cells line up with the weeks under it. */
+.board .heatmap .months {
+  grid-area: 1 / 2;
+  display: flex;
+  gap: 3px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.board .heatmap .months li {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* Explicit placement throughout. Auto-placement would put the weekday column in row one
+   beside the months, because the row the months occupy still has its first cell free. */
+.board .heatmap .weekdays {
+  grid-area: 2 / 1;
+}
+
+/* Every other weekday is unlabelled: seven labels beside thirteen-pixel rows is more
+   type than grid, and the gaps are readable because the ones that are there are. */
+.board .heatmap .weeks {
+  grid-area: 2 / 2;
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.board .heatmap .weeks > li {
+  flex: 1;
+  min-width: 0;
+}
+
+.board .heatmap .weeks ol {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .heatmap .weeks ol li {
+  height: 13px;
+  border-radius: 3px;
+  background: var(--heat-0);
+}
+
+/* The steps have to out-specify the cell's own base background, which is why they carry
+   the full `.weeks ol li` path rather than the attribute alone: `.board .heatmap
+   [data-step="4"]` is three classes to that rule's three classes and two elements, so the
+   flat version LOSES and every cell draws --heat-0. The grid then renders perfectly and
+   is entirely blank, which is a hard bug to see — it looks like missing data. */
+.board .heatmap .weeks ol li[data-step="1"] {
+  background: var(--heat-1);
+}
+
+.board .heatmap .weeks ol li[data-step="2"] {
+  background: var(--heat-2);
+}
+
+.board .heatmap .weeks ol li[data-step="3"] {
+  background: var(--heat-3);
+}
+
+.board .heatmap .weeks ol li[data-step="4"] {
+  background: var(--heat-4);
+}
+
+/* A day that has not happened is not a day with no work. It is drawn as absent rather
+   than as the palest step, or the last column reads as a week the team stopped. */
+.board .heatmap .weeks ol li[data-future="true"] {
+  background: transparent;
+  border: 1px dashed var(--rule);
+}
+
+.board .heatmap .scale {
+  grid-area: 3 / 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.board .heatmap .scale span {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.board .heatmap .scale i {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--heat-0);
+}
+
+/* The key has the same fight to win, for the same reason. */
+.board .heatmap .scale i[data-step="1"] {
+  background: var(--heat-1);
+}
+
+.board .heatmap .scale i[data-step="2"] {
+  background: var(--heat-2);
+}
+
+.board .heatmap .scale i[data-step="3"] {
+  background: var(--heat-3);
+}
+
+.board .heatmap .scale i[data-step="4"] {
+  background: var(--heat-4);
+}
+
+/* Recent activity. A list, not a table: the columns are a key, a sentence and three short
+   facts, and a table would give the sentence the same width as the rest. */
+.board .feed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .feed li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.board .feed li:last-child {
+  border-bottom: 0;
+}
+
+/* The same row shape as the data, so the names sit exactly over what they name — a
+   separate header element would have to be kept in step with the row by hand. Styled
+   like a table's `th`, because that is what it is. */
+.board .feed li.heading {
+  padding: 0 0 7px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board .feed li.heading .key,
+.board .feed li.heading .title,
+.board .feed li.heading .who,
+.board .feed li.heading .when {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+/* The status column's header is a word, not a pill: a pill here would read as a status
+   that every row happens to share. */
+.board .feed li.heading .state {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  text-align: center;
+}
+
+.board .feed .key {
+  width: 5.5rem;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.board .feed .title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The site's own word for the status, not the category: a team that renamed "In Progress"
+   to "Cooking" is told "Cooking", and the category is what gives it its color. */
+.board .feed .state {
+  /* A width, so the heading above it and every pill below line up in one column. Without
+     it each pill is as wide as its own word and the column zig-zags. */
+  width: 7.5rem;
+  flex: none;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--sunk);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.board .feed .state[data-status="doing"] {
+  color: var(--doing);
+}
+
+.board .feed .state[data-status="done"] {
+  color: var(--done);
+}
+
+.board .feed .who {
+  width: 8rem;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board .feed .when {
+  width: 5rem;
+  flex: none;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* Effort per day. A bar per row rather than a chart library: one series, one axis, and
+   the width is the whole message. */
+.board .effort {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board .effort li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.board .effort .when {
+  width: 3.4rem;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.board .effort .bar {
+  height: 10px;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.board .effort .n {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.board .empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+@media (max-width: 720px) {
+  .board .lede .figure {
+    flex-wrap: wrap;
+  }
+
+  .board .lede .flag {
+    margin-left: 0;
+  }
+
+  .board .totals {
+    flex-wrap: wrap;
+  }
+
+  .board .total {
+    flex: 1 1 8rem;
+  }
+
+  /* Who goes first when there is no room: the key opens the ticket and the title
+     says what it is. */
+  .board td.who,
+  .board th.who,
+  .board .feed .who {
+    display: none;
+  }
+
+  .board .breakdown {
+    grid-template-columns: minmax(4rem, auto) 1fr auto auto;
+  }
+}

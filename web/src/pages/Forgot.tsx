@@ -1,10 +1,4 @@
-/**
- * Ask for a reset link.
- *
- * The answer is the same whether or not the address has an account, and the page says so
- * out loud: a screen that reads "no such account" is a screen anyone can use to find out
- * who has one. Saying it plainly is better than letting someone wonder whether it worked.
- */
+/** Ask for a reset link. */
 
 import { useState } from "react";
 import { Link } from "react-router-dom";

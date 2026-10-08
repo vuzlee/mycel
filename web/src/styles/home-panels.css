@@ -1,0 +1,313 @@
+/* -------------------------------------------------- three panels */
+
+/* Wider than the reading column. Charts are not read left to right at 74rem — they are
+   scanned, and a scanned thing wants the room the prose does not. */
+.home .band {
+  max-width: 92rem;
+}
+
+.home .band > h2 {
+  margin-bottom: 36px;
+  max-width: 74rem;
+  margin-inline: auto;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition:
+    border-color 0.18s ease,
+    translate 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.panel:hover {
+  border-color: var(--accent-line);
+  translate: 0 -3px;
+  box-shadow: var(--shadow-md);
+}
+
+.panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel .kind {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.panel > header b {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.panel .foot {
+  margin: auto 0 0;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.panel .foot b {
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* The status colors, once, for every mark that carries one. Each panel then only says
+   which category a thing is, never what color that is. */
+/* Four steps down the one hue. Green/amber/red would be a second palette on a page that
+   has exactly one, and it would shout "alarm" about a sprint that is fine. */
+.panel [data-step="1"] {
+  --mark: var(--accent);
+}
+.panel [data-step="2"] {
+  --mark: color-mix(in oklab, var(--accent) 68%, var(--surface));
+}
+.panel [data-step="3"] {
+  --mark: color-mix(in oklab, var(--accent) 40%, var(--surface));
+}
+.panel [data-step="4"] {
+  --mark: color-mix(in oklab, var(--accent) 20%, var(--surface));
+}
+
+/* -------------------------------------------------- the donut */
+
+.panel .donut {
+  position: relative;
+  width: 148px;
+  margin: 0 auto;
+}
+
+.panel .donut svg {
+  width: 100%;
+  rotate: 0deg;
+  overflow: visible;
+}
+
+/* Four arcs on one circle: a dash as long as the slice, a gap as long as the rest, and
+   a rotation to put it where it starts. No path maths, and each arc is one number. */
+.panel .donut circle {
+  fill: none;
+  stroke: var(--mark);
+  stroke-width: 11;
+  stroke-linecap: butt;
+  transform-origin: 50% 50%;
+  transition: stroke-width 0.18s ease;
+}
+
+.panel:hover .donut circle {
+  stroke-width: 13;
+}
+
+.panel .middle {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.panel .middle b {
+  font-family: var(--display);
+  font-size: 2.1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.panel .legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.panel .legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.panel .legend b {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.panel .swatch {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--mark);
+}
+
+/* -------------------------------------------------- the bars */
+
+.panel .bars {
+  display: grid;
+  gap: 13px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel .bars li {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 2.4rem;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.panel .who {
+  color: var(--ink-2);
+}
+
+.panel .track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+/* Violet, not a status color: these are hours, and hours have no category. The tint
+   down the length is what stops four flat bars reading as a stylesheet default. */
+.panel .fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in oklab, var(--accent) 62%, #ff9ecd)
+  );
+  animation: grow 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.panel .bars li:nth-child(2) .fill {
+  animation-delay: 0.08s;
+}
+.panel .bars li:nth-child(3) .fill {
+  animation-delay: 0.16s;
+}
+.panel .bars li:nth-child(4) .fill {
+  animation-delay: 0.24s;
+}
+
+@keyframes grow {
+  from {
+    width: 0 !important;
+  }
+}
+
+.panel .amount {
+  justify-self: end;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+/* -------------------------------------------------- the heatmap */
+
+/* Weeks run across, days down — the orientation every contribution graph uses, so it is
+   the one a reader does not have to be taught. */
+.panel .heat {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+}
+
+.panel .week {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+}
+
+/* One hue at five strengths. A second color here would imply a second meaning, and
+   there is only one: how much was logged. */
+.panel .cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) calc(var(--level) * 1%), var(--sunk));
+  transition: scale 0.16s ease;
+}
+
+.panel .cell[data-level="0"] {
+  --level: 0;
+}
+.panel .cell[data-level="1"] {
+  --level: 22;
+}
+.panel .cell[data-level="2"] {
+  --level: 44;
+}
+.panel .cell[data-level="3"] {
+  --level: 68;
+}
+.panel .cell[data-level="4"] {
+  --level: 100;
+}
+
+.panel .cell:hover {
+  scale: 1.18;
+}
+
+/* The key, because five shades of one color mean nothing until you say which end is
+   which — and saying it costs two words. */
+.panel .scale {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.panel .scale .cell {
+  width: 9px;
+  height: 9px;
+  aspect-ratio: auto;
+}
+
+.panel .scale span:first-child {
+  margin-right: 3px;
+}
+
+.panel .scale span:last-child {
+  margin-left: 3px;
+}

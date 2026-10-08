@@ -1,11 +1,4 @@
-/**
- * The frame every signed-in page sits in: the rail on the left, a header strip, a
- * scrolling body. The pages differ in what goes in the body, not in this.
- *
- * The header strip carries nothing but the button that reveals the rail on a narrow
- * screen. A run's id, its clock and its cost were all there; each was a fact about the
- * machine, offered to someone who came to read an answer.
- */
+/** The frame every signed-in page sits in: rail, header strip, scrolling body. */
 
 import { useState } from "react";
 import { ArrowDown, Menu } from "./icons";

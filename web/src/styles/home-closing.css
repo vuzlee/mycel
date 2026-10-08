@@ -1,0 +1,394 @@
+/* -------------------------------------------------- three moments */
+
+.home .uses > h2 {
+  margin-bottom: 36px;
+}
+
+.home .use-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: moment;
+}
+
+.home .use-list li {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 24px 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition:
+    border-color 0.18s ease,
+    translate 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.home .use-list li:hover {
+  border-color: var(--accent-line);
+  translate: 0 -3px;
+  box-shadow: var(--shadow-md);
+}
+
+.home .use-list .when {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.home .use-list b {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+/* Set as something typed, because it is: these are the words that go in the box. */
+.home .use-list .ask {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 7px 13px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.home .use-list li:hover .ask {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+
+/* -------------------------------------------------- the ask, and the name */
+
+.home .already {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: contract;
+}
+
+.home .already li {
+  display: grid;
+  gap: 4px;
+  padding: 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* Numbered, because three things a team must already have is a checklist, and a
+   checklist that is not counted reads as three unrelated cards. */
+.home .already li::before {
+  counter-increment: contract;
+  content: counter(contract, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.home .already b {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.home .already span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.home .note {
+  margin: 26px 0 0;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* -------------------------------------------------- the call */
+
+.home .call {
+  position: relative;
+  text-align: center;
+  border-top: 0;
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+
+.home .call::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: radial-gradient(44rem 24rem at 50% 50%, var(--accent-soft), transparent 70%);
+  border-top: 1px solid var(--rule);
+}
+
+.home .call h2 {
+  margin: 0 auto 14px;
+  max-width: 18ch;
+  font-family: var(--display);
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.home .call p {
+  margin: 0 auto 26px;
+  max-width: 44ch;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.home .call p b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.home .call .both {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.home .call a:not(.primary) {
+  color: var(--accent);
+}
+
+/* -------------------------------------------------- the footer */
+
+/* On its own ground, darker than the page. A footer that shares the page's background
+   and is separated by one hairline is a footer nobody can see the edge of. */
+.home > footer {
+  padding: 56px var(--gutter) 34px;
+  background: var(--sunk);
+  border-top: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.home > footer > * {
+  max-width: var(--page);
+  margin-inline: auto;
+}
+
+.home > footer .sig {
+  display: grid;
+  gap: 0;
+  margin-bottom: 40px;
+}
+
+.home > footer .sig p {
+  margin: 12px 0 0;
+  max-width: 44ch;
+  line-height: 1.7;
+  color: var(--faint);
+}
+
+.home > footer .sig em {
+  font-style: italic;
+  color: var(--muted);
+}
+
+.home > footer .columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.home > footer .columns > div {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+}
+
+.home > footer .columns .label {
+  margin-bottom: 2px;
+  color: var(--ink-2);
+}
+
+.home > footer a {
+  width: fit-content;
+  color: var(--muted);
+  transition: color 0.14s ease;
+}
+
+.home > footer a:hover {
+  color: var(--accent);
+}
+
+.home > footer .muted {
+  color: var(--faint);
+  line-height: 1.5;
+}
+
+.home > footer .fine {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 44px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule-2);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.home > footer .fine span:last-child {
+  max-width: 52ch;
+}
+
+/* -------------------------------------------------- arriving */
+
+/* Every revealed band is a removed offset, so the page is complete without the script
+   and the observer only ever takes something away. */
+[data-shown="false"] {
+  opacity: 0;
+  translate: 0 18px;
+}
+
+.home [data-shown] {
+  transition:
+    opacity 0.6s ease,
+    translate 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.home [data-shown="true"] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Inside a revealed band the cards arrive one after another, which reads as a hand
+   dealing them rather than a block appearing. */
+.home [data-shown="true"] .panel,
+.home [data-shown="true"] .use-list li,
+.home [data-shown="true"] .already li,
+.home [data-shown="true"] > div {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.home [data-shown="true"] .panel:nth-child(2),
+.home [data-shown="true"] .use-list li:nth-child(2),
+.home [data-shown="true"] .already li:nth-child(2),
+.home [data-shown="true"] > div:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.home [data-shown="true"] .panel:nth-child(3),
+.home [data-shown="true"] .use-list li:nth-child(3),
+.home [data-shown="true"] .already li:nth-child(3),
+.home [data-shown="true"] > div:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.home [data-shown="true"] > div:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home [data-shown],
+  .home [data-shown] * {
+    opacity: 1 !important;
+    translate: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .home .ping::after,
+  .demo .asked,
+  .demo .pip::after {
+    animation: none;
+  }
+
+  .demo .reply {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+/* -------------------------------------------------- narrow */
+
+@media (max-width: 960px) {
+  .panels,
+  .home .use-list,
+  .home .already {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .home section {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  /* The section links go first: on a phone the account controls are what the bar is
+     for, and three more links would push them off it. */
+  .home nav.sections {
+    display: none;
+  }
+
+  .home .account {
+    margin-left: auto;
+  }
+
+  /* The words go, the initial stays: at this width the avatar alone still answers
+     "is this my account" without taking the button's room. */
+  .account-menu[data-where="bar"] .named,
+  .account-menu[data-where="bar"] .caret {
+    display: none;
+  }
+
+  .account-menu[data-where="bar"] .me {
+    padding: 4px;
+  }
+
+  .home .acts {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home .acts a {
+    justify-content: center;
+  }
+
+  .demo .tape {
+    min-height: 19rem;
+    padding: 18px;
+  }
+
+  .demo .figures li {
+    grid-template-columns: 3.6rem 1fr auto;
+    gap: 9px;
+  }
+
+  .home > footer .columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}

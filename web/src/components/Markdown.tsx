@@ -1,15 +1,4 @@
-/**
- * Markdown, rendered the one way everywhere it appears.
- *
- * The orchestrator answers in markdown, so this renders both the
- * text arriving on the stream and the kept answer of a finished turn. GFM is on for
- * tables: a list of tickets with an assignee and a due date is what most answers are,
- * and a pipe table is how a model writes one.
- *
- * Streaming means this is called on half-written markdown — a table with one row of its
- * header, a link with no closing bracket. `react-markdown` renders what parses and shows
- * the rest as the text it currently is, which is the readable failure.
- */
+/** Markdown, rendered the one way everywhere it appears. */
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";

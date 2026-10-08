@@ -1,12 +1,4 @@
-/**
- * The turns of this conversation that happened before the one being watched.
- *
- * Read from `app.turn`, not from the stream: a stream belongs to one run, and these runs
- * are over. A turn keeps its tool calls in the shape the stream sent them,
- * so they build the same tree and render through the same `Steps`. Reasoning is not kept
- * — it is worth watching live and not worth storing — so a replayed turn shows what it
- * called and what came back, and none of the thinking in between.
- */
+/** The turns of this conversation that happened before the one being watched. */
 
 import type { Turn } from "../api";
 import { buildConversation } from "../lib/buildConversation";

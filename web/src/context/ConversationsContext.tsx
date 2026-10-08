@@ -1,10 +1,4 @@
-/**
- * The sidebar's history, from the server rather than this browser.
- *
- * It lives in a context because two pages start runs and one page lists them: a new run
- * has to show up in the rail without a reload, and the rail is not a child of either
- * page. `reload()` is what a page calls after queueing work.
- */
+/** The sidebar's history, from the server rather than this browser. */
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";

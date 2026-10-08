@@ -1,7 +1,4 @@
-/**
- * The user's documents, in a side panel: drop files in, watch them get ready, switch them
- * off, rename, delete. The list itself is live from `useDocuments`; nothing here polls.
- */
+/** The user's documents in a side panel: upload, watch, toggle, rename, delete. */
 
 import { useEffect, useRef, useState } from "react";
 import {

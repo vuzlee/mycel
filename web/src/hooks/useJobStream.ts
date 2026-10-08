@@ -1,14 +1,4 @@
-/**
- * The only place that touches `EventSource`.
- *
- * Three behaviors the scratch page at `/live` proved, and that must not be lost:
- *
- *  - the browser resends `Last-Event-ID` by itself, so a dropped connection *resumes*
- *    rather than replays. Nothing here reconnects by hand; doing so would break that.
- *  - a jump in `seq` is rendered, not swallowed. A silent gap is worse than an ugly one.
- *  - `run_finished` closes the stream only at the top level: a nested one just means a
- *    sub-agent finished while the parent is still working.
- */
+/** The only place that touches `EventSource`. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SequencedEvent, StreamState } from "../lib/types";

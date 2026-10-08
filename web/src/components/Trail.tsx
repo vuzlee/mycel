@@ -1,12 +1,4 @@
-/**
- * Everything a run did on its way to the answer, folded into one line.
- *
- * Every agent can think and call tools, and a call can hand work to another agent that
- * does the same, so the trail is a tree: each step is one row, and a delegated agent's
- * steps sit indented under the call that started them. The mark grows while the run is
- * out and rests once it is done. The fold is left to the reader: a run opening or
- * closing it would move the page under them.
- */
+/** Everything a run did on its way to the answer, folded into one line. */
 
 import type { Item, ToolItem } from "../lib/buildConversation";
 import { labelFor } from "../lib/toolLabel";

@@ -1,13 +1,4 @@
-/**
- * Sign in.
- *
- * Its own page rather than a toggle beside registration: the two now end differently —
- * signing in lands you in the app, registering leaves you here — and a single form that
- * branches on a flag hides that difference at exactly the moment it matters.
- *
- * Arriving from `/register` carries a notice in the router state, so a new account says
- * so on the screen that asks it to prove itself.
- */
+/** Sign in. */
 
 import { useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";

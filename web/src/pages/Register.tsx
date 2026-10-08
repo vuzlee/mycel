@@ -1,13 +1,4 @@
-/**
- * Create an account — and stop there.
- *
- * `POST /auth/register` issues no cookie, so a new account is not a signed-in one. The
- * page says so and sends you to the login form, which is where the password gets proved
- * rather than assumed.
- *
- * Registration is open: anyone who can reach this page can create an account. That is
- * fine for a machine on a desk and is the first thing to revisit if this is ever exposed.
- */
+/** Create an account — and stop there. */
 
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
