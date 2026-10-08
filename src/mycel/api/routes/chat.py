@@ -10,9 +10,9 @@ from mycel.agents.core.chips import Chip
 from mycel.api.dependencies import CurrentUser
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.domains.chat import ConversationNotFound, find_turn, request_chat
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
+from mycel.services.chat import ConversationNotFound, find_turn, request_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

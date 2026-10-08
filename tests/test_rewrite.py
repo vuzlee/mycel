@@ -6,10 +6,10 @@ import pytest
 
 from mycel.agents.agent.rewriter import Rewriter
 from mycel.domains import chat as domain
-from mycel.domains.chat import REWRITE_ANSWER_CHARS, _rewrite_context
 from mycel.queue.job import Job, JobKind
 from mycel.services import knowledge
 from mycel.services.auth import Principal
+from mycel.services.chat import REWRITE_ANSWER_CHARS, _rewrite_context
 from tests.test_history import _turn
 
 pytestmark = pytest.mark.anyio

@@ -6,10 +6,11 @@ from typing import Any
 
 import pytest
 
-from mycel.domains.chat import HISTORY_CHARS, HISTORY_TURNS, _recall, run
+from mycel.domains.chat import run
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.queue.job import Job, JobKind
 from mycel.services.auth import Principal
+from mycel.services.chat import HISTORY_CHARS, HISTORY_TURNS, _recall
 
 pytestmark = pytest.mark.anyio
 

@@ -220,7 +220,7 @@ class TestQueueingAQuestion:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """404, not 403: which of the two it was is the one thing worth hiding."""
-        from mycel.domains.chat import ConversationNotFound
+        from mycel.services.chat import ConversationNotFound
 
         _queues(monkeypatch, ConversationNotFound(7))
         response = client.post("/chat", json={"question": "and last week?", "conversation_id": 7})

@@ -78,7 +78,7 @@ class TestKnowledgeGoesThroughTheOrchestrator:
         from contextlib import asynccontextmanager
         from types import SimpleNamespace
 
-        from mycel.domains import chat
+        from mycel.services import chat
 
         queued: list[tuple[object, object]] = []
 

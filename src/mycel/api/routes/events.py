@@ -7,9 +7,9 @@ from fastapi.responses import StreamingResponse
 
 from mycel.api.dependencies import CurrentUser
 from mycel.core.logging import get_logger
-from mycel.domains.chat import find_turn
 from mycel.events.event import RUN_FINISHED, SequencedEvent
 from mycel.infra.redis import streams
+from mycel.services.chat import find_turn
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

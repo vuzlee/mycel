@@ -6,7 +6,7 @@ import pytest
 
 from mycel import doctor
 from mycel.core.config import Settings
-from mycel.doctor import Check, State
+from mycel.doctor import Check, State, probes
 
 pytestmark = pytest.mark.anyio
 
@@ -70,7 +70,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
 class TestWhatCountsAsConfigured:
     def test_an_absent_tool_is_off_and_says_what_is_missing(self) -> None:
         """The detail names the tool."""
-        checks = doctor._declared(_settings(tavily_api_key=None))
+        checks = doctor.declared(_settings(tavily_api_key=None))
         search = next(c for c in checks if c.name == "web search")
         assert search.state is State.OFF
         assert "web_search" in search.detail
@@ -78,26 +78,26 @@ class TestWhatCountsAsConfigured:
     def test_the_calendar_needs_all_three_keys(self) -> None:
         """Two of three is not partly working."""
         partial = _settings(google_client_id="id", google_client_secret="secret")
-        check = next(c for c in doctor._declared(partial) if c.name == "calendar & mail")
+        check = next(c for c in doctor.declared(partial) if c.name == "calendar & mail")
         assert check.state is State.OFF
 
 
 class TestTheOpenFrontDoor:
     def test_open_registration_is_reported_broken(self) -> None:
         """The default is that anyone who can reach the URL gets an account."""
-        checks = doctor._declared(_settings())
+        checks = doctor.declared(_settings())
         who = next(c for c in checks if c.name == "who may sign up")
         assert who.state is State.BROKEN
         assert "ANYONE" in who.detail
 
     def test_an_invite_code_closes_it(self) -> None:
-        checks = doctor._declared(_settings(registration_invite_code="s3cret"))
+        checks = doctor.declared(_settings(registration_invite_code="s3cret"))
         who = next(c for c in checks if c.name == "who may sign up")
         assert who.state is State.OK
         assert "s3cret" not in who.detail, "the report must not print the code"
 
     def test_a_domain_allowlist_closes_it(self) -> None:
-        checks = doctor._declared(_settings(registration_allowed_domains="acme.com"))
+        checks = doctor.declared(_settings(registration_allowed_domains="acme.com"))
         who = next(c for c in checks if c.name == "who may sign up")
         assert (who.state, "acme.com" in who.detail) == (State.OK, True)
 
@@ -144,7 +144,7 @@ class TestTheGateway:
             "AsyncClient",
             lambda **kw: real(transport=httpx2.MockTransport(handler), **kw),
         )
-        detail = await doctor._gateway(_settings(litellm_base_url="http://gw:4000"))
+        detail = await probes._gateway(_settings(litellm_base_url="http://gw:4000"))
         assert detail == "2 models: a, b"
 
     async def test_a_gateway_with_no_model_is_broken(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -160,7 +160,7 @@ class TestTheGateway:
             ),
         )
         with pytest.raises(RuntimeError, match="no model"):
-            await doctor._gateway(_settings())
+            await probes._gateway(_settings())
 
 
 class TestTheUpstreams:
@@ -183,25 +183,25 @@ class TestTheUpstreams:
             return self._info(("claude", "http://proxy/v1"), ("gemini", None))
 
         real = httpx2.AsyncClient
-        monkeypatch.setattr(doctor, "_ask_gateway", info)
+        monkeypatch.setattr(probes, "_ask_gateway", info)
         monkeypatch.setattr(
             httpx2,
             "AsyncClient",
             lambda **kw: real(transport=httpx2.MockTransport(lambda r: httpx2.Response(401)), **kw),
         )
-        assert await doctor._upstreams(_settings()) == "1 answering: claude"
+        assert await probes._upstreams(_settings()) == "1 answering: claude"
 
     async def test_a_silent_upstream_is_broken(self, monkeypatch: pytest.MonkeyPatch) -> None:
         async def info(settings: Settings, path: str) -> dict[str, object]:
             return self._info(("claude", "http://127.0.0.1:9/v1"))
 
-        monkeypatch.setattr(doctor, "_ask_gateway", info)
+        monkeypatch.setattr(probes, "_ask_gateway", info)
         with pytest.raises(RuntimeError, match="not answering: claude"):
-            await doctor._upstreams(_settings())
+            await probes._upstreams(_settings())
 
     async def test_hosted_apis_are_not_probed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         async def info(settings: Settings, path: str) -> dict[str, object]:
             return self._info(("gemini", None))
 
-        monkeypatch.setattr(doctor, "_ask_gateway", info)
-        assert await doctor._upstreams(_settings()) == "no self-hosted upstream"
+        monkeypatch.setattr(probes, "_ask_gateway", info)
+        assert await probes._upstreams(_settings()) == "no self-hosted upstream"
