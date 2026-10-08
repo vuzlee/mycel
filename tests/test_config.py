@@ -58,23 +58,23 @@ class TestWhereSettingsComeFrom:
 
     def test_the_environment_beats_the_yaml(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-        assert Settings(_env_file=None).log_level == "DEBUG"
+        assert Settings().log_level == "DEBUG"
 
     def test_the_yaml_beats_the_class_default(self) -> None:
         """base.yaml carries the real defaults now."""
-        assert Settings(_env_file=None).embedding_model == "BAAI/bge-small-en-v1.5"
+        assert Settings().embedding_model == "BAAI/bge-small-en-v1.5"
 
     def test_the_overlay_beats_base(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """dev.yaml sets DEBUG over base.yaml's INFO."""
         monkeypatch.setenv("MYCEL_ENV", "dev")
         monkeypatch.delenv("METRICS_PORT", raising=False)  # conftest sets a free one
-        settings = Settings(_env_file=None)
+        settings = Settings()
         assert settings.log_level == "DEBUG"
         assert settings.metrics_port == 9100, "an overlay must not drop what it omits"
 
     def test_prod_keeps_the_base_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("MYCEL_ENV", "prod")
-        assert Settings(_env_file=None).log_level == "INFO"
+        assert Settings().log_level == "INFO"
 
     def test_reading_the_yaml_does_not_recurse(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The source reads MYCEL_ENV from the environment directly, NOT through get_settings()."""

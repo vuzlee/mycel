@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from mycel.api.app import create_app
 from mycel.api.dependencies import SESSION_COOKIE
 from mycel.core.config import Settings, get_settings
+from mycel.infra import smtp
 from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.accounts import AccountRepository
@@ -20,9 +21,6 @@ from mycel.services import auth, permission
 from tests.fakes import DSN, SCHEMAS, needs_postgres
 
 pytestmark = pytest.mark.anyio
-
-
-assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 
 PASSWORD = "correct horse battery"
@@ -411,7 +409,7 @@ class TestForgottenPasswords:
         async def capture(to: str, subject: str, body: str) -> None:
             sent.append((to, subject, body))
 
-        monkeypatch.setattr(auth.smtp, "send", capture)
+        monkeypatch.setattr(smtp, "send", capture)
         return sent
 
     @staticmethod

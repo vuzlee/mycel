@@ -5,12 +5,14 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from qdrant_client.models import VectorParams
 
+import mycel.infra.vectors.client as client
+import mycel.infra.vectors.collections as collections
+import mycel.infra.vectors.indexer as indexer
+import mycel.infra.vectors.search as search
 from mycel.core.config import get_settings
 from mycel.infra.postgres.repositories.gold import WorkItemRow
-from mycel.infra.vectors import client, collections, indexer, search
-
-pytestmark = pytest.mark.anyio
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "")
 
@@ -97,7 +99,9 @@ class TestTheIndex:
 
         collection = collections.work_items(get_settings().embedding_model)
         info = await client.client().get_collection(collection.name)
-        assert info.config.params.vectors.size == collection.dimensions
+        vectors = info.config.params.vectors
+        assert isinstance(vectors, VectorParams)
+        assert vectors.size == collection.dimensions
 
 
 class TestSearch:

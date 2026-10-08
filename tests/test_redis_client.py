@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
+import mycel.infra.redis.client as module
 from mycel.core.config import get_settings
-from mycel.infra.redis import client as module
 
 pytestmark = pytest.mark.anyio
 

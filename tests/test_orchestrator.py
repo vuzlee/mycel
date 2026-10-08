@@ -289,4 +289,5 @@ async def _call_summarizer(deps: MycelDeps, project: str) -> str:
     ctx.deps = deps  # type: ignore[attr-defined]
     ctx.messages = []  # type: ignore[attr-defined]
     tool = delegate.build_toolset().tools["summarizer"].function
-    return await tool(ctx, project)
+    out: str = await tool(ctx, project)  # type: ignore[arg-type]
+    return out

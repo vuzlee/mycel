@@ -9,7 +9,7 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 
-from mycel.agents.core import runner
+import mycel.agents.core.runner as runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import RunawayStopped
@@ -115,7 +115,8 @@ class TestDelegation:
         async def ask_child(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the child agent."""
             with child.override(model=child_model):
-                return await runner.delegate(child, "sub-question", ctx)
+                out: str = await runner.delegate(child, "sub-question", ctx)
+                return out
 
         step = [0]
 
@@ -150,7 +151,8 @@ class TestDelegation:
         @parent.tool
         async def analyst(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the child agent."""
-            return await runner.delegate(child, "q", ctx)
+            out: str = await runner.delegate(child, "q", ctx)
+            return out
 
         # Different arguments every call, so only the limit can stop this.
         asked = [0]
@@ -197,7 +199,8 @@ class TestDelegation:
         async def specialist(ctx: RunContext[MycelDeps]) -> str:
             """Delegate, on the child's own settings rather than the caller's."""
             assert ctx.usage.tool_calls >= 1, "the parent must have spent one before delegating"
-            return await runner.delegate(child, "q", ctx, CHILD)
+            out: str = await runner.delegate(child, "q", ctx, CHILD)
+            return out
 
         asked = [0]
 
@@ -233,7 +236,8 @@ class TestDelegation:
         async def ask_child(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the child agent."""
             with child.override(model=_says("child answer", tokens=100)):
-                return await runner.delegate(child, "sub-question", ctx)
+                out: str = await runner.delegate(child, "sub-question", ctx)
+                return out
 
         step = [0]
 

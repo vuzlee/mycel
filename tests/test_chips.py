@@ -1,11 +1,13 @@
 """No chip, no tool: what the model is shown is decided in code, per turn."""
 
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.chips import Chip, parse, tools_for
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
@@ -17,7 +19,7 @@ from mycel.llm.budget import JobBudget
 pytestmark = pytest.mark.anyio
 
 
-async def offered(agent_cls: type, chips: frozenset[Chip] | None) -> set[str]:
+async def offered(agent_cls: type[BaseAgent[Any]], chips: frozenset[Chip] | None) -> set[str]:
     """The tool names the model would see for one turn."""
     seen: list[set[str]] = []
 

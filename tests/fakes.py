@@ -2,6 +2,8 @@
 
 import os
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import text
@@ -11,6 +13,7 @@ from mycel.agents.tools import calendar as calendar_tool
 from mycel.core.config import get_settings
 from mycel.infra.postgres.engine import async_dsn
 from mycel.infra.postgres.models import Base
+from mycel.infra.postgres.repositories.conversations import TurnRow
 
 #: The suite's own database, set by `conftest.py`. Empty means the Postgres tests skip.
 DSN = os.environ.get("DATABASE_URL", "")
@@ -66,3 +69,18 @@ async def session() -> AsyncIterator[AsyncSession]:
             for schema in SCHEMAS:
                 await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
         await engine.dispose()
+
+
+def turn(n: int, question: str, answer: str, status: str = "done") -> TurnRow:
+    return TurnRow(
+        id=n,
+        conversation_id=1,
+        job_id=f"job-{n}",
+        question=question,
+        status=status,
+        answer=answer if status == "done" else None,
+        error=None,
+        spent_usd=Decimal("0.01"),
+        steps=None,
+        created_at=datetime.now(UTC) + timedelta(seconds=n),
+    )

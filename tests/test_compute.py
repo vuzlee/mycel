@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from mycel.agents.tools import compute
+import mycel.agents.tools.compute as compute
 
 
 class TestPercentage:

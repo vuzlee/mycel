@@ -44,6 +44,7 @@ class TestOneClient:
         model = build_model(
             "cloud:claude-sonnet-5", settings=_settings(litellm_api_key="sk-gateway")
         )
+        assert isinstance(model, OpenAIChatModel)
         assert model.client.api_key == "sk-gateway"
 
     def test_no_gateway_is_a_config_error(self) -> None:
@@ -75,6 +76,7 @@ class TestModelSettings:
             agent_settings=AgentSettings(transient_retries=4),
             settings=_settings(),
         )
+        assert isinstance(model, OpenAIChatModel)
         assert model.client.max_retries == 4
 
 

@@ -12,7 +12,8 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools import calendar as calendar_tool
-from mycel.agents.tools.calendar import CONNECT, MAX_HOURS, MAX_MINUTES, build_toolset
+from mycel.agents.tools.calendar import CONNECT, MAX_MINUTES, build_toolset
+from mycel.agents.tools.limits import MAX_HOURS
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
 from mycel.services.auth import Principal

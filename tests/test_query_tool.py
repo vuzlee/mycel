@@ -27,7 +27,6 @@ pytestmark = pytest.mark.anyio
 DSN = os.environ.get("DATABASE_URL", "")
 needs_postgres = pytest.mark.skipif(not DSN, reason="no test database is reachable")
 
-assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 SCHEMAS = ("bronze", "silver", "gold", "app")
 

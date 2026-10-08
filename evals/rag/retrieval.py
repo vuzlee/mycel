@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from evals.rag.metrics import Ranked, first_hit, mrr, recall_at, threshold
+from evals.rag.metrics import Ranked, first_hit, mrr, normalize, recall_at, threshold
 from mycel.infra.documents.chunk import passages
 from mycel.infra.documents.parse import parse
 from mycel.infra.vectors import documents as vectors
@@ -33,8 +33,6 @@ def load_questions() -> list[dict[str, object]]:
 
 def check_evidence(questions: list[dict[str, object]], texts: dict[str, str]) -> list[str]:
     """Every label must occur in its parsed document, or the measure is measuring a typo."""
-    from evals.rag.metrics import normalize
-
     missing = []
     for q in questions:
         if q.get("answerable") is False:

@@ -9,10 +9,10 @@ from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from mycel.agents.core import runner
+import mycel.agents.core.runner as runner
+from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.api.app import create_app
 from mycel.core.config import Settings, get_settings
-from mycel.domains import chat as chat_domain
 from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.infra.redis.client import close_clients
@@ -31,7 +31,6 @@ needs_everything = pytest.mark.skipif(
     not (DSN and BROKER and CACHE), reason="needs postgres, rabbitmq and redis together"
 )
 
-assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 SCHEMAS = ("bronze", "silver", "gold", "app")
 
@@ -60,7 +59,7 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
 
     # The one stub is the model, and `build` with it.
     monkeypatch.setattr(runner, "run", _answer)
-    monkeypatch.setattr(chat_domain.Orchestrator, "build", classmethod(lambda cls, s: None))
+    monkeypatch.setattr(Orchestrator, "build", classmethod(lambda cls, s: None))
 
     stop = asyncio.Event()
     worker = asyncio.create_task(run_worker(HANDLER, stop))

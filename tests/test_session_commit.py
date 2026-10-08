@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import socket
 import threading
 import time
 from collections.abc import Iterator
@@ -17,10 +16,10 @@ from mycel.api.app import create_app
 from mycel.core.config import Settings
 from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
+from tests.conftest import _free_port
 
 DSN = os.environ.get("DATABASE_URL", "")
 pytestmark = pytest.mark.skipif(not DSN, reason="no test database")
-assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
@@ -33,12 +32,6 @@ async def _schema(create: bool) -> None:
         if create:
             await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()
-
-
-def _free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
 
 
 @pytest.fixture

@@ -94,8 +94,10 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-async def main_async(limit: int | None = None) -> int:
+async def main_async(limit: int | None = None, fresh: bool = False) -> int:
     questions = retrieval.load_questions()
+    if fresh:
+        STATE.unlink(missing_ok=True)
     names = sorted({str(q["doc"]) for q in questions if q.get("answerable") is not False})
     lookup, _ = await retrieval.ingest(names)
     retrieval.RESULTS.mkdir(exist_ok=True)
@@ -125,7 +127,9 @@ async def main_async(limit: int | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=None, help="at most N questions (default all)")
-    return asyncio.run(main_async(parser.parse_args(argv).limit))
+    parser.add_argument("--fresh", action="store_true", help="forget saved answers first")
+    args = parser.parse_args(argv)
+    return asyncio.run(main_async(args.limit, args.fresh))
 
 
 if __name__ == "__main__":

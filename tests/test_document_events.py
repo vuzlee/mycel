@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from mycel.infra.redis import document_events
+import mycel.infra.redis.document_events as document_events
 
 pytestmark = [
     pytest.mark.anyio,
@@ -22,7 +22,7 @@ class TestTheSignal:
     async def test_silence_is_a_keepalive(self) -> None:
         stream = document_events.listen(990_002, timeout_s=0.2)
         assert await stream.__anext__() is False
-        await stream.aclose()
+        await stream.aclose()  # type: ignore[attr-defined]
 
     async def test_another_users_change_is_not_heard(self) -> None:
         listener = await document_events.Listener(990_003).open()

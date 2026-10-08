@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+import mycel.agents.core.runner as runner
 from mycel.agents.core.exceptions import AgentError
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
@@ -117,7 +118,7 @@ def _runs(monkeypatch: pytest.MonkeyPatch, outcome: str | Exception) -> None:
             raise outcome
         return outcome
 
-    monkeypatch.setattr(chat_domain.runner, "run", fake_run)
+    monkeypatch.setattr(runner, "run", fake_run)
 
 
 _ANSWER = "42, and here is why."
@@ -150,7 +151,7 @@ class TestSuccess:
             seen.append("ran")
             return _ANSWER
 
-        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
+        monkeypatch.setattr(runner, "run", fake_run)
 
         message = _message()
         original_ack = message.ack
@@ -202,7 +203,7 @@ class TestFailures:
     ) -> None:
         _runs(monkeypatch, AgentError("still down"))
         dlx = FakeExchange()
-        message = _message(**{retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS - 1})
+        message = FakeMessage(_message().body, {retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS - 1})
 
         await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
@@ -299,7 +300,7 @@ class TestAttemptCounting:
     def test_the_counter_travels_with_the_job(self) -> None:
         message = FakeMessage(b"{}", {retry.ATTEMPT_HEADER: 2})
         assert retry.attempt_of(message) == 2  # type: ignore[arg-type]
-        assert retry.exhausted(message) is (3 >= topology.MAX_ATTEMPTS)
+        assert retry.exhausted(message) is (3 >= topology.MAX_ATTEMPTS)  # type: ignore[arg-type]
 
     async def test_republishing_increments_it(self) -> None:
         dlx = FakeExchange()
@@ -315,7 +316,7 @@ class TestAttemptCounting:
         dlx = FakeExchange()
         message = FakeMessage(b"{}", {retry.ATTEMPT_HEADER: 0})
 
-        await retry.reject(message, dlx, reason="no point", give_up=True)
+        await retry.reject(message, dlx, reason="no point", give_up=True)  # type: ignore[arg-type]
 
         published, key = dlx.published[0]
         assert key == topology.DEAD_QUEUE
@@ -354,7 +355,7 @@ class TestTheBudgetSurvivesARetry:
             seen.append(deps.budget.spent_usd)
             return _ANSWER
 
-        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
+        monkeypatch.setattr(runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert seen == [Decimal("0.30")]
@@ -366,7 +367,7 @@ class TestTheBudgetSurvivesARetry:
             deps.budget.spent_usd = Decimal("0.20")
             return _ANSWER
 
-        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
+        monkeypatch.setattr(runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.20")
@@ -380,7 +381,7 @@ class TestTheBudgetSurvivesARetry:
             deps.budget.spent_usd = Decimal("0.40")
             raise AgentError("provider returned 503")
 
-        monkeypatch.setattr(chat_domain.runner, "run", fake_run)
+        monkeypatch.setattr(runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
 
         assert spent["job-1"] == Decimal("0.40")

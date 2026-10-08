@@ -2,21 +2,23 @@
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic_ai import RunContext
+from pydantic_ai.mcp import MCPToolset
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
+import mycel.mcp.clients as clients
 from mycel.core.exceptions import ConfigError
-from mycel.mcp import clients
 
 pytestmark = pytest.mark.anyio
 
 SERVER = Path(__file__).parent / "fixtures" / "mcp_echo_server.py"
 
 
-def _ctx() -> RunContext[None]:
+def _ctx() -> RunContext[Any]:
     """The minimum context `get_tools` needs to resolve a tool's retry budget."""
     return RunContext(deps=None, model=TestModel(), usage=RunUsage())
 
@@ -47,6 +49,7 @@ class TestTalkingToARealServer:
     async def test_a_tool_runs_with_its_arguments(self, echo_config: Path) -> None:
         """The part construction alone cannot show: arguments cross the boundary intact."""
         (toolset,) = clients.build_toolsets(config_path=echo_config)
+        assert isinstance(toolset, MCPToolset)
         async with toolset:
             result = await toolset.direct_call_tool("echo", {"text": "xin chào"})
         assert "xin chào" in str(result)
@@ -54,6 +57,7 @@ class TestTalkingToARealServer:
     async def test_a_tool_reads_a_file_through_the_server(self, echo_config: Path) -> None:
         """A tool with side effects, not just one that reflects its input back."""
         (toolset,) = clients.build_toolsets(config_path=echo_config)
+        assert isinstance(toolset, MCPToolset)
         async with toolset:
             result = await toolset.direct_call_tool("read_note", {"name": "hello"})
         assert "separate files" in str(result)
@@ -61,6 +65,7 @@ class TestTalkingToARealServer:
     async def test_the_server_refuses_a_path_outside_its_sandbox(self, echo_config: Path) -> None:
         """`name` comes from a model, so `../../.env` is an ordinary string to it."""
         (toolset,) = clients.build_toolsets(config_path=echo_config)
+        assert isinstance(toolset, MCPToolset)
         async with toolset:
             with pytest.raises(Exception, match="outside the sandbox|Error executing tool"):
                 await toolset.direct_call_tool("read_note", {"name": "../../../etc/passwd"})

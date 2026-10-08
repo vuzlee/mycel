@@ -13,7 +13,7 @@ pytestmark = pytest.mark.anyio
 
 def _settings(**kwargs: object) -> Settings:
     """Settings built from nothing but the arguments — no .env, no YAML overlay."""
-    return Settings(_env_file=None, **kwargs)  # type: ignore[arg-type]
+    return Settings(**kwargs)  # type: ignore[arg-type]
 
 
 class TestProbeIsNotRunWhenThereIsNothingToProbe:
@@ -26,7 +26,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
             called = True
             return "should not happen"
 
-        check = await doctor._probe("x", "G", probe, missing="not configured")
+        check = await probes._probe("x", "G", probe, missing="not configured")
 
         assert check.state is State.OFF
         assert not called, "a probe ran for something that is not configured"
@@ -35,14 +35,14 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
         async def probe() -> str:
             return "connected, 3 tables"
 
-        check = await doctor._probe("x", "G", probe, missing=None)
+        check = await probes._probe("x", "G", probe, missing=None)
         assert (check.state, check.detail) == (State.OK, "connected, 3 tables")
 
     async def test_a_probe_that_raises_is_broken_and_keeps_the_message(self) -> None:
         async def probe() -> str:
             raise ConnectionRefusedError("connection refused on port 5433")
 
-        check = await doctor._probe("x", "G", probe, missing=None)
+        check = await probes._probe("x", "G", probe, missing=None)
         assert check.state is State.BROKEN
         assert "5433" in check.detail
 
@@ -52,7 +52,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
         async def probe() -> str:
             raise OSError()
 
-        check = await doctor._probe("x", "G", probe, missing=None)
+        check = await probes._probe("x", "G", probe, missing=None)
         assert check.detail == "OSError"
 
     async def test_a_hang_is_broken_rather_than_a_hang(self) -> None:
@@ -62,7 +62,7 @@ class TestProbeIsNotRunWhenThereIsNothingToProbe:
             await asyncio.sleep(10)
             return "never"
 
-        check = await doctor._probe("x", "G", probe, missing=None, timeout=0.05)
+        check = await probes._probe("x", "G", probe, missing=None, timeout=0.05)
         assert check.state is State.BROKEN
         assert "no answer" in check.detail
 

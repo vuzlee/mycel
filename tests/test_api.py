@@ -439,7 +439,7 @@ class TestTheThingsThatFailSilently:
         http_span = next(span for span in exporter.get_finished_spans() if span.name != "publish")
         assert publish_span.context.trace_id == http_span.context.trace_id
 
-        trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+        trace._TRACER_PROVIDER = None
 
 
 def _may_read(monkeypatch: pytest.MonkeyPatch, projects: set[str]) -> None:

@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
-from evals.summarizer.case import HEADLINE_MAX, Case, load_all
 
+from evals.summarizer.case import HEADLINE_MAX, Case, load_all
 from mycel.agents.schemas import LoadLine, ProgressSummary, WorkLine
 
 GOLDEN = Path(__file__).parent.parent / "evals" / "summarizer" / "golden"

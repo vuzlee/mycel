@@ -12,6 +12,7 @@ from mycel.core.exceptions import ConfigError
 from mycel.services import google_oauth as oauth
 from mycel.services import oauth as shared_oauth
 from mycel.services.google_oauth import GoogleError, NotConnected
+from mycel.services.tokens import seal
 from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio
@@ -180,7 +181,7 @@ class TestRefreshing:
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"error": "invalid_grant"}, status=400))
 
         with pytest.raises(NotConnected):
-            await oauth.access_token(oauth.seal("1//refresh"))
+            await oauth.access_token(seal("1//refresh"))
 
     async def test_any_other_refusal_is_a_google_error(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
@@ -191,7 +192,7 @@ class TestRefreshing:
         )
 
         with pytest.raises(GoogleError) as caught:
-            await oauth.access_token(oauth.seal("1//refresh"))
+            await oauth.access_token(seal("1//refresh"))
 
         assert not isinstance(caught.value, NotConnected)
 
@@ -200,13 +201,13 @@ class TestRefreshing:
     ) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"access_token": "ya29.token"}))
 
-        assert await oauth.access_token(oauth.seal("1//refresh")) == "ya29.token"
+        assert await oauth.access_token(seal("1//refresh")) == "ya29.token"
 
 
 class TestTheTokenAtRest:
     def test_what_reaches_postgres_is_not_the_token(self, configured: None) -> None:
         """A database dump must not be a list of calendars."""
-        sealed = oauth.seal("1//refresh")
+        sealed = seal("1//refresh")
 
         assert "1//refresh" not in sealed
         assert oauth.unseal(sealed) == "1//refresh"
@@ -228,7 +229,7 @@ class TestTheTokenAtRest:
         get_settings.cache_clear()
 
         with pytest.raises(ConfigError):
-            oauth.seal("1//refresh")
+            seal("1//refresh")
 
 
 def _b64(claims: dict[str, str]) -> str:

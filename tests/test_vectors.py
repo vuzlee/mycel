@@ -7,11 +7,13 @@ from typing import Any
 import pytest
 from pydantic_ai import ModelRetry
 
+import mycel.infra.vectors.collections as collections
+import mycel.infra.vectors.indexer as indexer
+import mycel.infra.vectors.search as search
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools.rag_search import MAX_RESULTS, build_toolset
 from mycel.infra.postgres.repositories.gold import WorkItemRow
-from mycel.infra.vectors import collections, indexer, search
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio

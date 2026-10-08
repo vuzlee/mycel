@@ -9,7 +9,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect, text
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from mycel.etl.checks.work import CheckFailed
@@ -40,10 +40,10 @@ class AppRepository(IdentityRepository, AccountRepository, ConversationRepositor
 
 
 pytestmark = pytest.mark.anyio
+_PG = PGDialect()  # type: ignore[no-untyped-call]
 
 
 # Fixtures drop schemas, so refuse any database not named `*_test`.
-assert not DSN or DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to run against {DSN}"
 
 PROJECT = "MYC"
 
@@ -423,7 +423,7 @@ class TestTheMigration:
         async with engine.connect() as conn:
             built = await conn.run_sync(
                 lambda sync: {
-                    c["name"]: c["type"].compile(postgresql.dialect())
+                    c["name"]: c["type"].compile(_PG)
                     for c in inspect(sync).get_columns(table, schema=schema)
                 }
             )
@@ -431,8 +431,7 @@ class TestTheMigration:
 
         # Compiled for postgresql: generic `str(type)` prints DATETIME, not TIMESTAMP.
         declared = {
-            c.name: c.type.compile(postgresql.dialect())
-            for c in Base.metadata.tables[f"{schema}.{table}"].columns
+            c.name: c.type.compile(_PG) for c in Base.metadata.tables[f"{schema}.{table}"].columns
         }
         assert built == declared
 

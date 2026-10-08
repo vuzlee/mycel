@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+from evals.common import CEILING_USD
 from evals.rag.metrics import Ranked, first_hit
 from evals.rag.retrieval import CORPUS_DIR, EVAL_OWNER_ID, RESULTS, TOP_K, cleanup, ingest
 from mycel.agents.core import runner
@@ -35,7 +36,7 @@ async def rank(query: str, case: dict[str, str], lookup: dict[int, tuple[str, st
 
 async def rewrite(case: dict[str, str]) -> str:
     settings = AgentSettings.from_config(Rewriter.name)
-    deps = build_deps(f"eval-{case['id']}", "1", settings=settings)
+    deps = build_deps(f"eval-{case['id']}", CEILING_USD, settings=settings)
     prompt = f"Earlier questions:\n- {case['previous']}\n\nThe question now:\n{case['question']}"
     answer: str = await runner.run(Rewriter.build(settings), prompt, deps)
     return answer.strip()

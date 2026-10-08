@@ -9,9 +9,9 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from prometheus_client import REGISTRY
 
+import mycel.queue.context as context
 from mycel.observability import metrics
 from mycel.observability.metrics_server import serve_metrics
-from mycel.queue import context
 
 #: Labels whose value set grows with traffic; each series lives forever in Prometheus.
 FORBIDDEN_LABELS = frozenset(

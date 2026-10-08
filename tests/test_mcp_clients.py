@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
+import mycel.mcp.clients as clients
 from mycel.core.exceptions import ConfigError
-from mycel.mcp import clients
 
 
 def _config(tmp_path: Path, body: str) -> Path:

@@ -9,13 +9,14 @@ from typing import Any
 import httpx2
 import pytest
 
+import mycel.sources.jira as jira
 from mycel.core.config import Settings
 from mycel.etl.checks.work import CheckFailed, check_item, check_items, check_worklog
 from mycel.etl.normalize import JIRA, from_jira_issue, from_jira_worklog
 from mycel.etl.promote import to_gold_item, to_gold_worklog
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 from mycel.services.check import check_work
-from mycel.sources import SourceError, jira
+from mycel.sources import SourceError
 
 pytestmark = pytest.mark.anyio
 

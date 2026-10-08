@@ -79,6 +79,9 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["mycel", "evals", "tests"]
+
 [tool.ruff.lint.per-file-ignores]
 # B008 flags Depends() in argument defaults, which is how FastAPI works.
 "src/mycel/api/routes/*.py" = ["B008"]
@@ -86,7 +89,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src", "evals"]
+files = ["src", "evals", "tests"]
 
 [[tool.mypy.overrides]]
 module = [

@@ -5,7 +5,8 @@ from typing import Any
 
 import pytest
 
-from mycel.services import access, jira_oauth
+import mycel.services.access as access
+import mycel.services.jira_oauth as jira_oauth
 
 pytestmark = pytest.mark.anyio
 

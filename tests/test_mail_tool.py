@@ -5,6 +5,7 @@ from decimal import Decimal
 from email.utils import format_datetime
 from typing import Any
 
+import httpx2
 import pytest
 from pydantic_ai import ModelRetry
 
@@ -12,7 +13,8 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools import mail as mail_tool
-from mycel.agents.tools.mail import CONNECT, MAX_HOURS, MAX_MESSAGES, build_toolset
+from mycel.agents.tools.limits import MAX_HOURS
+from mycel.agents.tools.mail import CONNECT, MAX_MESSAGES, build_toolset
 from mycel.llm.budget import JobBudget
 from mycel.services.auth import Principal
 from mycel.services.google_oauth import NotConnected
@@ -98,7 +100,7 @@ def inbox() -> list[tuple[str, str, datetime]]:
 @pytest.fixture
 def api(monkeypatch: pytest.MonkeyPatch, inbox: list[tuple[str, str, datetime]]) -> FakeGmail:
     fake = FakeGmail(inbox)
-    monkeypatch.setattr(gmail.httpx2, "AsyncClient", fake.client)
+    monkeypatch.setattr(httpx2, "AsyncClient", fake.client)
     return fake
 
 
@@ -222,7 +224,7 @@ class TestWhatTheModelReads:
     async def test_an_empty_mailbox_says_so(
         self, read_mail: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch, connected: list[int]
     ) -> None:
-        monkeypatch.setattr(gmail.httpx2, "AsyncClient", FakeGmail([]).client)
+        monkeypatch.setattr(httpx2, "AsyncClient", FakeGmail([]).client)
 
         assert "(no messages)" in await read_mail(ctx, hours=24)
 
@@ -232,7 +234,7 @@ class TestWhenTheMailboxCannotBeRead:
         self, read_mail: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch, connected: list[int]
     ) -> None:
         """A grant made before mail was asked for answers 403; the fix is reconnecting."""
-        monkeypatch.setattr(gmail.httpx2, "AsyncClient", FakeGmail([], status=403).client)
+        monkeypatch.setattr(httpx2, "AsyncClient", FakeGmail([], status=403).client)
 
         with pytest.raises(ToolFailed, match="connect Google again"):
             await read_mail(ctx, hours=24)
@@ -242,10 +244,8 @@ class TestWhenTheMailboxCannotBeRead:
     ) -> None:
         """Reconnecting cannot fix a project with the Gmail API off; saying so wastes a turn."""
         fake = FakeGmail([], status=403)
-        original = FakeGmail._Response.json
         monkeypatch.setattr(FakeGmail._Response, "text", property(lambda self: "SERVICE_DISABLED"))
-        monkeypatch.setattr(gmail.httpx2, "AsyncClient", fake.client)
+        monkeypatch.setattr(httpx2, "AsyncClient", fake.client)
 
         with pytest.raises(ToolFailed, match="Gmail API is not enabled"):
             await read_mail(ctx, hours=24)
-        assert original

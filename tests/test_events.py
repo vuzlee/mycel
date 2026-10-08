@@ -8,13 +8,14 @@ from pydantic_ai import Agent, RunContext, messages
 from pydantic_ai.messages import ModelMessage, ModelResponse
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.core import runner
+import mycel.agents.core.runner as runner
+import mycel.api.routes.events as events
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.emit import RunEmitter
-from mycel.api.routes import events
 from mycel.events.channel import NullChannel, RecordingChannel
 from mycel.events.event import TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
+from mycel.infra.redis import streams
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
@@ -233,7 +234,8 @@ class TestNestingThroughARealRun:
         async def analyst(ctx: RunContext[MycelDeps]) -> str:
             """Delegate to the analyst."""
             with child.override(model=FunctionModel(child_says)):
-                return await runner.delegate(child, "sub-question", ctx)
+                out: str = await runner.delegate(child, "sub-question", ctx)
+                return out
 
         step = [0]
 
@@ -340,8 +342,8 @@ async def _collect(
     async def fake_find_turn(job_id: str) -> Any:
         return kept
 
-    monkeypatch.setattr(events.streams, "read", fake_read)
-    monkeypatch.setattr(events.streams, "exists", fake_exists)
+    monkeypatch.setattr(streams, "read", fake_read)
+    monkeypatch.setattr(streams, "exists", fake_exists)
     monkeypatch.setattr(events, "find_turn", fake_find_turn)
     return [frame async for frame in events._frames(request, "job-1", "0")]
 

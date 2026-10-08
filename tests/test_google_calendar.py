@@ -6,7 +6,8 @@ from typing import Any
 import httpx2
 import pytest
 
-from mycel.sources import SourceError, google_calendar
+import mycel.sources.google_calendar as google_calendar
+from mycel.sources import SourceError
 
 TOKEN = "access-token"
 
