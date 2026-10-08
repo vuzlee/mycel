@@ -130,7 +130,11 @@ export function Demo() {
 
         <div className="trace">
           {current.steps.map((tool, i) => (
-            <p className="step" key={tool} data-state={i < shown ? "done" : i === shown ? "live" : "wait"}>
+            <p
+              className="step"
+              key={tool}
+              data-state={i < shown ? "done" : i === shown ? "live" : "wait"}
+            >
               <span className="pip" aria-hidden />
               {labelFor(tool)}
             </p>
@@ -139,9 +143,11 @@ export function Demo() {
 
         <div className="reply" data-shown={written > 0}>
           <p className="said" data-writing={!answered}>
-            {said.slice(0, written).map((word, i) =>
-              word.strong ? <b key={i}>{word.text} </b> : <span key={i}>{word.text} </span>,
-            )}
+            {said
+              .slice(0, written)
+              .map((word, i) =>
+                word.strong ? <b key={i}>{word.text} </b> : <span key={i}>{word.text} </span>,
+              )}
           </p>
           {current.figures && (
             <ul className="figures">

@@ -317,7 +317,9 @@ a.brand:hover .mark {
   height: 28px;
   border-radius: var(--radius-sm);
   color: var(--muted);
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .icon-button:hover {
@@ -337,7 +339,10 @@ a.brand:hover .mark {
   box-shadow: var(--shadow-sm);
   font-size: 13.5px;
   font-weight: 500;
-  transition: border-color 0.14s ease, color 0.14s ease, transform 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.14s ease;
 }
 
 .new-run:hover {
@@ -368,7 +373,9 @@ a.brand:hover .mark {
   border-radius: var(--radius);
   font-size: 13.5px;
   color: var(--ink-2);
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .board-link:hover {
@@ -420,7 +427,9 @@ a.brand:hover .mark {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .rail li > button:hover {
@@ -452,7 +461,9 @@ a.brand:hover .mark {
   border-radius: 6px;
   color: var(--faint);
   opacity: 0;
-  transition: opacity 0.14s ease, color 0.14s ease;
+  transition:
+    opacity 0.14s ease,
+    color 0.14s ease;
 }
 
 .rail li:hover .pin,
@@ -816,7 +827,9 @@ details[open] > summary .chevron {
   background: var(--surface);
   color: var(--ink-2);
   box-shadow: var(--shadow-md);
-  transition: color 0.16s ease, border-color 0.16s ease;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .jump:hover {
@@ -863,7 +876,9 @@ details[open] > summary .chevron {
   border-radius: 18px;
   background: var(--raised);
   box-shadow: var(--shadow-md);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .composer form:focus-within {
@@ -897,7 +912,10 @@ details[open] > summary .chevron {
   border-radius: 11px;
   background: var(--accent);
   color: var(--accent-ink);
-  transition: background 0.14s ease, opacity 0.14s ease, transform 0.14s ease;
+  transition:
+    background 0.14s ease,
+    opacity 0.14s ease,
+    transform 0.14s ease;
 }
 
 .send:hover:not(:disabled) {
@@ -996,7 +1014,10 @@ details[open] > summary .chevron {
   font-size: 14px;
   text-align: left;
   color: var(--ink-2);
-  transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s ease,
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
     box-shadow 0.16s ease;
 }
 
@@ -1011,7 +1032,9 @@ details[open] > summary .chevron {
   margin-left: auto;
   flex: none;
   color: var(--faint);
-  transition: color 0.16s ease, translate 0.16s ease;
+  transition:
+    color 0.16s ease,
+    translate 0.16s ease;
 }
 
 .seeds button:hover .arrow {
@@ -1528,7 +1551,9 @@ button.primary:disabled {
   font-family: var(--mono);
   font-size: 12px;
   color: var(--muted);
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .windows button[aria-pressed="true"] {
@@ -2585,7 +2610,9 @@ td[data-status="late"] {
   font-size: 13.5px;
   color: var(--ink-2);
   text-align: left;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .account-menu .menu button:hover {
@@ -2778,7 +2805,10 @@ td[data-status="late"] {
   background: var(--surface);
   color: var(--muted);
   font-size: 13px;
-  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .theme-picker button:hover {
@@ -2928,7 +2958,9 @@ and which one is on is stated by the border rather than a dot: the
   padding: 7px 11px;
   border-radius: var(--radius-sm);
   color: var(--muted);
-  transition: color 0.14s ease, background 0.14s ease;
+  transition:
+    color 0.14s ease,
+    background 0.14s ease;
 }
 
 .home nav a:not(.primary):hover {
@@ -2946,7 +2978,10 @@ and which one is on is stated by the border rather than a dot: the
   color: var(--accent-ink);
   font-weight: 500;
   white-space: nowrap;
-  transition: background 0.14s ease, translate 0.14s ease, box-shadow 0.14s ease;
+  transition:
+    background 0.14s ease,
+    translate 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .home a.primary:hover {
@@ -3008,8 +3043,16 @@ and which one is on is stated by the border rather than a dot: the
   z-index: -1;
   background:
     radial-gradient(52rem 30rem at 50% 4%, var(--accent-soft), transparent 70%),
-    radial-gradient(34rem 22rem at 84% 0%, color-mix(in oklab, var(--flag) 10%, transparent), transparent 72%),
-    radial-gradient(30rem 20rem at 12% 12%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 72%);
+    radial-gradient(
+      34rem 22rem at 84% 0%,
+      color-mix(in oklab, var(--flag) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      30rem 20rem at 12% 12%,
+      color-mix(in oklab, var(--accent) 7%, transparent),
+      transparent 72%
+    );
 }
 
 /* A grid, fading out before it reaches the copy. It is what stops the wash reading as a
@@ -3060,8 +3103,15 @@ and which one is on is stated by the border rather than a dot: the
 }
 
 @keyframes ping {
-  0% { opacity: 0.7; scale: 0.6; }
-  70%, 100% { opacity: 0; scale: 1.7; }
+  0% {
+    opacity: 0.7;
+    scale: 0.6;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    scale: 1.7;
+  }
 }
 
 .home .lead h1 {
@@ -3111,7 +3161,10 @@ and which one is on is stated by the border rather than a dot: the
   background: color-mix(in oklab, var(--surface) 80%, transparent);
   font-size: 15.5px;
   color: var(--ink-2);
-  transition: border-color 0.14s ease, color 0.14s ease, translate 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    color 0.14s ease,
+    translate 0.14s ease;
 }
 
 .home .ghost:hover {
@@ -3209,7 +3262,9 @@ and which one is on is stated by the border rather than a dot: the
   margin: 0;
   font-size: 13.5px;
   color: var(--faint);
-  transition: color 0.3s ease, opacity 0.3s ease;
+  transition:
+    color 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .demo .step[data-state="wait"] {
@@ -3230,13 +3285,14 @@ and which one is on is stated by the border rather than a dot: the
   height: 14px;
   border-radius: 50%;
   border: 1px solid var(--rule-2);
-  transition: border-color 0.3s ease, background 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease;
 }
 
 .demo .step[data-state="done"] .pip {
   border-color: var(--accent);
-  background:
-    linear-gradient(var(--accent), var(--accent)) no-repeat center / 6px 6px content-box;
+  background: linear-gradient(var(--accent), var(--accent)) no-repeat center / 6px 6px content-box;
 }
 
 .demo .step[data-state="live"] .pip {
@@ -3260,7 +3316,9 @@ and which one is on is stated by the border rather than a dot: the
   border-top: 1px solid var(--rule);
   opacity: 0;
   translate: 0 8px;
-  transition: opacity 0.45s ease, translate 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition:
+    opacity 0.45s ease,
+    translate 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 /* The whole transcript fades out together between scenes, so the loop reads as one run
@@ -3299,7 +3357,9 @@ and which one is on is stated by the border rather than a dot: the
 }
 
 @keyframes caret {
-  50% { opacity: 0; }
+  50% {
+    opacity: 0;
+  }
 }
 
 .demo .said b {
@@ -3366,8 +3426,14 @@ and which one is on is stated by the border rather than a dot: the
 }
 
 @keyframes rise {
-  from { opacity: 0; translate: 0 8px; }
-  to { opacity: 1; translate: 0 0; }
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 /* -------------------------------------------------- what the code guarantees */
@@ -3398,7 +3464,9 @@ and which one is on is stated by the border rather than a dot: the
   border-radius: 999px;
   background: color-mix(in oklab, var(--surface) 76%, transparent);
   backdrop-filter: blur(6px);
-  transition: border-color 0.16s ease, translate 0.2s ease;
+  transition:
+    border-color 0.16s ease,
+    translate 0.2s ease;
 }
 
 /* A light passes along the row once, one pill after another, and stops. It is the only
@@ -3422,12 +3490,20 @@ and which one is on is stated by the border rather than a dot: the
   animation: sweep 1.1s ease-out forwards;
 }
 
-.home .guarantees[data-shown="true"] > div:nth-child(2)::after { animation-delay: 0.12s; }
-.home .guarantees[data-shown="true"] > div:nth-child(3)::after { animation-delay: 0.24s; }
-.home .guarantees[data-shown="true"] > div:nth-child(4)::after { animation-delay: 0.36s; }
+.home .guarantees[data-shown="true"] > div:nth-child(2)::after {
+  animation-delay: 0.12s;
+}
+.home .guarantees[data-shown="true"] > div:nth-child(3)::after {
+  animation-delay: 0.24s;
+}
+.home .guarantees[data-shown="true"] > div:nth-child(4)::after {
+  animation-delay: 0.36s;
+}
 
 @keyframes sweep {
-  to { translate: 130% 0; }
+  to {
+    translate: 130% 0;
+  }
 }
 
 .home .guarantees > div:hover {
@@ -3474,7 +3550,10 @@ and which one is on is stated by the border rather than a dot: the
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--surface);
-  transition: border-color 0.18s ease, translate 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    translate 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .panel:hover {
@@ -3519,10 +3598,18 @@ and which one is on is stated by the border rather than a dot: the
    which category a thing is, never what color that is. */
 /* Four steps down the one hue. Green/amber/red would be a second palette on a page that
    has exactly one, and it would shout "alarm" about a sprint that is fine. */
-.panel [data-step="1"] { --mark: var(--accent); }
-.panel [data-step="2"] { --mark: color-mix(in oklab, var(--accent) 68%, var(--surface)); }
-.panel [data-step="3"] { --mark: color-mix(in oklab, var(--accent) 40%, var(--surface)); }
-.panel [data-step="4"] { --mark: color-mix(in oklab, var(--accent) 20%, var(--surface)); }
+.panel [data-step="1"] {
+  --mark: var(--accent);
+}
+.panel [data-step="2"] {
+  --mark: color-mix(in oklab, var(--accent) 68%, var(--surface));
+}
+.panel [data-step="3"] {
+  --mark: color-mix(in oklab, var(--accent) 40%, var(--surface));
+}
+.panel [data-step="4"] {
+  --mark: color-mix(in oklab, var(--accent) 20%, var(--surface));
+}
 
 /* -------------------------------------------------- the donut */
 
@@ -3644,16 +3731,28 @@ and which one is on is stated by the border rather than a dot: the
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 62%, #ff9ecd));
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in oklab, var(--accent) 62%, #ff9ecd)
+  );
   animation: grow 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
-.panel .bars li:nth-child(2) .fill { animation-delay: 0.08s; }
-.panel .bars li:nth-child(3) .fill { animation-delay: 0.16s; }
-.panel .bars li:nth-child(4) .fill { animation-delay: 0.24s; }
+.panel .bars li:nth-child(2) .fill {
+  animation-delay: 0.08s;
+}
+.panel .bars li:nth-child(3) .fill {
+  animation-delay: 0.16s;
+}
+.panel .bars li:nth-child(4) .fill {
+  animation-delay: 0.24s;
+}
 
 @keyframes grow {
-  from { width: 0 !important; }
+  from {
+    width: 0 !important;
+  }
 }
 
 .panel .amount {
@@ -3689,11 +3788,21 @@ and which one is on is stated by the border rather than a dot: the
   transition: scale 0.16s ease;
 }
 
-.panel .cell[data-level="0"] { --level: 0; }
-.panel .cell[data-level="1"] { --level: 22; }
-.panel .cell[data-level="2"] { --level: 44; }
-.panel .cell[data-level="3"] { --level: 68; }
-.panel .cell[data-level="4"] { --level: 100; }
+.panel .cell[data-level="0"] {
+  --level: 0;
+}
+.panel .cell[data-level="1"] {
+  --level: 22;
+}
+.panel .cell[data-level="2"] {
+  --level: 44;
+}
+.panel .cell[data-level="3"] {
+  --level: 68;
+}
+.panel .cell[data-level="4"] {
+  --level: 100;
+}
 
 .panel .cell:hover {
   scale: 1.18;
@@ -3751,7 +3860,10 @@ and which one is on is stated by the border rather than a dot: the
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--surface);
-  transition: border-color 0.18s ease, translate 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    translate 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .home .use-list li:hover {
@@ -3789,7 +3901,9 @@ and which one is on is stated by the border rather than a dot: the
   font-size: 11.5px;
   line-height: 1.4;
   color: var(--muted);
-  transition: border-color 0.18s ease, color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .home .use-list li:hover .ask {
@@ -3998,7 +4112,9 @@ and which one is on is stated by the border rather than a dot: the
 }
 
 .home [data-shown] {
-  transition: opacity 0.6s ease, translate 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition:
+    opacity 0.6s ease,
+    translate 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .home [data-shown="true"] {
@@ -4018,14 +4134,20 @@ and which one is on is stated by the border rather than a dot: the
 .home [data-shown="true"] .panel:nth-child(2),
 .home [data-shown="true"] .use-list li:nth-child(2),
 .home [data-shown="true"] .already li:nth-child(2),
-.home [data-shown="true"] > div:nth-child(2) { animation-delay: 0.08s; }
+.home [data-shown="true"] > div:nth-child(2) {
+  animation-delay: 0.08s;
+}
 
 .home [data-shown="true"] .panel:nth-child(3),
 .home [data-shown="true"] .use-list li:nth-child(3),
 .home [data-shown="true"] .already li:nth-child(3),
-.home [data-shown="true"] > div:nth-child(3) { animation-delay: 0.16s; }
+.home [data-shown="true"] > div:nth-child(3) {
+  animation-delay: 0.16s;
+}
 
-.home [data-shown="true"] > div:nth-child(4) { animation-delay: 0.24s; }
+.home [data-shown="true"] > div:nth-child(4) {
+  animation-delay: 0.24s;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .home [data-shown],
@@ -4056,7 +4178,6 @@ and which one is on is stated by the border rather than a dot: the
   .home .already {
     grid-template-columns: 1fr;
   }
-
 }
 
 @media (max-width: 760px) {
@@ -4117,29 +4238,23 @@ and which one is on is stated by the border rather than a dot: the
   margin-top: -16px;
 }
 
-.notebooks {
-  display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr) minmax(0, 1.3fr);
-  grid-template-rows: auto 1fr;
-  gap: 18px 28px;
-  align-items: start;
-}
-
-.nb-list .drop {
+.kb-list .drop {
   width: 24px;
   height: 24px;
   display: grid;
   place-items: center;
   border-radius: 6px;
   color: var(--faint);
-  transition: color 0.14s ease, opacity 0.14s ease;
+  transition:
+    color 0.14s ease,
+    opacity 0.14s ease;
 }
 
-.nb-list .drop:hover {
+.kb-list .drop:hover {
   color: var(--flag);
 }
 
-.nb-drop {
+.kb-drop {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -4149,35 +4264,37 @@ and which one is on is stated by the border rather than a dot: the
   background: var(--surface);
   color: var(--muted);
   text-align: left;
-  transition: border-color 0.14s ease, background 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease;
 }
 
-.nb-drop:hover,
-.nb-drop[data-over="true"] {
+.kb-drop:hover,
+.kb-drop[data-over="true"] {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--ink);
 }
 
-.nb-drop span {
+.kb-drop span {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.nb-drop b {
+.kb-drop b {
   color: var(--ink);
   font-weight: 500;
   font-size: 14px;
 }
 
-.nb-drop small,
-.nb-name small {
+.kb-drop small,
+.kb-name small {
   font-size: 12px;
   color: var(--faint);
 }
 
-.nb-list {
+.kb-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -4186,18 +4303,18 @@ and which one is on is stated by the border rather than a dot: the
   background: var(--surface);
 }
 
-.nb-list li {
+.kb-list li {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
 }
 
-.nb-list li + li {
+.kb-list li + li {
   border-top: 1px solid var(--rule);
 }
 
-.nb-rename {
+.kb-rename {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -4206,43 +4323,43 @@ and which one is on is stated by the border rather than a dot: the
   color: var(--ink);
 }
 
-.nb-rename:hover {
+.kb-rename:hover {
   text-decoration: underline dotted;
 }
 
-.nb-list li[data-enabled="false"] .nb-rename,
-.nb-list li[data-enabled="false"] .nb-name > span {
+.kb-list li[data-enabled="false"] .kb-rename,
+.kb-list li[data-enabled="false"] .kb-name > span {
   color: var(--faint);
   text-decoration: line-through;
 }
 
-.nb-name {
+.kb-name {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.nb-name > span {
+.kb-name > span {
   font-size: 13.5px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.nb-working {
+.kb-working {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: var(--accent);
 }
 
-.nb-failed,
-.nb-error {
+.kb-failed,
+.kb-error {
   color: var(--flag);
 }
 
-.nb-error {
+.kb-error {
   margin: 0;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -4250,14 +4367,14 @@ and which one is on is stated by the border rather than a dot: the
   font-size: 13px;
 }
 
-.nb-switch {
+.kb-switch {
   position: relative;
   flex: none;
   width: 30px;
   height: 18px;
 }
 
-.nb-switch input {
+.kb-switch input {
   position: absolute;
   inset: 0;
   opacity: 0;
@@ -4265,7 +4382,7 @@ and which one is on is stated by the border rather than a dot: the
   cursor: pointer;
 }
 
-.nb-switch span {
+.kb-switch span {
   position: absolute;
   inset: 0;
   border-radius: 999px;
@@ -4274,7 +4391,7 @@ and which one is on is stated by the border rather than a dot: the
   pointer-events: none;
 }
 
-.nb-switch span::after {
+.kb-switch span::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -4286,19 +4403,19 @@ and which one is on is stated by the border rather than a dot: the
   transition: translate 0.14s ease;
 }
 
-.nb-switch input:checked + span {
+.kb-switch input:checked + span {
   background: var(--accent);
 }
 
-.nb-switch input:checked + span::after {
+.kb-switch input:checked + span::after {
   translate: 12px 0;
 }
 
-.nb-switch input:focus-visible + span {
+.kb-switch input:focus-visible + span {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.nb-sources {
+.kb-sources {
   margin: 10px 0 0;
   padding: 8px 0 0;
   border-top: 1px solid var(--rule);
@@ -4308,7 +4425,7 @@ and which one is on is stated by the border rather than a dot: the
   gap: 2px;
 }
 
-.nb-sources button {
+.kb-sources button {
   padding: 1px 0;
   border: 0;
   background: none;
@@ -4317,17 +4434,17 @@ and which one is on is stated by the border rather than a dot: the
   color: var(--ink-2);
 }
 
-.nb-sources button:hover {
+.kb-sources button:hover {
   color: var(--ink);
   text-decoration: underline;
 }
 
-.nb-sources b {
+.kb-sources b {
   font-weight: 500;
   color: var(--accent);
 }
 
-.nb-sources small {
+.kb-sources small {
   color: var(--ink-3, var(--ink-2));
 }
 
@@ -4347,7 +4464,7 @@ and which one is on is stated by the border rather than a dot: the
   text-decoration: underline;
 }
 
-.nb-passage {
+.kb-passage {
   max-height: 50vh;
   overflow: auto;
   margin: 0 0 14px;
@@ -4360,25 +4477,9 @@ and which one is on is stated by the border rather than a dot: the
 }
 
 @media (max-width: 1100px) {
-  .notebooks {
-    grid-template-columns: 12rem minmax(0, 1fr);
-  }
-
-  
-
-  
 }
 
 @media (max-width: 760px) {
-  .notebooks {
-    display: flex;
-    flex-direction: column;
-    padding: 20px 16px 40px;
-  }
-
-  
-
-  
 }
 
 /* ------------------------------------------------------------ chips + knowledge panel */
@@ -4448,7 +4549,9 @@ and which one is on is stated by the border rather than a dot: the
   background: var(--surface);
   outline: none;
   transform: translateX(0);
-  transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.2s ease;
+  transition:
+    transform 0.32s cubic-bezier(0.2, 0.7, 0.3, 1),
+    opacity 0.2s ease;
 }
 
 .kb-panel[data-open="false"] {
@@ -4607,17 +4710,41 @@ and which one is on is stated by the border rather than a dot: the
   }
 }
 
-.pdf-view { max-height: 66vh; overflow: auto; margin-bottom: 12px; }
-.pdf-stage { position: relative; width: max-content; }
-.pdf-stage canvas { display: block; }
-.pdf-marks { position: absolute; inset: 0; pointer-events: none; }
+.pdf-view {
+  max-height: 66vh;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+.pdf-stage {
+  position: relative;
+  width: max-content;
+}
+.pdf-stage canvas {
+  display: block;
+}
+.pdf-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 /* The page is paper in either theme, so its mark is the light one, multiplied into the ink. */
-.pdf-mark { position: absolute; background: rgb(110 86 207 / 30%); mix-blend-mode: multiply; border-radius: 2px; }
-.nb-passage mark { background: var(--quote-mark); color: inherit; border-radius: 2px; }
+.pdf-mark {
+  position: absolute;
+  background: rgb(110 86 207 / 30%);
+  mix-blend-mode: multiply;
+  border-radius: 2px;
+}
+.kb-passage mark {
+  background: var(--quote-mark);
+  color: inherit;
+  border-radius: 2px;
+}
 
 /* Settings: a sidebar of sections and the chosen section's page. A new section is one
    entry in SECTIONS (panels.tsx). On a phone the sidebar becomes a row of tabs. */
-.modal.wide:has(.settings) { max-width: 60rem; }
+.modal.wide:has(.settings) {
+  max-width: 60rem;
+}
 .settings {
   display: grid;
   grid-template-columns: 170px 1fr;
@@ -4643,17 +4770,35 @@ and which one is on is stated by the border rather than a dot: the
   font-size: 13.5px;
   text-align: left;
 }
-.settings-nav button:hover { background: var(--sunk); color: var(--ink); }
+.settings-nav button:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
 .settings-nav button[aria-current="page"] {
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
 }
-.settings-page { min-width: 0; display: grid; align-content: start; gap: 16px; }
-.settings-page > header h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
-.settings-page > header p { margin: 3px 0 0; }
+.settings-page {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.settings-page > header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.settings-page > header p {
+  margin: 3px 0 0;
+}
 @media (max-width: 640px) {
-  .settings { grid-template-columns: 1fr; gap: 14px; }
+  .settings {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
   .settings-nav {
     flex-direction: row;
     overflow-x: auto;
@@ -4678,8 +4823,14 @@ and which one is on is stated by the border rather than a dot: the
   flex-direction: column;
   gap: 12px;
 }
-.connection p { margin: 0; }
-.connection > button { margin-top: auto; width: 100%; justify-content: center; }
+.connection p {
+  margin: 0;
+}
+.connection > button {
+  margin-top: auto;
+  width: 100%;
+  justify-content: center;
+}
 .connection-head {
   display: flex;
   align-items: center;
@@ -4700,7 +4851,10 @@ and which one is on is stated by the border rather than a dot: the
   background: var(--accent-soft);
   color: var(--accent);
 }
-.connection-icon svg { width: 16px; height: 16px; }
+.connection-icon svg {
+  width: 16px;
+  height: 16px;
+}
 .pill {
   margin-left: auto;
   padding: 2px 9px;
@@ -4718,7 +4872,9 @@ and which one is on is stated by the border rather than a dot: the
   display: grid;
   gap: 2px;
 }
-.connection-who .muted { font-size: 12.5px; }
+.connection-who .muted {
+  font-size: 12.5px;
+}
 button.outline {
   padding: 9px 14px;
   border: 1px solid var(--rule-2);
@@ -4749,7 +4905,10 @@ button.outline:hover {
   background: transparent;
   font-size: 13px;
 }
-.theme-picker.compact button svg { width: 14px; height: 14px; }
+.theme-picker.compact button svg {
+  width: 14px;
+  height: 14px;
+}
 
 /* ------------------------------------------------- trail: what a run did, folded */
 
@@ -4763,7 +4922,9 @@ button.outline:hover {
   color: var(--muted);
   list-style: none;
   cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 
 .trail > summary::-webkit-details-marker,
@@ -4791,8 +4952,12 @@ button.outline:hover {
 }
 
 @keyframes shimmer {
-  from { background-position: 100% 0; }
-  to { background-position: 0 0; }
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }
 
 .trail .rest {
@@ -4842,9 +5007,15 @@ button.outline:hover {
   border-radius: 999px;
 }
 
-.step .dot.think { border: 1px solid var(--faint); }
-.step .dot.tool { background: var(--accent); }
-.step .dot.say { background: var(--faint); }
+.step .dot.think {
+  border: 1px solid var(--faint);
+}
+.step .dot.tool {
+  background: var(--accent);
+}
+.step .dot.say {
+  background: var(--faint);
+}
 
 .step .what {
   flex: none;
@@ -4907,7 +5078,15 @@ button.outline:hover {
   word-break: break-word;
 }
 
-.json .j-key { color: var(--accent); }
-.json .j-str { color: var(--ink); }
-.json .j-num { color: var(--doing); }
-.json .j-lit { color: var(--late); }
+.json .j-key {
+  color: var(--accent);
+}
+.json .j-str {
+  color: var(--ink);
+}
+.json .j-num {
+  color: var(--doing);
+}
+.json .j-lit {
+  color: var(--late);
+}

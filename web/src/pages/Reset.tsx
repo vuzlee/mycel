@@ -52,8 +52,7 @@ export function Reset() {
 
         <h1>Choose a new password</h1>
         <p className="lede">
-          This signs out every browser that is still signed in to the account, including
-          this one.
+          This signs out every browser that is still signed in to the account, including this one.
         </p>
 
         <form

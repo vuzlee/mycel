@@ -7,8 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   MAX_UPLOAD_BYTES,
   deleteDocument,
-  renameDocument,
-  setDocumentEnabled,
+  updateDocument,
   uploadDocument,
   type DocumentRow,
 } from "../../api";
@@ -117,7 +116,7 @@ export function Documents({ open, documents, onClose }: Props) {
     const next = window.prompt("Rename document", doc.filename)?.trim();
     if (!next || next === doc.filename) return;
     try {
-      await renameDocument(doc.id, next);
+      await updateDocument(doc.id, { filename: next });
     } catch (failure) {
       setError((failure as Error).message);
     }
@@ -125,7 +124,7 @@ export function Documents({ open, documents, onClose }: Props) {
 
   const toggle = async (doc: DocumentRow): Promise<void> => {
     try {
-      await setDocumentEnabled(doc.id, !doc.enabled);
+      await updateDocument(doc.id, { enabled: !doc.enabled });
     } catch (failure) {
       setError((failure as Error).message);
     }
@@ -162,7 +161,7 @@ export function Documents({ open, documents, onClose }: Props) {
         </button>
       </header>
       <button
-        className="nb-drop"
+        className="kb-drop"
         data-over={over}
         onClick={() => input.current?.click()}
         onDragOver={(event) => {
@@ -194,20 +193,20 @@ export function Documents({ open, documents, onClose }: Props) {
         }}
       />
 
-      {error && <p className="nb-error" role="alert">{error}</p>}
+      {error && (
+        <p className="kb-error" role="alert">
+          {error}
+        </p>
+      )}
 
       {documents.length === 0 ? (
         <p className="empty">No documents yet.</p>
       ) : (
-        <ul className="nb-list">
+        <ul className="kb-list">
           {documents.map((doc) => (
             <li key={doc.id} data-enabled={doc.enabled}>
-              <div className="nb-name">
-                <button
-                  className="nb-rename"
-                  title="Rename"
-                  onClick={() => void rename(doc)}
-                >
+              <div className="kb-name">
+                <button className="kb-rename" title="Rename" onClick={() => void rename(doc)}>
                   {doc.filename}
                 </button>
                 <small>
@@ -216,7 +215,10 @@ export function Documents({ open, documents, onClose }: Props) {
                 </small>
               </div>
               {doc.status === "ready" && (
-                <label className="nb-switch" title={doc.enabled ? "Searched" : "Hidden from answers"}>
+                <label
+                  className="kb-switch"
+                  title={doc.enabled ? "Searched" : "Hidden from answers"}
+                >
                   <input
                     type="checkbox"
                     checked={doc.enabled}
@@ -245,10 +247,12 @@ export function Documents({ open, documents, onClose }: Props) {
 function Status({ doc }: { doc: DocumentRow }) {
   if (doc.status === "ready") return <>{doc.enabled ? "ready" : "hidden"}</>;
   if (doc.status === "failed") {
-    return <span className="nb-failed">failed: {REASONS[doc.fail_reason ?? ""] ?? doc.fail_reason}</span>;
+    return (
+      <span className="kb-failed">failed: {REASONS[doc.fail_reason ?? ""] ?? doc.fail_reason}</span>
+    );
   }
   return (
-    <span className="nb-working">
+    <span className="kb-working">
       <Mycelium size={13} className="grow" />{" "}
       <span className="breathe">{doc.status === "uploaded" ? "queued" : "processing"}</span>
     </span>

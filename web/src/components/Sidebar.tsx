@@ -66,22 +66,13 @@ export function Sidebar({ current, open, onClose }: Props) {
           {/* The wordmark goes home, the way a wordmark does everywhere else. Signed in,
               `/home` is still worth reaching: it is where what this thing does is written
               down, and there is a way straight back from it. */}
-          <Link
-            className="brand"
-            to="/home"
-            onClick={onClose}
-            title="What Mycel is"
-          >
+          <Link className="brand" to="/home" onClick={onClose} title="What Mycel is">
             <span className="mark">
               <Mycelium size={15} />
             </span>
             Mycel
           </Link>
-          <button
-            className="icon-button shut"
-            onClick={onClose}
-            aria-label="Close menu"
-          >
+          <button className="icon-button shut" onClick={onClose} aria-label="Close menu">
             <Close />
           </button>
         </header>
@@ -134,9 +125,7 @@ export function Sidebar({ current, open, onClose }: Props) {
           )}
           <h2 className="label">Recent</h2>
           {conversations.length === 0 ? (
-            <p className="empty">
-              Runs you start appear here, ready to reopen.
-            </p>
+            <p className="empty">Runs you start appear here, ready to reopen.</p>
           ) : (
             <ol>
               {recent.map((conversation) => (

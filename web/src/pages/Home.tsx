@@ -126,13 +126,11 @@ export function Home() {
           Reads your board. Never writes to it.
         </span>
         <h1>
-          Your tracker already knows what happened.{" "}
-          <em>Mycel writes it down.</em>
+          Your tracker already knows what happened. <em>Mycel writes it down.</em>
         </h1>
         <p>
-          Nobody fills in a form and nobody chases anybody. Your team works the
-          Jira board they already keep, and you ask Mycel about it in your own
-          words.
+          Nobody fills in a form and nobody chases anybody. Your team works the Jira board they
+          already keep, and you ask Mycel about it in your own words.
         </p>
 
         <div className="acts">
@@ -140,12 +138,7 @@ export function Home() {
             {user ? "Open Mycel" : "Start with this week"}
             <ArrowRight />
           </Link>
-          <a
-            className="ghost"
-            href={`${REPO}#readme`}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="ghost" href={`${REPO}#readme`} target="_blank" rel="noreferrer">
             Read the source
           </a>
         </div>
@@ -210,8 +203,7 @@ export function Home() {
           </li>
         </ul>
         <p className="note">
-          That is the whole contract. Mycel reads the board and never writes to
-          it.
+          That is the whole contract. Mycel reads the board and never writes to it.
         </p>
       </section>
 
@@ -221,8 +213,8 @@ export function Home() {
           <>
             <h2>Your answers are waiting.</h2>
             <p>
-              Signed in as <b>{user.email}</b>. Everything you have run is under
-              this account, on any machine you sign in from.
+              Signed in as <b>{user.email}</b>. Everything you have run is under this account, on
+              any machine you sign in from.
             </p>
             <Link className="primary" to="/">
               Open Mycel
@@ -233,8 +225,8 @@ export function Home() {
           <>
             <h2>Start with this week.</h2>
             <p>
-              An account takes an email and a password. Your conversations are kept
-              under it, so they are still there on another machine tomorrow.
+              An account takes an email and a password. Your conversations are kept under it, so
+              they are still there on another machine tomorrow.
             </p>
             <div className="both">
               <Link className="primary" to="/register">
@@ -260,9 +252,8 @@ export function Home() {
           {/* The naming story lives here rather than in a band of its own: it explains
               the word on the tab, which is a thing you look up, not a thing you are sold. */}
           <p>
-            Named after <em>mycelium</em> — the underground network that
-            connects a whole forest. Out of sight, quietly gathering, surfacing
-            only when it is worth it.
+            Named after <em>mycelium</em> — the underground network that connects a whole forest.
+            Out of sight, quietly gathering, surfacing only when it is worth it.
           </p>
         </div>
 
@@ -271,11 +262,7 @@ export function Home() {
             <span className="label">Product</span>
             <a href="#what">What you get</a>
             <a href="#ask">What it asks</a>
-            {user ? (
-              <Link to="/">Ask</Link>
-            ) : (
-              <Link to="/register">Create an account</Link>
-            )}
+            {user ? <Link to="/">Ask</Link> : <Link to="/register">Create an account</Link>}
           </div>
 
           <div>
@@ -283,11 +270,7 @@ export function Home() {
             <a href={REPO} target="_blank" rel="noreferrer">
               Source
             </a>
-            <a
-              href={`${REPO}/blob/main/docs/architecture.html`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={`${REPO}/blob/main/docs/architecture.html`} target="_blank" rel="noreferrer">
               Architecture
             </a>
             <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">
@@ -299,8 +282,8 @@ export function Home() {
         <div className="fine">
           <span>© {new Date().getFullYear()} Mycel</span>
           <span>
-            Running on your own machine. Your work data stays in your database
-            and is never sent anywhere but the model that answers the question.
+            Running on your own machine. Your work data stays in your database and is never sent
+            anywhere but the model that answers the question.
           </span>
         </div>
       </footer>

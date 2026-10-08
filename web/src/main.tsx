@@ -63,7 +63,6 @@ function Root() {
             <Route path="/forgot" element={<Forgot />} />
             <Route path="/reset" element={<Reset />} />
             <Route path="/dashboard" element={<Board />} />
-            <Route path="/notebooks" element={<Navigate to="/" replace />} />
             <Route path="/" element={<Front />} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>

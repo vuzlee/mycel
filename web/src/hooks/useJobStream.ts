@@ -48,9 +48,8 @@ export function useJobStream(jobId: string | null): Stream {
         return;
       }
 
-      const lost = lastSeq.current && event.seq > lastSeq.current + 1
-        ? event.seq - lastSeq.current - 1
-        : 0;
+      const lost =
+        lastSeq.current && event.seq > lastSeq.current + 1 ? event.seq - lastSeq.current - 1 : 0;
       lastSeq.current = event.seq;
 
       setStream((previous) => {

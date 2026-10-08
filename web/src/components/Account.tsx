@@ -106,11 +106,7 @@ export function Account({ where }: Props) {
             Help
           </button>
 
-          <button
-            className="out"
-            role="menuitem"
-            onClick={() => show("leaving")}
-          >
+          <button className="out" role="menuitem" onClick={() => show("leaving")}>
             <SignOut />
             Sign out
           </button>
@@ -154,7 +150,6 @@ export function Account({ where }: Props) {
           </div>
         </div>
       )}
-
     </div>
   );
 }

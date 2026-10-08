@@ -12,9 +12,9 @@ const PdfPage = lazy(() => import("./PdfPage").then((m) => ({ default: m.PdfPage
 /** The passage, with the first case-insensitive occurrence of the quote marked. */
 function Marked({ text, quote }: { text: string; quote: string }) {
   const at = quote ? text.toLowerCase().indexOf(quote.toLowerCase()) : -1;
-  if (at < 0) return <pre className="nb-passage">{text}</pre>;
+  if (at < 0) return <pre className="kb-passage">{text}</pre>;
   return (
-    <pre className="nb-passage">
+    <pre className="kb-passage">
       {text.slice(0, at)}
       <mark>{text.slice(at, at + quote.length)}</mark>
       {text.slice(at + quote.length)}
@@ -46,18 +46,26 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
       : source.page
         ? `page ${source.page}`
         : null;
-  const where = [pages, source.section || null]
-    .filter(Boolean)
-    .join(" · ");
+  const where = [pages, source.section || null].filter(Boolean).join(" · ");
   const loading = !failure && (isPdf ? url === null : passage === null);
 
   return (
-    <Modal title={`[${source.label}] ${source.filename}`} lede={where || undefined} onClose={onClose} wide={isPdf}>
-      {failure && <p className="nb-error">{failure}</p>}
+    <Modal
+      title={`[${source.label}] ${source.filename}`}
+      lede={where || undefined}
+      onClose={onClose}
+      wide={isPdf}
+    >
+      {failure && <p className="kb-error">{failure}</p>}
       {loading && <p className="empty">Loading…</p>}
       {isPdf && url && (
         <Suspense fallback={<p className="empty">Loading…</p>}>
-          <PdfPage url={url} first={source.page!} last={source.page_end ?? source.page!} quote={quote} />
+          <PdfPage
+            url={url}
+            first={source.page!}
+            last={source.page_end ?? source.page!}
+            quote={quote}
+          />
         </Suspense>
       )}
       {passage && <Marked text={passage.text} quote={quote} />}

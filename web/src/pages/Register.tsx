@@ -44,8 +44,7 @@ export function Register() {
 
         <h1>Create an account</h1>
         <p className="lede">
-          Your conversations live under it, so they are still there on another machine
-          tomorrow.
+          Your conversations live under it, so they are still there on another machine tomorrow.
         </p>
 
         <Credentials

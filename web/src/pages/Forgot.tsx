@@ -45,8 +45,8 @@ export function Forgot() {
         {sent ? (
           <>
             <p className="lede">
-              If that address has an account, a link is on its way. It works once and stops
-              working in an hour.
+              If that address has an account, a link is on its way. It works once and stops working
+              in an hour.
             </p>
             <p className="switch">
               <Link to="/login">Back to sign in</Link>
@@ -55,8 +55,7 @@ export function Forgot() {
         ) : (
           <>
             <p className="lede">
-              Give the address you sign in with and we will send a link to set a new
-              password.
+              Give the address you sign in with and we will send a link to set a new password.
             </p>
 
             <form

@@ -181,13 +181,25 @@ async function detail(res: Response): Promise<string> {
   return `${res.status} ${body.slice(0, 300)}`;
 }
 
-function post<T>(path: string, body: unknown): Promise<T> {
-  return fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  }).then(json<T>);
+/** One call to the API: JSON in, JSON out; a 401 is `Unauthorized`, any other failure throws. */
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const init: RequestInit = { method };
+  if (body instanceof FormData) init.body = body;
+  else if (body !== undefined) {
+    init.headers = { "content-type": "application/json" };
+    init.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, init);
+  if (res.status === 204) {
+    if (!res.ok) throw new Error(await detail(res));
+    return undefined as T;
+  }
+  return json<T>(res);
 }
+
+const get = <T>(path: string): Promise<T> => request<T>("GET", path);
+const post = <T>(path: string, body?: unknown): Promise<T> => request<T>("POST", path, body);
+const del = (path: string): Promise<void> => request<void>("DELETE", path);
 
 // -- auth -------------------------------------------------------------------
 
@@ -211,40 +223,16 @@ export async function me(): Promise<User | null> {
 
 /** 202 whether or not the address has an account, so this call cannot be used to find
  *  out who is registered. 503 means the deployment has no way to send mail. */
-export async function forgotPassword(email: string): Promise<void> {
-  const res = await fetch("/auth/forgot", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const forgotPassword = (email: string): Promise<void> =>
+  post<void>("/auth/forgot", { email });
 
 /** Spend a reset link. Every session of that account ends, this browser included. */
-export async function resetPassword(
-  token: string,
-  newPassword: string,
-): Promise<void> {
-  const res = await fetch("/auth/reset", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token, new_password: newPassword }),
-  });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const resetPassword = (token: string, newPassword: string): Promise<void> =>
+  post<void>("/auth/reset", { token, new_password: newPassword });
 
 /** Change it while signed in. Every other session ends; this one survives. */
-export async function changePassword(
-  current: string,
-  next: string,
-): Promise<void> {
-  const res = await fetch("/auth/password", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ current_password: current, new_password: next }),
-  });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const changePassword = (current: string, next: string): Promise<void> =>
+  post<void>("/auth/password", { current_password: current, new_password: next });
 
 // -- google -----------------------------------------------------------------
 
@@ -259,8 +247,7 @@ export interface GoogleStatus {
   connected_at: string | null;
 }
 
-export const fetchGoogle = (): Promise<GoogleStatus> =>
-  fetch("/auth/google").then(json<GoogleStatus>);
+export const fetchGoogle = (): Promise<GoogleStatus> => get<GoogleStatus>("/auth/google");
 
 /** Connecting is a navigation, not a call: consent happens on Google's own screen, so the
  *  browser has to actually go there. The server answers `/auth/google/start` with a
@@ -269,10 +256,7 @@ export function connectGoogle(): void {
   window.location.href = "/auth/google/start";
 }
 
-export async function disconnectGoogle(): Promise<void> {
-  const res = await fetch("/auth/google", { method: "DELETE" });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const disconnectGoogle = (): Promise<void> => del("/auth/google");
 
 // -- jira -------------------------------------------------------------------
 
@@ -287,18 +271,14 @@ export interface JiraStatus {
   projects: string[];
 }
 
-export const fetchJira = (): Promise<JiraStatus> =>
-  fetch("/auth/jira").then(json<JiraStatus>);
+export const fetchJira = (): Promise<JiraStatus> => get<JiraStatus>("/auth/jira");
 
 /** A navigation, not a call: consent happens on Atlassian's own screen. */
 export function connectJira(): void {
   window.location.href = "/auth/jira/start";
 }
 
-export async function disconnectJira(): Promise<void> {
-  const res = await fetch("/auth/jira", { method: "DELETE" });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const disconnectJira = (): Promise<void> => del("/auth/jira");
 
 // -- work -------------------------------------------------------------------
 
@@ -329,36 +309,23 @@ export async function fetchChat(jobId: string): Promise<ChatResult | null> {
 
 // -- lists ------------------------------------------------------------------
 
-export const fetchProjects = (): Promise<string[]> =>
-  fetch("/projects").then(json<string[]>);
+export const fetchProjects = (): Promise<string[]> => get<string[]>("/projects");
 
 export const fetchConversations = (): Promise<ConversationSummary[]> =>
-  fetch("/conversations").then(json<ConversationSummary[]>);
+  get<ConversationSummary[]>("/conversations");
 
 /** Every run in one conversation, oldest first. What a conversation said before this tab opened it. */
 export const fetchTurns = (id: number): Promise<Turn[]> =>
-  fetch(`/conversations/${id}/turns`).then(json<Turn[]>);
+  get<Turn[]>(`/conversations/${id}/turns`);
 
-/** 204, no body. The runs under the conversation go with it, in the database. */
-export async function forgetThread(id: number): Promise<void> {
-  const res = await fetch(`/conversations/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await detail(res));
-}
+/** Its runs go with it. */
+export const deleteConversation = (id: number): Promise<void> => del(`/conversations/${id}`);
 
-export async function pinThread(id: number, pinned: boolean): Promise<void> {
-  const res = await fetch(`/conversations/${id}/pin`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pinned }),
-  });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const pinConversation = (id: number, pinned: boolean): Promise<void> =>
+  request<void>("PUT", `/conversations/${id}/pin`, { pinned });
 
-export const fetchDashboard = (
-  project: string,
-  days: number,
-): Promise<Dashboard> =>
-  fetch(`/dashboard/${project}?days=${days}`).then(json<Dashboard>);
+export const fetchDashboard = (project: string, days: number): Promise<Dashboard> =>
+  get<Dashboard>(`/dashboard/${project}?days=${days}`);
 
 // -- documents (the Knowledge chip) -------------------------------------------
 
@@ -409,39 +376,21 @@ export interface DocumentStatus {
   documents: DocumentRow[];
 }
 
-export async function uploadDocument(file: File): Promise<DocumentRow> {
+export function uploadDocument(file: File): Promise<DocumentRow> {
   const body = new FormData();
   body.append("file", file);
-  return fetch("/documents", { method: "POST", body }).then(
-    json<DocumentRow>,
-  );
+  return post<DocumentRow>("/documents", body);
 }
 
-export async function setDocumentEnabled(id: number, enabled: boolean): Promise<DocumentRow> {
-  return fetch(`/documents/${id}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ enabled }),
-  }).then(json<DocumentRow>);
-}
+export const updateDocument = (
+  id: number,
+  patch: { enabled?: boolean; filename?: string },
+): Promise<DocumentRow> => request<DocumentRow>("PATCH", `/documents/${id}`, patch);
 
-export async function renameDocument(id: number, filename: string): Promise<DocumentRow> {
-  return fetch(`/documents/${id}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ filename }),
-  }).then(json<DocumentRow>);
-}
-
-export async function deleteDocument(id: number): Promise<void> {
-  const res = await fetch(`/documents/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(await detail(res));
-}
+export const deleteDocument = (id: number): Promise<void> => del(`/documents/${id}`);
 
 export const fetchSourceUrl = (documentId: number): Promise<string> =>
-  fetch(`/documents/${documentId}/source`)
-    .then(json<{ url: string }>)
-    .then((found) => found.url);
+  get<{ url: string }>(`/documents/${documentId}/source`).then((found) => found.url);
 
 export const fetchPassage = (chunkId: number): Promise<Passage> =>
-  fetch(`/chunks/${chunkId}`).then(json<Passage>);
+  get<Passage>(`/chunks/${chunkId}`);

@@ -18,14 +18,7 @@
  * id is the *latest* run — both are the wrong answer from the second turn on.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef, Turn } from "../api";
 import { askChat, fetchProjects, fetchTurns } from "../api";
@@ -112,10 +105,8 @@ export function Ask() {
   // The conversation the next question joins. `?conversation=` first because it is there the moment
   // you navigate, while the run needs a poll to come back — and it is the run, not the
   // sidebar, that knows the conversation of a link naming a turn other than the latest.
-  const fromUrl = params.get("conversation") ?? params.get("thread");
-  const conversationId = fromUrl
-    ? Number(fromUrl)
-    : (run.result?.conversation_id ?? null);
+  const fromUrl = params.get("conversation");
+  const conversationId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
 
   // Everything this conversation said before the run on screen. Turns are read from the kept
   // rows, not the stream: those runs are over, and a stream belongs to one run.
@@ -177,11 +168,7 @@ export function Ask() {
       // The open conversation by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
-      const { job_id, conversation_id } = await askChat(
-        text,
-        conversationId ?? undefined,
-        chips,
-      );
+      const { job_id, conversation_id } = await askChat(text, conversationId ?? undefined, chips);
       setAsked(text);
       setParams({ job: job_id, conversation: String(conversation_id) });
       reload();
@@ -259,10 +246,7 @@ export function Ask() {
     () =>
       jobId === null
         ? []
-        : [
-            ...past,
-            ...(question !== null ? [{ job_id: jobId, question }] : []),
-          ].map((turn) => ({
+        : [...past, ...(question !== null ? [{ job_id: jobId, question }] : [])].map((turn) => ({
             id: anchorFor(turn.job_id),
             label: label(turn.question),
           })),
@@ -276,16 +260,8 @@ export function Ask() {
         run.follow.ref(node);
         setBody(node);
       }}
-      aside={
-        topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined
-      }
-      panel={
-        <Documents
-          open={panel}
-          documents={docs.documents}
-          onClose={() => setPanel(false)}
-        />
-      }
+      aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
+      panel={<Documents open={panel} documents={docs.documents} onClose={() => setPanel(false)} />}
       panelToggle={
         <button
           className="kb-toggle"
@@ -298,9 +274,7 @@ export function Ask() {
           {docs.busy && <Spinner size={11} />}
         </button>
       }
-      jump={
-        jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined
-      }
+      jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       footer={
         <Composer
           busy={run.busy}
@@ -324,7 +298,11 @@ export function Ask() {
           anchor={anchorFor(jobId)}
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
-          items={cited ? run.items.filter((i) => i.kind !== "text" || i.agent !== "orchestrator") : run.items}
+          items={
+            cited
+              ? run.items.filter((i) => i.kind !== "text" || i.agent !== "orchestrator")
+              : run.items
+          }
           gaps={run.gaps}
           failure={failure}
           pending={run.pending}
@@ -332,9 +310,7 @@ export function Ask() {
           {run.result?.status === "done" && (
             <Answer
               result={run.result}
-              streamed={
-                !cited && run.items.some((i) => i.kind === "text")
-              }
+              streamed={!cited && run.items.some((i) => i.kind === "text")}
               onSource={setSource}
             />
           )}
@@ -345,8 +321,8 @@ export function Ask() {
             Ask Mycel <em>anything</em>.
           </h1>
           <p>
-            Your team's week, the numbers, your mail, or anything outside.
-            Read-only &mdash; nothing you ask can change the work data.
+            Your team's week, the numbers, your mail, or anything outside. Read-only &mdash; nothing
+            you ask can change the work data.
           </p>
           {refused && <p className="failure">{refused}</p>}
           <span className="label">Try one</span>
@@ -360,9 +336,7 @@ export function Ask() {
           </div>
         </div>
       )}
-      {source && (
-        <SourcePanel source={source} onClose={() => setSource(null)} />
-      )}
+      {source && <SourcePanel source={source} onClose={() => setSource(null)} />}
     </Shell>
   );
 }

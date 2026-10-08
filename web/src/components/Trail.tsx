@@ -113,7 +113,9 @@ function ToolRow({ item, gaps }: { item: ToolItem; gaps?: Map<number, number> })
           )}
         </div>
       </details>
-      {item.children.length > 0 && <ol className="trail-steps nested">{rows(item.children, gaps)}</ol>}
+      {item.children.length > 0 && (
+        <ol className="trail-steps nested">{rows(item.children, gaps)}</ol>
+      )}
     </>
   );
 }

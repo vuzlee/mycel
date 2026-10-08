@@ -21,7 +21,6 @@ const POLL_MS = 3000;
 export interface Run {
   items: Item[];
   gaps: Map<number, number>;
-  liveSeq: number | null;
   failure: string | null;
   result: ChatResult | null;
   busy: boolean;
@@ -38,7 +37,6 @@ export function useRun(jobId: string | null): Run {
 
   const stream = useJobStream(jobId);
   const items = useMemo(() => buildConversation(stream.events), [stream.events]);
-
 
   useEffect(() => {
     setFailure(null);
@@ -85,7 +83,6 @@ export function useRun(jobId: string | null): Run {
   return {
     items,
     gaps: stream.gaps,
-    liveSeq: busy ? (stream.events[stream.events.length - 1]?.seq ?? null) : null,
     failure,
     result,
     busy,

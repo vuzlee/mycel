@@ -50,10 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // than leave the page showing a name that no longer signs anything.
   const forget = useCallback(() => setUser(null), []);
 
-  const value = useMemo(
-    () => ({ user, signIn, signOut, forget }),
-    [user, signIn, signOut, forget],
-  );
+  const value = useMemo(() => ({ user, signIn, signOut, forget }), [user, signIn, signOut, forget]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

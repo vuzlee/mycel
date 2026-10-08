@@ -22,8 +22,7 @@ interface Props {
   live?: boolean;
 }
 
-const isAnswer = (item: Item): boolean =>
-  item.kind === "text" && item.agent === "orchestrator";
+const isAnswer = (item: Item): boolean => item.kind === "text" && item.agent === "orchestrator";
 
 export function Steps({ items, gaps, live = false }: Props) {
   const answer = items.filter(isAnswer);
@@ -31,12 +30,7 @@ export function Steps({ items, gaps, live = false }: Props) {
     <>
       <Trail items={items.filter((i) => !isAnswer(i))} live={live} gaps={gaps} />
       {answer.map((item) =>
-        item.kind === "text" ? (
-          <Markdown
-            key={item.seq}
-            body={hideMarkers(item.body)}
-          />
-        ) : null,
+        item.kind === "text" ? <Markdown key={item.seq} body={hideMarkers(item.body)} /> : null,
       )}
     </>
   );

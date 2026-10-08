@@ -117,4 +117,3 @@ function siblingsFor(
   const parent = event.parent_tool_call_id ? byToolCall.get(event.parent_tool_call_id) : undefined;
   return parent ? parent.children : root;
 }
-

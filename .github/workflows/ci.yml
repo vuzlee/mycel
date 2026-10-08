@@ -67,7 +67,7 @@ jobs:
       - name: Test
         run: uv run pytest --cov
 
-  # The frontend's type check; no database needed.
+  # The frontend: types, lint and format, build. No database needed.
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -82,6 +82,8 @@ jobs:
       - run: npm ci
       - name: Type check
         run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
       - name: Build
         run: npm run build
 

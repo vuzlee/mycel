@@ -172,8 +172,8 @@ export function Composer({
         <p className="hint note">{PROCESSING_NOTE}</p>
       ) : (
         <p className="hint">
-          <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line ·{" "}
-          <kbd>@</kbd> for a source
+          <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line · <kbd>@</kbd>{" "}
+          for a source
         </p>
       )}
     </div>

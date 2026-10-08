@@ -41,7 +41,7 @@ export function Answer({ result, streamed, onSource }: Props) {
         }
       />
       {result.sources.length > 0 && (
-        <ol className="nb-sources">
+        <ol className="kb-sources">
           {result.sources.map((s) => (
             <li key={s.label}>
               <button onClick={() => onSource?.(s)}>

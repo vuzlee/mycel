@@ -42,18 +42,13 @@ export function Login() {
 
         <h1>Sign in</h1>
         <p className="lede">
-          Ask about your team's week, the numbers behind it, or anything else. An account
-          keeps your runs, so they are still there on another machine tomorrow.
+          Ask about your team's week, the numbers behind it, or anything else. An account keeps your
+          runs, so they are still there on another machine tomorrow.
         </p>
 
         {sent.notice && <p className="notice">{sent.notice}</p>}
 
-        <Credentials
-          verb="Sign in"
-          onSubmit={signIn}
-          failure={failure}
-          onFailure={setFailure}
-        />
+        <Credentials verb="Sign in" onSubmit={signIn} failure={failure} onFailure={setFailure} />
 
         <p className="switch">
           No account yet? <Link to="/register">Create one</Link>

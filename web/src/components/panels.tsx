@@ -54,9 +54,8 @@ export function ProfilePanel({ conversations }: { conversations: ConversationSum
       </dl>
 
       <p className="muted">
-        Your runs are kept under this account, so signing in on another machine
-        brings them with you. The address is the identity here and cannot be
-        changed.
+        Your runs are kept under this account, so signing in on another machine brings them with
+        you. The address is the identity here and cannot be changed.
       </p>
 
       <PasswordForm />
@@ -124,11 +123,7 @@ function PasswordForm() {
         </label>
 
         {failure && <p className="failure">{failure}</p>}
-        {done && (
-          <p className="notice">
-            Changed. Every other browser has been signed out.
-          </p>
-        )}
+        {done && <p className="notice">Changed. Every other browser has been signed out.</p>}
 
         <button className="primary" type="submit" disabled={busy}>
           {busy && <Spinner className="spin" size={14} />}
@@ -268,8 +263,7 @@ const CONNECTIONS: Provider[] = [
     id: "google",
     title: "Google",
     icon: <Calendar size={16} />,
-    offers:
-      "Your own calendar and mail. Mail is read-only; nothing is deleted.",
+    offers: "Your own calendar and mail. Mail is read-only; nothing is deleted.",
     status: async () => {
       const s = await fetchGoogle();
       return { configured: s.configured, who: s.email, since: s.connected_at };
@@ -342,26 +336,19 @@ function Connection({ provider }: { provider: Provider }) {
       </header>
       {status === null && <p className="muted">Checking…</p>}
       {status && !status.configured && (
-        <p className="muted">
-          Not set up on this deployment — see docs/setup.md.
-        </p>
+        <p className="muted">Not set up on this deployment — see docs/setup.md.</p>
       )}
       {status?.configured && status.who && (
         <>
           <div className="connection-who">
             <b>{status.who}</b>
             <span className="muted">
-              since{" "}
-              {status.since ? new Date(status.since).toLocaleDateString() : "—"}
+              since {status.since ? new Date(status.since).toLocaleDateString() : "—"}
             </span>
           </div>
           {status.note && <p className="muted">{status.note}</p>}
           {failure && <p className="failure">{failure}</p>}
-          <button
-            className="outline"
-            onClick={() => void drop()}
-            disabled={busy}
-          >
+          <button className="outline" onClick={() => void drop()} disabled={busy}>
             {busy && <Spinner className="spin" size={14} />}
             Disconnect
           </button>
@@ -371,9 +358,7 @@ function Connection({ provider }: { provider: Provider }) {
         <>
           <p className="muted">{provider.offers}</p>
           {came === "failed" && (
-            <p className="failure">
-              That did not finish. Nothing was connected.
-            </p>
+            <p className="failure">That did not finish. Nothing was connected.</p>
           )}
           <button className="primary" onClick={provider.connect}>
             Connect {provider.title}

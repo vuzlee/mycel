@@ -76,7 +76,9 @@ export function PdfPage({ url, first, last, quote }: Props) {
         if (!live || !page || !node || !text) return;
 
         // Fit the frame's width; drawn at the device's pixel ratio so text stays sharp.
-        const fit = (node.parentElement?.parentElement?.clientWidth ?? 600) / page.getViewport({ scale: 1 }).width;
+        const fit =
+          (node.parentElement?.parentElement?.clientWidth ?? 600) /
+          page.getViewport({ scale: 1 }).width;
         const viewport = page.getViewport({ scale: fit });
         const ratio = window.devicePixelRatio || 1;
         node.width = Math.floor(viewport.width * ratio);
@@ -93,7 +95,10 @@ export function PdfPage({ url, first, last, quote }: Props) {
         text.style.width = `${viewport.width}px`;
         text.style.height = `${viewport.height}px`;
         for (const item of marked ?? []) {
-          const [x, y] = pdfjs.Util.applyTransform([item.transform[4]!, item.transform[5]!], viewport.transform);
+          const [x, y] = pdfjs.Util.applyTransform(
+            [item.transform[4]!, item.transform[5]!],
+            viewport.transform,
+          );
           const height = Math.hypot(item.transform[2]!, item.transform[3]!) * viewport.scale;
           const mark = document.createElement("span");
           mark.className = "pdf-mark";
@@ -115,7 +120,7 @@ export function PdfPage({ url, first, last, quote }: Props) {
     };
   }, [url, first, last, quote]);
 
-  if (failure) return <p className="nb-error">Could not show the PDF: {failure}</p>;
+  if (failure) return <p className="kb-error">Could not show the PDF: {failure}</p>;
   return (
     <div className="pdf-view">
       {found === false && <p className="empty">The quote could not be located on this page.</p>}
