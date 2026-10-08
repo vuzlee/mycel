@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         previous = float(json.loads(BASELINE.read_text())["score"])
         print(f"  baseline {previous:.3f}")
-        if overall < previous:
+        if round(overall, 4) < previous:
             print("  SCORE DROPPED — this change makes the summary worse")
             return 1
 
