@@ -1,5 +1,6 @@
 /** What this is, before you have an account. */
 
+import { REPO } from "../lib/links";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/auth";
 import { Account } from "../components/Account";
@@ -11,7 +12,6 @@ import { useReveal } from "../hooks/useReveal";
 /** Where the source and the written docs live. The API serves `/app` and nothing else,
  *  so a link to `docs/` has to leave for the repository rather than pretend to be a
  *  route here. */
-const REPO = "https://github.com/vuzlee/mycel";
 
 /** Three moments, not three features: one line of prose, one line someone would type. */
 const USES = [

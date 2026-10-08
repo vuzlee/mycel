@@ -1,9 +1,9 @@
 /** Ask anything, and watch the run happen. */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Chip, SourceRef, Turn } from "../api";
-import { askChat, fetchProjects, fetchTurns } from "../api";
+import type { Chip, SourceRef } from "../api";
+import { askChat, fetchProjects } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
@@ -18,6 +18,9 @@ import { ArrowRight, Notebook, Spinner } from "../components/icons";
 import { useRun } from "../hooks/useRun";
 import { useConversations } from "../context/ConversationsContext";
 import { useDocuments } from "../hooks/useDocuments";
+import { useHotkey } from "../hooks/useHotkey";
+import { usePastTurns } from "../hooks/usePastTurns";
+import { useRefetchOnSettle, useScrollToQuestion } from "../hooks/useAskEffects";
 
 //: How far below the top of the body the question is parked. Flush against the edge reads
 //: as a page cut off rather than a turn begun. Same number as `.turn.user`'s
@@ -50,11 +53,6 @@ export function Ask() {
   const { reload } = useConversations();
 
   const [asked, setAsked] = useState<string | null>(null);
-  const [past, setPast] = useState<Turn[]>([]);
-  //: The job id `past` was loaded for. What the one scroll waits on: the earlier turns sit
-  //: ABOVE the question, so until they are in, the question's position is not yet the one it
-  //: will keep.
-  const [pastFor, setPastFor] = useState<string | null>(null);
   const [seed, setSeed] = useState("");
   const [firstProject, setFirstProject] = useState<string | null>(null);
   useEffect(() => {
@@ -90,39 +88,7 @@ export function Ask() {
   const fromUrl = params.get("conversation");
   const conversationId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
 
-  // Everything this conversation said before the run on screen. Turns are read from the kept
-  // rows, not the stream: those runs are over, and a stream belongs to one run.
-  //
-  // A null conversation id is NOT an empty conversation. It is the one moment before the page knows
-  // which conversation it is on — a link carrying only `?job=` has to read the conversation off
-  // the run, and the run has to be fetched first. Clearing on null makes that moment
-  // visible: the earlier turns vanish and come back when the poll lands. So nothing is
-  // cleared until there is an answer to replace it with, and `startNew` does the clearing
-  // for the case that really is empty, where it is a deliberate act rather than a gap.
-  useEffect(() => {
-    // No conversation means no history to wait for — the first question of a new one.
-    if (conversationId === null) {
-      if (jobId !== null) setPastFor(jobId);
-      return;
-    }
-    let live = true;
-    void fetchTurns(conversationId)
-      .then((turns) => {
-        if (!live) return;
-        setPast(turns.filter((turn) => turn.job_id !== jobId));
-        setPastFor(jobId);
-      })
-      .catch(() => {
-        // Left as it was. A failed fetch says the network is unhappy, not that the conversation
-        // has no history, and blanking on it would throw away rows that are still correct.
-        // Marked settled all the same, or the scroll below waits for something that is not
-        // coming and never happens at all.
-        if (live) setPastFor(jobId);
-      });
-    return () => {
-      live = false;
-    };
-  }, [conversationId, jobId]);
+  const { past, setPast, pastFor } = usePastTurns(conversationId, jobId);
 
   const startNew = useCallback(() => {
     setParams({}, { replace: false });
@@ -130,19 +96,9 @@ export function Ask() {
     setPast([]);
     setRefused(null);
     composer.current?.focus();
-  }, [setParams]);
+  }, [setParams, setPast]);
 
-  // Cmd/Ctrl+K for a new run, the shortcut the button advertises.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        startNew();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [startNew]);
+  useHotkey("k", startNew);
 
   const ask = async (text: string): Promise<void> => {
     setRefused(null);
@@ -165,60 +121,8 @@ export function Ask() {
   // answer - only the markers that held, and clickable sources - takes its place.
   const cited = run.result?.status === "done" && run.result.sources.length > 0;
 
-  // A finished run moves its conversation to the top of Recent. The sidebar is ordered by the
-  // last thing written to a conversation, and that write happens on the worker, minutes after
-  // the list was fetched — so the order on screen is stale until something asks again.
-  // Keyed on the job so one refetch happens per run, not one per poll.
-  const settled = run.result?.status;
-  const refetched = useRef<string | null>(null);
-  useEffect(() => {
-    if (jobId === null) return;
-    if (settled !== "done" && settled !== "failed") return;
-    if (refetched.current === jobId) return;
-    refetched.current = jobId;
-    reload();
-  }, [jobId, settled, reload]);
-
-  // Asking sends the view to the question just asked, and only then. One move per run, at
-  // the moment there is a reason to move: the question goes to the top, the answer writes
-  // itself into the room below it, and from then on the scroll is the reader's. Nothing
-  // follows the text — a view that re-anchored on every token would be taking the page
-  // back from whoever is reading it, dozens of times a run.
-  //
-  // The top rather than the bottom. The work happens below the question, so the top is
-  // where the room is; sending it to the bottom would pin it to the last line and push it
-  // off screen again at the first tool call.
-  //
-  // Layout effect, and after the earlier turns are in: they are what the new turn's offset
-  // is measured from, and an effect that runs before they render scrolls to a position
-  // that stops existing one frame later.
-  const landed = useRef<string | null>(null);
-  useLayoutEffect(() => {
-    if (jobId === null || question === null || body === null) return;
-    // Waits for the history. The earlier turns sit above the question, so scrolling before
-    // they arrive aims at a position that stops existing the moment they do — the question
-    // gets carried down the page by however tall they turn out to be. This is why the fix
-    // is to wait rather than to chase: there is one thing above the question that changes
-    // height, it announces when it is done, and after that nothing moves the question again.
-    if (pastFor !== jobId) return;
-    if (landed.current === jobId) return;
-    const node = document.getElementById(anchorFor(jobId));
-    if (!node) return;
-    landed.current = jobId;
-
-    // Computed against the body rather than `scrollIntoView`: that helper scrolls the least
-    // it can to bring an element into view, which is right for a link and wrong here. From
-    // a few lines above the question it moves a few lines and stops, instead of putting the
-    // question at the top of the body, where the answer then has the whole screen to fill.
-    body.scrollTo({
-      top:
-        body.scrollTop +
-        node.getBoundingClientRect().top -
-        body.getBoundingClientRect().top -
-        TOP_GAP,
-      behavior: "smooth",
-    });
-  }, [jobId, question, pastFor, body]);
+  useRefetchOnSettle(jobId, run.result?.status, reload);
+  useScrollToQuestion(body, jobId, question, pastFor, TOP_GAP);
 
   // One entry per turn, the question as its own label. Trimmed rather than named by a
   // model: the question is already the name of the turn, and it costs nothing.
