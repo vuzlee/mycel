@@ -40,10 +40,24 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         # The image runs 3.11 (Dockerfile); the runner's default is newer. uv matches the image.
         with: {python-version: "3.11", version: "0.8.0"}
-      - run: uv sync --locked
+      # Not the ingest group: docling is ~2.5 GB and no test here parses a document.
+      - run: uv sync --locked --no-group ingest
 
       - name: Lint
         run: uv run ruff check .
+
+      # Nothing else runs the shell scripts, so a broken one reaches main unseen.
+      - name: Scripts parse
+        run: for f in scripts/*.sh scripts/*/*.sh; do bash -n "$f" || exit 1; done
+
+      # The image installs no dev group. A module that imports a package only dev or test
+      # tooling brings in passes every test above and fails in production, so import each
+      # entry point without them.
+      - name: Imports with production dependencies only
+        run: |
+          uv venv /tmp/prod --python 3.11
+          VIRTUAL_ENV=/tmp/prod uv sync --locked --no-default-groups --active
+          /tmp/prod/bin/python -c "import mycel.api.app, mycel.queue.consumer, mycel.scheduler, mycel.doctor"
 
       # The three Grafana files exist twice, because Helm's .Files.Get does not follow
       # symlinks - see `scripts/stack.sh grafana-sync`. Drift is otherwise invisible until
