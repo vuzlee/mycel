@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-#
 # The pods, and the addresses they answer on.
-#
-# Both hostnames resolve through /etc/hosts, not DNS. Without the entries, curl with an
-# explicit Host header still works — which is how to tell an Ingress problem apart from a
-# hosts-file one.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 

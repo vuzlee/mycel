@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-#
 # Stores in compose, the three app processes on the host.
-#
-# The one mode where a code change is visible without a rebuild, which is why it is the
-# default and why `up` starts no app profile in compose.
-#
-# The worker is not optional. Without it `POST /chat` returns a job id for work nobody
-# picks up — which looks like a slow model rather than a missing process.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 source "$ROOT/scripts/lib/hostproc.sh"
@@ -30,13 +23,11 @@ spawn ingest    "$ROOT/scripts/dev/ingest-loop.sh"
 spawn scheduler uv run python -m mycel.scheduler
 
 # Each one, before waiting on the API: a worker that died on a bad import is invisible
-# otherwise, and the stack would report itself up with nothing consuming the queue.
 failed=0
 for name in api worker ingest scheduler; do settled "$name" || failed=1; done
 [[ $failed -eq 0 ]] || die "not everything came up — see the logs above, then: scripts/stack.sh dev down"
 
 # `/health/live`, not `/health`: the router has a prefix and no route at the bare path, so
-# probing it 404s forever while the API is perfectly healthy.
 wait_for api "curl -sf http://localhost:$API_PORT/health/live"
 
 echo

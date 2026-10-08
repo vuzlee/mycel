@@ -15,7 +15,6 @@ need minikube
 TAG=${1:-dev}
 
 # Two images from one Dockerfile: the app, and ingest with docling and its models baked in.
-# ingest is ~2.75 GB, so its first build and load take several minutes.
 for pair in "app:mycel" "ingest:mycel-ingest"; do
   target=${pair%%:*} name=${pair#*:}
   log "building $name:$TAG"

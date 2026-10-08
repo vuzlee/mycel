@@ -37,8 +37,7 @@ spec:
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       {{- end }}
-      # A job is acked only after it finishes. Long enough for the one in flight to end
-      # rather than be redelivered to another worker halfway through.
+      # A job is acked only after it finishes.
       terminationGracePeriodSeconds: 60
       containers:
         - name: worker
@@ -49,13 +48,10 @@ spec:
             - name: metrics
               containerPort: {{ .Values.config.METRICS_PORT | int }}
           # METRICS_HOST is 0.0.0.0 here, outranking the Secret built from the whole of .env,
-          # where it is 127.0.0.1 so that a dev machine does not publish an unauthenticated
-          # port. Inside a pod, loopback means kubelet's probe gets connection refused.
           {{- include "mycel.env" (dict "ctx" . "metrics" true) | nindent 10 }}
           livenessProbe:
             httpGet: {path: /metrics, port: metrics}
             # Generous: a job holding the loop for a moment is normal, and a restart in
-            # the middle of one costs the work rather than saving it.
             initialDelaySeconds: 20
             periodSeconds: 30
             failureThreshold: 3

@@ -1,10 +1,6 @@
-# Full dev stack: app + databases + observability.
-# Every app service builds in place; the published images come from release.yml.
+# Full dev stack. App services build in place; published images come from release.yml.
 
-# Where the stores are, for every application container. .env names them at localhost,
-# which is right for `dev` mode on the host and wrong inside a container, where localhost
-# is the container itself: the worker died on RabbitMQ and the api's readiness said 503.
-# `environment:` outranks `env_file:`, so these win. The passwords come from the same .env.
+# Store addresses inside the compose network; `environment:` outranks the .env localhost ones.
 x-stores: &stores
   DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mycel}
   RABBITMQ_URL: amqp://${RABBITMQ_USER:-mycel}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
@@ -21,9 +17,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-mycel}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
       POSTGRES_DB: ${POSTGRES_DB:-mycel}
-    # 5433 on the host, not 5432: a machine that already runs Postgres for something else
-    # keeps the default, and this stack does not fight it for the port. DATABASE_URL in
-    # .env names the same number — the two have to agree or nothing connects.
+    # 5433 on the host so a local Postgres keeps 5432; DATABASE_URL must agree.
     ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -36,14 +30,12 @@ services:
   api:
     build: {context: ., target: app}
     profiles: [api]
-    # `--factory`: there is no module-level `app`. `create_app()` is a factory on purpose,
-    # so configuration is chosen at call time rather than frozen at import.
+    # `--factory`: create_app() reads config at call time.
     command: uvicorn --factory mycel.api.app:create_app --host 0.0.0.0 --port 8000
     env_file: .env
     environment:
       <<: *stores
-      # /metrics on its own port (9103), reachable on the compose network and not
-      # published: only 8000 is.
+      # /metrics on 9103, on the compose network only.
       METRICS_HOST: "0.0.0.0"
     ports: ["8000:8000"]
     depends_on:
@@ -51,25 +43,20 @@ services:
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
 
-  # Jira -> bronze -> silver -> gold every SYNC_INTERVAL_SECONDS. An advisory lock makes a
-  # second replica skip. `--profile app`.
+  # Jira -> bronze -> silver -> gold. An advisory lock makes a second replica skip.
   scheduler:
     build: {context: ., target: app}
     profiles: [app]
     command: python -m mycel.scheduler
     env_file: .env
     # /metrics has no authentication, so what it binds to is what keeps it private.
-    # Inside a container all interfaces means "the compose network"; the port is not
-    # published, so nothing outside that network can reach it.
     environment:
       <<: *stores
       METRICS_HOST: "0.0.0.0"
     depends_on:
       postgres: {condition: service_healthy}
 
-  # Runs background jobs: sync, transform, chat turns.
-  # --scale worker=N works without a ceiling here: RabbitMQ hands each message to one
-  # consumer, so workers share a queue rather than being capped by a partition count.
+  # Chat jobs. Scales with --scale worker=N.
   worker:
     build: {context: ., target: app}
     profiles: [app]
@@ -83,8 +70,7 @@ services:
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
 
-  # Parses and embeds uploaded documents. One replica: docling needs ~3-4 GB of RAM.
-  # It exits after ingest_worker_max_jobs documents; `restart` brings it back.
+  # Parses and embeds uploads. One replica: docling needs 3-4 GB; restarts after N jobs.
   ingest:
     build: {context: ., target: ingest}
     profiles: [app]
@@ -138,13 +124,11 @@ services:
 
   # --- Stores and gateway ---
 
-  # The one gateway every model call goes through. Models and keys: config/litellm/.
-  # The app speaks OpenAI Chat Completions to it; the provider keys never reach the app.
+  # Every model call goes through here; provider keys never reach the app.
   litellm:
     image: ghcr.io/berriai/litellm@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
     entrypoint: ["/app/entrypoint.sh"]
-    # Only the provider keys, not the whole .env: DATABASE_URL there would make LiteLLM
-    # try to use the app's Postgres as its own store, and it needs none.
+    # Provider keys only: DATABASE_URL would make LiteLLM use the app's Postgres.
     environment:
       GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
       CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
@@ -160,7 +144,7 @@ services:
       interval: 10s
       retries: 12
 
-  # Vector store. Postgres holds the truth, Qdrant holds embeddings.
+  # Embeddings; Postgres holds the truth.
   qdrant:
     image: qdrant/qdrant:v1.19.1
     volumes: ["qdrantdata:/qdrant/storage"]
@@ -170,9 +154,7 @@ services:
       interval: 10s
       retries: 10
 
-  # Original uploaded files. S3 API, so real S3 is an endpoint change.
-  # Chainguard's build: MinIO stopped publishing images and deleted minio/minio in 2026-09.
-  # Pinned by digest: `latest` moves, and a deleted tag is how minio/minio broke last time.
+  # Uploaded files, S3 API. Chainguard build pinned by digest: minio/minio images were removed.
   minio:
     image: cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034
     command: ["server", "/data", "--console-address", ":9001"]
@@ -230,8 +212,7 @@ services:
     ports: ["9090:9090"]
     mem_limit: 1g
 
-  # Prometheus answers "is something broken" and Loki "why". "Where" is Langfuse's
-  # question now, and it is not part of this stack.
+  # Traces go to Langfuse, not here.
   loki:
     image: grafana/loki:3.3.2
     profiles: [monitoring]
@@ -240,8 +221,7 @@ services:
     ports: ["3100:3100"]
     mem_limit: 512m
 
-  # Collects container stdout and ships it to Loki. The app only prints JSON logs to
-  # stdout and sends them nowhere itself.
+  # Ships container stdout (JSON logs) to Loki.
   promtail:
     image: grafana/promtail:3.3.2
     profiles: [monitoring]
@@ -266,12 +246,10 @@ services:
       - ./deploy/helm/mycel/files/mycel.json:/etc/grafana/provisioning/dashboards/mycel.json:ro
     ports: ["3000:3000"]
     depends_on: [prometheus, loki]
-    # 512m, not 256m: measured at 196 MiB idle with one dashboard, which leaves no room
-    # for a second browser tab. Grafana is the one here that holds rendered state.
+    # 512m: 196 MiB idle with one dashboard.
     mem_limit: 512m
 
-# Fixed names so an existing `mycel-pgdata` is reused. On a machine where it was made by
-# hand, compose warns once that it "was not created by Compose": harmless, data is kept.
+# Fixed names so existing volumes are reused.
 volumes:
   pgdata:
     name: mycel-pgdata

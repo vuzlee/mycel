@@ -19,8 +19,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # type=gha cache needs the docker-container driver; the default docker
-      # driver cannot export cache.
+      # type=gha cache needs the docker-container driver; the default docker driver cannot export cache.
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v6
         with:
@@ -61,7 +60,6 @@ jobs:
         run: helm lint deploy/helm/mycel -f deploy/helm/mycel/values-minikube.yaml
 
       # The stores host is the one value every environment must name; without it the chart
-      # refuses to render. That refusal is the guard, so check it holds.
       - name: Refuses to render without a stores host
         run: |
           if helm template mycel deploy/helm/mycel --set image.tag=${{ github.sha }} > /dev/null 2>&1; then
@@ -69,7 +67,6 @@ jobs:
           fi
 
       # No `-f values-minikube.yaml`: apart from the host, the defaults have to render on
-      # their own, or the first real environment inherits a chart that only works with a dev override.
       - name: Renders on the defaults
         run: |
           helm template mycel deploy/helm/mycel \
@@ -83,8 +80,7 @@ jobs:
             --set externalStores.host=stores.internal \
             --set monitoring.enabled=true > /tmp/rendered.yaml
 
-      # The chart references a Secret by name and renders none. `helm template` producing
-      # a credential would mean a value had moved into values.yaml, which is in git.
+      # The chart references a Secret by name and renders none.
       - name: No credential in the rendered output
         run: |
           if grep -nE '^\s+(password|secret|token|api_key):' /tmp/rendered.yaml; then
@@ -92,8 +88,7 @@ jobs:
           fi
           echo "nothing rendered that is worth stealing"
 
-      # The tag has to reach every container, not just the first. A chart that renders
-      # cleanly while three Deployments run `latest` is the failure this catches.
+      # The tag has to reach every container, not just the first.
       - name: The built image reaches every container
         run: |
           expected=$(grep -cE '^\s+image: mycel(-ingest)?:' /tmp/rendered.yaml || true)

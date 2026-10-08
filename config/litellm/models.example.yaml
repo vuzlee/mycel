@@ -1,6 +1,4 @@
-# Copy to models.yaml (gitignored) and keep the providers you have. Each `model_name` is
-# what config/agents/*.yaml asks for as `cloud:<model_name>`. Keys come from the
-# environment as `os.environ/<NAME>`; put them in .env and pass them in docker-compose.yml.
+# Copy to models.yaml (gitignored) and keep the providers you have.
 model_list:
   # Anthropic directly.
   - model_name: claude-sonnet-5

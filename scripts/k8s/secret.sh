@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # The Secret from .env, with the store URLs pointed out of the pod: inside a pod, localhost
-# is that pod. It carries all of .env and outranks the ConfigMap; see templates/_helpers.tpl.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 

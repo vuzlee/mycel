@@ -3,8 +3,7 @@
 # Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
 model_spec: cloud:claude-sonnet-5
 
-# One call per specialist per angle, and a report usually has a few angles. Low on purpose:
-# every call here is itself a whole agent run, so this limit multiplies rather than adds.
+# One call per specialist per angle, and a report usually has a few angles.
 tool_calls_limit: 8
 
 # Counts this agent's own model requests *and* every specialist's, because

@@ -19,9 +19,7 @@ spec:
         {{- include "mycel.labels" . | nindent 8 }}
         app.kubernetes.io/component: api
       annotations:
-        # Changing a setting changes this hash, which changes the pod spec, which rolls
-        # the pods. Without it, `helm upgrade` with a new ConfigMap updates nothing a
-        # running container can see: env vars are read once, at start.
+        # Changing a setting changes this hash, which changes the pod spec, which rolls the pods.
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       {{- if .Values.image.pullSecret }}
@@ -32,9 +30,7 @@ spec:
         - name: api
           image: {{ include "mycel.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          # The Dockerfile has no CMD: all three services share one image and each is told
-          # what to be. --factory because there is no module-level `app` — create_app() is
-          # a factory so configuration is chosen at call time, not frozen at import.
+          # The Dockerfile has no CMD: all three services share one image and each is told what to be.
           command: ["uvicorn", "--factory", "mycel.api.app:create_app",
                     "--host", "0.0.0.0", "--port", "8000"]
           ports:
@@ -44,15 +40,12 @@ spec:
             - name: metrics
               containerPort: {{ add (.Values.config.METRICS_PORT | int) 3 }}
           {{- include "mycel.env" (dict "ctx" . "metrics" true) | nindent 10 }}
-          # Liveness touches nothing outside the process. A liveness probe that asks the
-          # database restarts healthy pods every time the database blinks — and restarting
-          # the api does not fix a database.
+          # Liveness touches nothing outside the process, so a database blip restarts nothing.
           livenessProbe:
             httpGet: {path: /health/live, port: http}
             initialDelaySeconds: 10
             periodSeconds: 20
-          # Readiness does touch Postgres, and returns 503 rather than raising. A pod that
-          # cannot reach its database should leave the Service, not die.
+          # Readiness checks Postgres: an unreachable database takes the pod out of the Service.
           readinessProbe:
             httpGet: {path: /health/ready, port: http}
             initialDelaySeconds: 5

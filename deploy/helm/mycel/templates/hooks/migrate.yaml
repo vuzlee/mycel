@@ -13,7 +13,6 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   # The name carries the revision: a Job's pod template is immutable, so reusing one name
-  # makes the second upgrade fail on a field that cannot be patched.
   name: {{ include "mycel.fullname" . }}-migrate-{{ .Release.Revision }}
   labels:
     {{- include "mycel.labels" . | nindent 4 }}

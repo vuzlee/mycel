@@ -3,9 +3,7 @@
 # Claude through the LiteLLM gateway; names are `model_name`s in config/litellm/config.yaml.
 model_spec: cloud:claude-sonnet-5
 
-# It has no tools. One call, one answer. Zero does not stop the structured output —
-# that is delivered as `final_result`, which pydantic-ai does not count here — nor a
-# re-prompt when the model returns the wrong shape. `test_summariser.py` pins both.
+# No tools: one call, one structured answer.
 tool_calls_limit: 0
 
 # A second provider: if Claude is unreachable or out of quota, Gemini answers instead.

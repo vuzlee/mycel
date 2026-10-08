@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#
 # Every container this project owns, including the ones a profile did not start.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"

@@ -8,10 +8,8 @@ agents:
 settings:
   log_level: DEBUG
   # Three host processes share this machine's Postgres, and a dev box runs the test suite
-  # against it at the same time.
   db_pool_size: 10
   # Traces on, because the whole point of a dev machine is being able to see what happened.
   otel_enabled: true
   # Spans carry the prompt and the answer on a dev machine, and nowhere else: the content
-  # is real user data, and Langfuse is a third party.
   otel_capture_content: true

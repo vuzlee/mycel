@@ -1,11 +1,6 @@
-# Overrides values.yaml for a local minikube cluster. Lists only what differs.
-#
-# This is the file that proves the chart runs. The two others describe clusters that do
-# not exist yet.
+# Overrides values.yaml for a local minikube cluster.
 
 # `minikube image load mycel:dev` puts the image in the node's own docker daemon, so there
-# is no registry and nothing to pull. Never means never: IfNotPresent would still try to
-# pull when the tag is missing, and the error that produces names a registry nobody set up.
 image:
   repository: mycel
   tag: dev
@@ -14,12 +9,7 @@ image:
 api:       {replicas: 1}
 worker:    {replicas: 1}
 
-# Every store runs on the host under docker-compose. From inside a pod, this is the name
-# that reaches the host — `localhost` would be the pod itself.
-#
-# The chart builds QDRANT_URL, S3_ENDPOINT_URL and LITELLM_BASE_URL from it. The four URLs
-# that carry a password (DATABASE_URL, RABBITMQ_URL, REDIS_URL, REDIS_CACHE_URL) live in the
-# Secret instead, and scripts/k8s/secret.sh rewrites them to this same host.
+# How pods reach the stores in compose on the host.
 externalStores:
   host: host.minikube.internal
 

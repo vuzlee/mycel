@@ -13,18 +13,14 @@ data:
       scrape_interval: {{ .Values.monitoring.prometheus.scrapeInterval }}
 
     scrape_configs:
-      # One job, not three. The three processes differ only in which port serves /metrics,
-      # and the pod's own labels say which is which — so a fourth service added later is
-      # found without touching this file.
+      # One job for every app pod; the pod's metrics port says where to scrape.
       - job_name: mycel
         kubernetes_sd_configs:
           - role: pod
             namespaces:
               names: [{{ .Release.Namespace }}]
         relabel_configs:
-          # Only this release's application pods. Without it, Prometheus tries to scrape
-          # itself, Loki, Grafana and every pod in the namespace, and most of them answer
-          # 404 on /metrics - a wall of red targets that are not actually broken.
+          # Only this release's app pods; others answer 404 on /metrics.
           - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
             action: keep
             regex: {{ .Release.Name }}
@@ -32,12 +28,10 @@ data:
             action: keep
             regex: api|worker|scheduler|ingest
           # The port to scrape is the one the pod declares as metrics; the api's http port
-          # serves no /metrics. A pod that declares none is dropped, not guessed at.
           - source_labels: [__meta_kubernetes_pod_container_port_name]
             action: keep
             regex: metrics
-          # Carry the component through as a label, so a graph can be split by which
-          # process it came from. Prometheus drops every __meta_ label otherwise.
+          # Carry the component through as a label, so a graph can be split by which process it came from.
           - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
             target_label: component
           - source_labels: [__meta_kubernetes_pod_name]
@@ -69,9 +63,7 @@ metadata:
     app.kubernetes.io/component: prometheus
 spec:
   replicas: 1
-  # The samples live in the pod. Recreate rather than RollingUpdate, because two
-  # Prometheus pods briefly scraping the same targets is two sets of samples for the same
-  # instant, and the graph shows it.
+  # Recreate: two pods would scrape the same targets twice.
   strategy:
     type: Recreate
   selector:
@@ -84,8 +76,6 @@ spec:
         app.kubernetes.io/component: prometheus
       annotations:
         # The hash is of the config VALUES, not of this template file: a template that
-        # includes itself to hash itself recurses until Helm gives up. 057's Deployments
-        # could hash templates/configmap.yaml because that was a different file.
         checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
     spec:
       serviceAccountName: {{ include "mycel.fullname" . }}-prometheus
@@ -102,8 +92,6 @@ spec:
             - {name: config, mountPath: /etc/prometheus}
             - {name: data, mountPath: /prometheus}
           # /-/healthy is the process; /-/ready is "has it finished loading the config and
-          # replaying its write-ahead log". Starting that replay can take a while, so a
-          # liveness probe on the readiness path would restart a pod that is working.
           livenessProbe:
             httpGet: {path: /-/healthy, port: http}
             initialDelaySeconds: 15
@@ -118,10 +106,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "mycel.fullname" . }}-prometheus
-        # Deliberately not a PersistentVolumeClaim. The stateful stores stay
-        # outside the cluster because storage is the painful part, and that reason does not
-        # change here: losing seven days of samples on a dev box is not a problem, a claim
-        # stuck Pending on the wrong storage class is - nothing runs at all then.
+        # emptyDir: losing dev samples is fine, a Pending claim is not.
         - name: data
           emptyDir: {}
 {{- end }}

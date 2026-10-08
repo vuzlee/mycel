@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
-#
 # Running the three app processes on the host, under pid files in .run/.
-#
-# Only `dev/` uses this. Compose and Kubernetes have their own supervisor and neither
-# wants a pid file — which is the whole reason this is a second library rather than more
-# of common.sh.
-#
-# Why on the host at all: these are what is being edited, and `uv run` picks up a change
-# without a rebuild. That is the one thing neither of the other two modes gives.
 
 alive() { [[ -f "$RUN/$1.pid" ]] && kill -0 "$(cat "$RUN/$1.pid")" 2>/dev/null; }
 
@@ -41,9 +33,7 @@ spawn() {
   log "$name started (pid $pid, log: .run/$name.log)"
 }
 
-# Started, and still there a moment later. A process that dies on a bound port or a bad
-# import exits within milliseconds, and without this the stack reports itself up while two
-# thirds of it is a log file nobody reads.
+# Started, and still there a moment later.
 settled() {
   local name=$1
   sleep 2
@@ -69,13 +59,7 @@ reap() {
   rm -f "${RUN:?}/${name:?}.pid"
 }
 
-# Anything of ours that no pid file points at. Earlier versions of this script wrote the
-# wrong pid, and a crashed `up` can leave a half-started process behind, so `down` cannot
-# assume its own bookkeeping is complete.
-#
-# Matched on this checkout's own interpreter path, never on the module name alone: another
-# clone of this repo in another directory is somebody else's stack, and `down` here must
-# not reach into it.
+# Anything of ours that no pid file points at.
 sweep() {
   local pids
   pids=$(pgrep -f "$ROOT/.venv/bin/.*(uvicorn|mycel\.)" 2>/dev/null || true)

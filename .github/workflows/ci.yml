@@ -15,7 +15,6 @@ jobs:
           --health-cmd pg_isready --health-interval 5s --health-retries 10
         ports: ["5432:5432"]
       # The broker and Redis are here so `test_queue_live.py` and `test_end_to_end.py` run
-      # rather than skip. They skip silently without one, which reads as a green suite.
       rabbitmq:
         image: rabbitmq:3-alpine
         options: >-
@@ -50,9 +49,7 @@ jobs:
       - name: Scripts parse
         run: for f in scripts/*.sh scripts/*/*.sh; do bash -n "$f" || exit 1; done
 
-      # The image installs no dev group. A module that imports a package only dev or test
-      # tooling brings in passes every test above and fails in production, so import each
-      # entry point without them.
+      # The image installs no dev group, so import every entry point without it.
       - name: Imports with production dependencies only
         run: |
           uv venv /tmp/prod --python 3.11
@@ -67,12 +64,10 @@ jobs:
         run: uv run alembic upgrade head
 
       # `--cov` carries its own floor from pyproject: a change that guts a tested module
-      # fails here rather than in a review nobody ran.
       - name: Test
         run: uv run pytest --cov
 
-  # The frontend's `mypy`. A separate job rather than a step in `check`: it needs Node and
-  # no database, and a Python-only change should not wait on an npm install.
+  # The frontend's type check; no database needed.
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -91,4 +86,3 @@ jobs:
         run: npm run build
 
 # No eval job: evals call real models, cost quota, and need the LiteLLM gateway, a model
-# gateway CI cannot reach. They are run by hand and announced first - see evals/README.md.

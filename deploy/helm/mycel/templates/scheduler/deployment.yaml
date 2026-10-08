@@ -44,8 +44,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["python", "-m", "mycel.scheduler"]
           ports:
-            # What `__main__.py` actually binds: METRICS_PORT + 1. The env below passes the
-            # base value, unshifted, because the code does the shifting.
+            # What `__main__.py` actually binds: METRICS_PORT + 1.
             - name: metrics
               containerPort: {{ add (.Values.config.METRICS_PORT | int) 1 }}
           # METRICS_HOST outranks envFrom; see the worker's for why it has to.

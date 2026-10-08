@@ -59,8 +59,6 @@ spec:
         app.kubernetes.io/component: grafana
       annotations:
         # Hash the provisioned files themselves: editing a dashboard must roll the pod,
-        # and Grafana reads these once at start. Hashing this template instead would be a
-        # template including itself, which recurses until Helm gives up.
         checksum/files: {{ printf "%s%s%s" (.Files.Get "files/datasources.yaml") (.Files.Get "files/dashboards.yaml") (.Files.Get "files/mycel.json") | sha256sum }}
     spec:
       containers:
@@ -68,10 +66,7 @@ spec:
           image: {{ .Values.monitoring.grafana.image }}
           env:
             {{- if .Values.monitoring.grafana.anonymous }}
-            # Anonymous Admin. Correct on a laptop, where a login nobody shares is a
-            # dashboard nobody opens — and a hole the moment the hostname resolves
-            # anywhere real, because Grafana admin includes editing the datasources.
-            # Set `monitoring.grafana.anonymous: false` and supply the two keys below.
+            # Anonymous admin; set monitoring.grafana.anonymous: false on a reachable host.
             - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "true"}
             - {name: GF_AUTH_ANONYMOUS_ORG_ROLE, value: Admin}
             {{- else }}
@@ -97,8 +92,7 @@ spec:
             # Nobody signs themselves up for a dashboard.
             - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
             {{- end }}
-            # Grafana builds its own absolute urls from this. Without it a page served
-            # through an Ingress redirects to localhost:3000 the first time it tries.
+            # Grafana builds its own absolute urls from this.
             - name: GF_SERVER_ROOT_URL
               value: http://{{ .Values.monitoring.grafana.host }}/
           ports:
@@ -121,9 +115,7 @@ spec:
         - name: dashboards
           configMap:
             name: {{ include "mycel.fullname" . }}-grafana-dashboards
-        # Grafana's own sqlite: sessions, and any panel somebody drags about. The
-        # dashboard itself comes from the ConfigMap, so losing this loses nothing that
-        # was written down.
+        # Grafana's own sqlite: sessions, and any panel somebody drags about.
         - name: data
           emptyDir: {}
 ---
@@ -139,7 +131,6 @@ spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
     # Its own host rather than a path on the api's: Grafana serves its assets from
-    # absolute paths, so mounting it under /grafana means rewriting every one of them.
     - host: {{ .Values.monitoring.grafana.host }}
       http:
         paths:

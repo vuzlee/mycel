@@ -6,60 +6,35 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
-  # pydantic-ai-slim, not the full package: full pulls in every provider plus Logfire.
+  # slim: the full package pulls in every provider and Logfire.
   "pydantic-ai-slim[google,mcp,openai]>=2.44,<3",
   "pydantic-settings>=2.4",
-  # Arrives with pydantic-ai anyway, declared because `tools/web_search.py` imports it
-  # directly: a transitive dependency is a fact about today's lockfile, not a promise.
+  # Imported directly, so declared even though pydantic-ai brings it.
   "httpx2>=2.13",
   "pyyaml>=6.0",
   "opentelemetry-sdk>=1.27",
   "opentelemetry-exporter-otlp-proto-http>=1.27",
-  # The HTTP shell. `fastapi`, not `fastapi[standard]`: the latter pulls in a CLI, an
-  # email validator and httpx, none of which this service uses.
   "fastapi>=0.115",
   "uvicorn>=0.30",
   "opentelemetry-instrumentation-fastapi>=0.48b0",
-  # The job queue. `aio-pika` over the raw `pika` client because everything downstream of a
-  # job is async — the orchestrator, its tools, httpx — and a blocking AMQP client would
-  # have to be driven from a thread to coexist with them.
   "aio-pika>=9.4",
-  # Where a finished report waits until someone asks for it. Not durable storage: a result
-  # has to be readable from a second process, and the data layer that will own it properly
-  # is a later branch.
   "redis>=5.0",
-  # The data layer. `asyncpg` rather than psycopg: every caller downstream of a query is
-  # already async, and a blocking driver would stall the event loop it runs on.
   "sqlalchemy[asyncio]>=2.0",
   "asyncpg>=0.29",
   "alembic>=1.13",
-  # Password hashing. Argon2id is what the OWASP cheat sheet names first, and bcrypt's
-  # silent truncation at 72 bytes is a footgun nobody notices until a long passphrase
-  # turns out to have been only its first 72 bytes all along.
   "argon2-cffi>=23.1",
-  # Metrics. The client library only, not an exporter sidecar: it holds the registry in
-  # process and renders the text format, which is all Prometheus asks for.
   "prometheus-client>=0.20",
-  # Encrypting one stored secret: the Google refresh token in `app.google_account`. Fernet
-  # only — declared because `services/google_oauth.py` imports it directly, and it arrives
-  # transitively today, which is a fact about this lockfile rather than a promise.
+  # Fernet for stored Google and Jira refresh tokens.
   "cryptography>=43.0",
-  # Search over gold. `qdrant-client` without the `fastembed` extra: embeddings are made
-  # here rather than inside the client, so the two can be swapped apart.
   "qdrant-client>=1.12",
-  # The embedding model itself, as ONNX. `fastembed` rather than sentence-transformers
-  # because the latter pulls in PyTorch — ~2.5 GiB for a model that is 130 MiB, and a
-  # Dockerfile that takes minutes longer every build for a tier nothing else uses.
+  # ONNX embeddings without PyTorch.
   "fastembed>=0.5",
-  # Notebook files in MinIO / S3.
   "aioboto3>=13.0",
-  # File type by content, not by extension.
   "filetype>=1.2",
-  # Multipart form parsing for uploads.
   "python-multipart>=0.0.9",
 ]
 
-# Only the ingest worker parses documents. docling pulls in torch, so the API image skips it.
+# torch from the CPU index: the default wheel brings ~3 GB of CUDA.
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]
 torchvision = [{ index = "pytorch-cpu" }]
@@ -69,7 +44,6 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
-# Dev tooling: CI runs on a clean runner, so anything not declared here does not exist.
 [dependency-groups]
 dev = [
   "ruff>=0.6",
@@ -77,20 +51,13 @@ dev = [
   "pytest>=8.0",
   "anyio>=4.4",
   "types-pyyaml>=6.0",
-  # Reads `.env` in conftest to keep it out of the tests.
   "python-dotenv>=1.0",
-  # Type stubs for the async driver, which ships none.
   "asyncpg-stubs>=0.29",
-  # Coverage, so "is this tested" has an answer instead of an opinion.
   "pytest-cov>=5.0",
 ]
-# Document parsing, for the ingest worker only (~2.5 GB). A group rather than an extra, and
-# a default one: a plain `uv sync` on a dev machine then keeps it instead of removing it.
-# The `app` image leaves it out with `--no-default-groups`.
+# The ingest worker only (~2.5 GB). A default group so a plain `uv sync` keeps it.
 ingest = [
   "docling>=2.15",
-  # Named so the CPU index below applies: the default wheel pulls ~3 GB of CUDA libraries
-  # for a worker that runs on CPU.
   "torch",
   "torchvision",
 ]
@@ -113,9 +80,7 @@ src = ["src", "tests"]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-# B008 forbids a call in an argument default, which is exactly how FastAPI declares a
-# dependency. The rule is right in general and wrong for this one framework idiom, so it
-# is turned off where routes live rather than silenced line by line.
+# B008 flags Depends() in argument defaults, which is how FastAPI works.
 "src/mycel/api/routes/*.py" = ["B008"]
 
 [tool.mypy]
@@ -123,11 +88,10 @@ python_version = "3.11"
 strict = true
 files = ["src", "evals"]
 
-# Libraries without type information. Their surface is wrapped in one module each.
 [[tool.mypy.overrides]]
 module = [
   "aioboto3", "aioboto3.*", "botocore.*", "filetype",
-  # The ingest extra; CI type-checks without it.
+  # ingest group; CI type-checks without it.
   "docling.*", "docling_core.*", "transformers",
 ]
 ignore_missing_imports = true
@@ -144,13 +108,11 @@ source = ["src/mycel"]
 branch = true
 
 [tool.coverage.report]
-# Lines that exist to be skipped, not to be run.
 exclude_also = [
   "if TYPE_CHECKING:",
   "raise NotImplementedError",
   "@overload",
 ]
-# The floor, not the target. It exists so a change that guts a tested module fails loudly;
-# raise it when the number genuinely climbs, never to make a red run green.
+# A floor: raise it when coverage climbs, never lower it to pass.
 fail_under = 70
 show_missing = true

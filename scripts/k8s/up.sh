@@ -31,7 +31,6 @@ if ! minikube_running; then
 fi
 
 # nginx rather than whatever is default: values-minikube.yaml names it, and an Ingress
-# whose class nobody serves stays pending forever without saying why.
 if ! kubectl get ingressclass nginx >/dev/null 2>&1; then
   log "enabling the ingress addon"
   minikube addons enable ingress
@@ -55,8 +54,6 @@ log "helm ${args[*]:0:3}"
 helm "${args[@]}"
 
 # Each Deployment's rollout, not every pod with the release label: a migration Job that
-# failed on an earlier attempt leaves its pods behind in Error, and they are never Ready.
-# Waiting on them times out over a release that is in fact running.
 log "waiting for the rollouts"
 for d in $(kubectl get deploy -l "app.kubernetes.io/instance=mycel" -o name); do
   kubectl rollout status "$d" --timeout=300s \

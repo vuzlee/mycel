@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#
 # Follow one host process: api, worker, ingest or scheduler.
 
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"

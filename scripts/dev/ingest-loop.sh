@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-#
-# The ingest worker, restarted each time it exits. It exits on purpose after
-# ingest_worker_max_jobs documents, because docling keeps native memory it never frees.
-#
-# Capped so a PDF cannot take the machine: INGEST_CPUS cores, INGEST_MEM of RAM, low
-# priority. Over the memory cap the worker is killed, restarted here, and the job retried.
+# The ingest worker, restarted each time it exits.
 
 set -uo pipefail
 

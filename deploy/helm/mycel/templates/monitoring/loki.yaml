@@ -49,8 +49,6 @@ spec:
         app.kubernetes.io/component: loki
       annotations:
         # The hash is of the config VALUES, not of this template file: a template that
-        # includes itself to hash itself recurses until Helm gives up. 057's Deployments
-        # could hash templates/configmap.yaml because that was a different file.
         checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
     spec:
       containers:

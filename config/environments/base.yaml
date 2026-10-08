@@ -1,88 +1,55 @@
-# Non-secret configuration, versioned with the code. A private value is named here and read
-# from the environment — never written down.
-#
-# `dev.yaml` and `prod.yaml`, beside this file, hold only what differs from it.
+# Non-secret config. dev.yaml and prod.yaml hold only what differs; secrets live in .env.
 
 agents:
-  # Fallback for any agent that does not override the key in config/agents/<name>.yaml.
+  # Overridden per agent in config/agents/<name>.yaml.
   defaults:
     model_spec: cloud:claude-sonnet-5
     # The gateway drops it for models that reject sampling parameters (Gemini 3).
     temperature: 0.0
     timeout_s: 60.0
     tool_retries: 3
-    # Transport failures (408, 429, 5xx, dropped connection), retried by the provider's own
-    # client. Counted as attempts after the first, so 0 disables retrying.
+    # Retries by the provider client on transport failures; 0 disables.
     transient_retries: 2
     request_limit: 12
     tool_calls_limit: 20
     repeat_threshold: 2
 
-# Everything a deployment configures that is NOT a key. The rule in one line: what must
-# never reach git lives in `.env`, everything else lives here — and here is better,
-# because a change becomes a commit with a history and a reviewer rather than a silent
-# edit on one machine.
-#
-# These names match `Settings` field for field, in lower case. An environment variable of
-# the same name OVERRIDES any of them: `docker run -e LOG_LEVEL=DEBUG` has to work.
+# `Settings` fields, lower case. An environment variable of the same name overrides each.
 settings:
   log_level: INFO
-  # The team's own zone, as an IANA name. A Jira due date is a bare calendar day, and
-  # "end of that day" only means something in a zone.
+  # IANA zone: a Jira due date is a bare day, and its end depends on the zone.
   timezone: UTC
 
-  # --- Postgres pool, and the two sweeps ---
   db_pool_size: 5
-  # How long a finished answer stays readable: long enough for a caller to come back,
-  # short enough that Redis is never asked to be a database.
   result_ttl_seconds: 3600
-  # Capped so a chatty run cannot fill Redis; a client that falls behind sees a gap in
-  # `seq` and knows it.
+  # A client that falls behind sees a gap in `seq`.
   event_stream_max_events: 1000
-  # Nothing depends on this — expiry is checked on read — but without it `app.session`
-  # only ever grows.
+  # Expiry is checked on read; the sweep only keeps app.session small.
   session_sweep_interval_seconds: 86400
   password_reset_ttl_seconds: 3600
 
-  # --- Where the app is, and what it syncs ---
-  # Both consent rounds redirect back here, so it must match the URI registered with
-  # Google and the callback URL registered with Atlassian.
+  # Must match the OAuth callbacks registered with Google and Atlassian.
   public_base_url: http://localhost:8000
   sync_interval_seconds: 900
-  # Writing to Jira is off until a deployment arms it. On, and the write tools appear on
-  # the analyst for anyone who has connected their own Jira account.
   jira_write_enabled: false
-  # Creating a PROJECT has its own switch, because it is the one write with no way back:
-  # many sites refuse to delete a project over the API and a key is never reusable. Off,
-  # and `manage:jira-project` is not even asked for on the consent screen.
+  # A project cannot be deleted over the API; off also drops the manage:jira-project scope.
   jira_allow_create_project: false
 
-  # --- Models ---
-  # The LiteLLM gateway every model call goes through. Models and keys: config/litellm/.
   litellm_base_url: http://localhost:4000
-  # USD per million tokens, [input, output], by gateway model name. pydantic-ai prices
-  # by the provider's own model id, which a gateway name is not, so the job budget falls
-  # back to this. A model missing here is counted in tokens but not in dollars.
-  # Gemini runs on free-tier keys, so it costs nothing and is not listed.
+  # USD per million tokens [input, output] by gateway name. Unlisted models cost $0.
   model_prices_usd:
     claude-sonnet-5: [2.00, 10.00]
-  # Most one queued job may spend.
   job_ceiling_usd: 0.50
 
-  # --- Search over gold ---
-  # EMPTY DISABLES SEARCH, and that is the switch: `rag_search` is not offered to the
-  # model at all without it, because a tool the model can see is a tool it will call.
+  # Empty disables rag_search.
   qdrant_url: http://localhost:6333
-  # The name is part of the collection name: the dimension belongs to the model, so
-  # changing it means a new collection and a full reindex.
+  # Part of the collection name: changing it means a full reindex.
   embedding_model: BAAI/bge-small-en-v1.5
   embedding_cache_dir: .cache/fastembed
 
-  # --- Notebooks (document RAG) ---
-  # Original files. S3 API; MinIO in compose. Keys live in `.env`.
+  # Documents (Knowledge).
   s3_endpoint_url: http://localhost:9000
   documents_bucket: mycel-documents
-  # A separate model from gold search: 8192-token context, no query prefix.
   document_embedding_model: jinaai/jina-embeddings-v2-small-en
   document_chunk_tokens: 500
   document_table_max_tokens: 1500
@@ -91,38 +58,28 @@ settings:
   documents_per_user: 200
   documents_in_flight_per_user: 5
   document_stuck_seconds: 600
-  # The ingest worker exits after this many documents; docling keeps native memory.
+  # The ingest worker restarts after this many; docling leaks native memory.
   ingest_worker_max_jobs: 20
-  # CPU threads docling may use per document. Its default is 4.
   ingest_threads: 2
-  # Below this top score a question is off topic for the notebook and Gemini is not called.
-  # Measured: answerable 0.805-0.926, off topic 0.67-0.72.
+  # Below this top score no model is called. Measured: answerable 0.805+, off topic 0.72-.
   document_min_score: 0.75
-  # Gemini calls for notebook questions. The free tier is ~20 a day for the whole system.
   ask_top_k: 5
   ask_max_chars: 500
 
-  # --- Mail out ---
-  # Host, sender and login are per deployment and live in `.env` (SMTP_HOST, SMTP_FROM,
-  # SMTP_USERNAME, SMTP_PASSWORD). Without a host, `/auth/forgot` refuses rather than
-  # pretending to send.
+  # Password-reset mail; host and login are in .env.
   smtp_port: 587
   smtp_starttls: true
 
-  # --- Who may register ---
-  # EMPTY MEANS ANYONE CAN REGISTER. Right for a laptop on localhost, wrong the moment
-  # the app is reachable from a company network. The invite code lives in `.env` beside
-  # this, because a code in git is not a code.
+  # Empty means anyone can register; set it once the app is reachable by others.
   registration_allowed_domains: ""
 
-  # --- Observability ---
   otel_enabled: false
   otel_service_name: mycel
-  # Empty means Langfuse, derived from langfuse_base_url. Set it only to divert spans.
+  # Empty means Langfuse at langfuse_base_url.
   otel_exporter_otlp_endpoint: ""
-  # Prompts and answers into the span. REAL USER DATA LEAVES THE MACHINE — dev only.
+  # Puts prompts and answers in spans: user data leaves the machine.
   otel_capture_content: false
   langfuse_base_url: https://cloud.langfuse.com
-  # /metrics has no authentication, so what it binds to is what keeps it private.
+  # /metrics has no auth; the bind address keeps it private.
   metrics_host: 127.0.0.1
   metrics_port: 9100

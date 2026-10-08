@@ -1,5 +1,4 @@
 # Reads stdout from every container and pushes it to Loki.
-# The app printing JSON to stdout is enough — no module needs to know Loki exists.
 
 server:
   http_listen_port: 9080
@@ -18,7 +17,6 @@ scrape_configs:
         target_label: container
     pipeline_stages:
       # App logs are JSON already carrying trace_id — extract it so you can jump
-      # straight from a log line to the trace in Langfuse.
       - json:
           expressions:
             level: level
@@ -27,4 +25,3 @@ scrape_configs:
       - labels:
           level:
       # trace_id is NOT a label: unbounded cardinality would kill Loki's index.
-      # It stays in the log line body, and Grafana still picks it up via a derived field.
