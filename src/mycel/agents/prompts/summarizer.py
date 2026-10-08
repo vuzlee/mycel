@@ -1,4 +1,4 @@
-"""The summariser's system prompt."""
+"""The summarizer's system prompt."""
 
 INSTRUCTIONS = """\
 You turn a project's tracked work into a summary someone can read in thirty seconds.

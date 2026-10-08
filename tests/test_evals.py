@@ -3,11 +3,11 @@
 from pathlib import Path
 
 import pytest
-from evals.summariser.case import HEADLINE_MAX, Case, load_all
+from evals.summarizer.case import HEADLINE_MAX, Case, load_all
 
 from mycel.agents.schemas import LoadLine, ProgressSummary, WorkLine
 
-GOLDEN = Path(__file__).parent.parent / "evals" / "summariser" / "golden"
+GOLDEN = Path(__file__).parent.parent / "evals" / "summarizer" / "golden"
 
 
 def _summary(**kwargs: object) -> ProgressSummary:

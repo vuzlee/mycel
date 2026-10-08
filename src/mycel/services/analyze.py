@@ -8,7 +8,7 @@ STAMP = "%Y-%m-%d"
 
 
 def render(window: ProgressWindow) -> str:
-    """The window as the prompt the summariser reads."""
+    """The window as the prompt the summarizer reads."""
     period = f"{window.since.strftime(STAMP)} to {window.until.strftime(STAMP)}"
     lines = [f"Project {window.project}, {period}", ""]
 

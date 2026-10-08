@@ -7,7 +7,7 @@ from mycel.agents.agent.analyst import Analyst
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.agent.researcher import Researcher
 from mycel.agents.agent.rewriter import Rewriter
-from mycel.agents.agent.summariser import Summariser
+from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
@@ -26,7 +26,7 @@ _DECLARED: tuple[type[BaseAgent[Any]], ...] = (
     Orchestrator,
     Researcher,
     Rewriter,
-    Summariser,
+    Summarizer,
 )
 
 AGENTS: dict[str, type[BaseAgent[Any]]] = {cls.name: cls for cls in _DECLARED}

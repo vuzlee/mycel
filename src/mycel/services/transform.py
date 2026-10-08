@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.logging import get_logger
-from mycel.etl import normalise, promote
+from mycel.etl import normalize, promote
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.repositories.gold import GoldRepository
 from mycel.infra.postgres.repositories.silver import SilverRepository
@@ -32,7 +32,7 @@ async def transform(session: AsyncSession, keys: Sequence[str] | None = None) ->
     items = [
         row
         for row in (
-            normalise.from_jira_issue(payload, _project(payload))
+            normalize.from_jira_issue(payload, _project(payload))
             for payload in await bronze.issue_payloads(keys)
         )
         if row is not None
@@ -41,7 +41,7 @@ async def transform(session: AsyncSession, keys: Sequence[str] | None = None) ->
     worklogs = [
         row
         for row in (
-            normalise.from_jira_worklog(payload, _worklog_project(payload, by_key))
+            normalize.from_jira_worklog(payload, _worklog_project(payload, by_key))
             for payload in await bronze.worklog_payloads(keys)
         )
         if row is not None

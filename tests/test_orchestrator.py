@@ -69,7 +69,7 @@ class TestWiring:
         have.
         """
         toolset = build_toolset()
-        assert set(toolset.tools) == {"researcher", "analyst", "summariser"}
+        assert set(toolset.tools) == {"researcher", "analyst", "summarizer"}
 
     async def test_a_delegated_answer_reaches_the_model_as_text(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -191,7 +191,7 @@ class TestAFailingSpecialist:
                 await agent.run("Find out who.", deps=deps)
 
 
-class TestTheSummariserTool:
+class TestTheSummarizerTool:
     """The one delegated tool that does not forward a question."""
 
     async def test_it_builds_the_prompt_from_the_window_it_was_given(
@@ -224,7 +224,7 @@ class TestTheSummariserTool:
         def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             if len(messages) == 1:
                 return ModelResponse(
-                    parts=[ToolCallPart("summariser", {"project": "MYC", "days": 14})]
+                    parts=[ToolCallPart("summarizer", {"project": "MYC", "days": 14})]
                 )
             return _answer()
 
@@ -233,7 +233,7 @@ class TestTheSummariserTool:
             await agent.run("How is MYC going?", deps=deps)
 
         assert windows == [("MYC", 14)], "the window must be the one the model asked for"
-        assert prompts == ["rendered progress"], "the summariser gets the rendered window"
+        assert prompts == ["rendered progress"], "the summarizer gets the rendered window"
 
     async def test_a_project_the_asker_was_not_granted_is_never_read(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -244,7 +244,7 @@ class TestTheSummariserTool:
         _granted(monkeypatch, "OTHER")
 
         with pytest.raises(ToolFailed) as raised:
-            await _call_summariser(deps, "MYC")
+            await _call_summarizer(deps, "MYC")
 
         assert reached == []
         assert "MYC" in str(raised.value)
@@ -256,7 +256,7 @@ class TestTheSummariserTool:
         _granted(monkeypatch, "OTHER")
 
         with pytest.raises(ToolFailed) as raised:
-            await _call_summariser(deps, "MYC")
+            await _call_summarizer(deps, "MYC")
 
         assert "does not exist or you do not have access" in str(raised.value)
 
@@ -267,7 +267,7 @@ class TestTheSummariserTool:
         _granted(monkeypatch, "MYC")
 
         with pytest.raises(ToolFailed):
-            await _call_summariser(replace(deps, principal=None), "MYC")
+            await _call_summarizer(replace(deps, principal=None), "MYC")
 
 
 def _granted(monkeypatch: pytest.MonkeyPatch, *projects: str) -> None:
@@ -279,7 +279,7 @@ def _granted(monkeypatch: pytest.MonkeyPatch, *projects: str) -> None:
     monkeypatch.setattr("mycel.services.permission.readable_projects", _readable)
 
 
-async def _call_summariser(deps: MycelDeps, project: str) -> str:
+async def _call_summarizer(deps: MycelDeps, project: str) -> str:
     """The tool body, called straight rather than through a model."""
 
     class _Ctx:
@@ -288,5 +288,5 @@ async def _call_summariser(deps: MycelDeps, project: str) -> str:
     ctx = _Ctx()
     ctx.deps = deps  # type: ignore[attr-defined]
     ctx.messages = []  # type: ignore[attr-defined]
-    tool = delegate.build_toolset().tools["summariser"].function
+    tool = delegate.build_toolset().tools["summarizer"].function
     return await tool(ctx, project)

@@ -1,1 +1,1 @@
-"""Quality evals: the summariser golden set and the RAG benchmark."""
+"""Quality evals: the summarizer golden set and the RAG benchmark."""

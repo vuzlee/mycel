@@ -859,7 +859,7 @@ pre .c { color: var(--ink-faint); }
         </div>
       </div>
       <figcaption>
-        Data moves one way, through both hops: <code>etl/normalise.py</code> unwraps bronze into
+        Data moves one way, through both hops: <code>etl/normalize.py</code> unwraps bronze into
         silver, <code>etl/promote.py</code> lifts silver into gold.
         <code>public.alembic_version</code> sits outside the chain — it is alembic's own
         bookkeeping, and a per-layer schema cannot hold it, because the first migration is what
@@ -921,7 +921,7 @@ pre .c { color: var(--ink-faint); }
       <div class="dict-head">
         <span class="dict-name">bronze.jira_issue</span>
         <p>Written by <code>domains/sync.py</code>, read by <code>etl/</code>. The payload goes
-        down before anything is parsed, so whatever the normaliser gets wrong today can be re-run
+        down before anything is parsed, so whatever the normalizer gets wrong today can be re-run
         against this table tomorrow without calling Jira again.</p>
       </div>
 
@@ -1091,7 +1091,7 @@ pre .c { color: var(--ink-faint); }
       <div class="col">
         <span class="col-n">kind</span>
         <span class="col-t">varchar(16)</span>
-        <span class="col-d">The issue type, <b>normalised</b>. Every Jira site names its own
+        <span class="col-d">The issue type, <b>normalized</b>. Every Jira site names its own
         types, so "Story" here and "User Story" there have to become one word before gold.
         <span class="ex">epic · story · task · subtask</span></span>
       </div>
@@ -1288,7 +1288,7 @@ pre .c { color: var(--ink-faint); }
 
     <p class="path-note">
       The accepted values for <code>kind</code> and <code>status_category</code> live in
-      <code>etl/normalise.py</code>. The database itself accepts any string of the right length —
+      <code>etl/normalize.py</code>. The database itself accepts any string of the right length —
       <b>there is no CHECK constraint yet</b>.
     </p>
 
@@ -1480,7 +1480,7 @@ pre .c { color: var(--ink-faint); }
         <tr><td class="who">text</td><td>unbounded string</td>
             <td>Human-written content; no slower than <code>varchar</code> in PostgreSQL</td></tr>
         <tr><td class="who">jsonb</td><td>parsed JSON</td>
-            <td>Queried in place, without deserialising in Python</td></tr>
+            <td>Queried in place, without deserializing in Python</td></tr>
         <tr><td class="who">timestamptz</td><td>instant with offset</td>
             <td>Moving the server does not shift the numbers</td></tr>
       </tbody>

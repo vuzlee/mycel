@@ -53,7 +53,7 @@ const CAPTION: Record<(typeof CATEGORIES)[number], string> = {
  *  the counts happened to arrive in. Anything the site added falls in after these. */
 const PRIORITY_ORDER = ["Highest", "High", "Medium", "Low", "Lowest"];
 
-/** Priority names get a colour by urgency, not by status: a Highest and a late ticket are
+/** Priority names get a color by urgency, not by status: a Highest and a late ticket are
  *  different kinds of alarm and sharing one red would say they were the same. Anything the
  *  site renamed falls through to the neutral tone rather than being dropped. */
 const URGENCY: Record<string, string> = {

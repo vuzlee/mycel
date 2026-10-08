@@ -192,7 +192,7 @@ Migrations alone run as the owner. Both steps happen inside `up`.
 
 ## What you can ask it
 
-- **"How is PROJ doing this sprint?"** — `summariser` returns a verdict (on track · at risk ·
+- **"How is PROJ doing this sprint?"** — `summarizer` returns a verdict (on track · at risk ·
   off track), a headline, then the tables behind them: at risk, in flight, shipped, and
   estimated against spent per person.
 - **"Who logged the most hours on bugs last month?"** — `analyst` writes its own SQL against

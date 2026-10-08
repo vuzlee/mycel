@@ -1,4 +1,4 @@
-"""The summariser, and the prompt it is given."""
+"""The summarizer, and the prompt it is given."""
 
 from dataclasses import replace
 from datetime import UTC, date, datetime
@@ -9,12 +9,12 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from mycel.agents.agent.summariser import Summariser
+from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.schemas import ProgressSummary
-from mycel.etl.normalise import JIRA
+from mycel.etl.normalize import JIRA
 from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS, WorkItemRow
 from mycel.infra.postgres.repositories.gold_stats import AssigneeLoad, DayEffort
 from mycel.llm.budget import JobBudget
@@ -176,11 +176,11 @@ class TestThePrompt:
 
 
 class TestTheConfiguredLimit:
-    """`tool_calls_limit: 0` in `config/agents/summariser.yaml`."""
+    """`tool_calls_limit: 0` in `config/agents/summarizer.yaml`."""
 
     @pytest.fixture
     def configured(self) -> AgentSettings:
-        cfg = replace(AgentSettings.from_config(Summariser.name), model_spec="local:qwen3-4b")
+        cfg = replace(AgentSettings.from_config(Summarizer.name), model_spec="local:qwen3-4b")
         assert cfg.tool_calls_limit == 0, "this test is about the zero"
         return cfg
 
@@ -188,7 +188,7 @@ class TestTheConfiguredLimit:
         deps = MycelDeps(
             job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=configured
         )
-        agent = Summariser.build(configured)
+        agent = Summarizer.build(configured)
         with agent.override(model=FunctionModel(_good)):
             result = await runner.run(agent, render(_window()), deps, configured)
 
@@ -209,7 +209,7 @@ class TestTheConfiguredLimit:
         deps = MycelDeps(
             job_id="job-1", budget=JobBudget("job-1", Decimal("1.00")), settings=configured
         )
-        agent = Summariser.build(configured)
+        agent = Summarizer.build(configured)
         with agent.override(model=FunctionModel(respond)):
             result = await runner.run(agent, render(_window()), deps, configured)
 
@@ -220,7 +220,7 @@ class TestTheConfiguredLimit:
 class TestTheAgent:
     def test_it_has_no_tools(self) -> None:
         """The data is in the prompt."""
-        assert Summariser.toolsets() == []
+        assert Summarizer.toolsets() == []
 
     async def test_it_returns_a_structured_summary(self, deps: MycelDeps) -> None:
         def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -257,7 +257,7 @@ class TestTheAgent:
                 ]
             )
 
-        agent = Summariser.build(LOCAL)
+        agent = Summarizer.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run(render(_window()), deps=deps)
 
@@ -293,7 +293,7 @@ class TestTheAgent:
                 ]
             )
 
-        agent = Summariser.build(LOCAL)
+        agent = Summarizer.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run(render(_window()), deps=deps)
 
@@ -309,7 +309,7 @@ class TestTheAgent:
                 parts=[ToolCallPart("final_result", {"period": "15-21 September 2026"})]
             )
 
-        agent = Summariser.build(LOCAL)
+        agent = Summarizer.build(LOCAL)
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run(render(_window()), deps=deps)
 

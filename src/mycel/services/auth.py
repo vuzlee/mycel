@@ -51,7 +51,7 @@ async def register(
     session: AsyncSession, email: str, password: str, invite_code: str | None = None
 ) -> Principal:
     """Create an account, or raise `AuthError` if it is not allowed."""
-    email = _normalise(email)
+    email = _normalize(email)
     if not EMAIL_SHAPE.fullmatch(email):
         raise AuthError("that is not an email address")
     _check_allowed(email, invite_code)
@@ -69,7 +69,7 @@ async def register(
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> Principal:
     """Check an email and password, or raise `AuthError`."""
-    user = await IdentityRepository(session).user_by_email(_normalise(email))
+    user = await IdentityRepository(session).user_by_email(_normalize(email))
     stored = user.password_hash if user else _hasher.hash("no such user")
 
     try:
@@ -146,7 +146,7 @@ async def change_password(
 
 async def begin_password_reset(session: AsyncSession, email: str) -> None:
     """Send a reset link, if that address has an account."""
-    user = await IdentityRepository(session).user_by_email(_normalise(email))
+    user = await IdentityRepository(session).user_by_email(_normalize(email))
     if user is None:
         return
 
@@ -209,7 +209,7 @@ async def sweep_expired_sessions(session: AsyncSession) -> int:
     return await IdentityRepository(session).delete_expired_sessions(datetime.now(UTC))
 
 
-def _normalise(email: str) -> str:
+def _normalize(email: str) -> str:
     """One address, one spelling. Case and surrounding space are not identity."""
     return email.strip().lower()
 

@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from mycel.etl.checks.work import CheckFailed
-from mycel.etl.normalise import JIRA
+from mycel.etl.normalize import JIRA
 from mycel.infra.postgres.engine import async_dsn, dispose_engine
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.models import Base
@@ -123,7 +123,7 @@ def _worklog(worklog_id: str = "10100", **kw: Any) -> WorklogRow:
 
 
 def _payload(key: str = "MYC-7", **overrides: Any) -> dict[str, Any]:
-    """A search result, trimmed to the fields the normaliser reads."""
+    """A search result, trimmed to the fields the normalizer reads."""
     fields: dict[str, Any] = {
         "summary": "Postgres schemas and alembic migrations",
         "issuetype": {"name": "Story"},
@@ -574,7 +574,7 @@ class TestTheAdvisoryLock:
 
 @needs_postgres
 class TestTheProgressWindow:
-    """What the summariser is given, assembled from gold in one place."""
+    """What the summarizer is given, assembled from gold in one place."""
 
     async def test_it_carries_the_items_and_the_totals(self, session: AsyncSession) -> None:
         await GoldRepository(session).upsert_items(
@@ -619,7 +619,7 @@ class TestTheProgressWindow:
 
 @needs_postgres
 class TestTheDashboard:
-    """The same window the summariser reads, shaped for a screen."""
+    """The same window the summarizer reads, shaped for a screen."""
 
     async def test_it_counts_by_category(self, session: AsyncSession) -> None:
         await GoldRepository(session).upsert_items(
@@ -725,7 +725,7 @@ class TestTheDashboard:
         assert [a.items for a in board.assignees] == [2]
         assert [(e.issue_key, e.items) for e in board.epics] == [("MYC-6", 1)]
 
-    async def test_it_agrees_with_the_summariser_about_the_same_week(
+    async def test_it_agrees_with_the_summarizer_about_the_same_week(
         self, session: AsyncSession
     ) -> None:
         """One code path, so there is nothing for them to disagree over."""

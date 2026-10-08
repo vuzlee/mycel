@@ -16,7 +16,7 @@ class Ranked:
     scores: Sequence[float]
 
 
-def normalise(text: str) -> str:
+def normalize(text: str) -> str:
     """Case, whitespace and soft hyphenation stop mattering."""
     text = re.sub(r"-\s*\n\s*", "", text)
     return " ".join(text.lower().split())
@@ -26,9 +26,9 @@ def first_hit(result: Ranked) -> int | None:
     """1-based rank of the first passage from the right document containing the evidence."""
     if result.evidence is None:
         return None
-    needle = normalise(result.evidence)
+    needle = normalize(result.evidence)
     for rank, (doc, text) in enumerate(result.passages, start=1):
-        if (result.doc is None or doc == result.doc) and needle in normalise(text):
+        if (result.doc is None or doc == result.doc) and needle in normalize(text):
             return rank
     return None
 

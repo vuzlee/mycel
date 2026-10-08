@@ -25,7 +25,7 @@ class TestSniff:
         with pytest.raises(DocumentError):
             sniff("notes.txt", b"# Title")
 
-    def test_a_docx_is_recognised(self) -> None:
+    def test_a_docx_is_recognized(self) -> None:
         import io
         import zipfile
 

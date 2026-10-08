@@ -12,7 +12,7 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from mycel.agents.agent.analyst import Analyst
 from mycel.agents.agent.researcher import Researcher
-from mycel.agents.agent.summariser import Summariser
+from mycel.agents.agent.summarizer import Summarizer
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
@@ -53,11 +53,11 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         """
         return await _delegate(ctx, Analyst, question)
 
-    @toolset.tool(name="summariser")
-    async def _summariser(
+    @toolset.tool(name="summarizer")
+    async def _summarizer(
         ctx: RunContext[MycelDeps], project: str, days: int = DEFAULT_WINDOW_DAYS
     ) -> str:
-        """Summarise a project's recent progress: shipped, in flight, late, load per person.
+        """Summarize a project's recent progress: shipped, in flight, late, load per person.
 
         Args:
             project: The project key, e.g. "PROJ".
@@ -67,7 +67,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         until = datetime.now(UTC)
         async with session_scope() as session:
             window = await gather_progress(session, project, until - timedelta(days=days), until)
-        return await _delegate(ctx, Summariser, render(window))
+        return await _delegate(ctx, Summarizer, render(window))
 
     return toolset
 
@@ -78,7 +78,7 @@ async def _must_read(ctx: RunContext[MycelDeps], project: str) -> None:
         await require(ctx.deps.principal, project)
     except NotReadable as exc:
         log.info("project read refused", extra={"project": project, "job_id": ctx.deps.job_id})
-        raise ToolFailed("summariser", str(exc)) from None
+        raise ToolFailed("summarizer", str(exc)) from None
 
 
 async def _delegate(

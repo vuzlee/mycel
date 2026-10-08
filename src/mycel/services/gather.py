@@ -14,7 +14,7 @@ MAX_ITEMS = 300
 
 @dataclass(frozen=True)
 class ProgressWindow:
-    """Everything the summariser is given about one project over one window."""
+    """Everything the summarizer is given about one project over one window."""
 
     project: str
     since: datetime
@@ -44,7 +44,7 @@ class ProgressWindow:
 async def gather_progress(
     session: AsyncSession, project: str, since: datetime, until: datetime
 ) -> ProgressWindow:
-    """One project's window, as the summariser will see it."""
+    """One project's window, as the summarizer will see it."""
     gold = GoldRepository(session)
     stats = GoldStats(session)
 

@@ -8,7 +8,7 @@ from typing import Any
 
 from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import retrieval
-from evals.rag.metrics import normalise
+from evals.rag.metrics import normalize
 from mycel.agents.agent.orchestrator import Orchestrator
 from mycel.agents.core import runner
 from mycel.agents.core.chips import Chip
@@ -64,7 +64,7 @@ async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> d
     hit_labels = [
         label
         for label, c in labelled.items()
-        if evidence and c.filename == q["doc"] and normalise(str(evidence)) in normalise(c.text)
+        if evidence and c.filename == q["doc"] and normalize(str(evidence)) in normalize(c.text)
     ]
     return {
         **base,
@@ -77,7 +77,7 @@ async def answer_one(q: dict[str, Any], lookup: dict[int, tuple[str, str]]) -> d
     }
 
 
-def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     answerable = [r for r in rows if r["answerable"]]
     unanswerable = [r for r in rows if not r["answerable"]]
     correct = [r for r in answerable if r["answered"] and r["grounded"] and not r.get("dropped")]
@@ -118,7 +118,7 @@ async def main_async(limit: int | None = None) -> int:
         await retrieval.cleanup(len(names))
 
     rows = read_jsonl(STATE)
-    print(json.dumps(summarise(rows), indent=2))
+    print(json.dumps(summarize(rows), indent=2))
     return 0 if len(rows) == len(questions) else 2
 
 

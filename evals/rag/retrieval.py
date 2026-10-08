@@ -33,14 +33,14 @@ def load_questions() -> list[dict[str, object]]:
 
 def check_evidence(questions: list[dict[str, object]], texts: dict[str, str]) -> list[str]:
     """Every label must occur in its parsed document, or the measure is measuring a typo."""
-    from evals.rag.metrics import normalise
+    from evals.rag.metrics import normalize
 
     missing = []
     for q in questions:
         if q.get("answerable") is False:
             continue
         doc, evidence = str(q["doc"]), str(q["evidence"])
-        if normalise(evidence) not in normalise(texts[doc]):
+        if normalize(evidence) not in normalize(texts[doc]):
             missing.append(f"{q['id']}: {evidence!r} not found in {doc}")
     return missing
 

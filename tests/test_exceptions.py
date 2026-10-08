@@ -30,7 +30,7 @@ class TestTranslation:
         with pytest.raises(RunawayStopped):
             _raise(UsageLimitExceeded("request_limit of 3 exceeded"))
 
-    def test_unexpected_behaviour_becomes_validation_failure(self) -> None:
+    def test_unexpected_behavior_becomes_validation_failure(self) -> None:
         with pytest.raises(OutputValidationFailed):
             _raise(UnexpectedModelBehavior("no output"))
 
@@ -53,14 +53,14 @@ class TestTranslation:
 class TestTimeoutDetection:
     """pydantic-ai wraps the SDK's own exception."""
 
-    def test_a_wrapped_timeout_is_recognised(self) -> None:
+    def test_a_wrapped_timeout_is_recognized(self) -> None:
         wrapped = ModelAPIError(model_name="qwen", message="timed out")
         wrapped.__cause__ = httpx2.ReadTimeout("read timed out")
 
         with pytest.raises(ModelTimeout):
             _raise(wrapped)
 
-    def test_a_wrapped_sdk_timeout_is_recognised(self) -> None:
+    def test_a_wrapped_sdk_timeout_is_recognized(self) -> None:
         """Neither provider SDK inherits from the HTTP library's timeout."""
 
         class APITimeoutError(Exception):

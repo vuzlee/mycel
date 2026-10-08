@@ -52,7 +52,7 @@ TOOLS: dict[Chip, frozenset[str]] = {
     Chip.JIRA: frozenset(
         {
             "analyst",
-            "summariser",
+            "summarizer",
             "run_sql",
             "find_jira_user",
             "draft_jira_write",

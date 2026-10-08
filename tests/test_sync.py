@@ -1,4 +1,4 @@
-"""The sync chain: the Jira connector, the normaliser, and the checks that guard gold."""
+"""The sync chain: the Jira connector, the normalizer, and the checks that guard gold."""
 
 import copy
 import json
@@ -11,7 +11,7 @@ import pytest
 
 from mycel.core.config import Settings
 from mycel.etl.checks.work import CheckFailed, check_item, check_items, check_worklog
-from mycel.etl.normalise import JIRA, from_jira_issue, from_jira_worklog
+from mycel.etl.normalize import JIRA, from_jira_issue, from_jira_worklog
 from mycel.etl.promote import to_gold_item, to_gold_worklog
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
 from mycel.services.check import check_work
@@ -408,7 +408,7 @@ class TestHowJiraFails:
             await jira.search_issues(AUTH, "project = MYC")
 
 
-class TestNormalisingAnIssue:
+class TestNormalizingAnIssue:
     def test_an_epic_becomes_a_row(self) -> None:
         row = from_jira_issue(_issue("MYC-6"), PROJECT)
         assert row is not None
@@ -510,7 +510,7 @@ class TestNormalisingAnIssue:
         assert from_jira_issue({"key": "MYC-7"}, PROJECT) is None
 
 
-class TestNormalisingAWorklog:
+class TestNormalizingAWorklog:
     def test_an_entry_becomes_a_row(self) -> None:
         row = from_jira_worklog(RECORDED["worklogs"][0], PROJECT)
         assert row is not None

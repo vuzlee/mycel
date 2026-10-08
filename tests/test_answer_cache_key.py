@@ -21,5 +21,5 @@ class TestKey:
     def test_the_writer_is_part_of_the_key(self) -> None:
         assert _key(1, "v", "w1", "q?") != _key(1, "v", "w2", "q?")
 
-    def test_the_question_is_normalised(self) -> None:
+    def test_the_question_is_normalized(self) -> None:
         assert _key(1, "v", "w", "What is BERT?") == _key(1, "v", "w", "what is bert")

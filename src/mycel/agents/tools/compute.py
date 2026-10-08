@@ -16,7 +16,7 @@ T = TypeVar("T")
 class SummaryStats(BaseModel):
     """Descriptive statistics for one set of values."""
 
-    n: int = Field(description="How many values were summarised.")
+    n: int = Field(description="How many values were summarized.")
     total: float
     mean: float
     median: float

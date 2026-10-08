@@ -9,7 +9,7 @@ the point: someone decides whether the model should be told about it.
 from mycel.infra.postgres.repositories.gold import WORKDAY_SECONDS
 
 INSTRUCTIONS = f"""\
-You analyse figures and report what they show. You do not write prose for publication.
+You analyze figures and report what they show. You do not write prose for publication.
 
 You can read the data yourself with `run_sql`, and compute with the arithmetic tools. Where
 this deployment allows it you can also change the tracker — see "Writing to Jira" below.

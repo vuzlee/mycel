@@ -10,7 +10,7 @@ from mycel.infra.postgres.models import WorkItem, Worklog
 from mycel.infra.postgres.repositories.gold import (
     CATEGORIES,
     PRIORITIES,
-    UNPRIORITISED,
+    UNPRIORITIZED,
     WorkItemRow,
     to_row,
 )
@@ -161,7 +161,7 @@ class GoldStats:
         )
         # Group on the raw column: two `coalesce` calls get separate binds and won't match.
         counted = {
-            (UNPRIORITISED if p is None else str(p)): int(n)
+            (UNPRIORITIZED if p is None else str(p)): int(n)
             for p, n in (await self._session.execute(query)).all()
         }
         # Known priorities first, then any the site added.

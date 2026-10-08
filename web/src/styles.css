@@ -2,7 +2,7 @@
  * One violet hue (272°) carries the whole interface. Everything else — ground, surface,
  * rule, text — is that same hue at very low saturation, so the greys read as belonging to
  * the accent rather than sitting next to it. That is where the "expensive" look comes
- * from: restraint, not more colour.
+ * from: restraint, not more color.
  */
 
 :root {
@@ -37,11 +37,11 @@
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
 
-  /* Jira's status categories, as colours, plus the one state it has no category for.
+  /* Jira's status categories, as colors, plus the one state it has no category for.
      Tokens rather than literals because the dashboard they came from hardcoded a green
      and a red that were invisible in dark mode.
 
-     Chosen against the violet, not against a traffic light. A signal colour only has to
+     Chosen against the violet, not against a traffic light. A signal color only has to
      be *distinct*; nothing makes it have to be the reddest red available, and a page
      built on one low-chroma hue is exactly where a saturated green and a fire-engine red
      look borrowed from another product.
@@ -52,7 +52,7 @@
      the accent's violet for done, magenta-rose for late, and a desaturated lavender-grey
      for not-started. Nothing on the screen is a hue the brand does not already own, and
      the three still separate, because they separate by POSITION ALONG ONE ARC rather than
-     by being unrelated colours. Done gets the accent's own hue on purpose: it is the one
+     by being unrelated colors. Done gets the accent's own hue on purpose: it is the one
      the page is asking you to want. */
   --todo: #8b84a3;
   --doing: #4f5bc7;
@@ -226,7 +226,7 @@ button {
 }
 
 /* Underlines off once, here, rather than in every rule that styles a link. A link in
-   this app is told apart by colour and by where it sits, and an underline under a
+   this app is told apart by color and by where it sits, and an underline under a
    wordmark or a nav row reads as a mistake. */
 a {
   text-decoration: none;
@@ -1402,7 +1402,7 @@ details[open] > summary .chevron {
 }
 
 /* An outcome, not a failure: the account exists and the next step is this form. Stated
-   in the accent rather than the flag colour, which everywhere else means something went
+   in the accent rather than the flag color, which everywhere else means something went
    wrong. */
 .gate .notice {
   margin: 0;
@@ -1657,7 +1657,7 @@ button.primary:disabled {
   background: var(--done);
 }
 
-/* What each segment is. A bar with three colours and no key is a bar the reader guesses
+/* What each segment is. A bar with three colors and no key is a bar the reader guesses
    at, and the guess is usually that the longest one is the important one. */
 .board .lede .legend {
   display: flex;
@@ -2332,7 +2332,7 @@ td[data-status="late"] {
 }
 
 /* The site's own word for the status, not the category: a team that renamed "In Progress"
-   to "Cooking" is told "Cooking", and the category is what gives it its colour. */
+   to "Cooking" is told "Cooking", and the category is what gives it its color. */
 .board .feed .state {
   /* A width, so the heading above it and every pill below line up in one column. Without
      it each pill is as wide as its own word and the column zig-zags. */
@@ -2881,7 +2881,7 @@ and which one is on is stated by the border rather than a dot: the
 /* -------------------------------------------------- the bar */
 
 /* Transparent over the hero and only drawing a rule once the page has moved under it,
-   so the first screen is one field of colour with nothing cutting across it. */
+   so the first screen is one field of color with nothing cutting across it. */
 .home > header {
   position: sticky;
   top: 0;
@@ -2999,7 +2999,7 @@ and which one is on is stated by the border rather than a dot: the
   border-top: 0;
 }
 
-/* Bled past the column to the window edge. It is the only coloured ground on the page:
+/* Bled past the column to the window edge. It is the only colored ground on the page:
    a second one further down would make this one ordinary. */
 .home .lead::before {
   content: "";
@@ -3515,8 +3515,8 @@ and which one is on is stated by the border rather than a dot: the
   color: var(--accent);
 }
 
-/* The status colours, once, for every mark that carries one. Each panel then only says
-   which category a thing is, never what colour that is. */
+/* The status colors, once, for every mark that carries one. Each panel then only says
+   which category a thing is, never what color that is. */
 /* Four steps down the one hue. Green/amber/red would be a second palette on a page that
    has exactly one, and it would shout "alarm" about a sprint that is fine. */
 .panel [data-step="1"] { --mark: var(--accent); }
@@ -3638,7 +3638,7 @@ and which one is on is stated by the border rather than a dot: the
   overflow: hidden;
 }
 
-/* Violet, not a status colour: these are hours, and hours have no category. The tint
+/* Violet, not a status color: these are hours, and hours have no category. The tint
    down the length is what stops four flat bars reading as a stylesheet default. */
 .panel .fill {
   display: block;
@@ -3680,7 +3680,7 @@ and which one is on is stated by the border rather than a dot: the
   gap: 3px;
 }
 
-/* One hue at five strengths. A second colour here would imply a second meaning, and
+/* One hue at five strengths. A second color here would imply a second meaning, and
    there is only one: how much was logged. */
 .panel .cell {
   aspect-ratio: 1;
@@ -3699,7 +3699,7 @@ and which one is on is stated by the border rather than a dot: the
   scale: 1.18;
 }
 
-/* The key, because five shades of one colour mean nothing until you say which end is
+/* The key, because five shades of one color mean nothing until you say which end is
    which — and saying it costs two words. */
 .panel .scale {
   grid-column: 1 / -1;

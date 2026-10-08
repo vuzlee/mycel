@@ -14,10 +14,11 @@ const LABELS: Record<string, string> = {
   // Delegation. A tool that wraps an agent carries that agent's own name.
   researcher: "Asking the researcher",
   analyst: "Asking the analyst",
-  summariser: "Summarising the project",
+  summarizer: "Summarizing the project",
+  summariser: "Summarizing the project", // the name in turns stored before the rename
 
   // Fetching — each one reaches somewhere the model cannot see.
-  run_sql: "Analysing the data",
+  run_sql: "Analyzing the data",
   web_search: "Searching the web",
   read_mail: "Reading the mailbox",
 

@@ -31,7 +31,7 @@ interface Scene {
 const SCENES: Scene[] = [
   {
     question: "How is MYC going this week?",
-    steps: ["summariser"],
+    steps: ["summarizer"],
     answer:
       "**On track.** Nine issues closed and two slipped a day. One to watch: MYC-21 is due Friday and has not started.",
     figures: [
@@ -185,7 +185,7 @@ function tokenise(line: string): Word[] {
   });
 }
 
-/** Honoured live, not only at load: the setting can change while the page is open. */
+/** Honored live, not only at load: the setting can change while the page is open. */
 function usePrefersStill(): boolean {
   const [still, setStill] = useState(
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,

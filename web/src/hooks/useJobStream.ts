@@ -1,7 +1,7 @@
 /**
  * The only place that touches `EventSource`.
  *
- * Three behaviours the scratch page at `/live` proved, and that must not be lost:
+ * Three behaviors the scratch page at `/live` proved, and that must not be lost:
  *
  *  - the browser resends `Last-Event-ID` by itself, so a dropped connection *resumes*
  *    rather than replays. Nothing here reconnects by hand; doing so would break that.

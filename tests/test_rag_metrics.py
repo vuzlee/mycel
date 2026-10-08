@@ -1,6 +1,6 @@
 """Recall@k, MRR and the threshold rule, on hand-built rankings."""
 
-from evals.rag.metrics import Ranked, first_hit, mrr, normalise, recall_at, threshold
+from evals.rag.metrics import Ranked, first_hit, mrr, normalize, recall_at, threshold
 
 
 def ranked(qid: str, evidence: str | None, docs: list[str], scores: list[float]) -> Ranked:
@@ -8,12 +8,12 @@ def ranked(qid: str, evidence: str | None, docs: list[str], scores: list[float])
     return Ranked(qid, evidence, "a.pdf" if evidence else None, passages, scores)
 
 
-class TestNormalise:
+class TestNormalize:
     def test_case_and_whitespace(self) -> None:
-        assert normalise("Masked   Language\nModel") == "masked language model"
+        assert normalize("Masked   Language\nModel") == "masked language model"
 
     def test_a_hyphen_across_a_line_break_is_joined(self) -> None:
-        assert normalise("pre-\ntraining") == "pretraining"
+        assert normalize("pre-\ntraining") == "pretraining"
 
 
 class TestFirstHit:

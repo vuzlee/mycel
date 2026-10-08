@@ -5,13 +5,13 @@ simply worse than the last one.
 
 Two suites:
 
-- **Summariser golden set** in `summariser/`: prompt → what a good summary must contain.
+- **Summarizer golden set** in `summarizer/`: prompt → what a good summary must contain.
 - **RAG benchmark** in `rag/`: does Knowledge document search find, cite and state the right passage.
 
-## Summariser golden set
+## Summarizer golden set
 
 ```
-summariser/
+summarizer/
   case.py      # one case and its checks
   run.py       # runs every case, scores it, saves or compares a baseline
   golden/
@@ -25,7 +25,7 @@ summariser/
 
 Checks are structural: health verdict, at-risk and shipped keys, no invented keys,
 load rows per person, notes for a truncated window.
-`--save-baseline` writes `summariser/baseline.json`; `--compare-baseline` exits 1 if the score drops.
+`--save-baseline` writes `summarizer/baseline.json`; `--compare-baseline` exits 1 if the score drops.
 
 ## RAG benchmark
 
@@ -48,8 +48,8 @@ Run them by hand, and say how many calls before you do.
 | `uv run python -m evals.rag.answers` | ~31 | citation correctness, declining unanswerable |
 | `uv run python -m evals.rag.grade` | ~26 | answer content against the reference |
 | `uv run python -m evals.rag.followups` | 5 | follow-up search: stitched vs rewritten, top-5 hits |
-| `uv run python -m evals.summariser.run --save-baseline` | 6 | summariser golden set, records the score |
-| `uv run python -m evals.summariser.run --compare-baseline` | 6 | same, fails if the score dropped |
+| `uv run python -m evals.summarizer.run --save-baseline` | 6 | summarizer golden set, records the score |
+| `uv run python -m evals.summarizer.run --compare-baseline` | 6 | same, fails if the score dropped |
 
 ## Committed baseline
 
@@ -57,7 +57,7 @@ Run them by hand, and say how many calls before you do.
 |---|---|
 | Date | 2026-10-08 |
 | Commit | after `2662251`: a refusal cites nothing, and a few late items is `at_risk` |
-| Models | `claude-sonnet-5` for answers, grades and the summariser (the grader is the answerer's own model) |
+| Models | `claude-sonnet-5` for answers, grades and the summarizer (the grader is the answerer's own model) |
 | Corpus size | 8 documents, 31 questions (26 answerable, 5 not) |
 | Recall@5 / @10 / @20 | 0.962 / 0.962 / 1.0 |
 | MRR | 0.793 |
@@ -65,4 +65,4 @@ Run them by hand, and say how many calls before you do.
 | Declined | 5/5 |
 | Grades (correct / partly / wrong) | 29 / 1 / 1 (`a01`) |
 | Follow-ups @5 (stitched / rewritten) | 3/5 / 5/5, `gemini-3.5-flash-lite` rewrites (after `b515fec`) |
-| Summariser | 0.976 over 6 cases (one miss: `MYC-62`, far over estimate, left out of `at_risk`), saved to `evals/summariser/baseline.json` |
+| Summarizer | 0.976 over 6 cases (one miss: `MYC-62`, far over estimate, left out of `at_risk`), saved to `evals/summarizer/baseline.json` |

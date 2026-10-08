@@ -371,7 +371,7 @@ not do what it should.</p>
 <h2 data-n="00">What the system actually does</h2>
 
 <p>Nobody fills in a form and nobody learns a convention. People work their board as they
-already do. A scheduled sync pulls in what moved, an ETL normalises it, and two things read
+already do. A scheduled sync pulls in what moved, an ETL normalizes it, and two things read
 the result: a dashboard that counts, and an agent that writes a summary in words. Due dates
 go out to a calendar.</p>
 
@@ -618,7 +618,7 @@ number.</p>
 <h2 data-n="07">Ask for a progress summary</h2>
 
 <p>Ask for one: &ldquo;how is MYC going this week&rdquo;. The orchestrator hands it to the
-<b>summariser</b>, which takes the project key and the window out of your sentence. There
+<b>summarizer</b>, which takes the project key and the window out of your sentence. There
 used to be a form for this, with a project picker and a day count; a sentence
 carries both and does not have to be found first.</p>
 
@@ -693,7 +693,7 @@ offering a button that leads to an error.</p>
 GOOGLE_CLIENT_SECRET=…
 TOKEN_ENCRYPTION_KEY=…</pre>
   <p>In the Google Cloud console: <b>Credentials → Create credentials → OAuth client ID →
-  Web application</b>, and under authorised redirect URIs add exactly your
+  Web application</b>, and under authorized redirect URIs add exactly your
   <code>PUBLIC_BASE_URL</code> followed by <code>/auth/google/callback</code>. Google
   matches that string character for character, and a mismatch is the one error everybody
   hits first. Enable the Google Calendar API for the same project.</p>
@@ -736,7 +736,7 @@ before you can ask it.</p>
 
 <table>
   <tr><th>Ask this</th><th>What answers it</th></tr>
-  <tr><td>&ldquo;how is MYC going this week&rdquo;</td><td>The summariser, on the window
+  <tr><td>&ldquo;how is MYC going this week&rdquo;</td><td>The summarizer, on the window
   you named in the question.</td></tr>
   <tr><td>&ldquo;what is late right now, and who is it with&rdquo;</td><td>The analyst,
   the question the dashboard page used to answer.</td></tr>

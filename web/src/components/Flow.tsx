@@ -10,7 +10,7 @@
  * a figure shown is worth a paragraph promising one.
  *
  * Drawn, not screenshotted: a screenshot is out of date the next time the layout moves
- * and unreadable at this size anyway. Every colour is a token — the four Jira status
+ * and unreadable at this size anyway. Every color is a token — the four Jira status
  * categories and the accent — so the panels are the app's palette, not a chart library's.
  */
 
@@ -41,7 +41,7 @@ const HOURS = [
 
 /** The donut, as four arcs on one circle. `stroke-dasharray` over a fixed circumference
  *  is the whole trick — no path maths, and each arc is one number. */
-/** Four steps down one violet ramp, not four colours. Green/amber/red would be a second
+/** Four steps down one violet ramp, not four colors. Green/amber/red would be a second
  *  palette on a page that has exactly one, and it would say "alarm" about a sprint that
  *  is fine. Depth carries the order instead: closed is solid, late is barely there. */
 const SPLIT = [

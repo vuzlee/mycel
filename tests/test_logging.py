@@ -53,7 +53,7 @@ def test_trace_id_attached_inside_a_span() -> None:
     assert len(out["trace_id"]) == 32
 
 
-def test_unserialisable_extra_does_not_raise() -> None:
+def test_unserializable_extra_does_not_raise() -> None:
     """Logging is not allowed to turn a small problem into a large one."""
     out = _format(_record(obj=object()))
     assert "obj" in out

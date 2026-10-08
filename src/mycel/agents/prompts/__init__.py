@@ -1,9 +1,9 @@
 """System prompts, one module per agent, each exporting `INSTRUCTIONS`.
 
 Kept out of the agent modules because the two change at different rates and for different
-reasons: a prompt is edited constantly, often by someone tuning behaviour rather than
+reasons: a prompt is edited constantly, often by someone tuning behavior rather than
 writing code, while the schema and toolsets beside it barely move. Separated, a prompt
-change is a one-file diff a reviewer can read as a behaviour change — and `evals/` can be
+change is a one-file diff a reviewer can read as a behavior change — and `evals/` can be
 gated on this directory alone.
 
 `<name>.py` matches `config/agents/<name>.yaml` and the registry key, so an agent's name

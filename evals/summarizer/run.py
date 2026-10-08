@@ -1,4 +1,4 @@
-"""Run the summariser golden set and report what it scored."""
+"""Run the summarizer golden set and report what it scored."""
 
 import argparse
 import asyncio
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from evals.common import CEILING_USD
-from evals.summariser.case import Case, Check, load_all
+from evals.summarizer.case import Case, Check, load_all
 from mycel.agents.core.runner import run
 from mycel.agents.registry import build, build_deps
 from mycel.agents.schemas import ProgressSummary
@@ -40,10 +40,10 @@ class Result:
 
 
 async def run_case(case: Case) -> Result:
-    """One case against the real summariser. An error is a zero, never a crash."""
+    """One case against the real summarizer. An error is a zero, never a crash."""
     try:
         summary = await run(
-            build("summariser"),
+            build("summarizer"),
             case.prompt,
             build_deps(job_id=f"eval:{case.name}", ceiling_usd=CEILING_USD),
         )

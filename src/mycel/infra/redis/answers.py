@@ -9,7 +9,7 @@ from mycel.infra.redis.client import get_cache_client
 TTL_SECONDS = 24 * 3600
 
 
-def normalise(question: str) -> str:
+def normalize(question: str) -> str:
     return " ".join(question.lower().split()).rstrip("?.! ")
 
 
@@ -19,7 +19,7 @@ def writer(instructions: str, models: tuple[str, ...]) -> str:
 
 
 def _key(user_id: int, version: str, writer: str, question: str) -> str:
-    digest = hashlib.sha256(normalise(question).encode()).hexdigest()[:32]
+    digest = hashlib.sha256(normalize(question).encode()).hexdigest()[:32]
     return _kv.key("answer", user_id, version, writer, digest)
 
 

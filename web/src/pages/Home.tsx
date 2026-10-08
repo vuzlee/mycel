@@ -119,7 +119,7 @@ export function Home() {
 
       {/* The hero is the only place on the page with a ground of its own. It is one
           wash of the accent behind the fold, which is what makes the rest read as paper
-          — a second coloured band further down would make this one ordinary. */}
+          — a second colored band further down would make this one ordinary. */}
       <section className="lead">
         <span className="eyebrow">
           <span className="ping" aria-hidden />

@@ -14,7 +14,7 @@ spec.loader.exec_module(callbacks)
 
 
 class TestWhichQuota:
-    def test_the_daily_quota_is_recognised(self) -> None:
+    def test_the_daily_quota_is_recognized(self) -> None:
         body = '{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}'
         assert callbacks.is_daily_quota(body)
 

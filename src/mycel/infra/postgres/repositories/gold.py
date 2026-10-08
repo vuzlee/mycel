@@ -17,7 +17,7 @@ CATEGORIES = ("todo", "doing", "done")
 PRIORITIES = ("Highest", "High", "Medium", "Low", "Lowest")
 
 #: Label for items with no priority.
-UNPRIORITISED = "None"
+UNPRIORITIZED = "None"
 
 #: Working seconds in one man-day (Jira's default working day).
 WORKDAY_SECONDS = 8 * 3600

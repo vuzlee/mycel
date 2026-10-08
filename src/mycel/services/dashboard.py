@@ -74,7 +74,7 @@ class Dashboard:
 async def build_dashboard(
     session: AsyncSession, project: str, since: datetime, until: datetime
 ) -> Dashboard:
-    """The whole picture, from the same window the summariser is given."""
+    """The whole picture, from the same window the summarizer is given."""
     window = await gather_progress(session, project, since, until)
     gold = GoldRepository(session)
     stats = GoldStats(session)

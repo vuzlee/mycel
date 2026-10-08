@@ -749,7 +749,7 @@ footer {
           <text x="230" y="320" font-family="var(--mono)" font-size="12.5"
                 fill="var(--silver)">silver</text>
           <text x="230" y="338" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">normalised, deduplicated</text>
+                fill="var(--ink-soft)">normalized, deduplicated</text>
 
           <!-- gold -->
           <rect x="450" y="298" width="200" height="52" rx="2"
@@ -915,7 +915,7 @@ footer {
         <p>The provider's envelope taken off: typed columns, timestamps in UTC, keyed on what
         the source calls the row. Changes when <em>the source</em> changes.</p>
         <dl>
-          <dt>written by</dt><dd>etl/normalise.py</dd>
+          <dt>written by</dt><dd>etl/normalize.py</dd>
           <dt>read by</dt><dd>etl/promote.py</dd>
           <dt>type</dt><dd>typed columns</dd>
         </dl>
@@ -1500,7 +1500,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </div>
       <div class="tree-row" data-tone="gold">
         <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the asker&rsquo;s own Gmail through the Gmail API on their OAuth token (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summariser</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
+        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the asker&rsquo;s own Gmail through the Gmail API on their OAuth token (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summarizer</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
@@ -1512,7 +1512,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </div>
       <div class="tree-row is-epic">
         <span class="tree-path">E2 · Entrypoints</span>
-        <span class="tree-note">The ways in. A route parses and authorises; a service answers inside the request, in SQL. Work that takes seconds is handed to E4.</span>
+        <span class="tree-note">The ways in. A route parses and authorizes; a service answers inside the request, in SQL. Work that takes seconds is handed to E4.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>api/</span>
@@ -2276,12 +2276,12 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
         </tr>
         <tr>
           <td class="who">etl/ — bronze → silver → gold</td>
-          <td>Built — <code>normalise.py</code> and <code>promote.py</code>, driven by
+          <td>Built — <code>normalize.py</code> and <code>promote.py</code>, driven by
             <code>services/transform.py</code> under an advisory lock</td>
         </tr>
         <tr>
           <td class="who">agents/ · chat</td>
-          <td>Built — orchestrator, analyst, researcher (web + mail), summariser; an answer is markdown kept in
+          <td>Built — orchestrator, analyst, researcher (web + mail), summarizer; an answer is markdown kept in
             <code>app.turn</code></td>
         </tr>
         <tr>

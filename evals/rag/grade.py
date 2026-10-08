@@ -71,7 +71,7 @@ async def grade_one(q: dict[str, Any], answer: dict[str, Any]) -> dict[str, Any]
     return {**base, "grade": verdict.grade, "reason": verdict.reason, "model": True}
 
 
-def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     count = Counter(r["grade"] for r in rows)
     total = len(rows)
     return {
@@ -109,7 +109,7 @@ async def main_async(limit: int | None, fresh: bool) -> int:
         print(f"  {row['id']}: {row['grade']} — {row['reason']}")
 
     rows = read_jsonl(STATE)
-    print(json.dumps(summarise(rows), indent=2))
+    print(json.dumps(summarize(rows), indent=2))
     return 0 if len(rows) == len(questions) else 2
 
 

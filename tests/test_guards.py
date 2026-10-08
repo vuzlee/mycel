@@ -33,7 +33,7 @@ class TestFingerprint:
     def test_different_tools_differ(self) -> None:
         assert fingerprint("x", {"a": 1}) != fingerprint("y", {"a": 1})
 
-    def test_unserialisable_value_does_not_raise(self) -> None:
+    def test_unserializable_value_does_not_raise(self) -> None:
         """A guard that crashes is worse than a guard that is occasionally coarse."""
         assert fingerprint("t", {"a": object()})
 

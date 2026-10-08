@@ -5,9 +5,9 @@ from mycel.agents.prompts import load
 from mycel.agents.schemas import ProgressSummary
 
 
-class Summariser(BaseAgent[ProgressSummary]):
+class Summarizer(BaseAgent[ProgressSummary]):
     """Reads a window of progress updates and says what happened in it."""
 
-    name = "summariser"
-    instructions = load("summariser")
+    name = "summarizer"
+    instructions = load("summarizer")
     output_type = ProgressSummary

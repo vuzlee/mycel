@@ -52,13 +52,13 @@ const TOP_GAP = 24;
 
 // One per capability, because these buttons are the capability documentation people
 // actually read — nobody opens the docs before typing a first question. Every screen the
-// app still has its own page for is reachable from here too: progress is the summariser,
+// app still has its own page for is reachable from here too: progress is the summarizer,
 // the dashboard's numbers are the analyst writing its own SQL.
 //
 // The Jira seeds name the reader's own first project, and go when they can read none: a
 // seed for a project they cannot see is a button that answers "no access".
 const jiraSeeds = (project: string): string[] => [
-  `How is ${project} going this week?`, // summariser — the progress summary
+  `How is ${project} going this week?`, // summarizer — the progress summary
   "What is late right now, and who is it with?", // analyst — the dashboard's own question
   "Who logged the most hours this month, and on what?", // analyst, through run_sql
   "Compare hours logged this month with last month.", // analyst — two windows, one query
