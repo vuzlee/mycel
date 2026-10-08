@@ -36,3 +36,31 @@ class TestCheck:
 
         assert out.answer == "A claim."
         assert out.dropped == ["c1"]
+
+
+class TestARefusalCitesNothing:
+    """A refusal listed under sources reads as an answer with evidence."""
+
+    def test_markers_on_a_refusal_are_dropped(self) -> None:
+        out = check(
+            "The documents do not cover this — they describe BackgroundTasks [c1][c2], "
+            "but say nothing about retries.",
+            LABELS,
+        )
+
+        assert out.cited == []
+        assert "[c1]" not in out.answer
+        assert out.dropped == ["c1", "c2"]
+
+    def test_the_usual_wordings_count_as_a_refusal(self) -> None:
+        for text in (
+            "The documents don't cover pricing [c1].",
+            "The provided documents do not contain that [c1].",
+            "The documents cover Qdrant, not Milvus, so they don't cover this [c1].",
+        ):
+            assert check(text, LABELS).cited == [], text
+
+    def test_an_answer_that_mentions_a_gap_later_keeps_its_markers(self) -> None:
+        out = check("BERT masks 15% of tokens [c1]. The documents don't cover ALBERT.", LABELS)
+
+        assert out.cited == ["c1"]

@@ -1,6 +1,10 @@
 """Check an answer's `[cN]` markers against the passages it was given. No model involved.
 
 A marker survives when its label is one of the passages sent. Any other marker is removed.
+
+An answer that opens by saying the documents do not cover the question cites nothing,
+whatever markers it carries: a refusal listed under sources reads as an answer with
+evidence. The prompt asks for this too; the model does not always follow it.
 """
 
 import re
@@ -8,6 +12,15 @@ from collections.abc import Collection
 from dataclasses import dataclass
 
 _MARKER = re.compile(r"\s?\[(c\d+)\]", re.IGNORECASE)
+
+#: The opening of a refusal: "The documents do not cover…", "The documents provided don't
+#: cover…", "The documents cover X, not Y, so they don't cover this". Only the first
+#: sentence is read, so an answer that says "don't cover" further on keeps its markers.
+_DECLINE = re.compile(
+    r"^\W*the (?:provided |uploaded )?documents\b[^.!?\n]*\b(?:do not|don't|does not|doesn't)"
+    r" (?:cover|contain|mention|say|address|include)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,8 +30,15 @@ class Checked:
     dropped: list[str]
 
 
+def declines(text: str) -> bool:
+    """Whether the answer opens by saying the documents do not cover the question."""
+    return bool(_DECLINE.search(text))
+
+
 def check(text: str, labels: Collection[str]) -> Checked:
     """Keep markers whose label was sent, strip the rest. `cited` follows passage order."""
+    if declines(text):
+        labels = ()
     dropped: list[str] = []
 
     def keep_or_drop(match: re.Match[str]) -> str:
