@@ -12,7 +12,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
-from mycel.services.chat import find_turn, request_chat
+from mycel.services.chat import find_own_turn, request_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -86,7 +86,9 @@ async def get_chat(
     user: CurrentUser,
 ) -> ChatResponse:
     """Read what became of a job."""
-    kept = await find_turn(job_id)
+    kept = await find_own_turn(user.id, job_id)
+    if kept is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no job {job_id}")
     result = await results.fetch(job_id)
 
     if result is not None:
@@ -96,25 +98,20 @@ async def get_chat(
             "spent_usd": result.spent_usd,
             "error": result.error,
         }
-    elif kept is not None:
+    else:
         state = {
             "status": _state_of(kept),
             "answer": kept.answer,
             "spent_usd": str(kept.spent_usd) if kept.spent_usd is not None else None,
             "error": kept.error,
         }
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"no job {job_id}: no such run",
-        )
 
     cited = await citations.fetch(job_id)
     sources = cited["sources"] if cited and cited.get("user_id") == user.id else []
     return ChatResponse(
         job_id=job_id,
-        conversation_id=kept.conversation_id if kept else None,
-        question=kept.question if kept else None,
+        conversation_id=kept.conversation_id,
+        question=kept.question,
         sources=sources,
         **state,
     )

@@ -116,3 +116,9 @@ async def find_turn(job_id: str) -> TurnRow | None:
     """The kept record of a run, whatever Redis has since forgotten."""
     async with session_scope() as session:
         return await ConversationRepository(session).turn_by_job_id(job_id)
+
+
+async def find_own_turn(user_id: int, job_id: str) -> TurnRow | None:
+    """The run's record, or None when it is not `user_id`'s."""
+    async with session_scope() as session:
+        return await ConversationRepository(session).owned_turn(user_id, job_id)

@@ -56,20 +56,21 @@ def _stored(
     monkeypatch: pytest.MonkeyPatch,
     result: JobResult | None,
     kept: TurnRow | None = None,
+    owner: int = 1,
 ) -> None:
     """Make everything the route reads answer, with neither Redis nor Postgres here."""
 
     async def fake_fetch(job_id: str) -> JobResult | None:
         return result
 
-    async def fake_find(job_id: str) -> TurnRow | None:
-        return kept
+    async def fake_find(user_id: int, job_id: str) -> TurnRow | None:
+        return kept if user_id == owner else None
 
     async def no_citations(job_id: str) -> dict[str, Any] | None:
         return None
 
     monkeypatch.setattr("mycel.api.routes.chat.results.fetch", fake_fetch)
-    monkeypatch.setattr("mycel.api.routes.chat.find_turn", fake_find)
+    monkeypatch.setattr("mycel.api.routes.chat.find_own_turn", fake_find)
     monkeypatch.setattr("mycel.api.routes.chat.citations.fetch", no_citations)
 
 
@@ -231,6 +232,7 @@ class TestCollectingAnAnswer:
                 answer=KEPT_ANSWER,
                 spent_usd="0.0216",
             ),
+            kept=_kept("job-abc"),
         )
         body = client.get("/chat/job-abc").json()
 
@@ -244,7 +246,7 @@ class TestCollectingAnAnswer:
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A poller must be able to tell "not yet" from "never"."""
-        _stored(monkeypatch, JobResult(job_id="job-abc", status="running"))
+        _stored(monkeypatch, JobResult(job_id="job-abc", status="running"), kept=_kept("job-abc"))
         body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "running"
@@ -253,7 +255,11 @@ class TestCollectingAnAnswer:
     def test_a_failed_job_carries_its_reason(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _stored(monkeypatch, JobResult(job_id="job-abc", status="failed", error="provider 503"))
+        _stored(
+            monkeypatch,
+            JobResult(job_id="job-abc", status="failed", error="provider 503"),
+            kept=_kept("job-abc"),
+        )
         body = client.get("/chat/job-abc").json()
 
         assert body["status"] == "failed"
@@ -262,9 +268,24 @@ class TestCollectingAnAnswer:
     def test_an_unknown_job_is_a_404(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Only a miss in *both* stores is a 404: gone from Redis and never kept."""
-        _stored(monkeypatch, None)
+        """No kept turn is a 404, whatever Redis holds."""
+        _stored(monkeypatch, JobResult(job_id="nope", status="running"))
         assert client.get("/chat/nope").status_code == 404
+
+    def test_another_users_job_is_a_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A job id alone does not open someone else's answer."""
+        _stored(
+            monkeypatch,
+            JobResult(job_id="job-abc", status="done", answer="secret"),
+            kept=_kept("job-abc"),
+            owner=2,
+        )
+        response = client.get("/chat/job-abc")
+
+        assert response.status_code == 404
+        assert "secret" not in response.text
 
     def test_a_dropped_key_falls_back_to_the_kept_row(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -312,6 +333,19 @@ class TestCollectingAnAnswer:
 
         assert body["conversation_id"] == 1
         assert body["question"] == "what happened?"
+
+
+class TestEventStreamOwnership:
+    def test_another_users_stream_is_a_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The stream carries the answer token by token; same rule as the poll."""
+
+        async def not_yours(user_id: int, job_id: str) -> TurnRow | None:
+            return None
+
+        monkeypatch.setattr("mycel.api.routes.events.find_own_turn", not_yours)
+        assert client.get("/chat/job-abc/events").status_code == 404
 
 
 class TestErrorsComeBackAsThemselves:

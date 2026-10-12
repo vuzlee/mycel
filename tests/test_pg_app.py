@@ -48,6 +48,19 @@ class TestATurnKeepsItsToolCalls:
 
 
 @needs_postgres
+class TestATurnBelongsToItsAsker:
+    async def test_only_the_owner_finds_it(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        owner = await repo.create_user("owner@example.com", "x")
+        other = await repo.create_user("other@example.com", "x")
+        thread = await repo.create_conversation(owner.id, "chat", "mine")
+        await repo.upsert_turn(thread.id, "job-own", "q", "done", answer="a")
+
+        assert await repo.owned_turn(owner.id, "job-own") is not None
+        assert await repo.owned_turn(other.id, "job-own") is None
+
+
+@needs_postgres
 class TestForgettingAThread:
     """Delete is the one write in `app` that has to be scoped by hand."""
 

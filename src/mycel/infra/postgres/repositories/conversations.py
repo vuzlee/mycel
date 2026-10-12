@@ -143,6 +143,15 @@ class ConversationRepository:
         row = await self._session.scalar(select(Turn).where(Turn.job_id == job_id))
         return _turn(row) if row else None
 
+    async def owned_turn(self, user_id: int, job_id: str) -> TurnRow | None:
+        """A job's turn, only when it sits in one of `user_id`'s conversations."""
+        row = await self._session.scalar(
+            select(Turn)
+            .join(Conversation, Conversation.id == Turn.conversation_id)
+            .where(Turn.job_id == job_id, Conversation.user_id == user_id)
+        )
+        return _turn(row) if row else None
+
     async def turns_for_conversation(self, conversation_id: int) -> list[TurnRow]:
         """Every turn in a conversation, oldest first."""
         rows = await self._session.scalars(

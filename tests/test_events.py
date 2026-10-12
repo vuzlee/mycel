@@ -339,13 +339,9 @@ async def _collect(
     async def fake_exists(job_id: str) -> bool:
         return stream
 
-    async def fake_find_turn(job_id: str) -> Any:
-        return kept
-
     monkeypatch.setattr(streams, "read", fake_read)
     monkeypatch.setattr(streams, "exists", fake_exists)
-    monkeypatch.setattr(events, "find_turn", fake_find_turn)
-    return [frame async for frame in events._frames(request, "job-1", "0")]
+    return [frame async for frame in events._frames(request, "job-1", "0", kept)]
 
 
 class TestSseFrames:

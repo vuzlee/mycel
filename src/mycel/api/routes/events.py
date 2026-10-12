@@ -2,14 +2,15 @@
 
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Header, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
 from mycel.api.dependencies import CurrentUser
 from mycel.core.logging import get_logger
 from mycel.events.event import RUN_FINISHED, SequencedEvent
+from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import streams
-from mycel.services.chat import find_turn
+from mycel.services.chat import find_own_turn
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -30,22 +31,26 @@ async def stream_events(
     last_event_id: str | None = Header(default=None, alias="Last-Event-ID"),
 ) -> StreamingResponse:
     """Stream the job's events, resuming after `Last-Event-ID` when the client reconnects."""
+    kept = await find_own_turn(user.id, job_id)
+    if kept is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"no job {job_id}")
     return StreamingResponse(
-        _frames(request, job_id, last_event_id or streams.FIRST),
+        _frames(request, job_id, last_event_id or streams.FIRST, kept),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
-async def _frames(request: Request, job_id: str, after: str) -> AsyncIterator[str]:
+async def _frames(
+    request: Request, job_id: str, after: str, kept: TurnRow | None
+) -> AsyncIterator[str]:
     """Yield SSE frames until the client goes away."""
     # A run whose stream is gone has no events left to wait for.
-    kept = await find_turn(job_id) if after == streams.FIRST else None
     if (
         after == streams.FIRST
-        and not await streams.exists(job_id)
         and kept is not None
         and kept.status in FINISHED
+        and not await streams.exists(job_id)
     ):
         done = SequencedEvent(agent="system", type=RUN_FINISHED, seq=0)
         yield f"data: {done.model_dump_json()}\n\n"
