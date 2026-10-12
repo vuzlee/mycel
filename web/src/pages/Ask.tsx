@@ -75,6 +75,14 @@ export function Ask() {
   const [body, setBody] = useState<HTMLElement | null>(null);
 
   const run = useRun(jobId);
+  const followRef = run.follow.ref;
+  const scrollRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      followRef(node);
+      setBody(node);
+    },
+    [followRef],
+  );
 
   // Arriving from the sidebar or a reloaded link: the question is not in this tab's
   // memory, and the stream does not carry it — a stream is tool calls, not the prompt.
@@ -142,12 +150,17 @@ export function Ask() {
   return (
     <Shell
       current={jobId}
-      scrollRef={(node) => {
-        run.follow.ref(node);
-        setBody(node);
-      }}
+      scrollRef={scrollRef}
       aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
-      panel={<Documents open={panel} documents={docs.documents} onClose={() => setPanel(false)} />}
+      panel={
+        <Documents
+          open={panel}
+          documents={docs.documents}
+          loading={docs.loading}
+          failure={docs.error}
+          onClose={() => setPanel(false)}
+        />
+      }
       panelToggle={
         <button
           className="kb-toggle"
@@ -168,7 +181,7 @@ export function Ask() {
           handle={composer}
           chips={chips}
           onChips={setChips}
-          knowledgeLocked={docs.busy}
+          knowledgeLocked={docs.busy || docs.loading || docs.error !== null}
           onAsk={(text) => void ask(text)}
           onDropFiles={(files) => {
             setPanel(true);

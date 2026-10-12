@@ -190,11 +190,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     init.body = JSON.stringify(body);
   }
   const res = await fetch(path, init);
-  if (res.status === 204) {
-    if (!res.ok) throw new Error(await detail(res));
-    return undefined as T;
-  }
-  return json<T>(res);
+  if (res.status === 401) throw new Unauthorized();
+  if (!res.ok) throw new Error(await detail(res));
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 const get = <T>(path: string): Promise<T> => request<T>("GET", path);

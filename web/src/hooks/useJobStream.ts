@@ -102,9 +102,13 @@ const ADRIFT = 120;
 
 export function useFollow(): Follow {
   const node = useRef<HTMLDivElement | null>(null);
+  const stop = useRef<(() => void) | null>(null);
   const [adrift, setAdrift] = useState(false);
 
   const ref = useCallback((element: HTMLDivElement | null) => {
+    if (element === node.current) return;
+    stop.current?.();
+    stop.current = null;
     node.current = element;
     if (!element) return;
 
@@ -116,6 +120,10 @@ export function useFollow(): Follow {
     const grows = new ResizeObserver(read);
     for (const child of Array.from(element.children)) grows.observe(child);
     grows.observe(element);
+    stop.current = () => {
+      element.removeEventListener("scroll", read);
+      grows.disconnect();
+    };
     read();
   }, []);
 

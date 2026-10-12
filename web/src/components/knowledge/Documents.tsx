@@ -40,6 +40,8 @@ export async function sendFiles(files: FileList | File[]): Promise<string[]> {
 interface Props {
   open: boolean;
   documents: DocumentRow[];
+  loading: boolean;
+  failure: string | null;
   onClose: () => void;
 }
 
@@ -85,7 +87,7 @@ function useResize(panel: React.RefObject<HTMLElement>) {
   };
 }
 
-export function Documents({ open, documents, onClose }: Props) {
+export function Documents({ open, documents, loading, failure, onClose }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
   const resize = useResize(panel);
@@ -196,8 +198,16 @@ export function Documents({ open, documents, onClose }: Props) {
         </p>
       )}
 
-      {documents.length === 0 ? (
-        <p className="empty">No documents yet.</p>
+      {failure && (
+        <p className="kb-error" role="alert">
+          {failure}
+        </p>
+      )}
+
+      {loading ? (
+        <p className="empty">Loading…</p>
+      ) : documents.length === 0 ? (
+        <p className="empty">{failure ? "" : "No documents yet."}</p>
       ) : (
         <ul className="kb-list">
           {documents.map((doc) => (

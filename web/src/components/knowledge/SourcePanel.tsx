@@ -27,9 +27,18 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
   const quote = source.quote ?? "";
 
   useEffect(() => {
-    const fail = (e: Error): void => setFailure(e.message);
-    if (isPdf) void fetchSourceUrl(source.document_id).then(setUrl, fail);
-    else void fetchPassage(source.chunk_id).then(setPassage, fail);
+    let current = true;
+    setPassage(null);
+    setUrl(null);
+    setFailure(null);
+    const fail = (e: Error): void => {
+      if (current) setFailure(e.message);
+    };
+    if (isPdf) void fetchSourceUrl(source.document_id).then((u) => current && setUrl(u), fail);
+    else void fetchPassage(source.chunk_id).then((p) => current && setPassage(p), fail);
+    return () => {
+      current = false;
+    };
   }, [isPdf, source.chunk_id, source.document_id]);
 
   const open = async (): Promise<void> => {
