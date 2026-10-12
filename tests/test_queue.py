@@ -5,8 +5,10 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
+import httpx
 import pytest
-from sqlalchemy.exc import IntegrityError
+import redis.exceptions
+from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 
 import mycel.agents.core.runner as runner
 from mycel.agents.core.exceptions import AgentError
@@ -189,6 +191,28 @@ class TestFailures:
         assert [key for _, key in dlx.published] == [topology.RETRY_QUEUE]
         # Acked, not nacked: the copy carries the job onward, so the original must go.
         assert message.acked and not message.nacked
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            redis.exceptions.ConnectionError("redis gone"),
+            redis.exceptions.TimeoutError("redis slow"),
+            OperationalError("SELECT 1", {}, Exception("server closed the connection")),
+            InterfaceError("SELECT 1", {}, Exception("connection is closed")),
+            httpx.ConnectError("refused"),
+            httpx.ReadTimeout("slow"),
+        ],
+    )
+    async def test_a_dropped_store_or_socket_is_retried(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], error: Exception
+    ) -> None:
+        """A blip in Redis, Postgres or an HTTP call is not a reason to give up."""
+        _runs(monkeypatch, error)
+        dlx = FakeExchange()
+
+        await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.RETRY_QUEUE]
 
     async def test_a_transient_failure_is_not_yet_reported_as_failed(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]

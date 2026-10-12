@@ -3,6 +3,10 @@
 python -m mycel.worker [--queue ingest]
 """
 
+import httpx
+import redis.exceptions
+import sqlalchemy.exc
+
 from mycel.agents.core.exceptions import AgentError
 from mycel.domains import chat, ingest
 from mycel.llm.budget import BudgetExceeded
@@ -13,8 +17,16 @@ from mycel.queue.job import Job, JobKind
 #: Never retried: another attempt spends money the job does not have.
 FINAL: tuple[type[Exception], ...] = (BudgetExceeded,)
 
-#: Retried after a delay: a provider 503, a rate limit, a dropped socket.
-TRANSIENT: tuple[type[Exception], ...] = (AgentError, OSError)
+#: Retried after a delay: a provider 503, a rate limit, a dropped socket or store.
+TRANSIENT: tuple[type[Exception], ...] = (
+    AgentError,
+    OSError,
+    redis.exceptions.ConnectionError,
+    redis.exceptions.TimeoutError,
+    sqlalchemy.exc.OperationalError,
+    sqlalchemy.exc.InterfaceError,
+    httpx.TransportError,
+)
 
 
 async def run(job: Job) -> None:
