@@ -31,11 +31,21 @@ from mycel.infra.postgres.engine import dispose_engine
 from mycel.llm.budget import BudgetExceeded
 from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
+from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
 from mycel.services.chat import ConversationNotFound
-from mycel.services.documents import DocumentError
 
 log = get_logger(__name__)
+
+#: What each document refusal means over HTTP.
+DOCUMENT_STATUS: dict[type[document_service.DocumentError], int] = {
+    document_service.DocumentNotFound: 404,
+    document_service.UnsupportedType: 415,
+    document_service.TooLarge: 413,
+    document_service.Unusable: 422,
+    document_service.Conflict: 409,
+    document_service.Busy: 429,
+}
 
 #: Where `web/` lands once built.
 WEB_DIST = REPO_ROOT / "web" / "dist"
@@ -166,9 +176,9 @@ def _install_error_handlers(app: FastAPI) -> None:
         log.warning("agent run failed", extra={"detail": str(exc)})
         return problem(502, "agent_failed", str(exc))
 
-    @app.exception_handler(DocumentError)
-    async def _document(request: Request, exc: DocumentError) -> JSONResponse:
-        return problem(exc.status, "document_refused", exc.message)
+    @app.exception_handler(document_service.DocumentError)
+    async def _document(request: Request, exc: document_service.DocumentError) -> JSONResponse:
+        return problem(DOCUMENT_STATUS.get(type(exc), 400), "document_refused", str(exc))
 
     @app.exception_handler(ConversationNotFound)
     async def _no_conversation(request: Request, exc: ConversationNotFound) -> JSONResponse:

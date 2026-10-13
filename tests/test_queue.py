@@ -12,6 +12,7 @@ from aiormq.exceptions import ChannelNotFoundEntity
 from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 
 import mycel.agents.core.runner as runner
+from mycel import worker
 from mycel.agents.core.exceptions import AgentError
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
@@ -312,6 +313,24 @@ class TestAKindThisWorkerDoesNotKnow:
         await consumer.handle(FakeMessage(body), dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
+    async def test_a_known_kind_with_no_handler_is_parked_not_run_as_chat(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """A kind added to `JobKind` but not to `worker.RUNS`."""
+        ran: list[Job] = []
+
+        async def chat_run(job: Job) -> None:
+            ran.append(job)
+
+        monkeypatch.setattr(chat_domain, "run", chat_run)
+        monkeypatch.delitem(worker.RUNS, JobKind.CHAT)
+        dlx = FakeExchange()
+
+        await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+        assert ran == []
 
 
 class TestAJobThatKillsItsWorker:

@@ -26,16 +26,32 @@ MARKDOWN = "text/markdown"
 
 
 class DocumentError(Exception):
-    """A refusal with an HTTP status and a sentence for the user."""
-
-    def __init__(self, status: int, message: str) -> None:
-        super().__init__(message)
-        self.status = status
-        self.message = message
+    """A refusal, with a sentence for the user. The api maps each kind to a status."""
 
 
-def _not_found() -> DocumentError:
-    return DocumentError(404, "Not found.")
+class DocumentNotFound(DocumentError):
+    def __init__(self) -> None:
+        super().__init__("Not found.")
+
+
+class UnsupportedType(DocumentError):
+    pass
+
+
+class TooLarge(DocumentError):
+    pass
+
+
+class Unusable(DocumentError):
+    """Empty, or nameless: nothing to work with."""
+
+
+class Conflict(DocumentError):
+    """Already there, or no room left."""
+
+
+class Busy(DocumentError):
+    """Too much in flight; the same request works shortly."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +61,7 @@ class Upload:
 
 
 def sniff(filename: str, data: bytes) -> str:
-    """The real type of the file, from its bytes. Raises 415 for anything else."""
+    """The real type of the file, from its bytes. `UnsupportedType` for anything else."""
     kind = filetype.guess(data)
     if kind is not None and kind.mime == PDF:
         return PDF
@@ -58,7 +74,7 @@ def sniff(filename: str, data: bytes) -> str:
             pass
         else:
             return MARKDOWN
-    raise DocumentError(415, "Only PDF, DOCX and Markdown files are supported.")
+    raise UnsupportedType("Only PDF, DOCX and Markdown files are supported.")
 
 
 def max_bytes() -> int:
@@ -74,9 +90,9 @@ async def upload(user_id: int, file: Upload) -> DocumentRow:
     """Check, store the original, record it, queue the ingest job."""
     settings = get_settings()
     if len(file.data) > settings.document_max_bytes:
-        raise DocumentError(413, "Files are limited to 2 MB.")
+        raise TooLarge("Files are limited to 2 MB.")
     if not file.data:
-        raise DocumentError(422, "The file is empty.")
+        raise Unusable("The file is empty.")
     mime = sniff(file.filename, file.data)
     sha = hashlib.sha256(file.data).hexdigest()
     filename = _safe_name(file.filename)
@@ -84,11 +100,11 @@ async def upload(user_id: int, file: Upload) -> DocumentRow:
     async with session_scope() as session:
         repo = DocumentRepository(session)
         if await repo.duplicate(user_id, sha):
-            raise DocumentError(409, "Already uploaded.")
+            raise Conflict("Already uploaded.")
         if await repo.count_documents(user_id) >= settings.documents_per_user:
-            raise DocumentError(409, "You have reached the document limit.")
+            raise Conflict("You have reached the document limit.")
         if await repo.count_in_flight(user_id) >= settings.documents_in_flight_per_user:
-            raise DocumentError(429, "Too many documents are processing. Try again shortly.")
+            raise Busy("Too many documents are processing. Try again shortly.")
         doc = await repo.add_document(user_id, filename, mime, len(file.data), sha)
         await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
         job = await enqueue.stage(session, enqueue.ingest_job(doc.id))
@@ -102,12 +118,12 @@ async def rename(user_id: int, document_id: int, filename: str) -> DocumentRow:
     """A new display name. Search and citations show it at once; nothing is re-processed."""
     name = _safe_name(filename)
     if not name.strip():
-        raise DocumentError(422, "A document needs a name.")
+        raise Unusable("A document needs a name.")
     async with session_scope() as session:
         repo = DocumentRepository(session)
         doc = await repo.owned_document(document_id, user_id)
         if doc is None or doc.status == DELETING:
-            raise _not_found()
+            raise DocumentNotFound()
         await repo.rename(document_id, name)
         updated = await repo.document(document_id)
     assert updated is not None
@@ -121,7 +137,7 @@ async def set_enabled(user_id: int, document_id: int, enabled: bool) -> Document
         repo = DocumentRepository(session)
         doc = await repo.owned_document(document_id, user_id)
         if doc is None or doc.status == DELETING:
-            raise _not_found()
+            raise DocumentNotFound()
         await repo.set_enabled(document_id, enabled)
     await vectors.set_enabled(document_id, enabled)
     async with session_scope() as session:
@@ -137,7 +153,7 @@ async def delete_document(user_id: int, document_id: int) -> None:
         repo = DocumentRepository(session)
         doc = await repo.owned_document(document_id, user_id)
         if doc is None:
-            raise _not_found()
+            raise DocumentNotFound()
         await repo.set_status(document_id, DELETING)
         job = await enqueue.stage(session, enqueue.delete_job(document_id))
     await document_events.changed(user_id)
@@ -148,7 +164,7 @@ async def source_url(user_id: int, document_id: int) -> str:
     async with session_scope() as session:
         doc = await DocumentRepository(session).owned_document(document_id, user_id)
     if doc is None or doc.status == DELETING:
-        raise _not_found()
+        raise DocumentNotFound()
     return await presign(buckets.documents(), doc.object_key)
 
 
@@ -156,7 +172,7 @@ async def chunk(user_id: int, chunk_id: int) -> ChunkRow:
     async with session_scope() as session:
         found = await DocumentRepository(session).readable_chunks([chunk_id], user_id)
     if not found:
-        raise _not_found()
+        raise DocumentNotFound()
     return found[0]
 
 
