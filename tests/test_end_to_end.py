@@ -175,5 +175,5 @@ async def _purge_queues() -> None:
     """Leftovers from an earlier run would be consumed by this one's worker."""
     async with channel() as ch:
         topo = await topology.declare(ch)
-        for queue in (topo.jobs, topo.retry, topo.dead):
+        for queue in (topo.jobs, *topo.retries, topo.dead):
             await queue.purge()

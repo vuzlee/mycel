@@ -45,6 +45,6 @@ class TestRouting:
         assert queue_for(Job(kind=JobKind.CHAT, payload={})) == topology.QUEUE
 
     def test_each_queue_retries_into_its_own_family(self) -> None:
-        assert topology.retry_queue_for(topology.INGEST_QUEUE) == topology.INGEST_RETRY_QUEUE
+        assert topology.retry_queue_for(topology.INGEST_QUEUE) == "ingest.retry.5s"
         assert topology.dead_queue_for(topology.INGEST_QUEUE) == topology.INGEST_DEAD_QUEUE
-        assert topology.retry_queue_for(topology.QUEUE) == topology.RETRY_QUEUE
+        assert topology.retry_queue_for(topology.QUEUE) == "jobs.retry.5s"

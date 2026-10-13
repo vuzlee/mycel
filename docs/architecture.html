@@ -1279,7 +1279,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
                 stroke="var(--bronze)" stroke-width="1.2" fill="none"
                 color="var(--bronze)" marker-end="url(#lc-ar)"/>
           <text x="420" y="145" font-family="var(--mono)" font-size="9.5"
-                fill="var(--bronze)" text-anchor="start">failure &#8594; jobs.retry (TTL, then back)</text>
+                fill="var(--bronze)" text-anchor="start">failure &#8594; jobs.retry.5s / 30s / 2m (TTL, then back)</text>
 
           <path d="M 238 130 L 238 174"
                 stroke="var(--bronze)" stroke-width="1.2" stroke-dasharray="3 3"
@@ -1580,7 +1580,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>queue/</span>
-        <span class="tree-note">The job layer <em>on top of</em> RabbitMQ (the broker runs outside). A task queue, not an ordered log, so retry and dead-lettering are broker features: <code>mycel.jobs</code> → <code>jobs</code>, dead-lettering to <code>mycel.jobs.dlx</code> → <code>jobs.retry</code> (TTL, then back) and <code>jobs.dlq</code> (nothing consumes it). Ack after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
+        <span class="tree-note">The job layer <em>on top of</em> RabbitMQ (the broker runs outside). A task queue, not an ordered log, so retry and dead-lettering are broker features: <code>mycel.jobs</code> → <code>jobs</code>, dead-lettering to <code>mycel.jobs.dlx</code> → <code>jobs.retry.5s</code>, <code>.30s</code>, <code>.2m</code> (TTL, then back) and <code>jobs.dlq</code> (nothing consumes it). Ack after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>events/</span>

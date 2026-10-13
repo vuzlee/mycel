@@ -1,4 +1,4 @@
-"""Retry through a TTL queue, then a dead-letter queue, counted in our own header."""
+"""Retry through TTL queues that wait longer each time, then a dead-letter queue."""
 
 from aio_pika import DeliveryMode, Message
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
@@ -37,7 +37,7 @@ async def reject(
     attempt = attempt_of(message) + 1
     dead = give_up or exhausted(message)
     origin = getattr(message, "routing_key", None) or topology.QUEUE
-    target = topology.dead_queue_for(origin) if dead else topology.retry_queue_for(origin)
+    target = topology.dead_queue_for(origin) if dead else topology.retry_queue_for(origin, attempt)
 
     headers = dict(message.headers or {})
     headers[ATTEMPT_HEADER] = topology.MAX_ATTEMPTS if dead else attempt

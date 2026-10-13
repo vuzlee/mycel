@@ -5,11 +5,15 @@ from dataclasses import dataclass
 from aio_pika import ExchangeType
 from aio_pika.abc import AbstractChannel, AbstractExchange, AbstractQueue
 
-#: Delay before a failed job returns to its work queue.
-RETRY_DELAY_MS = 60_000
+#: Delay before retry n (1-based) returns a failed job to its work queue.
+RETRY_DELAYS_MS = (5_000, 30_000, 120_000)
 
-#: Retries before a job is parked in the dead-letter queue.
-MAX_ATTEMPTS = 3
+#: The first try plus one retry per delay; then the dead-letter queue.
+MAX_ATTEMPTS = 1 + len(RETRY_DELAYS_MS)
+
+#: The single 60 s retry queue before batch 078. Still declared so jobs parked in it at
+#: deploy return; nothing publishes to it any more.
+LEGACY_DELAY_MS = 60_000
 
 EXCHANGE = "mycel.jobs"
 DLX = "mycel.jobs.dlx"
@@ -24,8 +28,16 @@ INGEST_RETRY_QUEUE = "ingest.retry"
 INGEST_DEAD_QUEUE = "ingest.dlq"
 
 
-def retry_queue_for(queue: str) -> str:
-    return INGEST_RETRY_QUEUE if queue == INGEST_QUEUE else RETRY_QUEUE
+def retry_queue_for(queue: str, attempt: int = 1) -> str:
+    """Where retry `attempt` waits: one queue per delay, so each has a single TTL."""
+    base = INGEST_RETRY_QUEUE if queue == INGEST_QUEUE else RETRY_QUEUE
+    delay = RETRY_DELAYS_MS[min(max(attempt, 1), len(RETRY_DELAYS_MS)) - 1]
+    return f"{base}.{_label(delay)}"
+
+
+def _label(delay_ms: int) -> str:
+    seconds = delay_ms // 1000
+    return f"{seconds // 60}m" if seconds % 60 == 0 else f"{seconds}s"
 
 
 def dead_queue_for(queue: str) -> str:
@@ -39,7 +51,8 @@ class Topology:
     exchange: AbstractExchange
     dlx: AbstractExchange
     jobs: AbstractQueue
-    retry: AbstractQueue
+    #: Every delay queue of `jobs`, shortest first.
+    retries: tuple[AbstractQueue, ...]
     dead: AbstractQueue
     ingest: AbstractQueue
 
@@ -48,11 +61,13 @@ async def declare(channel: AbstractChannel) -> Topology:
     """Declare everything durably and idempotently, and return the bound objects."""
     exchange = await channel.declare_exchange(EXCHANGE, ExchangeType.DIRECT, durable=True)
     dlx = await channel.declare_exchange(DLX, ExchangeType.DIRECT, durable=True)
-    jobs, retry, dead = await _family(channel, exchange, dlx, QUEUE, RETRY_QUEUE, DEAD_QUEUE)
+    jobs, retries, dead = await _family(channel, exchange, dlx, QUEUE, RETRY_QUEUE, DEAD_QUEUE)
     ingest, _, _ = await _family(
         channel, exchange, dlx, INGEST_QUEUE, INGEST_RETRY_QUEUE, INGEST_DEAD_QUEUE
     )
-    return Topology(exchange=exchange, dlx=dlx, jobs=jobs, retry=retry, dead=dead, ingest=ingest)
+    return Topology(
+        exchange=exchange, dlx=dlx, jobs=jobs, retries=retries, dead=dead, ingest=ingest
+    )
 
 
 async def _family(
@@ -62,8 +77,8 @@ async def _family(
     name: str,
     retry_name: str,
     dead_name: str,
-) -> tuple[AbstractQueue, AbstractQueue, AbstractQueue]:
-    """One work queue, its delayed-retry queue, and its dead-letter queue."""
+) -> tuple[AbstractQueue, tuple[AbstractQueue, ...], AbstractQueue]:
+    """One work queue, its delay queues, and its dead-letter queue."""
     work = await channel.declare_queue(
         name,
         durable=True,
@@ -71,17 +86,33 @@ async def _family(
     )
     await work.bind(exchange, routing_key=name)
 
-    retry = await channel.declare_queue(
-        retry_name,
-        durable=True,
-        arguments={
-            "x-message-ttl": RETRY_DELAY_MS,
-            "x-dead-letter-exchange": EXCHANGE,
-            "x-dead-letter-routing-key": name,
-        },
+    # The work queue's own dead-letter key still names this queue; a queue's arguments
+    # cannot change in place, so it stays, and only a broker-side reject lands here.
+    await _delay(channel, dlx, name, retry_name, LEGACY_DELAY_MS)
+    retries = tuple(
+        [
+            await _delay(channel, dlx, name, f"{retry_name}.{_label(delay)}", delay)
+            for delay in RETRY_DELAYS_MS
+        ]
     )
-    await retry.bind(dlx, routing_key=retry_name)
 
     dead = await channel.declare_queue(dead_name, durable=True)
     await dead.bind(dlx, routing_key=dead_name)
-    return work, retry, dead
+    return work, retries, dead
+
+
+async def _delay(
+    channel: AbstractChannel, dlx: AbstractExchange, work: str, name: str, delay_ms: int
+) -> AbstractQueue:
+    """A queue nobody consumes: each message waits `delay_ms`, then dead-letters to `work`."""
+    queue = await channel.declare_queue(
+        name,
+        durable=True,
+        arguments={
+            "x-message-ttl": delay_ms,
+            "x-dead-letter-exchange": EXCHANGE,
+            "x-dead-letter-routing-key": work,
+        },
+    )
+    await queue.bind(dlx, routing_key=name)
+    return queue

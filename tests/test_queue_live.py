@@ -1,5 +1,6 @@
 """The queue against a real broker — the half `test_queue.py` cannot prove."""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
 
@@ -24,7 +25,7 @@ async def live() -> AsyncIterator[AbstractChannel]:
     """A channel with the topology declared, and all three queues emptied first."""
     async with channel() as ch:
         topo = await topology.declare(ch)
-        for queue in (topo.jobs, topo.retry, topo.dead):
+        for queue in (topo.jobs, *topo.retries, topo.dead):
             await queue.purge()
         yield ch
     await close_connection()
@@ -41,7 +42,11 @@ class TestTopology:
         again = await topology.declare(live)
 
         assert again.jobs.name == topology.QUEUE
-        assert again.retry.name == topology.RETRY_QUEUE
+        assert [q.name for q in again.retries] == [
+            "jobs.retry.5s",
+            "jobs.retry.30s",
+            "jobs.retry.2m",
+        ]
         assert again.dead.name == topology.DEAD_QUEUE
 
 
@@ -97,7 +102,7 @@ class TestRejecting:
 
         await retry.reject(incoming, topo.dlx, reason="provider said 503")
 
-        held = await topo.retry.get(timeout=5)
+        held = await topo.retries[0].get(timeout=5)
         assert held is not None
         assert held.headers[retry.ATTEMPT_HEADER] == 1
         assert held.headers["mycel-error"] == "provider said 503"
@@ -117,6 +122,26 @@ class TestRejecting:
         assert parked.headers[retry.ATTEMPT_HEADER] == topology.MAX_ATTEMPTS
         await parked.ack()
 
+    async def test_the_first_retry_comes_back_after_its_delay(self, live: AbstractChannel) -> None:
+        """The broker, not our code, moves it back: TTL, then dead-letter to `jobs`."""
+        topo = await topology.declare(live)
+        job = _job()
+        await publish(job)
+        message = await topo.jobs.get(timeout=5)
+        assert message is not None
+        await retry.reject(message, topo.dlx, reason="503")
+
+        back = None
+        for _ in range(40):
+            back = await topo.jobs.get(fail=False)
+            if back is not None:
+                break
+            await asyncio.sleep(0.25)
+        assert back is not None, "not back within 10 s of a 5 s delay"
+        assert back.message_id == job.job_id
+        assert back.headers[retry.ATTEMPT_HEADER] == 1
+        await back.ack()
+
     async def test_the_last_attempt_goes_to_the_dead_letter_queue(
         self, live: AbstractChannel
     ) -> None:
@@ -126,17 +151,14 @@ class TestRejecting:
 
         message = await topo.jobs.get(timeout=5)
         assert message is not None
-        await retry.reject(message, topo.dlx, reason="first")
+        await retry.reject(message, topo.dlx, reason="try 1")
 
-        held = await topo.retry.get(timeout=5)
-        assert held is not None
-        assert not retry.exhausted(held)
-        await retry.reject(held, topo.dlx, reason="second")
-
-        again = await topo.retry.get(timeout=5)
-        assert again is not None
-        assert retry.exhausted(again)
-        await retry.reject(again, topo.dlx, reason="third")
+        # Each retry waits in the next, longer delay queue; taken before its TTL runs out.
+        for n, queue in enumerate(topo.retries, start=2):
+            held = await queue.get(timeout=5)
+            assert held is not None
+            assert retry.exhausted(held) is (n == topology.MAX_ATTEMPTS)
+            await retry.reject(held, topo.dlx, reason=f"try {n}")
 
         parked = await topo.dead.get(timeout=5)
         assert parked is not None

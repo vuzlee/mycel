@@ -190,7 +190,7 @@ class TestFailures:
 
         await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
-        assert [key for _, key in dlx.published] == [topology.RETRY_QUEUE]
+        assert [key for _, key in dlx.published] == ["jobs.retry.5s"]
         # Acked, not nacked: the copy carries the job onward, so the original must go.
         assert message.acked and not message.nacked
 
@@ -214,7 +214,7 @@ class TestFailures:
 
         await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
 
-        assert [key for _, key in dlx.published] == [topology.RETRY_QUEUE]
+        assert [key for _, key in dlx.published] == ["jobs.retry.5s"]
 
     async def test_a_transient_failure_is_not_yet_reported_as_failed(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
@@ -376,6 +376,21 @@ class TestAttemptCounting:
         assert retry.attempt_of(message) == 2  # type: ignore[arg-type]
         assert retry.exhausted(message) is (3 >= topology.MAX_ATTEMPTS)  # type: ignore[arg-type]
 
+    @pytest.mark.parametrize(
+        ("attempt", "queue"), [(0, "jobs.retry.5s"), (1, "jobs.retry.30s"), (2, "jobs.retry.2m")]
+    )
+    async def test_each_retry_waits_longer(self, attempt: int, queue: str) -> None:
+        dlx = FakeExchange()
+        message = FakeMessage(b"{}", {retry.ATTEMPT_HEADER: attempt})
+        await retry.reject(message, dlx, reason="503")  # type: ignore[arg-type]
+        assert [key for _, key in dlx.published] == [queue]
+
+    async def test_after_the_last_delay_it_is_parked(self) -> None:
+        dlx = FakeExchange()
+        message = FakeMessage(b"{}", {retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS - 1})
+        await retry.reject(message, dlx, reason="503")  # type: ignore[arg-type]
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
     async def test_republishing_increments_it(self) -> None:
         dlx = FakeExchange()
         message = FakeMessage(b"{}", {retry.ATTEMPT_HEADER: 0})
@@ -499,7 +514,7 @@ class TestIngestJobs:
 
         await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
 
-        assert [key for _, key in dlx.published] == [topology.INGEST_RETRY_QUEUE]
+        assert [key for _, key in dlx.published] == ["ingest.retry.5s"]
         assert failed == []
 
     @pytest.mark.parametrize("status", ["ready", "failed", "deleting"])
