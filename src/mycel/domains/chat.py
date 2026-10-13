@@ -1,6 +1,6 @@
 """The chat domain: ask something, and let a worker answer it."""
 
-from dataclasses import replace
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
@@ -12,12 +12,17 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
-from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
-from mycel.events.channel import EventChannel, NullChannel, RecordingChannel
+from mycel.domains.chat_knowledge import (
+    answer_without_model,
+    cache_writer,
+    cite,
+    search_query,
+)
+from mycel.events.channel import EventChannel, RecordingChannel
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
 )
@@ -29,134 +34,115 @@ from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
 from mycel.services import knowledge
 from mycel.services.chat import find_turn
-from mycel.services.citations import check
 
 log = get_logger(__name__)
 
 
+@dataclass
+class _Turn:
+    """One attempt at one question, as the steps below pass it along."""
+
+    job: Job
+    question: str
+    history: str
+    principal: Principal
+    chips: frozenset[Chip] | None
+    settings: AgentSettings
+    recorder: RecordingChannel
+    deps: MycelDeps
+    found: knowledge.Retrieved | None = None
+
+
 async def run(job: Job) -> None:
     """Answer the job's question and record it. Raises; the consumer decides on retry."""
+    turn = await _prepare(job)
+    if turn is None or await _ground(turn):
+        return
+    answer = await _ask(turn)
+    await _settle(turn, answer)
+
+
+async def _prepare(job: Job) -> "_Turn | None":
+    """Who asked, with which sources and budget; `None` when the job is already answered."""
     question = str(job.payload.get("question", "")).strip()
     if not question:
         raise ValueError("chat job has no question")
     done = await find_turn(job.job_id)
     if done is not None and done.status == "done":
         log.info("chat job already answered", extra={"job_id": job.job_id})
-        return
-    history = str(job.payload.get("history", "")).strip()
+        return None
     principal = await _who_asked(job)
     chips = parse_chips(job.payload.get("chips"))
-
     settings = AgentSettings.from_config(Orchestrator.name)
     recorder = RecordingChannel(RedisEventChannel(job.job_id))
-    deps = await _deps(job, settings, recorder, principal, chips)
-
-    found: knowledge.Retrieved | None = None
-    if chips is not None and Chip.KNOWLEDGE in chips:
-        query = await _search_query(job, question, deps)
-        found = await knowledge.retrieve(principal.id, query)
-        if await _answer_without_model(job, question, principal.id, chips, found):
-            await budgets.save(deps.budget)
-            return
-
-    prompt = f"{history}\n\nThe question now:\n{question}" if history else question
-    if found is not None and found.labelled:
-        prompt = f"{knowledge.render(found.labelled)}\n\n{prompt}"
-
-    _log_start(job, settings, deps)
-    try:
-        answer = await runner.run(Orchestrator.build(settings), prompt, deps)
-    finally:
-        await budgets.save(deps.budget)
-
-    if recorder.dropped:
-        log.warning(
-            "tool calls past the ceiling were not kept",
-            extra={"job_id": job.job_id, "dropped": recorder.dropped},
-        )
-    sources: list[dict[str, Any]] = []
-    if found is not None:
-        answer, sources = _cite(job, answer, found)
-        if chips == frozenset({Chip.KNOWLEDGE}):
-            await answers.put(
-                principal.id,
-                found.version,
-                _answer_cache_writer(settings),
-                found.query,
-                {"answer": answer, "sources": sources},
-            )
-    await citations.store(job.job_id, principal.id, sources)
-    await _finish(job, answer, question, deps.budget.spent_usd, recorder.steps, sources)
-    log.info(
-        "job finished",
-        extra={
-            "job_id": job.job_id,
-            "chars": len(answer),
-            "spent_usd": str(deps.budget.spent_usd),
-        },
+    return _Turn(
+        job=job,
+        question=question,
+        history=str(job.payload.get("history", "")).strip(),
+        principal=principal,
+        chips=chips,
+        settings=settings,
+        recorder=recorder,
+        deps=await _deps(job, settings, recorder, principal, chips),
     )
 
 
-async def _search_query(job: Job, question: str, deps: MycelDeps) -> str:
-    """The follow-up rewritten to stand alone; the stitched text if the rewrite fails."""
-    previous = str(job.payload.get("previous", "")).strip()
-    context = str(job.payload.get("context", "")).strip()
-    stitched = knowledge.search_text(question, previous[: get_settings().ask_max_chars])
-    if not context:
-        return stitched
-    settings = AgentSettings.from_config(Rewriter.name)
-    rewrite_deps = replace(deps, settings=settings, events=NullChannel())
-    prompt = f"{context}\n\nThe question now:\n{question}"
-    try:
-        rewritten = await runner.run(Rewriter.build(settings), prompt, rewrite_deps)
-    except Exception as exc:
-        log.warning("rewrite failed", extra={"job_id": job.job_id, "error": str(exc)})
-        return stitched
-    rewritten = rewritten.strip()[: get_settings().ask_max_chars]
-    return rewritten or stitched
-
-
-async def _answer_without_model(
-    job: Job,
-    question: str,
-    user_id: int,
-    chips: frozenset[Chip],
-    found: knowledge.Retrieved,
-) -> bool:
-    """A Knowledge-only turn the documents settle alone: busy, nothing found, or cached."""
-    if chips != frozenset({Chip.KNOWLEDGE}):
+async def _ground(turn: _Turn) -> bool:
+    """Knowledge only: find passages; True when they settle the turn without a model."""
+    if turn.chips is None or Chip.KNOWLEDGE not in turn.chips:
         return False
-    if found.busy:
-        text, sources = knowledge.BUSY, list[dict[str, Any]]()
-    elif not found.labelled:
-        text, sources = knowledge.NOT_FOUND, []
-    else:
-        settings = AgentSettings.from_config(Orchestrator.name)
-        cached = await answers.get(
-            user_id, found.version, _answer_cache_writer(settings), found.query
-        )
-        if cached is None:
-            return False
-        text, sources = cached["answer"], cached["sources"]
-    await citations.store(job.job_id, user_id, sources)
-    await _finish(job, text, question, Decimal("0"), [], sources)
+    query = await search_query(turn.job, turn.question, turn.deps)
+    turn.found = await knowledge.retrieve(turn.principal.id, query)
+    settled = await answer_without_model(turn.principal.id, turn.chips, turn.found)
+    if settled is None:
+        return False
+    text, sources = settled
+    await citations.store(turn.job.job_id, turn.principal.id, sources)
+    await _finish(turn.job, text, turn.question, Decimal("0"), [], sources)
+    await budgets.save(turn.deps.budget)
     return True
 
 
-def _answer_cache_writer(settings: AgentSettings) -> str:
-    """What a cached Knowledge answer depends on besides the documents: prompt and models."""
-    return answers.writer(
-        Orchestrator.instructions, (settings.model_spec, *settings.fallback_specs)
+async def _ask(turn: _Turn) -> str:
+    """The orchestrator's answer; what it spent is saved even when it raises."""
+    prompt = (
+        f"{turn.history}\n\nThe question now:\n{turn.question}" if turn.history else turn.question
     )
+    if turn.found is not None and turn.found.labelled:
+        prompt = f"{knowledge.render(turn.found.labelled)}\n\n{prompt}"
+    _log_start(turn.job, turn.settings, turn.deps)
+    try:
+        return await runner.run(Orchestrator.build(turn.settings), prompt, turn.deps)
+    finally:
+        await budgets.save(turn.deps.budget)
 
 
-def _cite(job: Job, answer: str, found: knowledge.Retrieved) -> tuple[str, list[dict[str, Any]]]:
-    """Strip markers for passages not sent; the rest become the turn's sources."""
-    checked = check(answer, list(found.labelled))
-    if checked.dropped:
-        log.warning("citations dropped", extra={"job_id": job.job_id, "dropped": checked.dropped})
-    sources = [knowledge.source(label, found.labelled[label]) for label in checked.cited]
-    return checked.answer, sources
+async def _settle(turn: _Turn, answer: str) -> None:
+    """Cite, cache, and write the finished turn where it is polled and where it is kept."""
+    job, found = turn.job, turn.found
+    if turn.recorder.dropped:
+        log.warning(
+            "tool calls past the ceiling were not kept",
+            extra={"job_id": job.job_id, "dropped": turn.recorder.dropped},
+        )
+    sources: list[dict[str, Any]] = []
+    if found is not None:
+        answer, sources = cite(job, answer, found)
+        if turn.chips == frozenset({Chip.KNOWLEDGE}):
+            await answers.put(
+                turn.principal.id,
+                found.version,
+                cache_writer(turn.settings),
+                found.query,
+                {"answer": answer, "sources": sources},
+            )
+    spent = turn.deps.budget.spent_usd
+    await citations.store(job.job_id, turn.principal.id, sources)
+    await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources)
+    log.info(
+        "job finished",
+        extra={"job_id": job.job_id, "chars": len(answer), "spent_usd": str(spent)},
+    )
 
 
 async def record_failure(job: Job, error: str) -> None:
