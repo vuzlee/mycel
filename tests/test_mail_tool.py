@@ -15,8 +15,8 @@ from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools import mail as mail_tool
 from mycel.agents.tools.limits import MAX_HOURS
 from mycel.agents.tools.mail import CONNECT, MAX_MESSAGES, build_toolset
+from mycel.core.principal import Principal
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 from mycel.services.google_oauth import NotConnected
 from mycel.sources import gmail
 

@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 
-from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
+from mycel.core.chips import Chip
+from mycel.core.principal import Principal
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 
 
 @dataclass

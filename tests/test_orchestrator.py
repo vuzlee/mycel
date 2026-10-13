@@ -17,8 +17,8 @@ from mycel.agents.core.exceptions import ModelTimeout, ToolFailed
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.tools import delegate
 from mycel.agents.tools.delegate import build_toolset
+from mycel.core.principal import Principal
 from mycel.llm.budget import BudgetExceeded, JobBudget
-from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 

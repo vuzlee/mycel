@@ -13,9 +13,9 @@ from fastapi.testclient import TestClient
 from mycel.api.app import WEB_DIST, create_app
 from mycel.api.dependencies import current_user
 from mycel.core.config import Settings
+from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis.results import JobResult
-from mycel.services.auth import Principal
 
 #: Who every request in this file is made by.
 SIGNED_IN = Principal(id=1, email="tester@example.com")

@@ -7,11 +7,11 @@ import pytest
 
 from mycel.agents.core import runner
 from mycel.agents.specialists.rewriter import Rewriter
+from mycel.core.principal import Principal
 from mycel.domains import chat as domain
 from mycel.infra.redis import budgets
 from mycel.queue.job import Job, JobKind
 from mycel.services import knowledge
-from mycel.services.auth import Principal
 from mycel.services.chat import (
     HISTORY_CHARS,
     HISTORY_TURNS,

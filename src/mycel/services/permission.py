@@ -1,8 +1,8 @@
 """Can this person see this project."""
 
+from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
-from mycel.services.auth import Principal
 
 
 async def can_read_project(user: Principal, project: str) -> bool:

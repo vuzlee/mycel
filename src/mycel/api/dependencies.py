@@ -6,8 +6,9 @@ from typing import Annotated
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mycel.core.principal import Principal
 from mycel.infra.postgres.session import session_scope
-from mycel.services.auth import Principal, session_user
+from mycel.services.auth import session_user
 
 #: The cookie a browser sends back.
 SESSION_COOKIE = "mycel_session"

@@ -16,11 +16,11 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools import query as query_tool
 from mycel.agents.tools.query import MAX_ROWS, _limited, _reject, _table, build_toolset
+from mycel.core.principal import Principal
 from mycel.infra.postgres import acl
 from mycel.infra.postgres.engine import async_dsn, dispose_engine, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 
 pytestmark = pytest.mark.anyio
 

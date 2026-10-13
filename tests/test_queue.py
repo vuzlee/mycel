@@ -14,13 +14,13 @@ from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 import mycel.agents.core.runner as runner
 from mycel import worker
 from mycel.agents.core.exceptions import AgentError
+from mycel.core.principal import Principal
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import budgets, deliveries, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, producer, retry, topology
 from mycel.queue.job import Job, JobKind
-from mycel.services.auth import Principal
 from mycel.worker import HANDLER
 
 pytestmark = pytest.mark.anyio

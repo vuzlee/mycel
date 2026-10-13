@@ -84,7 +84,7 @@ class TestTheRealApp:
         from mycel.api.app import create_app
         from mycel.api.dependencies import current_user
         from mycel.core.config import Settings
-        from mycel.services.auth import Principal
+        from mycel.core.principal import Principal
 
         app = create_app(Settings(otel_enabled=False))
         app.dependency_overrides[current_user] = lambda: Principal(id=1, email="a@example.com")

@@ -3,8 +3,9 @@
 `chips=None` keeps every tool; an empty set keeps none.
 """
 
-from enum import StrEnum
 from typing import TYPE_CHECKING, Any
+
+from mycel.core.chips import Chip
 
 if TYPE_CHECKING:
     from pydantic_ai import RunContext
@@ -34,14 +35,6 @@ def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
         "button next to the question box. If an agent reports that an account is not "
         "connected, say so, and that it can be connected under Settings → Accounts."
     )
-
-
-class Chip(StrEnum):
-    KNOWLEDGE = "knowledge"
-    WEB = "web"
-    JIRA = "jira"
-    CALENDAR = "calendar"
-    MAIL = "mail"
 
 
 #: Agents and tools each chip opens. Knowledge opens no tool; its passages go in the prompt.

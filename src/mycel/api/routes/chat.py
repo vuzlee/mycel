@@ -6,9 +6,9 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from mycel.agents.core.chips import Chip
 from mycel.api.dependencies import CurrentUser
 from mycel.api.limits import per_user
+from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow

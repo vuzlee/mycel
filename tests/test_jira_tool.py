@@ -12,9 +12,9 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools.jira import CONNECT, build_toolset, offered
 from mycel.core.config import get_settings
+from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 from mycel.sources import jira
 from tests.fakes import FakeRedis
 

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from mycel.api.app import create_app
 from mycel.api.dependencies import current_user
 from mycel.core.config import Settings
+from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.conversations import ConversationRow, TurnRow
 from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.infra.postgres.repositories.gold_stats import (
@@ -22,7 +23,6 @@ from mycel.infra.postgres.repositories.gold_stats import (
     SprintTally,
 )
 from mycel.infra.redis.results import JobResult
-from mycel.services.auth import Principal
 from mycel.services.conversations import ConversationSummary
 from mycel.services.dashboard import Dashboard, EpicProgress
 

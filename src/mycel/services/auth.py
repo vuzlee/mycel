@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import re
 import secrets
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
@@ -14,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import MycelError
+from mycel.core.principal import Principal
 from mycel.infra import smtp
 from mycel.infra.postgres.repositories.identity import IdentityRepository, UserRow
 
@@ -38,14 +38,6 @@ EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 class AuthError(MycelError):
     """Registration or login refused. Carries no detail about which part was wrong."""
-
-
-@dataclass(frozen=True)
-class Principal:
-    """Who is making a request. What `Depends(current_user)` hands a route."""
-
-    id: int
-    email: str
 
 
 async def register(

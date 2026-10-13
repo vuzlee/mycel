@@ -4,7 +4,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import Chip
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.specialists.analyst import Analyst
@@ -12,10 +11,11 @@ from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.researcher import Researcher
 from mycel.agents.specialists.rewriter import Rewriter
 from mycel.agents.specialists.summarizer import Summarizer
+from mycel.core.chips import Chip
 from mycel.core.exceptions import ConfigError
+from mycel.core.principal import Principal
 from mycel.events.channel import EventChannel, NullChannel
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent

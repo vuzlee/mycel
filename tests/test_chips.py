@@ -8,12 +8,13 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import Chip, parse, tools_for
+from mycel.agents.core.chips import parse, tools_for
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.researcher import Researcher
+from mycel.core.chips import Chip
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio

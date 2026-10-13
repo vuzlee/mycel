@@ -1,6 +1,6 @@
 """Queue a chat question with what the worker needs to answer it."""
 
-from mycel.agents.core.chips import Chip
+from mycel.core.chips import Chip
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
     ConversationRow,

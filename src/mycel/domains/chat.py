@@ -7,15 +7,16 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.core import runner
-from mycel.agents.core.chips import Chip
 from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.rewriter import Rewriter
+from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.core.principal import Principal
 from mycel.events.channel import EventChannel, NullChannel, RecordingChannel
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
@@ -27,7 +28,6 @@ from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
 from mycel.services import knowledge
-from mycel.services.auth import Principal
 from mycel.services.chat import find_turn
 from mycel.services.citations import check
 

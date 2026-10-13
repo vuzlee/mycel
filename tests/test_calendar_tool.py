@@ -14,9 +14,9 @@ from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.tools import calendar as calendar_tool
 from mycel.agents.tools.calendar import CONNECT, MAX_MINUTES, build_toolset
 from mycel.agents.tools.limits import MAX_HOURS
+from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
-from mycel.services.auth import Principal
 from mycel.services.google_oauth import NotConnected
 from mycel.sources import google_calendar
 from tests.fakes import FakeRedis
