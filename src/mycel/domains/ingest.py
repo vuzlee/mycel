@@ -29,7 +29,7 @@ async def run(job: Job) -> None:
     async with session_scope() as session:
         repo = DocumentRepository(session)
         doc = await repo.document(document_id)
-        if doc is None or doc.status in (DELETING, READY):
+        if doc is None or doc.status in (DELETING, READY, FAILED):
             log.info("ingest skipped", extra={"document_id": document_id})
             return
         await repo.start_parsing(document_id)

@@ -9,7 +9,7 @@ from opentelemetry import context as otel_context
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
-from mycel.infra.redis import results
+from mycel.infra.redis import deliveries, results
 from mycel.infra.redis.client import close_clients
 from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
@@ -43,6 +43,13 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
         # A malformed body will not parse on retry either, and has no job id.
         log.error("unreadable job body", extra={"message_id": message.message_id})
         await retry.reject(message, dlx, reason=f"unreadable job body: {exc}", give_up=True)
+        return
+
+    # Redelivered means a worker took it and never acked: it may be what killed that worker.
+    if message.redelivered and await deliveries.count(job.job_id) > topology.MAX_ATTEMPTS:
+        log.error("job keeps killing its worker", extra={"job_id": job.job_id})
+        await jobs.record_failure(job, "worker died on every attempt")
+        await retry.reject(message, dlx, reason="worker died on every attempt", give_up=True)
         return
 
     try:

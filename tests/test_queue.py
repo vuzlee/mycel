@@ -14,7 +14,7 @@ import mycel.agents.core.runner as runner
 from mycel.agents.core.exceptions import AgentError
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
-from mycel.infra.redis import budgets, results
+from mycel.infra.redis import budgets, deliveries, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, retry, topology
 from mycel.queue.job import Job, JobKind
@@ -45,6 +45,7 @@ class FakeMessage:
         self.correlation_id = "chat:abc"
         self.acked = False
         self.nacked = False
+        self.redelivered = False
 
     async def ack(self) -> None:
         self.acked = True
@@ -312,6 +313,54 @@ class TestAKindThisWorkerDoesNotKnow:
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
 
+class TestAJobThatKillsItsWorker:
+    """Never acked, so the broker hands it back forever unless someone counts."""
+
+    @pytest.fixture
+    def delivered(self, monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
+        seen: dict[str, int] = {}
+
+        async def count(job_id: str) -> int:
+            seen[job_id] = seen.get(job_id, 0) + 1
+            return seen[job_id]
+
+        monkeypatch.setattr(deliveries, "count", count)
+        return seen
+
+    async def test_it_is_parked_after_the_last_attempt(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        store: dict[str, Any],
+        delivered: dict[str, int],
+    ) -> None:
+        _runs(monkeypatch, _ANSWER)
+        delivered["job-1"] = topology.MAX_ATTEMPTS
+        message = _message()
+        message.redelivered = True
+        dlx = FakeExchange()
+
+        await consumer.handle(message, dlx, HANDLER)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+        assert store["job-1"]["status"] == "failed"
+
+    async def test_a_first_redelivery_still_runs(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        store: dict[str, Any],
+        delivered: dict[str, int],
+    ) -> None:
+        """One crash may be the node, not the job."""
+        _runs(monkeypatch, _ANSWER)
+        message = _message()
+        message.redelivered = True
+
+        await consumer.handle(message, FakeExchange(), HANDLER)  # type: ignore[arg-type]
+
+        assert message.acked
+        assert store["job-1"]["status"] == "done"
+
+
 class TestAttemptCounting:
     def test_a_message_with_no_header_is_a_first_attempt(self) -> None:
         """Published by an older deployment, or by hand through the management UI."""
@@ -451,3 +500,23 @@ class TestIngestJobs:
 
         assert [key for _, key in dlx.published] == [topology.INGEST_RETRY_QUEUE]
         assert failed == []
+
+    @pytest.mark.parametrize("status", ["ready", "failed", "deleting"])
+    async def test_a_settled_document_is_not_parsed_again(
+        self, monkeypatch: pytest.MonkeyPatch, status: str
+    ) -> None:
+        """A redelivered job for a document already given up on must not start over."""
+        from types import SimpleNamespace
+
+        class Repo:
+            def __init__(self, session: object) -> None: ...
+
+            async def document(self, document_id: int) -> object:
+                return SimpleNamespace(status=status, user_id=1)
+
+            async def start_parsing(self, document_id: int) -> None:
+                raise AssertionError("parsed again")
+
+        monkeypatch.setattr(ingest_domain, "DocumentRepository", Repo)
+        monkeypatch.setattr(ingest_domain, "session_scope", _no_session)
+        await ingest_domain.run(Job(kind=JobKind.INGEST, payload={"document_id": 1}))
