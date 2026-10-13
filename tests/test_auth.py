@@ -1,6 +1,7 @@
 """Registering, signing in, and what a cookie is worth afterwards."""
 
 import asyncio
+import threading
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
@@ -118,6 +119,33 @@ class TestSigningIn:
             await auth.authenticate(session, "nobody@example.com", PASSWORD)
 
         assert str(wrong.value) == str(unknown.value)
+
+    async def test_hashing_runs_off_the_event_loop(
+        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Argon2 is ~50 ms of CPU; on the loop thread every other request waits for it."""
+        loop_thread = threading.get_ident()
+        seen: list[int] = []
+        real = auth._hasher
+
+        class Recording:
+            def hash(self, password: str) -> str:
+                seen.append(threading.get_ident())
+                return real.hash(password)
+
+            def verify(self, stored: str, password: str) -> bool:
+                seen.append(threading.get_ident())
+                return real.verify(stored, password)
+
+            def check_needs_rehash(self, stored: str) -> bool:
+                return False
+
+        monkeypatch.setattr(auth, "_hasher", Recording())
+        await auth.register(session, "f@example.com", PASSWORD)
+        await auth.authenticate(session, "f@example.com", PASSWORD)
+
+        assert len(seen) == 2
+        assert loop_thread not in seen
 
 
 @needs_postgres

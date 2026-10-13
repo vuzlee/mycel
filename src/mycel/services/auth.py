@@ -1,5 +1,6 @@
 """Register, log in, log out, and say who a cookie belongs to."""
 
+import asyncio
 import hashlib
 import re
 import secrets
@@ -60,7 +61,7 @@ async def register(
 
     repo = IdentityRepository(session)
     try:
-        user = await repo.create_user(email, _hasher.hash(password))
+        user = await repo.create_user(email, await _hash(password))
     except IntegrityError:
         await session.rollback()
         raise AuthError("that email is already registered") from None
@@ -70,19 +71,17 @@ async def register(
 async def authenticate(session: AsyncSession, email: str, password: str) -> Principal:
     """Check an email and password, or raise `AuthError`."""
     user = await IdentityRepository(session).user_by_email(_normalize(email))
-    stored = user.password_hash if user else _hasher.hash("no such user")
+    stored = user.password_hash if user else await _hash("no such user")
 
-    try:
-        _hasher.verify(stored, password)
-    except (VerifyMismatchError, VerificationError):
-        raise AuthError("wrong email or password") from None
+    if not await _verify(stored, password):
+        raise AuthError("wrong email or password")
 
     if user is None:
         raise AuthError("wrong email or password")
 
     if _hasher.check_needs_rehash(user.password_hash):
         # The cost parameters moved on since this hash was made.
-        await IdentityRepository(session).set_password_hash(user.id, _hasher.hash(password))
+        await IdentityRepository(session).set_password_hash(user.id, await _hash(password))
     return _principal(user)
 
 
@@ -132,15 +131,13 @@ async def change_password(
     if user is None:
         raise AuthError("wrong password")
 
-    try:
-        _hasher.verify(user.password_hash, current_password)
-    except (VerifyMismatchError, VerificationError):
-        raise AuthError("wrong password") from None
+    if not await _verify(user.password_hash, current_password):
+        raise AuthError("wrong password")
 
     if len(new_password) < MIN_PASSWORD:
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")
 
-    await repo.set_password_hash(user_id, _hasher.hash(new_password))
+    await repo.set_password_hash(user_id, await _hash(new_password))
     return await repo.delete_sessions_for(user_id, keep=keep_token)
 
 
@@ -180,8 +177,20 @@ async def reset_password(session: AsyncSession, token: str, new_password: str) -
     if await repo.spend_password_reset(row.id, datetime.now(UTC)) == 0:
         raise AuthError("that reset link is no longer usable")
 
-    await repo.set_password_hash(row.user_id, _hasher.hash(new_password))
+    await repo.set_password_hash(row.user_id, await _hash(new_password))
     return await repo.delete_sessions_for(row.user_id)
+
+
+async def _hash(password: str) -> str:
+    """Argon2 is ~50 ms of CPU; in a thread, the loop keeps serving."""
+    return await asyncio.to_thread(_hasher.hash, password)
+
+
+async def _verify(stored: str, password: str) -> bool:
+    try:
+        return await asyncio.to_thread(_hasher.verify, stored, password)
+    except (VerifyMismatchError, VerificationError):
+        return False
 
 
 def _digest(token: str) -> str:
