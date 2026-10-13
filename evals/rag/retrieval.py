@@ -59,7 +59,8 @@ async def ingest(names: list[str]) -> tuple[dict[int, tuple[str, str]], dict[str
         for chunk_id, p in zip(ids, found, strict=True):
             lookup[chunk_id] = (name, p.text)
         await vectors.delete(document_id)
-        await vectors.write(EVAL_OWNER_ID, document_id, True, ids, [p.text for p in found])
+        embedded = await vectors.embed_passages([p.text for p in found])
+        await vectors.write(EVAL_OWNER_ID, document_id, True, ids, embedded)
         print(f"  {name}: {len(found)} passages in {time.monotonic() - started:.0f}s")
     return lookup, texts
 
