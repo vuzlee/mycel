@@ -52,10 +52,12 @@ async def register(
         raise AuthError(f"password must be at least {MIN_PASSWORD} characters")
 
     repo = IdentityRepository(session)
+    password_hash = await _hash(password)
     try:
-        user = await repo.create_user(email, await _hash(password))
+        # A savepoint: a taken address undoes only this insert, not the caller's transaction.
+        async with session.begin_nested():
+            user = await repo.create_user(email, password_hash)
     except IntegrityError:
-        await session.rollback()
         raise AuthError("that email is already registered") from None
     return _principal(user)
 

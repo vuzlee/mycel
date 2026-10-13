@@ -77,6 +77,19 @@ class TestRegistering:
         with pytest.raises(auth.AuthError):
             await auth.register(session, "  A@Example.COM ", PASSWORD)
 
+    async def test_a_taken_address_leaves_the_callers_work_alone(
+        self, session: AsyncSession
+    ) -> None:
+        """The refusal undoes the insert only, not what the same session did before it."""
+        first = await auth.register(session, "taken@example.com", PASSWORD)
+        await IdentityRepository(session).set_password_hash(first.id, "kept")
+
+        with pytest.raises(auth.AuthError):
+            await auth.register(session, "taken@example.com", PASSWORD)
+
+        user = await IdentityRepository(session).user_by_id(first.id)
+        assert user is not None and user.password_hash == "kept"
+
     async def test_a_short_password_is_refused(self, session: AsyncSession) -> None:
         with pytest.raises(auth.AuthError):
             await auth.register(session, "b@example.com", "short")
