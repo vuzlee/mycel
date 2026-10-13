@@ -1,0 +1,14 @@
+# Compose's Alertmanager. With no webhook, firing alerts are held on its page (:9093).
+# To send them somewhere, add under the `mycel` receiver:
+#   webhook_configs: [{url: "https://hooks.example.com/..."}]
+# Helm renders this from monitoring.alertmanager.webhookUrl instead.
+
+route:
+  receiver: mycel
+  group_by: [alertname, queue]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: mycel

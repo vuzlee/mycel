@@ -14,6 +14,11 @@ data:
 
     rule_files: [alerts.yaml]
 
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ["alertmanager:9093"]
+
     scrape_configs:
       # One job for every app pod; the pod's metrics port says where to scrape.
       - job_name: mycel

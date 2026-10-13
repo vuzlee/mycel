@@ -1,0 +1,84 @@
+{{/* Alertmanager: Prometheus pushes firing alerts, one webhook receives them. Compose uses deploy/monitoring/alertmanager.yaml. */}}
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mycel.fullname" . }}-alertmanager
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+data:
+  alertmanager.yaml: |
+    route:
+      receiver: mycel
+      group_by: [alertname, queue]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+    receivers:
+      - name: mycel
+        {{- with .Values.monitoring.alertmanager.webhookUrl }}
+        webhook_configs:
+          - url: {{ . | quote }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # No release prefix: the Prometheus config names alertmanager:9093 on both networks.
+  name: alertmanager
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9093
+      targetPort: http
+  selector:
+    {{- include "mycel.selectorLabels" (dict "ctx" . "component" "alertmanager") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mycel.fullname" . }}-alertmanager
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alertmanager
+spec:
+  replicas: 1
+  # One pod: two without clustering would each send every alert.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "alertmanager") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mycel.labels" . | nindent 8 }}
+        app.kubernetes.io/component: alertmanager
+      annotations:
+        checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
+    spec:
+      containers:
+        - name: alertmanager
+          image: {{ .Values.monitoring.alertmanager.image }}
+          args: [--config.file=/etc/alertmanager/alertmanager.yaml]
+          ports:
+            - name: http
+              containerPort: 9093
+          volumeMounts:
+            - {name: config, mountPath: /etc/alertmanager}
+          readinessProbe:
+            httpGet: {path: /-/ready, port: http}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.monitoring.alertmanager.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "mycel.fullname" . }}-alertmanager
+{{- end }}

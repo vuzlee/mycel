@@ -3,7 +3,7 @@
 # The chart, on minikube.
 #
 #   scripts/stack.sh k8s up              four application pods: api, worker, ingest, scheduler
-#   scripts/stack.sh k8s up monitoring   ... and Prometheus, Loki, Promtail, Grafana
+#   scripts/stack.sh k8s up monitoring   ... and Prometheus, Alertmanager, Loki, Promtail, Grafana
 #
 # THE STORES STAY OUTSIDE THE CLUSTER and this script starts them in compose. Postgres,
 # RabbitMQ and Redis as StatefulSets is the painful part of Kubernetes — storage classes,

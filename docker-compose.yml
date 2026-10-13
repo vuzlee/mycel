@@ -226,7 +226,17 @@ services:
       - ./deploy/helm/mycel/files/alerts.yaml:/etc/prometheus/alerts.yaml:ro
       - promdata:/prometheus
     ports: ["9090:9090"]
+    depends_on: [alertmanager]
     mem_limit: 1g
+
+  # Where Prometheus sends firing alerts; the receiver is in deploy/monitoring/alertmanager.yaml.
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    profiles: [monitoring]
+    command: ["--config.file=/etc/alertmanager/alertmanager.yaml"]
+    volumes: ["./deploy/monitoring/alertmanager.yaml:/etc/alertmanager/alertmanager.yaml:ro"]
+    ports: ["9093:9093"]
+    mem_limit: 128m
 
   # Traces go to Langfuse, not here.
   loki:

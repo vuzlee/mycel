@@ -1,4 +1,4 @@
-# Shown on Prometheus' Alerts page. No Alertmanager yet, so nothing is sent anywhere.
+# Prometheus evaluates these and hands firing ones to Alertmanager, which routes them.
 groups:
   - name: mycel-queue
     rules:

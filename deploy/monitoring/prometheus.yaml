@@ -14,6 +14,11 @@ global:
 
 rule_files: [alerts.yaml]
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: mycel-api
     static_configs:

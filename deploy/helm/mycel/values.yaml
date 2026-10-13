@@ -106,6 +106,13 @@ monitoring:
     resources:
       requests: {cpu: 100m, memory: 256Mi}
       limits: {memory: 1Gi}
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    # Where firing alerts are POSTed. Empty = held on Alertmanager's own page.
+    webhookUrl: ""
+    resources:
+      requests: {cpu: 20m, memory: 32Mi}
+      limits: {memory: 128Mi}
   loki:
     image: grafana/loki:3.3.2
     resources:

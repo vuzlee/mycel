@@ -7,7 +7,7 @@
 # than to write code against.
 #
 #   scripts/stack.sh compose up                    stores + api + worker + scheduler
-#   scripts/stack.sh compose up monitoring         ... and Prometheus, Loki, Grafana
+#   scripts/stack.sh compose up monitoring         ... and Prometheus, Alertmanager, Loki, Grafana
 #
 # Migrations are run here rather than by an entrypoint: three app containers starting at
 # once would each try, and the loser of that race reports a lock timeout rather than the
