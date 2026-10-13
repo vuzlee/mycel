@@ -1,34 +1,27 @@
 """`python -m mycel.scheduler`: the scheduler process."""
 
 import asyncio
+from contextlib import suppress
 
-from mycel.core.config import get_settings
-from mycel.core.logging import get_logger, setup_logging
-from mycel.infra.postgres.engine import dispose_engine
-from mycel.observability.metrics_server import serve_metrics
+from mycel.lifecycle import running, start, stop_on_signals
 from mycel.scheduler.runner import run_forever
-
-log = get_logger(__name__)
 
 
 async def _main() -> None:
-    settings = get_settings()
-    setup_logging(settings.log_level)
-    # One port above the worker's, so both can run on one machine.
-    metrics = await serve_metrics(settings.metrics_port + 1, settings.metrics_host)
-    try:
-        await run_forever()
-    finally:
-        metrics.close()
-        await dispose_engine()
+    async with running("scheduler"):
+        stop = stop_on_signals()
+        timers = asyncio.create_task(run_forever())
+        await asyncio.wait(
+            {timers, asyncio.create_task(stop.wait())}, return_when="FIRST_COMPLETED"
+        )
+        timers.cancel()
+        with suppress(asyncio.CancelledError):
+            await timers
 
 
 def main() -> None:
-    """Entrypoint. `KeyboardInterrupt` is a normal way to stop, not a crash."""
-    try:
-        asyncio.run(_main())
-    except KeyboardInterrupt:
-        log.info("scheduler stopped")
+    start("scheduler")
+    asyncio.run(_main())
 
 
 if __name__ == "__main__":

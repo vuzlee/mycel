@@ -27,9 +27,8 @@ from mycel.api.routes import (
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
-from mycel.infra.postgres.engine import dispose_engine
+from mycel.lifecycle import running
 from mycel.llm.budget import BudgetExceeded
-from mycel.observability.metrics_server import serve_metrics
 from mycel.observability.tracing import setup_tracing
 from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
@@ -51,10 +50,6 @@ DOCUMENT_STATUS: dict[type[document_service.DocumentError], int] = {
 WEB_DIST = REPO_ROOT / "web" / "dist"
 
 
-#: The api's metrics port, after the worker (+0), scheduler (+1) and ingest (+2).
-METRICS_OFFSET = 3
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Assemble the application."""
     cfg = settings or get_settings()
@@ -65,13 +60,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-        """Flush spans and close the connection pool on the way out."""
-        metrics = await serve_metrics(cfg.metrics_port + METRICS_OFFSET, cfg.metrics_host)
-        yield
-        metrics.close()
-        await dispose_engine()
-        if provider is not None:
-            provider.shutdown()
+        async with running("api"):
+            yield
 
     app = FastAPI(
         title="Mycel",

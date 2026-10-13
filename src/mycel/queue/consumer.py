@@ -1,20 +1,16 @@
 """The worker's consume loop: receive a job, run it, ack."""
 
 import asyncio
-import signal
 import sys
 
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 from opentelemetry import context as otel_context
 
 from mycel.core.config import get_settings
-from mycel.core.logging import get_logger, setup_logging
+from mycel.core.logging import get_logger
 from mycel.infra.redis import deliveries, results
-from mycel.infra.redis.client import close_clients
-from mycel.observability.metrics_server import serve_metrics
-from mycel.observability.tracing import setup_tracing
 from mycel.queue import context, retry, topology
-from mycel.queue.connection import channel, close_connection
+from mycel.queue.connection import channel
 from mycel.queue.handler import Handler
 from mycel.queue.job import Job
 
@@ -105,31 +101,16 @@ async def run_worker(
 
 def main(jobs: Handler, argv: list[str] | None = None) -> int:
     """Consume `--queue` (jobs by default) until SIGTERM, serving /metrics."""
+    from mycel.lifecycle import running, start, stop_on_signals
+
     args = argv if argv is not None else sys.argv[1:]
     queue = args[args.index("--queue") + 1] if "--queue" in args else topology.QUEUE
-    settings = get_settings()
-    setup_logging(settings.log_level)
-    provider = setup_tracing(settings)
+    process = "ingest" if queue == topology.INGEST_QUEUE else "worker"
+    start(process)
 
     async def _main() -> None:
-        stop = asyncio.Event()
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            # `signal.signal` cannot set an asyncio event safely; the loop's handler can.
-            loop.add_signal_handler(sig, stop.set)
+        async with running(process):
+            await run_worker(jobs, stop_on_signals(), queue)
 
-        port = settings.metrics_port + (2 if queue == topology.INGEST_QUEUE else 0)
-        metrics = await serve_metrics(port, settings.metrics_host)
-        try:
-            await run_worker(jobs, stop, queue)
-        finally:
-            metrics.close()
-            await close_connection()
-            await close_clients()
-
-    try:
-        asyncio.run(_main())
-    finally:
-        if provider is not None:
-            provider.shutdown()
+    asyncio.run(_main())
     return 0
