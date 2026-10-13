@@ -80,13 +80,20 @@ class TestKnowledgeGoesThroughTheOrchestrator:
         from contextlib import asynccontextmanager
         from types import SimpleNamespace
 
-        from mycel.services import chat
+        from mycel.services import chat, enqueue
 
         queued: list[tuple[object, object]] = []
 
-        async def plain(*args: object, **kwargs: object) -> str:
+        real_job = enqueue.chat_job
+
+        def plain(*args: Any, **kwargs: Any) -> Any:
             queued.append((kwargs.get("chips"), kwargs.get("previous")))
-            return "job-c"
+            return real_job(*args, **kwargs)
+
+        async def staged(session: object, job: Any) -> Any:
+            return job
+
+        async def sent(job: object) -> None: ...
 
         class Repo:
             def __init__(self, session: object) -> None: ...
@@ -97,7 +104,7 @@ class TestKnowledgeGoesThroughTheOrchestrator:
             async def turns_for_conversation(self, conversation_id: int) -> list[object]:
                 return []
 
-            async def upsert_turn(self, *a: object, **k: object) -> None: ...
+            async def add_turn(self, *a: object, **k: object) -> None: ...
 
         @asynccontextmanager
         async def scope():  # type: ignore[no-untyped-def]
@@ -105,7 +112,9 @@ class TestKnowledgeGoesThroughTheOrchestrator:
 
         monkeypatch.setattr(chat, "ConversationRepository", Repo)
         monkeypatch.setattr(chat, "session_scope", scope)
-        monkeypatch.setattr(chat, "enqueue_chat", plain)
+        monkeypatch.setattr(enqueue, "chat_job", plain)
+        monkeypatch.setattr(enqueue, "stage", staged)
+        monkeypatch.setattr(enqueue, "send", sent)
 
         await chat.request_chat(7, "What is BERT?", chips=["knowledge"])
         await chat.request_chat(7, "Late tickets?", chips=["jira"])

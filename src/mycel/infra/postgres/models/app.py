@@ -178,3 +178,18 @@ class Turn(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class Outbox(Base):
+    """A job written with the row it acts on; the relay publishes what the request could not."""
+
+    __tablename__ = "outbox"
+    __table_args__ = (
+        Index("ix_outbox_unpublished", "created_at", postgresql_where="published_at IS NULL"),
+        {"schema": APP},
+    )
+
+    job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    body: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

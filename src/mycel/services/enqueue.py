@@ -1,10 +1,57 @@
-"""Queue jobs. Callers need not know the queue runs on RabbitMQ."""
+"""Queue jobs through the outbox: written with the row, published after the commit."""
 
+from datetime import timedelta
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from mycel.core.logging import get_logger
+from mycel.infra.postgres.repositories.outbox import OutboxRepository
+from mycel.infra.postgres.session import session_scope
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
 
+log = get_logger(__name__)
 
-async def enqueue_chat(
+#: The request publishes at once; the relay only takes rows older than this.
+RELAY_AFTER = timedelta(seconds=10)
+RELAY_BATCH = 100
+KEEP_PUBLISHED = timedelta(days=1)
+
+
+async def stage(session: AsyncSession, job: Job) -> Job:
+    """Write the job in the caller's transaction. Publish it with `send` once that commits."""
+    await OutboxRepository(session).add(job.job_id, job.model_dump(mode="json"))
+    return job
+
+
+async def send(job: Job) -> None:
+    """Publish a committed job now. A failure is left to the relay, never raised."""
+    try:
+        await publish(job)
+    except Exception:
+        log.warning("publish failed, the relay will retry", extra={"job_id": job.job_id})
+        return
+    await _mark(job.job_id)
+
+
+async def relay() -> None:
+    """Publish what a request committed but could not send, then drop old sent rows."""
+    async with session_scope() as session:
+        repo = OutboxRepository(session)
+        for body in await repo.unpublished(RELAY_AFTER, RELAY_BATCH):
+            job = Job.model_validate(body)
+            await publish(job)
+            await repo.mark_published(job.job_id)
+            log.info("outbox relayed", extra={"job_id": job.job_id})
+        await repo.prune(KEEP_PUBLISHED)
+
+
+async def _mark(job_id: str) -> None:
+    async with session_scope() as session:
+        await OutboxRepository(session).mark_published(job_id)
+
+
+def chat_job(
     question: str,
     conversation_id: int,
     history: str,
@@ -12,9 +59,9 @@ async def enqueue_chat(
     chips: list[str] | None,
     previous: str,
     context: str,
-) -> str:
-    """Queue a question; returns the job id. History rides in the payload, read once here."""
-    job = Job(
+) -> Job:
+    """History rides in the payload, read once here."""
+    return Job(
         kind=JobKind.CHAT,
         payload={
             "question": question,
@@ -26,7 +73,6 @@ async def enqueue_chat(
             "context": context,
         },
     )
-    return await publish(job)
 
 
 def ingest_job(document_id: int) -> Job:

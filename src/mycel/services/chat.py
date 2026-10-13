@@ -7,7 +7,7 @@ from mycel.infra.postgres.repositories.conversations import (
     TurnRow,
 )
 from mycel.infra.postgres.session import session_scope
-from mycel.services.enqueue import enqueue_chat
+from mycel.services import enqueue
 
 #: How much of a question becomes the conversation's title in the sidebar.
 TITLE_CHARS = 80
@@ -48,7 +48,7 @@ async def request_chat(
         previous = context = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
             previous, context = _last_question(turns), _rewrite_context(turns)
-        job_id = await enqueue_chat(
+        job = enqueue.chat_job(
             question,
             conversation.id,
             _history_text(turns),
@@ -57,8 +57,10 @@ async def request_chat(
             previous=previous,
             context=context,
         )
-        await repo.upsert_turn(conversation.id, job_id, question, status="queued")
-    return job_id, conversation.id
+        await repo.add_turn(conversation.id, job.job_id, question, status="queued")
+        await enqueue.stage(session, job)
+    await enqueue.send(job)
+    return job.job_id, conversation.id
 
 
 def _last_question(turns: list[TurnRow]) -> str:

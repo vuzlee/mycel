@@ -11,8 +11,10 @@ from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
 from mycel.services.auth import sweep_expired_sessions
+from mycel.services.enqueue import relay
 
 WATCHDOG_INTERVAL_SECONDS = 60
+RELAY_INTERVAL_SECONDS = 5
 
 log = get_logger(__name__)
 
@@ -38,6 +40,7 @@ async def run_forever() -> None:
         ("sync:jira", _sync, settings.sync_interval_seconds),
         ("sweep:sessions", _sweep, settings.session_sweep_interval_seconds),
         ("watchdog:documents", watchdog, WATCHDOG_INTERVAL_SECONDS),
+        ("relay:outbox", relay, RELAY_INTERVAL_SECONDS),
     ]
     log.info("scheduler started", extra={"timers": {name: every for name, _, every in timers}})
     await asyncio.gather(*(_loop(name, tick, every) for name, tick, every in timers))

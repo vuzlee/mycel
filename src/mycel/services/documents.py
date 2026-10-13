@@ -18,8 +18,7 @@ from mycel.infra.postgres.repositories.documents import (
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
-from mycel.queue.producer import publish
-from mycel.services.enqueue import delete_job, ingest_job
+from mycel.services import enqueue
 
 PDF = "application/pdf"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -92,9 +91,10 @@ async def upload(user_id: int, file: Upload) -> DocumentRow:
             raise DocumentError(429, "Too many documents are processing. Try again shortly.")
         doc = await repo.add_document(user_id, filename, mime, len(file.data), sha)
         await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
+        job = await enqueue.stage(session, enqueue.ingest_job(doc.id))
 
     await document_events.changed(user_id)
-    await publish(ingest_job(doc.id))
+    await enqueue.send(job)
     return doc
 
 
@@ -139,8 +139,9 @@ async def delete_document(user_id: int, document_id: int) -> None:
         if doc is None:
             raise _not_found()
         await repo.set_status(document_id, DELETING)
+        job = await enqueue.stage(session, enqueue.delete_job(document_id))
     await document_events.changed(user_id)
-    await publish(delete_job(document_id))
+    await enqueue.send(job)
 
 
 async def source_url(user_id: int, document_id: int) -> str:

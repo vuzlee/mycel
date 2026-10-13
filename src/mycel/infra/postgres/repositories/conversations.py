@@ -101,6 +101,16 @@ class ConversationRepository:
         )
         return bool(rowcount(result))
 
+    async def add_turn(self, conversation_id: int, job_id: str, question: str, status: str) -> None:
+        """The request's row. Never overwrites: the worker may already have finished."""
+        await self._session.execute(
+            insert(Turn)
+            .values(
+                conversation_id=conversation_id, job_id=job_id, question=question, status=status
+            )
+            .on_conflict_do_nothing(constraint="uq_turn_job_id")
+        )
+
     async def upsert_turn(
         self,
         conversation_id: int,
