@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from mycel.agents.core.chips import Chip
 from mycel.api.dependencies import CurrentUser
+from mycel.api.limits import per_user
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow
@@ -17,6 +18,9 @@ from mycel.services.chat import find_own_turn, request_chat
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 log = get_logger(__name__)
+
+#: Questions per person per minute; each one spends model money.
+CHAT_PER_MINUTE = 20
 
 
 class ChatRequest(BaseModel):
@@ -54,7 +58,12 @@ class ChatResponse(BaseModel):
     sources: list[dict[str, Any]] = []
 
 
-@router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=AcceptedResponse)
+@router.post(
+    "",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=AcceptedResponse,
+    dependencies=[per_user("chat", CHAT_PER_MINUTE)],
+)
 async def create_chat(
     body: ChatRequest,
     user: CurrentUser,

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.api.dependencies import SESSION_COOKIE, CurrentUser, Db
+from mycel.api.limits import per_ip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra import smtp
@@ -15,6 +16,10 @@ from mycel.services import auth
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 log = get_logger(__name__)
+
+#: Per client address. Login guesses passwords; the others send mail or create rows.
+LOGIN_PER_MINUTE = 10
+SIGNUP_PER_MINUTE = 5
 
 
 class Credentials(BaseModel):
@@ -59,7 +64,12 @@ class UserResponse(BaseModel):
     email: str
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@router.post(
+    "/register",
+    status_code=status.HTTP_201_CREATED,
+    response_model=UserResponse,
+    dependencies=[per_ip("register", SIGNUP_PER_MINUTE)],
+)
 async def register(
     body: Registration,
     session: Db,
@@ -70,7 +80,9 @@ async def register(
     return UserResponse(id=user.id, email=user.email)
 
 
-@router.post("/login", response_model=UserResponse)
+@router.post(
+    "/login", response_model=UserResponse, dependencies=[per_ip("login", LOGIN_PER_MINUTE)]
+)
 async def login(
     body: Credentials,
     response: Response,
@@ -108,7 +120,11 @@ async def change_password(
     log.info("password changed", extra={"user_id": user.id, "sessions_ended": ended})
 
 
-@router.post("/forgot", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/forgot",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[per_ip("forgot", SIGNUP_PER_MINUTE)],
+)
 async def forgot_password(
     body: ForgotRequest,
     session: Db,
@@ -119,7 +135,11 @@ async def forgot_password(
     await auth.begin_password_reset(session, body.email)
 
 
-@router.post("/reset", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/reset",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[per_ip("reset", SIGNUP_PER_MINUTE)],
+)
 async def reset_password(
     body: PasswordReset,
     session: Db,

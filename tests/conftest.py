@@ -98,6 +98,8 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     # A free METRICS_PORT, so a running dev stack on 9103 does not break app tests.
     monkeypatch.setenv("METRICS_PORT", str(_free_port() - 3))
+    # Every app test would otherwise count against a real Redis; tests/test_limits.py turns it on.
+    monkeypatch.setenv("RATE_LIMITS_ENABLED", "false")
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()

@@ -65,6 +65,10 @@ config:
   # minus ~10 for migrations and psql. 5 processes × (5 + 5) = 50.
   DB_POOL_SIZE: "5"
   DB_MAX_OVERFLOW: "5"
+  # The api is a ClusterIP reached through the ingress, so uvicorn takes the client address
+  # from X-Forwarded-For; the rate limits key on it. Compose exposes the api directly and
+  # keeps uvicorn's default (trust 127.0.0.1 only).
+  FORWARDED_ALLOW_IPS: "*"
   RESULT_TTL_SECONDS: "86400"
   EVENT_STREAM_MAX_EVENTS: "1000"
   JOB_CEILING_USD: "0.50"

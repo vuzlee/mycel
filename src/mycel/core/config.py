@@ -125,6 +125,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     #: Evictable cache (answers, access tokens), on its own `allkeys-lru` server.
     redis_cache_url: str = "redis://localhost:6380/0"
+    #: Off only for a load test: login, signup, reset and chat are capped per minute.
+    rate_limits_enabled: bool = True
     #: How long a finished answer stays readable.
     result_ttl_seconds: int = 3600
     #: Events kept per job stream; a lagging client sees a gap in `seq`.
