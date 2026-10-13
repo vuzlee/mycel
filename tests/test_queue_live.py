@@ -17,6 +17,9 @@ from mycel.queue.producer import publish
 
 pytestmark = pytest.mark.anyio
 
+#: The broker's management API, which queue arguments are read from.
+MGMT_PORT = int(os.environ.get("RABBITMQ_MANAGEMENT_PORT", "15672"))
+
 needs_broker = pytest.mark.skipif(
     not os.environ.get("RABBITMQ_URL"), reason="no broker is reachable"
 )
@@ -199,8 +202,12 @@ class TestTheWorkQueues:
     async def test_they_carry_no_broker_dead_lettering(self, live: AbstractChannel) -> None:
         """`retry.reject` routes every failure; a broker route would bypass the delays."""
         url = urlsplit(os.environ["RABBITMQ_URL"])
-        api = f"http://{url.hostname}:15672/api/queues/%2F"
+        api = f"http://{url.hostname}:{MGMT_PORT}/api/queues/%2F"
         async with httpx.AsyncClient(auth=(url.username or "", url.password or "")) as http:
+            try:
+                await http.get(f"http://{url.hostname}:{MGMT_PORT}/api/overview")
+            except httpx.TransportError:
+                pytest.skip(f"the broker has no management API on {MGMT_PORT}")
             for name in (topology.QUEUE, topology.INGEST_QUEUE):
                 arguments = (await http.get(f"{api}/{name}")).raise_for_status().json()["arguments"]
                 assert "x-dead-letter-routing-key" not in arguments, name
