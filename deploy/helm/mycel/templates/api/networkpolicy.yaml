@@ -1,0 +1,33 @@
+{{/*
+The api trusts X-Forwarded-For (FORWARDED_ALLOW_IPS), and the rate limits key on the address
+it gives. That is safe only if nothing but the ingress controller can reach the http port:
+any other pod could name any address it liked. /metrics stays open to this release's
+Prometheus. Enforced only on a CNI that implements NetworkPolicy; minikube's default does not.
+*/}}
+{{- if .Values.api.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "mycel.fullname" . }}-api
+  labels:
+    {{- include "mycel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "mycel.selectorLabels" (dict "ctx" . "component" "api") | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.api.networkPolicy.ingressNamespace }}
+      ports:
+        - port: http
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "mycel.selectorLabels" (dict "ctx" . "component" "prometheus") | nindent 14 }}
+      ports:
+        - port: metrics
+{{- end }}

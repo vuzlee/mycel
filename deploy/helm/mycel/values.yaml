@@ -20,6 +20,11 @@ api:
   resources:
     requests: {cpu: 200m, memory: 512Mi}
     limits: {memory: 1Gi}
+  # Only the ingress controller reaches the http port; see templates/api/networkpolicy.yaml
+  # for why FORWARDED_ALLOW_IPS depends on it.
+  networkPolicy:
+    enabled: true
+    ingressNamespace: ingress-nginx
 
 worker:
   replicas: 2
@@ -66,8 +71,9 @@ config:
   DB_POOL_SIZE: "5"
   DB_MAX_OVERFLOW: "5"
   # The api is a ClusterIP reached through the ingress, so uvicorn takes the client address
-  # from X-Forwarded-For; the rate limits key on it. Compose exposes the api directly and
-  # keeps uvicorn's default (trust 127.0.0.1 only).
+  # from X-Forwarded-For; the rate limits key on it. Safe only with api.networkPolicy on:
+  # without it any pod could send the header. Compose exposes the api directly and keeps
+  # uvicorn's default (trust 127.0.0.1 only).
   FORWARDED_ALLOW_IPS: "*"
   RESULT_TTL_SECONDS: "86400"
   EVENT_STREAM_MAX_EVENTS: "1000"
