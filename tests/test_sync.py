@@ -226,7 +226,8 @@ class TestOneFetch:
 
         def client(**kwargs: Any) -> httpx2.AsyncClient:
             opened.append(1)
-            return _mock(handler)(**kwargs)
+            kwargs.pop("transport", None)
+            return _REAL_CLIENT(transport=httpx2.MockTransport(handler), **kwargs)
 
         return client
 
