@@ -12,6 +12,8 @@
 global:
   scrape_interval: 15s
 
+rule_files: [alerts.yaml]
+
 scrape_configs:
   - job_name: mycel-api
     static_configs:

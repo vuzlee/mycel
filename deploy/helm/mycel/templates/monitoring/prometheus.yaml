@@ -12,6 +12,8 @@ data:
     global:
       scrape_interval: {{ .Values.monitoring.prometheus.scrapeInterval }}
 
+    rule_files: [alerts.yaml]
+
     scrape_configs:
       # One job for every app pod; the pod's metrics port says where to scrape.
       - job_name: mycel
@@ -36,6 +38,8 @@ data:
             target_label: component
           - source_labels: [__meta_kubernetes_pod_name]
             target_label: pod
+  alerts.yaml: |
+    {{- .Files.Get "files/alerts.yaml" | nindent 4 }}
 ---
 apiVersion: v1
 kind: Service

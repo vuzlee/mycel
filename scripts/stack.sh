@@ -8,12 +8,13 @@
 #
 #   scripts/stack.sh doctor             what is configured, broken, or off
 #   scripts/stack.sh sync [--refetch]   one Jira sync now
+#   scripts/stack.sh replay [dlq [N]]   count parked jobs, or send them back
 
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-  sed -n '3,10p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
+  sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
   exit "${1:-1}"
 }
 
@@ -36,6 +37,7 @@ case "$mode" in
 
   doctor)       run "$HERE/ops/doctor.sh" "$@" ;;
   sync)         run "$HERE/ops/sync.sh" "$@" ;;
+  replay)       run "$HERE/ops/replay.sh" "$@" ;;
 
   -h|--help|help) usage 0 ;;
   *) printf '\033[31mxx\033[0m unknown: %s\n\n' "$mode" >&2; usage ;;

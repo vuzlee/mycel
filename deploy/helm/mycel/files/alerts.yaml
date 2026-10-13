@@ -1,0 +1,9 @@
+# Shown on Prometheus' Alerts page. No Alertmanager yet, so nothing is sent anywhere.
+groups:
+  - name: mycel-queue
+    rules:
+      - alert: JobsParked
+        expr: max by (queue) (mycel_dead_letters) > 0
+        for: 5m
+        annotations:
+          summary: "{{ $labels.queue }} holds {{ $value }} parked job(s); see scripts/stack.sh replay"

@@ -10,6 +10,8 @@ from mycel.domains.ingest import watchdog
 from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
+from mycel.observability.metrics import dead_letters
+from mycel.queue.replay import depths
 from mycel.services.auth import sweep_expired_sessions
 from mycel.services.enqueue import relay
 
@@ -33,6 +35,13 @@ async def _sweep() -> None:
         log.info("expired sessions swept", extra={"deleted": deleted})
 
 
+async def _count_dead() -> None:
+    for queue, waiting in (await depths()).items():
+        dead_letters.labels(queue=queue).set(waiting)
+        if waiting:
+            log.warning("jobs parked in %s", queue, extra={"count": waiting})
+
+
 async def run_forever() -> None:
     """Run each timer until stopped; an advisory lock per timer keeps replicas from doubling."""
     settings = get_settings()
@@ -41,6 +50,7 @@ async def run_forever() -> None:
         ("sweep:sessions", _sweep, settings.session_sweep_interval_seconds),
         ("watchdog:documents", watchdog, WATCHDOG_INTERVAL_SECONDS),
         ("relay:outbox", relay, RELAY_INTERVAL_SECONDS),
+        ("count:dead-letters", _count_dead, WATCHDOG_INTERVAL_SECONDS),
     ]
     log.info("scheduler started", extra={"timers": {name: every for name, _, every in timers}})
     await asyncio.gather(*(_loop(name, tick, every) for name, tick, every in timers))

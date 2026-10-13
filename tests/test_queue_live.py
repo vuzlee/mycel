@@ -4,9 +4,10 @@ import os
 from collections.abc import AsyncIterator
 
 import pytest
+from aio_pika import Message
 from aio_pika.abc import AbstractChannel
 
-from mycel.queue import retry, topology
+from mycel.queue import replay, retry, topology
 from mycel.queue.connection import channel, close_connection
 from mycel.queue.job import Job, JobKind
 from mycel.queue.producer import publish
@@ -125,3 +126,29 @@ class TestRejecting:
         assert parked is not None
         assert parked.headers[retry.ATTEMPT_HEADER] == topology.MAX_ATTEMPTS
         await parked.ack()
+
+
+@needs_broker
+class TestReplay:
+    async def test_a_parked_job_goes_back_with_its_attempts_reset(
+        self, live: AbstractChannel
+    ) -> None:
+        topo = await topology.declare(live)
+        job = _job()
+        await topo.dlx.publish(
+            Message(
+                job.model_dump_json().encode(),
+                message_id=job.job_id,
+                headers={retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS, "mycel-error": "boom"},
+            ),
+            routing_key=topology.DEAD_QUEUE,
+        )
+
+        assert (await replay.depths())[topology.DEAD_QUEUE] == 1
+        assert await replay.replay(topology.DEAD_QUEUE) == 1
+
+        message = await topo.jobs.get(timeout=5)
+        assert message is not None and message.message_id == job.job_id
+        assert message.headers[retry.ATTEMPT_HEADER] == 0
+        assert "mycel-error" not in message.headers
+        await message.ack()

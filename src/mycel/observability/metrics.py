@@ -32,6 +32,13 @@ jobs_total = Counter(
 )
 
 
+dead_letters = Gauge(
+    "mycel_dead_letters",
+    "Jobs parked in a dead-letter queue; anything above zero needs a look.",
+    ["queue"],
+)
+
+
 def render() -> tuple[bytes, str]:
     """The registry in Prometheus text format, with its content type."""
     return generate_latest(), CONTENT_TYPE_LATEST

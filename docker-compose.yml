@@ -208,7 +208,10 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yaml"
       - "--storage.tsdb.retention.time=7d"
-    volumes: ["./deploy/monitoring:/etc/prometheus", "promdata:/prometheus"]
+    volumes:
+      - ./deploy/monitoring:/etc/prometheus
+      - ./deploy/helm/mycel/files/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - promdata:/prometheus
     ports: ["9090:9090"]
     mem_limit: 1g
 
