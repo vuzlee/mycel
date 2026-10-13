@@ -10,10 +10,11 @@ class JobKind(StrEnum):
     CHAT = "chat"
     INGEST = "ingest"
     DELETE_DOCUMENT = "delete_document"
+    INDEX_GOLD = "index_gold"
 
 
-#: Kinds that run on the ingest worker rather than the chat worker.
-INGEST_KINDS = frozenset({JobKind.INGEST, JobKind.DELETE_DOCUMENT})
+#: Kinds that run on the ingest worker, which holds the embedding models and the RAM.
+INGEST_KINDS = frozenset({JobKind.INGEST, JobKind.DELETE_DOCUMENT, JobKind.INDEX_GOLD})
 
 
 class Job(BaseModel):

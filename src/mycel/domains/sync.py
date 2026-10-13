@@ -8,11 +8,10 @@ from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository
-from mycel.infra.postgres.repositories.gold import GoldRepository
 from mycel.infra.postgres.session import session_scope
-from mycel.infra.vectors.client import configured as vectors_configured
 from mycel.observability.metrics import records_written, sync_duration_seconds
-from mycel.services import access
+from mycel.queue.job import Job, JobKind
+from mycel.services import access, enqueue
 from mycel.services.fetch import fetch_jira
 from mycel.services.transform import transform
 from mycel.sources.jira import Auth
@@ -29,8 +28,6 @@ class SyncResult:
     silver_worklogs: int
     items: int
     worklogs: int
-    #: How many gold rows were embedded this pass.
-    indexed: int = 0
 
 
 async def refetch_jira() -> SyncResult:
@@ -67,7 +64,7 @@ async def sync_jira() -> SyncResult:
         await _record(error=str(exc) or type(exc).__name__)
         raise
 
-    indexed = await _index_gold()
+    await _queue_index()
     await _record()
     refreshed = await access.refresh_everyone()
 
@@ -88,7 +85,6 @@ async def sync_jira() -> SyncResult:
             "silver_worklogs": result.silver_worklogs,
             "items": result.items,
             "worklogs": result.worklogs,
-            "indexed": indexed,
             "access_refreshed": refreshed,
         },
     )
@@ -98,7 +94,6 @@ async def sync_jira() -> SyncResult:
         silver_worklogs=result.silver_worklogs,
         items=result.items,
         worklogs=result.worklogs,
-        indexed=indexed,
     )
 
 
@@ -119,22 +114,9 @@ async def _record(error: str | None = None) -> None:
         log.warning("could not record the sync run", exc_info=True)
 
 
-async def _index_gold() -> int:
-    """Embed what gold has touched, if this deployment has somewhere to put it."""
-    if not vectors_configured():
-        return 0
-
-    try:
-        from mycel.infra.vectors import indexer
-
-        embedded = 0
-        epoch = datetime(1970, 1, 1, tzinfo=UTC)
-        async with session_scope() as session:
-            gold = GoldRepository(session)
-            for project in await gold.projects():
-                items = await gold.items_between(project, since=epoch)
-                embedded += (await indexer.index_items(items)).embedded
-        return embedded
-    except Exception:
-        log.warning("indexing gold failed; search is behind", exc_info=True)
-        return 0
+async def _queue_index() -> None:
+    """Hand the embedding to the ingest worker; the scheduler never loads a model."""
+    job = Job(kind=JobKind.INDEX_GOLD)
+    async with session_scope() as session:
+        await enqueue.stage(session, job)
+    await enqueue.send(job)
