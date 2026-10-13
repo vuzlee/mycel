@@ -1,6 +1,9 @@
 """One REST call on one person's Jira grant: retried past 429, failures named."""
 
 import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +22,8 @@ API_HOST = "https://api.atlassian.com"
 
 log = get_logger(__name__)
 
+_client: ContextVar["httpx2.AsyncClient | None"] = ContextVar("jira_client", default=None)
+
 
 @dataclass(frozen=True)
 class Auth:
@@ -26,6 +31,20 @@ class Auth:
 
     access_token: str
     cloud_id: str
+
+
+@asynccontextmanager
+async def session() -> AsyncIterator[None]:
+    """Every call inside the block shares one client, so one connection pool."""
+    if _client.get() is not None:
+        yield
+        return
+    async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
+        token = _client.set(client)
+        try:
+            yield
+        finally:
+            _client.reset(token)
 
 
 async def call(
@@ -54,20 +73,26 @@ async def request(
         "accept": "application/json",
     }
 
-    for attempt in range(RETRIES):
-        try:
-            async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS, headers=headers) as client:
-                response = await client.request(method, url, json=body, params=params)
-        except httpx2.TimeoutException as exc:
-            raise SourceError(f"jira: {path} did not respond in {HTTP_TIMEOUT_SECONDS}s") from exc
-        except httpx2.HTTPError as exc:
-            # A connection never made cannot have written anything.
-            raise NotWritten(f"jira: could not reach {url}: {exc}") from exc
+    async with session():
+        client = _client.get()
+        assert client is not None
+        for attempt in range(RETRIES):
+            try:
+                response = await client.request(
+                    method, url, json=body, params=params, headers=headers
+                )
+            except httpx2.TimeoutException as exc:
+                raise SourceError(
+                    f"jira: {path} did not respond in {HTTP_TIMEOUT_SECONDS}s"
+                ) from exc
+            except httpx2.HTTPError as exc:
+                # A connection never made cannot have written anything.
+                raise NotWritten(f"jira: could not reach {url}: {exc}") from exc
 
-        if response.status_code == 429 and attempt < RETRIES - 1:
-            await _wait(response, attempt)
-            continue
-        return _checked(path, response)
+            if response.status_code == 429 and attempt < RETRIES - 1:
+                await _wait(response, attempt)
+                continue
+            return _checked(path, response)
 
     raise SourceError(f"jira: {path} unreachable after {RETRIES} attempts")
 

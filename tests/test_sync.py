@@ -15,8 +15,10 @@ from mycel.etl.checks.work import CheckFailed, check_item, check_items, check_wo
 from mycel.etl.normalize import JIRA, from_jira_issue, from_jira_worklog
 from mycel.etl.promote import to_gold_item, to_gold_worklog
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
+from mycel.services import fetch
 from mycel.services.check import check_work
 from mycel.sources import SourceError
+from mycel.sources.jira_http import session as jira_session
 
 pytestmark = pytest.mark.anyio
 
@@ -204,6 +206,52 @@ class TestTheWorklogCall:
     async def test_an_issue_with_no_effort_logged(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"worklogs": []}))
         assert await jira.issue_worklogs(AUTH, "MYC-6") == []
+
+
+class TestOneFetch:
+    """A sync reads every issue's worklogs; it does so on one client, in parallel, in order."""
+
+    @staticmethod
+    def _jira(opened: list[int]) -> Any:
+        keys = [f"MYC-{n}" for n in range(1, 13)]
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            path = request.url.path
+            if path.endswith("/field"):
+                return httpx2.Response(200, json=[])
+            if path.endswith("/search/jql"):
+                return httpx2.Response(200, json={"issues": [{"key": k} for k in keys]})
+            key = path.split("/issue/")[1].split("/")[0]
+            return httpx2.Response(200, json={"worklogs": [{"id": key}]})
+
+        def client(**kwargs: Any) -> httpx2.AsyncClient:
+            opened.append(1)
+            return _mock(handler)(**kwargs)
+
+        return client
+
+    async def test_one_client_for_the_whole_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        opened: list[int] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", self._jira(opened))
+        async with jira_session():
+            issues = await jira.search_issues(AUTH, "x")
+            await fetch._worklogs(AUTH, [str(i["key"]) for i in issues])
+        assert len(opened) == 1
+
+    async def test_worklogs_come_back_in_key_order(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(httpx2, "AsyncClient", self._jira([]))
+        keys = [f"MYC-{n}" for n in range(1, 13)]
+        found = await fetch._worklogs(AUTH, keys)
+        assert [entries[0]["id"] for entries in found] == keys
+
+    async def test_without_a_session_each_call_has_its_own_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        opened: list[int] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", self._jira(opened))
+        await jira.issue_worklogs(AUTH, "MYC-1")
+        await jira.issue_worklogs(AUTH, "MYC-2")
+        assert len(opened) == 2
 
 
 class TestWritingBack:

@@ -221,6 +221,18 @@ class TestWhatTheModelReads:
         rows = [line for line in text.splitlines() if "@example.com" in line]
         assert rows and all("https://mail.google.com/" in r for r in rows)
 
+    async def test_headers_keep_the_order_gmail_listed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Headers are read in parallel; the newest-first order still holds."""
+        t = now()
+        inbox = [(f"P{i} <p{i}@example.com>", f"s{i}", t - timedelta(hours=i)) for i in range(12)]
+        monkeypatch.setattr(httpx2, "AsyncClient", FakeGmail(inbox).client)
+
+        found = await gmail.read_recent("token", hours=24, limit=12)
+
+        assert [h.subject for h in found.headers] == [f"s{i}" for i in range(12)]
+
     async def test_an_empty_mailbox_says_so(
         self, read_mail: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch, connected: list[int]
     ) -> None:

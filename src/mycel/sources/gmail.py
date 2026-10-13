@@ -1,5 +1,6 @@
 """Gmail: the asker's recent message headers, never bodies."""
 
+import asyncio
 import email.utils
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -16,6 +17,9 @@ API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 #: Read but never parsed for content.
 HEADERS = ("From", "Subject", "Date")
+
+#: Header reads in flight at once.
+PARALLEL = 8
 
 #: The message's permalink, the source an answer cites.
 PERMALINK = "https://mail.google.com/mail/u/0/#all/{id}"
@@ -48,7 +52,14 @@ async def read_recent(access_token: str, hours: int, limit: int) -> Mailbox:
         async with google_client(access_token) as client:
             listed = await _get(client, "/messages", {"q": query, "maxResults": "500"})
             ids = [str(m["id"]) for m in listed.get("messages", []) if m.get("id")]
-            headers = [h for h in [await _header(client, i) for i in ids[:limit]] if h]
+            gate = asyncio.Semaphore(PARALLEL)
+
+            async def one(message_id: str) -> Header | None:
+                async with gate:
+                    return await _header(client, message_id)
+
+            found = await asyncio.gather(*(one(i) for i in ids[:limit]))
+            headers = [h for h in found if h]
     except httpx2.HTTPError as exc:
         raise SourceError(f"gmail: the mailbox could not be reached: {exc}") from exc
     total = int(listed.get("resultSizeEstimate", len(ids)))

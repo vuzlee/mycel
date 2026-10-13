@@ -8,6 +8,7 @@ from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.services import jira_oauth
 from mycel.sources import jira
+from mycel.sources.jira_http import session as jira_session
 
 log = get_logger(__name__)
 
@@ -31,6 +32,7 @@ async def refresh_everyone() -> int:
     """Refresh every connected person. Returns how many were refreshed."""
     async with session_scope() as session:
         users = await AccountRepository(session).jira_connected_users()
-    for user_id in users:
-        await refresh(user_id)
+    async with jira_session():
+        for user_id in users:
+            await refresh(user_id)
     return len(users)
