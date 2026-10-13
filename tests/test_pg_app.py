@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.fakes import needs_postgres
@@ -176,6 +176,35 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
         rows = await repo.conversations_for(user.id)
         assert [row.id for row in rows] == [silent.id, spoken.id]
+
+    async def test_the_latest_turn_of_each_thread_in_one_query(self, session: AsyncSession) -> None:
+        """The sidebar shows each thread's last status without loading every turn."""
+        repo = AppRepository(session)
+        user = await repo.create_user("latest@example.com", "x")
+        a = await repo.create_conversation(user.id, "chat", "a")
+        b = await repo.create_conversation(user.id, "chat", "b")
+        silent = await repo.create_conversation(user.id, "chat", "silent")
+        await repo.upsert_turn(a.id, "a-1", "q", "done")
+        await repo.upsert_turn(a.id, "a-2", "q", "failed")
+        await repo.upsert_turn(b.id, "b-1", "q", "queued")
+        await session.flush()
+        await self._stamp(session, "turn", "job_id = 'a-1'", 1)
+        await self._stamp(session, "turn", "job_id = 'a-2'", 2)
+
+        statements: list[str] = []
+
+        def record(*args: object) -> None:
+            statements.append(str(args[2]))
+
+        engine = session.bind.sync_engine
+        event.listen(engine, "before_cursor_execute", record)
+        try:
+            latest = await repo.latest_turns([a.id, b.id, silent.id])
+        finally:
+            event.remove(engine, "before_cursor_execute", record)
+
+        assert len(statements) == 1
+        assert latest == {a.id: ("a-2", "failed"), b.id: ("b-1", "queued")}
 
 
 @needs_postgres

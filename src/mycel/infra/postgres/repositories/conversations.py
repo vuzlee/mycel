@@ -162,6 +162,18 @@ class ConversationRepository:
         )
         return _turn(row) if row else None
 
+    async def latest_turns(self, conversation_ids: list[int]) -> dict[int, tuple[str, str]]:
+        """`job_id` and `status` of each conversation's newest turn, in one query."""
+        if not conversation_ids:
+            return {}
+        rows = await self._session.execute(
+            select(Turn.conversation_id, Turn.job_id, Turn.status)
+            .where(Turn.conversation_id.in_(conversation_ids))
+            .distinct(Turn.conversation_id)
+            .order_by(Turn.conversation_id, Turn.created_at.desc(), Turn.id.desc())
+        )
+        return {cid: (job_id, status) for cid, job_id, status in rows}
+
     async def turns_for_conversation(self, conversation_id: int) -> list[TurnRow]:
         """Every turn in a conversation, oldest first."""
         rows = await self._session.scalars(

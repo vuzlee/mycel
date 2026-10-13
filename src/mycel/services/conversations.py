@@ -26,18 +26,16 @@ async def list_conversations(user_id: int, limit: int = HISTORY_LIMIT) -> list[C
     """One person's sidebar, newest first."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
-        summaries = []
-        for conversation in await repo.conversations_for(user_id, limit=limit):
-            turns = await repo.turns_for_conversation(conversation.id)
-            latest = turns[-1] if turns else None
-            summaries.append(
-                ConversationSummary(
-                    conversation=conversation,
-                    job_id=latest.job_id if latest else None,
-                    status=latest.status if latest else None,
-                )
-            )
-        return summaries
+        conversations = await repo.conversations_for(user_id, limit=limit)
+        latest = await repo.latest_turns([c.id for c in conversations])
+    return [
+        ConversationSummary(
+            conversation=c,
+            job_id=latest[c.id][0] if c.id in latest else None,
+            status=latest[c.id][1] if c.id in latest else None,
+        )
+        for c in conversations
+    ]
 
 
 async def conversation_turns(user_id: int, conversation_id: int) -> list[TurnRow]:
