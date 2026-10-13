@@ -95,12 +95,11 @@ services:
   # dead-letter exchange with a TTL, not a chain of retry topics.
   rabbitmq:
     image: rabbitmq:4.3.6-management-alpine
-    # The data directory is named after the node, and the node after the hostname. Docker
-    # gives each new container a random one, so a recreated container booted an empty
-    # broker. Pinned to the hostname the volume's live data was written under.
-    hostname: 7c0e57de42b5
+    # The data directory is named after the node, and the node after the hostname: without
+    # a fixed one, every recreated container would boot an empty broker.
     # Upgrades go one series at a time (3.13 → 4.2 → 4.3), with
     # `rabbitmqctl enable_feature_flag all` before and after each step.
+    hostname: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-mycel}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set it in .env}

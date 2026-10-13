@@ -11,10 +11,6 @@ RETRY_DELAYS_MS = (5_000, 30_000, 120_000)
 #: The first try plus one retry per delay; then the dead-letter queue.
 MAX_ATTEMPTS = 1 + len(RETRY_DELAYS_MS)
 
-#: The single 60 s retry queue before batch 078. Still declared so jobs parked in it at
-#: deploy return; nothing publishes to it any more.
-LEGACY_DELAY_MS = 60_000
-
 EXCHANGE = "mycel.jobs"
 DLX = "mycel.jobs.dlx"
 
@@ -79,16 +75,10 @@ async def _family(
     dead_name: str,
 ) -> tuple[AbstractQueue, tuple[AbstractQueue, ...], AbstractQueue]:
     """One work queue, its delay queues, and its dead-letter queue."""
-    work = await channel.declare_queue(
-        name,
-        durable=True,
-        arguments={"x-dead-letter-exchange": DLX, "x-dead-letter-routing-key": retry_name},
-    )
+    # No broker-side dead-lettering: `retry.reject` republishes every failure itself.
+    work = await channel.declare_queue(name, durable=True)
     await work.bind(exchange, routing_key=name)
 
-    # The work queue's own dead-letter key still names this queue; a queue's arguments
-    # cannot change in place, so it stays, and only a broker-side reject lands here.
-    await _delay(channel, dlx, name, retry_name, LEGACY_DELAY_MS)
     retries = tuple(
         [
             await _delay(channel, dlx, name, f"{retry_name}.{_label(delay)}", delay)

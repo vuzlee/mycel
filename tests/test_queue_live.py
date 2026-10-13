@@ -3,7 +3,9 @@
 import asyncio
 import os
 from collections.abc import AsyncIterator
+from urllib.parse import urlsplit
 
+import httpx
 import pytest
 from aio_pika import Message
 from aio_pika.abc import AbstractChannel
@@ -190,3 +192,15 @@ class TestReplay:
         assert message.headers[retry.ATTEMPT_HEADER] == 0
         assert "mycel-error" not in message.headers
         await message.ack()
+
+
+@needs_broker
+class TestTheWorkQueues:
+    async def test_they_carry_no_broker_dead_lettering(self, live: AbstractChannel) -> None:
+        """`retry.reject` routes every failure; a broker route would bypass the delays."""
+        url = urlsplit(os.environ["RABBITMQ_URL"])
+        api = f"http://{url.hostname}:15672/api/queues/%2F"
+        async with httpx.AsyncClient(auth=(url.username or "", url.password or "")) as http:
+            for name in (topology.QUEUE, topology.INGEST_QUEUE):
+                arguments = (await http.get(f"{api}/{name}")).raise_for_status().json()["arguments"]
+                assert "x-dead-letter-routing-key" not in arguments, name
