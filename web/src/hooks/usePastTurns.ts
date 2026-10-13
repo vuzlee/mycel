@@ -1,33 +1,32 @@
-import { useEffect, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import type { Turn } from "../api";
 import { fetchTurns } from "../api";
+
+const NONE: Turn[] = [];
 
 /** The conversation's earlier turns, and the job they were loaded for (what the scroll waits on).
  *  A null conversation keeps what is on screen: it is the moment before the run says which one. */
 export function usePastTurns(conversationId: number | null, jobId: string | null) {
-  const [past, setPast] = useState<Turn[]>([]);
-  const [pastFor, setPastFor] = useState<string | null>(null);
+  // Cleared by "new conversation" until the next conversation id arrives.
+  const [cleared, setCleared] = useState(false);
+  const query = useQuery({
+    queryKey: ["turns", conversationId],
+    queryFn: () => fetchTurns(conversationId as number),
+    enabled: conversationId !== null,
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    if (conversationId === null) {
-      if (jobId !== null) setPastFor(jobId);
-      return;
-    }
-    let live = true;
-    void fetchTurns(conversationId)
-      .then((turns) => {
-        if (!live) return;
-        setPast(turns.filter((turn) => turn.job_id !== jobId));
-        setPastFor(jobId);
-      })
-      .catch(() => {
-        // Keep the rows on screen, but settle so the scroll does not wait forever.
-        if (live) setPastFor(jobId);
-      });
-    return () => {
-      live = false;
-    };
-  }, [conversationId, jobId]);
+  const loaded = conversationId === null || query.isFetched || query.isError;
+  const past =
+    cleared && conversationId === null
+      ? NONE
+      : (query.data ?? NONE).filter((turn) => turn.job_id !== jobId);
+  // Failed loads settle too, so the scroll does not wait forever.
+  const pastFor = loaded && !query.isPlaceholderData ? jobId : null;
+
+  const setPast = useCallback((next: Turn[]) => setCleared(next.length === 0), []);
+  if (cleared && conversationId !== null) setCleared(false);
 
   return { past, setPast, pastFor };
 }

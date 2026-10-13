@@ -1,10 +1,14 @@
 /** The sidebar's history, from the server rather than this browser. */
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useContext } from "react";
 import type { ReactNode } from "react";
 import type { ConversationSummary } from "../api";
-import { Unauthorized, fetchConversations, deleteConversation, pinConversation } from "../api";
+import { fetchConversations, deleteConversation, pinConversation } from "../api";
 import { useAuth } from "./auth";
+
+const KEY = ["conversations"] as const;
+const NONE: ConversationSummary[] = [];
 
 interface ConversationsValue {
   conversations: ConversationSummary[];
@@ -23,21 +27,21 @@ const Ctx = createContext<ConversationsValue>({
 });
 
 export function ConversationsProvider({ children }: { children: ReactNode }) {
-  // `forget` is taken below by the conversation delete, and the auth one means something else.
-  const { user, forget: dropSession } = useAuth();
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-
+  const { user } = useAuth();
+  const client = useQueryClient();
+  const { data: conversations = NONE } = useQuery({
+    queryKey: KEY,
+    queryFn: fetchConversations,
+    enabled: Boolean(user),
+  });
+  const setConversations = useCallback(
+    (change: (current: ConversationSummary[]) => ConversationSummary[]) =>
+      client.setQueryData<ConversationSummary[]>(KEY, (current) => change(current ?? NONE)),
+    [client],
+  );
   const reload = useCallback(() => {
-    if (!user) {
-      setConversations([]);
-      return;
-    }
-    void fetchConversations()
-      .then(setConversations)
-      .catch((error: unknown) => {
-        if (error instanceof Unauthorized) dropSession();
-      });
-  }, [user, dropSession]);
+    void client.invalidateQueries({ queryKey: KEY });
+  }, [client]);
 
   // The row leaves the list before the server confirms. A delete that has to wait for a
   // round-trip feels broken on a slow link, and the failure case is a reload away.
@@ -48,7 +52,7 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
         reload();
       });
     },
-    [reload],
+    [reload, setConversations],
   );
 
   // Flipped at once, like the delete; the server's order comes back with the reload.
@@ -58,12 +62,13 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
       await pinConversation(id, pinned).catch(() => {});
       reload();
     },
-    [reload],
+    [reload, setConversations],
   );
 
-  useEffect(reload, [reload]);
-
-  return <Ctx.Provider value={{ conversations, reload, forget, pin }}>{children}</Ctx.Provider>;
+  const shown = user ? conversations : NONE;
+  return (
+    <Ctx.Provider value={{ conversations: shown, reload, forget, pin }}>{children}</Ctx.Provider>
+  );
 }
 
 export const useConversations = (): ConversationsValue => useContext(Ctx);

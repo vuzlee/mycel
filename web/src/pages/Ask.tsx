@@ -1,6 +1,7 @@
 /** Ask anything, and watch the run happen. */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef } from "../api";
 import { askChat, fetchProjects } from "../api";
@@ -54,12 +55,8 @@ export function Ask() {
 
   const [asked, setAsked] = useState<string | null>(null);
   const [seed, setSeed] = useState("");
-  const [firstProject, setFirstProject] = useState<string | null>(null);
-  useEffect(() => {
-    void fetchProjects()
-      .then((ps) => setFirstProject(ps[0] ?? null))
-      .catch(() => setFirstProject(null));
-  }, []);
+  const { data: projects } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
+  const firstProject = projects?.[0] ?? null;
   const seeds = useMemo(
     () => [...(firstProject ? jiraSeeds(firstProject) : []), ...OTHER_SEEDS],
     [firstProject],

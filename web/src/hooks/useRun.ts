@@ -1,9 +1,9 @@
 /** One run, watched two ways at once. */
 
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type { ChatResult } from "../api";
 import { Unauthorized, fetchChat } from "../api";
-import { useAuth } from "../context/auth";
 import { buildConversation } from "../lib/buildConversation";
 import type { Item } from "../lib/buildConversation";
 import type { Follow } from "./useJobStream";
@@ -24,49 +24,30 @@ export interface Run {
 }
 
 export function useRun(jobId: string | null): Run {
-  const { forget } = useAuth();
-  const [failure, setFailure] = useState<string | null>(null);
-  const [result, setResult] = useState<ChatResult | null>(null);
-
   const stream = useJobStream(jobId);
   const items = useMemo(() => buildConversation(stream.events), [stream.events]);
 
-  useEffect(() => {
-    setFailure(null);
-    setResult(null);
-    if (!jobId) return;
+  // Polled until the run settles; a 401 is handled once, by the query cache.
+  const polled = useQuery({
+    queryKey: ["chat", jobId],
+    queryFn: () => fetchChat(jobId as string),
+    enabled: jobId !== null,
+    refetchInterval: (query) => {
+      if (query.state.error instanceof Unauthorized) return false;
+      const data = query.state.data;
+      return data === undefined || data?.status === "running" ? POLL_MS : false;
+    },
+    // Anything but a 401 is transient while the run is live: keep polling.
+    retry: false,
+  });
 
-    let live = true;
-    let timer = 0;
-
-    const check = async (): Promise<void> => {
-      try {
-        const fetched = await fetchChat(jobId);
-        if (!live) return;
-        if (fetched === null) {
-          setFailure("No such run — it was never queued, or it was removed.");
-          window.clearInterval(timer);
-          return;
-        }
-        setResult(fetched);
-        if (fetched.status === "failed") setFailure(fetched.error ?? "The run failed.");
-        if (fetched.status !== "running") window.clearInterval(timer);
-      } catch (error) {
-        // A dead session must stop the loop; anything else is transient and retried.
-        if (error instanceof Unauthorized) {
-          window.clearInterval(timer);
-          forget();
-        }
-      }
-    };
-
-    void check();
-    timer = window.setInterval(check, POLL_MS);
-    return () => {
-      live = false;
-      window.clearInterval(timer);
-    };
-  }, [jobId, forget]);
+  const result: ChatResult | null = polled.data ?? null;
+  const failure =
+    polled.data === null
+      ? "No such run — it was never queued, or it was removed."
+      : result?.status === "failed"
+        ? (result.error ?? "The run failed.")
+        : null;
 
   const busy = stream.state === "running";
   // Only measures the distance to the bottom and offers the jump. Asking scrolls the new

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Dashboard as Board } from "../../api";
-import { Unauthorized, fetchDashboard, fetchProjects } from "../../api";
-import { useAuth } from "../../context/auth";
+import { fetchDashboard, fetchProjects } from "../../api";
 import { WINDOWS } from "./format";
 
 const EVERY_MS = 30_000;
@@ -10,59 +9,32 @@ const EVERY_MS = 30_000;
 /** Projects, the polled board, and the project/window kept in the URL. */
 export function useDashboard() {
   const [params, setParams] = useSearchParams();
-  const { forget } = useAuth();
-
-  const [projects, setProjects] = useState<string[] | null>(null);
-  const [board, setBoard] = useState<Board | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
-
   const project = params.get("project");
   // A hand-edited `?days=` goes straight into a fetch, so off-menu values fall back.
   const asked = Number(params.get("days"));
   const window_ = WINDOWS.includes(asked) ? asked : 7;
 
+  const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
+  const projects = projectsQuery.data ?? (projectsQuery.isError ? [] : null);
+
+  // The project lives in the URL so a board is a link someone can keep.
   useEffect(() => {
-    void fetchProjects()
-      .then((found) => {
-        setProjects(found);
-        // The project lives in the URL so a board is a link someone can keep.
-        if (project === null && found[0]) {
-          setParams({ project: found[0], days: String(window_) }, { replace: true });
-        }
-      })
-      .catch((error: unknown) => {
-        if (error instanceof Unauthorized) forget();
-        else setProjects([]);
-      });
-    // Only on mount: re-picking a default every time the window changes would fight the URL.
+    if (project === null && projects?.[0]) {
+      setParams({ project: projects[0], days: String(window_) }, { replace: true });
+    }
+    // Only when the list arrives: re-picking on every window change would fight the URL.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [projects]);
 
-  useEffect(() => {
-    if (project === null) return;
-    let live = true;
-
-    const load = (): void => {
-      void fetchDashboard(project, window_)
-        .then((found) => {
-          if (!live) return;
-          setBoard(found);
-          setFailure(null);
-        })
-        .catch((error: unknown) => {
-          if (!live) return;
-          if (error instanceof Unauthorized) forget();
-          else setFailure(error instanceof Error ? error.message : String(error));
-        });
-    };
-
-    load();
-    const timer = globalThis.setInterval(load, EVERY_MS);
-    return () => {
-      live = false;
-      globalThis.clearInterval(timer);
-    };
-  }, [project, window_, forget]);
+  const boardQuery = useQuery({
+    queryKey: ["dashboard", project, window_],
+    queryFn: () => fetchDashboard(project as string, window_),
+    enabled: project !== null,
+    refetchInterval: EVERY_MS,
+  });
+  const board = boardQuery.data ?? null;
+  const error = boardQuery.error;
+  const failure = error && !boardQuery.data ? error.message : null;
 
   const pick = (next: { project?: string; days?: number }): void =>
     setParams({

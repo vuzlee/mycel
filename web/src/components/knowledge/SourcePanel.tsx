@@ -1,6 +1,7 @@
 /** A cited source, with the quote marked; the original is one click away. */
 
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { fetchPassage, fetchSourceUrl, type Passage, type SourceRef } from "../../api";
 import { Modal } from "../Modal";
 
@@ -20,26 +21,20 @@ function Marked({ text, quote }: { text: string; quote: string }) {
 }
 
 export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: () => void }) {
-  const [passage, setPassage] = useState<Passage | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
   const isPdf = source.mime === "application/pdf" && source.page !== null;
   const quote = source.quote ?? "";
 
-  useEffect(() => {
-    let current = true;
-    setPassage(null);
-    setUrl(null);
-    setFailure(null);
-    const fail = (e: Error): void => {
-      if (current) setFailure(e.message);
-    };
-    if (isPdf) void fetchSourceUrl(source.document_id).then((u) => current && setUrl(u), fail);
-    else void fetchPassage(source.chunk_id).then((p) => current && setPassage(p), fail);
-    return () => {
-      current = false;
-    };
-  }, [isPdf, source.chunk_id, source.document_id]);
+  // Keyed by the source, so a fast second click can never show the first one's text.
+  const fetched = useQuery<{ url: string | null; passage: Passage | null }>({
+    queryKey: ["source", isPdf ? "pdf" : "chunk", isPdf ? source.document_id : source.chunk_id],
+    queryFn: async () =>
+      isPdf
+        ? { url: await fetchSourceUrl(source.document_id), passage: null }
+        : { url: null, passage: await fetchPassage(source.chunk_id) },
+  });
+  const url = fetched.data?.url ?? null;
+  const passage = fetched.data?.passage ?? null;
+  const failure = fetched.error?.message ?? null;
 
   const open = async (): Promise<void> => {
     const original = url ?? (await fetchSourceUrl(source.document_id));
@@ -53,7 +48,7 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
         ? `page ${source.page}`
         : null;
   const where = [pages, source.section || null].filter(Boolean).join(" · ");
-  const loading = !failure && (isPdf ? url === null : passage === null);
+  const loading = fetched.isPending;
 
   return (
     <Modal

@@ -1,9 +1,13 @@
 /** Who is signed in, for the whole app. */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../api";
 import * as api from "../api";
+import { whenUnauthorized } from "../lib/queryClient";
+
+const ME = ["me"] as const;
 
 interface AuthValue {
   user: User | null | undefined;
@@ -15,28 +19,33 @@ interface AuthValue {
 const Ctx = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const client = useQueryClient();
+  const { data: user } = useQuery({ queryKey: ME, queryFn: api.me, staleTime: Infinity });
+  const setUser = useCallback(
+    (next: User | null) => {
+      client.setQueryData(ME, next);
+      // Everything cached belonged to whoever was signed in.
+      client.removeQueries({ predicate: (q) => q.queryKey[0] !== ME[0] });
+    },
+    [client],
+  );
 
-  useEffect(() => {
-    let live = true;
-    void api.me().then((found) => live && setUser(found));
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  const signIn = useCallback(async (email: string, password: string) => {
-    setUser(await api.login(email, password));
-  }, []);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      setUser(await api.login(email, password));
+    },
+    [setUser],
+  );
 
   const signOut = useCallback(async () => {
     await api.logout();
     setUser(null);
-  }, []);
+  }, [setUser]);
 
   // A 401 from any other call: the session died server-side, so drop it here too rather
   // than leave the page showing a name that no longer signs anything.
-  const forget = useCallback(() => setUser(null), []);
+  const forget = useCallback(() => setUser(null), [setUser]);
+  useEffect(() => whenUnauthorized(forget), [forget]);
 
   const value = useMemo(() => ({ user, signIn, signOut, forget }), [user, signIn, signOut, forget]);
 

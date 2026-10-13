@@ -1,3 +1,4 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   connectGoogle,
@@ -75,25 +76,23 @@ type Status = Awaited<ReturnType<Provider["status"]>>;
 
 /** One provider's card: not set up here, connected, or not yet. */
 export function Connection({ provider }: { provider: Provider }) {
-  const [status, setStatus] = useState<Status | null>(null);
+  const client = useQueryClient();
+  const key = ["connection", provider.id];
+  const { data: status = null } = useQuery<Status>({ queryKey: key, queryFn: provider.status });
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [came] = useState(() => outcome(provider.id));
 
   useEffect(() => {
-    void provider
-      .status()
-      .then(setStatus)
-      .catch(() => setStatus(null));
     if (came) window.history.replaceState({}, "", window.location.pathname);
-  }, [came, provider]);
+  }, [came]);
 
   const drop = async (): Promise<void> => {
     setBusy(true);
     setFailure(null);
     try {
       await provider.disconnect();
-      setStatus(await provider.status());
+      await client.invalidateQueries({ queryKey: key });
     } catch (error) {
       setFailure(error instanceof Error ? error.message : String(error));
     } finally {
