@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from pydantic_ai import ModelRetry
+from qdrant_client.models import PayloadSchemaType
 
 import mycel.infra.vectors.collections as collections
 import mycel.infra.vectors.indexer as indexer
@@ -290,3 +291,32 @@ class TestTheTool:
         )
         out = _render([hit], query="q", asked=100, capped=MAX_RESULTS, scoped=True)
         assert f"{MAX_RESULTS} is the most" in out
+
+
+class TestEnsure:
+    async def test_a_collection_is_checked_once_per_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mycel.infra.vectors import client as vectors_client
+
+        asked: list[str] = []
+
+        class Qdrant:
+            async def collection_exists(self, name: str) -> bool:
+                asked.append(name)
+                return True
+
+            async def create_payload_index(self, *args: object, **kwargs: object) -> None:
+                asked.append("index")
+
+            async def close(self) -> None: ...
+
+        monkeypatch.setattr(vectors_client, "_client", Qdrant())
+        vectors_client._ensured.clear()
+        params = collections.work_items("BAAI/bge-small-en-v1.5").params
+        for _ in range(3):
+            await vectors_client.ensure("c", params, [("f", PayloadSchemaType.KEYWORD)])
+        assert asked == ["c", "index"]
+
+        await vectors_client.close()
+        assert vectors_client._ensured == set(), "a new client checks again"

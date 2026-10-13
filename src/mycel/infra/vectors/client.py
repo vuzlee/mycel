@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from functools import lru_cache
 
 from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import KeywordIndexParams, PayloadSchemaType, VectorParams
 
 from mycel.core.config import Settings, get_settings
 from mycel.core.logging import get_logger
@@ -11,6 +12,12 @@ from mycel.core.logging import get_logger
 log = get_logger(__name__)
 
 _client: AsyncQdrantClient | None = None
+
+#: What `create_payload_index` accepts as a field schema.
+PayloadSchema = PayloadSchemaType | KeywordIndexParams
+
+#: Collections known to exist on the open client; cleared when it closes.
+_ensured: set[str] = set()
 
 
 class VectorsUnavailable(RuntimeError):
@@ -39,6 +46,24 @@ async def close() -> None:
     if _client is not None:
         await _client.close()
         _client = None
+    _ensured.clear()
+
+
+async def ensure(
+    name: str, params: VectorParams, indexes: Sequence[tuple[str, PayloadSchema]] = ()
+) -> str:
+    """Create `name` and its payload indexes once per open client. Idempotent on Qdrant."""
+    if name in _ensured:
+        return name
+    qdrant = client()
+    if not await qdrant.collection_exists(name):
+        await qdrant.create_collection(name, vectors_config=params)
+        log.info("created collection", extra={"collection": name, "dimensions": params.size})
+    # Re-declared on each first use: older collections may lack a newer index.
+    for field, schema in indexes:
+        await qdrant.create_payload_index(name, field, field_schema=schema)
+    _ensured.add(name)
+    return name
 
 
 @lru_cache(maxsize=4)

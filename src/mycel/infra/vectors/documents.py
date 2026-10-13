@@ -19,11 +19,10 @@ from qdrant_client.models import (
 from mycel.core.config import get_settings
 from mycel.infra.vectors import collections
 from mycel.infra.vectors.client import client, embed
+from mycel.infra.vectors.client import ensure as ensure_collection
 
 _NAMESPACE = uuid.UUID("0b8f3c2a-5d61-4e2f-9a7c-61e4d2b8f013")
 BATCH = 32
-
-_ready = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,25 +40,17 @@ def _collection() -> collections.Collection:
     return collections.documents(get_settings().document_embedding_model)
 
 
+#: Every search filters on these; `user_id` is the tenant key.
+INDEXES = (
+    ("user_id", KeywordIndexParams(type=KeywordIndexType.KEYWORD, is_tenant=True)),
+    ("document_id", PayloadSchemaType.KEYWORD),
+    ("enabled", PayloadSchemaType.BOOL),
+)
+
+
 async def ensure() -> str:
-    """Create the collection and its payload indexes once per process."""
-    global _ready
-    name = _collection().name
-    if _ready:
-        return name
-    qdrant = client()
-    if not await qdrant.collection_exists(name):
-        await qdrant.create_collection(name, vectors_config=_collection().params)
-    # Re-declared each start: idempotent, and older collections may lack the `user_id` index.
-    await qdrant.create_payload_index(
-        name,
-        "user_id",
-        field_schema=KeywordIndexParams(type=KeywordIndexType.KEYWORD, is_tenant=True),
-    )
-    await qdrant.create_payload_index(name, "document_id", PayloadSchemaType.KEYWORD)
-    await qdrant.create_payload_index(name, "enabled", PayloadSchemaType.BOOL)
-    _ready = True
-    return name
+    collection = _collection()
+    return await ensure_collection(collection.name, collection.params, INDEXES)
 
 
 async def embed_texts(texts: Sequence[str]) -> list[list[float]]:

@@ -11,7 +11,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.gold import WorkItemRow
 from mycel.infra.vectors import collections
-from mycel.infra.vectors.client import client, embed
+from mycel.infra.vectors.client import client, embed, ensure
 
 log = get_logger(__name__)
 
@@ -65,15 +65,9 @@ def payload(item: WorkItemRow) -> dict[str, object]:
 
 
 async def ensure_collection() -> collections.Collection:
-    """The collection, created on first run. Safe to call every time."""
+    """The work-items collection, created on first use."""
     collection = collections.work_items(get_settings().embedding_model)
-    qdrant = client()
-    if not await qdrant.collection_exists(collection.name):
-        await qdrant.create_collection(collection.name, vectors_config=collection.params)
-        log.info(
-            "created collection",
-            extra={"collection": collection.name, "dimensions": collection.dimensions},
-        )
+    await ensure(collection.name, collection.params)
     return collection
 
 
