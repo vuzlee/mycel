@@ -10,7 +10,7 @@ import { useFollow } from "./useJobStream";
 
 class CountingObserver {
   static live = 0;
-  constructor(_: ResizeObserverCallback) {
+  constructor() {
     CountingObserver.live += 1;
   }
   observe(): void {}
