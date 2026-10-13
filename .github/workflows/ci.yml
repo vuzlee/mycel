@@ -79,6 +79,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      # npm 10, bundled with Node 22, crashes resolving this tree; see web/package.json.
+      - run: npm install -g npm@11.20.0
       - run: npm ci
       - name: Type check
         run: npx tsc --noEmit
