@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 import pytest
 import redis.exceptions
+from aiormq.exceptions import ChannelNotFoundEntity
 from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 
 import mycel.agents.core.runner as runner
@@ -16,7 +17,7 @@ from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import budgets, deliveries, results
 from mycel.llm.budget import BudgetExceeded, JobBudget
-from mycel.queue import consumer, retry, topology
+from mycel.queue import consumer, producer, retry, topology
 from mycel.queue.job import Job, JobKind
 from mycel.services.auth import Principal
 from mycel.worker import HANDLER
@@ -520,3 +521,60 @@ class TestIngestJobs:
         monkeypatch.setattr(ingest_domain, "DocumentRepository", Repo)
         monkeypatch.setattr(ingest_domain, "session_scope", _no_session)
         await ingest_domain.run(Job(kind=JobKind.INGEST, payload={"document_id": 1}))
+
+
+class TestPublishing:
+    """The topology is declared once per connection, not once per job."""
+
+    @pytest.fixture
+    def broker(self, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+        seen: dict[str, Any] = {"declared": 0, "exchange": FakeExchange(), "conn": object()}
+
+        class Channel:
+            async def get_exchange(self, name: str, ensure: bool = True) -> Any:
+                return seen["exchange"]
+
+        @asynccontextmanager
+        async def channel() -> AsyncIterator[Channel]:
+            yield Channel()
+
+        async def declare(ch: Any) -> Any:
+            seen["declared"] += 1
+            return type("Topo", (), {"exchange": seen["exchange"]})()
+
+        async def get_connection() -> object:
+            return seen["conn"]
+
+        monkeypatch.setattr(producer, "channel", channel)
+        monkeypatch.setattr(producer, "get_connection", get_connection)
+        monkeypatch.setattr(topology, "declare", declare)
+        monkeypatch.setattr(producer, "_declared_on", None)
+        return seen
+
+    async def test_two_publishes_declare_once(self, broker: dict[str, Any]) -> None:
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        assert broker["declared"] == 1
+        assert len(broker["exchange"].published) == 2
+
+    async def test_a_new_connection_declares_again(self, broker: dict[str, Any]) -> None:
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        broker["conn"] = object()
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        assert broker["declared"] == 2
+
+    async def test_a_missing_exchange_declares_on_the_next_publish(
+        self, broker: dict[str, Any]
+    ) -> None:
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+
+        class Gone(FakeExchange):
+            async def publish(self, message: Any, routing_key: str = "") -> None:
+                raise ChannelNotFoundEntity("no exchange")
+
+        working, broker["exchange"] = broker["exchange"], Gone()
+        with pytest.raises(ChannelNotFoundEntity):
+            await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        broker["exchange"] = working
+        await producer.publish(Job(kind=JobKind.CHAT, payload={}))
+        assert broker["declared"] == 2

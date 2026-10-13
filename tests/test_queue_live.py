@@ -69,6 +69,22 @@ class TestPublishing:
         assert Job.model_validate_json(message.body).payload["question"] == "did anything ship?"
         await message.ack()
 
+    async def test_a_second_publish_skips_the_declare_and_still_arrives(
+        self, live: AbstractChannel
+    ) -> None:
+        first, second = _job("one"), _job("two")
+        await publish(first)
+        await publish(second)
+
+        topo = await topology.declare(live)
+        ids = []
+        for _ in range(2):
+            message = await topo.jobs.get(timeout=5)
+            assert message is not None
+            ids.append(message.message_id)
+            await message.ack()
+        assert ids == [first.job_id, second.job_id]
+
 
 @needs_broker
 class TestRejecting:
