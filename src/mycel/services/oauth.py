@@ -1,16 +1,18 @@
 """What every OAuth provider here shares: consent state, token POST, sealed tokens."""
 
 import secrets
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlencode
 
 import httpx2
 from pydantic import SecretStr
 
-from mycel.core.config import get_settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.infra.redis.client import get_client
-from mycel.services.tokens import TokenUnreadable, unseal
+from mycel.services.tokens import TokenUnreadable, key_set, unseal
 
 HTTP_TIMEOUT_SECONDS = 15.0
 
@@ -18,15 +20,93 @@ HTTP_TIMEOUT_SECONDS = 15.0
 STATE_TTL_SECONDS = 600
 
 
+@dataclass(frozen=True)
+class OAuthProvider:
+    """One provider's constants; the flow every provider shares is its methods."""
+
+    key: str
+    name: str
+    env: str
+    auth_url: str
+    token_url: str
+    callback_path: str
+    #: The client id and secret fields on `Settings`.
+    client: Callable[[Settings], tuple[str | None, SecretStr | None]]
+    #: Atlassian takes JSON at its token endpoint; Google takes a form.
+    json_body: bool
+    error: type[MycelError]
+    revoked: type[MycelError]
+    revoked_codes: tuple[str, ...]
+    #: What to tell someone whose consent came back without a refresh token.
+    no_refresh_hint: str
+
+    def configured(self, settings: Settings | None = None) -> bool:
+        cfg = settings or get_settings()
+        client_id, secret = self.client(cfg)
+        return bool(client_id and secret and key_set(cfg))
+
+    def credentials(self) -> tuple[str, str]:
+        client_id, secret = self.client(get_settings())
+        return credentials(client_id, secret, self.configured(), self.env)
+
+    def redirect_uri(self) -> str:
+        return redirect_uri(self.callback_path)
+
+    async def consent_url(self, user_id: int, params: dict[str, str]) -> str:
+        client_id, _ = self.credentials()
+        base = {"client_id": client_id, "redirect_uri": self.redirect_uri()}
+        return await consent_url(self.key, self.auth_url, user_id, {**base, **params})
+
+    async def owner_of(self, state: str) -> int:
+        return await owner_of(self.key, state, self.error)
+
+    async def code_grant(self, code: str) -> dict[str, Any]:
+        """Exchange a consent code; the response must carry a refresh token."""
+        payload = await self._token_call(
+            {
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": self.redirect_uri(),
+            }
+        )
+        if not payload.get("refresh_token"):
+            raise self.error(f"{self.name} returned no refresh token. {self.no_refresh_hint}")
+        return payload
+
+    async def refresh_grant(self, sealed: str) -> dict[str, Any]:
+        """A refresh-token round; the response must carry an access token."""
+        payload = await self._token_call(
+            {"grant_type": "refresh_token", "refresh_token": self.unseal(sealed)}
+        )
+        if not payload.get("access_token"):
+            raise self.error(f"{self.name} returned no access token")
+        return payload
+
+    def unseal(self, sealed: str) -> str:
+        return unseal_for(sealed, self.name, self.revoked)
+
+    async def _token_call(self, data: dict[str, str]) -> dict[str, Any]:
+        client_id, client_secret = self.credentials()
+        return await token_call(
+            self.token_url,
+            {**data, "client_id": client_id, "client_secret": client_secret},
+            as_json=self.json_body,
+            name=self.name,
+            error=self.error,
+            revoked=self.revoked,
+            revoked_codes=self.revoked_codes,
+        )
+
+
 async def consent_url(provider: str, auth_url: str, user_id: int, params: dict[str, str]) -> str:
     """The provider's consent screen, carrying a fresh state remembered as this person's."""
-    state = await start_state(provider, user_id)
+    state = await _start_state(provider, user_id)
     return f"{auth_url}?{urlencode({**params, 'state': state})}"
 
 
 async def owner_of(provider: str, state: str, error: type[MycelError]) -> int:
     """Whose consent round a callback belongs to, or `error`."""
-    user_id = await spend_state(provider, state)
+    user_id = await _spend_state(provider, state)
     if user_id is None:
         raise error("that consent link has expired; start again from settings")
     return user_id
@@ -78,7 +158,7 @@ def credentials(
     return client_id, secret.get_secret_value()
 
 
-async def start_state(provider: str, user_id: int) -> str:
+async def _start_state(provider: str, user_id: int) -> str:
     """A fresh state for one consent round, remembered as this person's."""
     state = secrets.token_urlsafe(32)
     client = await get_client()
@@ -86,7 +166,7 @@ async def start_state(provider: str, user_id: int) -> str:
     return state
 
 
-async def spend_state(provider: str, state: str) -> int | None:
+async def _spend_state(provider: str, state: str) -> int | None:
     """Whose round this callback belongs to, or `None`."""
     client = await get_client()
     user_id = await client.getdel(_state_key(provider, state))

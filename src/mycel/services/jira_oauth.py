@@ -11,7 +11,7 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import access_tokens, oauth
-from mycel.services.tokens import key_set, seal
+from mycel.services.tokens import seal
 
 log = get_logger(__name__)
 
@@ -44,6 +44,22 @@ class NotConnected(JiraAuthError):
     """This person has no usable Jira account attached."""
 
 
+JIRA = oauth.OAuthProvider(
+    key=PROVIDER,
+    name="Atlassian",
+    env="JIRA",
+    auth_url=AUTH_URL,
+    token_url=TOKEN_URL,
+    callback_path=CALLBACK_PATH,
+    client=lambda cfg: (cfg.jira_client_id, cfg.jira_client_secret),
+    json_body=True,
+    error=JiraAuthError,
+    revoked=NotConnected,
+    revoked_codes=("invalid_grant", "unauthorized_client", "access_denied"),
+    no_refresh_hint=("Check that `offline_access` is one of the app's scopes, then connect again."),
+)
+
+
 @dataclass(frozen=True)
 class Grant:
     """What came back from a consent round, ready for the repository."""
@@ -64,47 +80,27 @@ def scopes() -> tuple[str, ...]:
 
 def configured(settings: Settings | None = None) -> bool:
     """Whether this deployment can connect an account at all."""
-    cfg = settings or get_settings()
-    return bool(cfg.jira_client_id and cfg.jira_client_secret and key_set(cfg))
+    return JIRA.configured(settings)
 
 
 async def consent_url(user_id: int) -> str:
     """Where to send someone so Atlassian can ask them."""
-    client_id, _ = _client()
     params = {
         "audience": "api.atlassian.com",
-        "client_id": client_id,
         "scope": " ".join(scopes()),
-        "redirect_uri": _redirect_uri(),
         "response_type": "code",
         "prompt": "consent",
     }
-    return await oauth.consent_url(PROVIDER, AUTH_URL, user_id, params)
+    return await JIRA.consent_url(user_id, params)
 
 
 async def spend_state(state: str) -> int:
-    return await oauth.owner_of(PROVIDER, state, JiraAuthError)
+    return await JIRA.owner_of(state)
 
 
 async def exchange(code: str) -> Grant:
     """Turn the code Atlassian redirected with into something worth keeping."""
-    client_id, client_secret = _client()
-    payload = await _token_call(
-        {
-            "grant_type": "authorization_code",
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "code": code,
-            "redirect_uri": _redirect_uri(),
-        }
-    )
-
-    refresh_token = payload.get("refresh_token")
-    if not refresh_token:
-        raise JiraAuthError(
-            "Atlassian returned no refresh token. Check that `offline_access` is one of "
-            "the app's scopes, then connect again."
-        )
+    payload = await JIRA.code_grant(code)
     access = str(payload.get("access_token", ""))
     if not access:
         raise JiraAuthError("Atlassian returned no access token")
@@ -115,7 +111,7 @@ async def exchange(code: str) -> Grant:
         account_id=account_id,
         display_name=display_name,
         cloud_id=cloud_id,
-        refresh_token=str(refresh_token),
+        refresh_token=str(payload["refresh_token"]),
         # As granted, not as asked for: a site may grant less.
         scope=str(payload.get("scope", "")),
     )
@@ -123,20 +119,13 @@ async def exchange(code: str) -> Grant:
 
 async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None, int | None]:
     """The access token, its successor refresh token if any, and its lifetime."""
-    client_id, client_secret = _client()
-    payload = await _token_call(
-        {
-            "grant_type": "refresh_token",
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "refresh_token": _unseal(refresh_token_encrypted),
-        }
-    )
-    token = payload.get("access_token")
-    if not token:
-        raise JiraAuthError("Atlassian returned no access token")
+    payload = await JIRA.refresh_grant(refresh_token_encrypted)
     rotated = payload.get("refresh_token")
-    return str(token), str(rotated) if rotated else None, access_tokens.lifetime(payload)
+    return (
+        str(payload["access_token"]),
+        str(rotated) if rotated else None,
+        access_tokens.lifetime(payload),
+    )
 
 
 async def _access_for(user_id: int) -> access_tokens.Fresh:
@@ -194,22 +183,6 @@ async def token_for(user_id: int) -> tuple[str, str]:
     return token, row.cloud_id
 
 
-def _unseal(refresh_token_encrypted: str) -> str:
-    return oauth.unseal_for(refresh_token_encrypted, "Jira", NotConnected)
-
-
-async def _token_call(data: dict[str, str]) -> dict[str, Any]:
-    return await oauth.token_call(
-        TOKEN_URL,
-        data,
-        as_json=True,
-        name="Atlassian",
-        error=JiraAuthError,
-        revoked=NotConnected,
-        revoked_codes=("invalid_grant", "unauthorized_client", "access_denied"),
-    )
-
-
 async def _cloud_id(access: str) -> str:
     """Which site this grant opens."""
     sites = await _api(access, RESOURCES_URL)
@@ -249,12 +222,3 @@ async def _api(access: str, url: str) -> Any:
         raise JiraAuthError(f"Atlassian could not be reached: {exc}") from exc
     except ValueError as exc:
         raise JiraAuthError("Atlassian answered with something that is not JSON") from exc
-
-
-def _client() -> tuple[str, str]:
-    cfg = get_settings()
-    return oauth.credentials(cfg.jira_client_id, cfg.jira_client_secret, configured(), "JIRA")
-
-
-def _redirect_uri() -> str:
-    return oauth.redirect_uri(CALLBACK_PATH)

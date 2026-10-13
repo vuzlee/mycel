@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 import httpx2
 
-from mycel.core.config import Settings, get_settings
+from mycel.core.config import Settings
 from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import access_tokens, oauth
-from mycel.services.tokens import key_set, seal
+from mycel.services.tokens import seal
 
 log = get_logger(__name__)
 
@@ -38,6 +38,22 @@ class NotConnected(GoogleError):
     """This person has no usable Google account attached."""
 
 
+GOOGLE = oauth.OAuthProvider(
+    key=PROVIDER,
+    name="Google",
+    env="GOOGLE",
+    auth_url=AUTH_URL,
+    token_url=TOKEN_URL,
+    callback_path=CALLBACK_PATH,
+    client=lambda cfg: (cfg.google_client_id, cfg.google_client_secret),
+    json_body=False,
+    error=GoogleError,
+    revoked=NotConnected,
+    revoked_codes=("invalid_grant",),
+    no_refresh_hint=("Remove Mycel at myaccount.google.com/permissions and connect again."),
+)
+
+
 @dataclass(frozen=True)
 class Grant:
     """What came back from a consent round, ready for the repository."""
@@ -49,76 +65,39 @@ class Grant:
 
 def configured(settings: Settings | None = None) -> bool:
     """Whether this deployment can connect an account at all."""
-    cfg = settings or get_settings()
-    return bool(cfg.google_client_id and cfg.google_client_secret and key_set(cfg))
+    return GOOGLE.configured(settings)
 
 
 async def consent_url(user_id: int) -> str:
     """Where to send someone so Google can ask them."""
-    client_id, _ = _client()
     params = {
-        "client_id": client_id,
-        "redirect_uri": _redirect_uri(),
         "response_type": "code",
         "scope": " ".join(SCOPES),
         "access_type": "offline",
         "prompt": "consent",
         "include_granted_scopes": "true",
     }
-    return await oauth.consent_url(PROVIDER, AUTH_URL, user_id, params)
+    return await GOOGLE.consent_url(user_id, params)
 
 
 async def spend_state(state: str) -> int:
-    return await oauth.owner_of(PROVIDER, state, GoogleError)
+    return await GOOGLE.owner_of(state)
 
 
 async def exchange(code: str) -> Grant:
     """Turn the code Google redirected with into something worth keeping."""
-    client_id, client_secret = _client()
-    payload = await _token_call(
-        {
-            "code": code,
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "redirect_uri": _redirect_uri(),
-            "grant_type": "authorization_code",
-        }
-    )
-
-    refresh_token = payload.get("refresh_token")
-    if not refresh_token:
-        raise GoogleError(
-            "Google returned no refresh token. Remove Mycel at "
-            "myaccount.google.com/permissions and connect again."
-        )
+    payload = await GOOGLE.code_grant(code)
     return Grant(
         email=_email_from(payload),
-        refresh_token=str(refresh_token),
+        refresh_token=str(payload["refresh_token"]),
         # As granted, not as asked for.
         scope=str(payload.get("scope", "")),
     )
 
 
-async def access_token(refresh_token_encrypted: str) -> str:
-    """A fresh access token for one person, from the token kept for them."""
-    token, _ = await _fresh(refresh_token_encrypted)
-    return token
-
-
 async def _fresh(refresh_token_encrypted: str) -> access_tokens.Fresh:
-    client_id, client_secret = _client()
-    payload = await _token_call(
-        {
-            "refresh_token": unseal(refresh_token_encrypted),
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "grant_type": "refresh_token",
-        }
-    )
-    token = payload.get("access_token")
-    if not token:
-        raise GoogleError("Google returned no access token")
-    return str(token), access_tokens.lifetime(payload)
+    payload = await GOOGLE.refresh_grant(refresh_token_encrypted)
+    return str(payload["access_token"]), access_tokens.lifetime(payload)
 
 
 async def revoke(refresh_token_encrypted: str) -> None:
@@ -172,19 +151,7 @@ async def token_for(user_id: int) -> str:
 
 
 def unseal(refresh_token_encrypted: str) -> str:
-    return oauth.unseal_for(refresh_token_encrypted, "Google", NotConnected)
-
-
-async def _token_call(data: dict[str, str]) -> dict[str, object]:
-    return await oauth.token_call(
-        TOKEN_URL,
-        data,
-        as_json=False,
-        name="Google",
-        error=GoogleError,
-        revoked=NotConnected,
-        revoked_codes=("invalid_grant",),
-    )
+    return GOOGLE.unseal(refresh_token_encrypted)
 
 
 def _email_from(payload: dict[str, object]) -> str:
@@ -202,12 +169,3 @@ def _email_from(payload: dict[str, object]) -> str:
         return str(claims.get("email", "(unknown)"))
     except Exception:  # pragma: no cover - a malformed id token is not worth a branch
         return "(unknown)"
-
-
-def _client() -> tuple[str, str]:
-    cfg = get_settings()
-    return oauth.credentials(cfg.google_client_id, cfg.google_client_secret, configured(), "GOOGLE")
-
-
-def _redirect_uri() -> str:
-    return oauth.redirect_uri(CALLBACK_PATH)

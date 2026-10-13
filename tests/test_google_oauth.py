@@ -182,7 +182,7 @@ class TestRefreshing:
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"error": "invalid_grant"}, status=400))
 
         with pytest.raises(NotConnected):
-            await oauth.access_token(seal("1//refresh"))
+            await _access_token(seal("1//refresh"))
 
     async def test_any_other_refusal_is_a_google_error(
         self, configured: None, monkeypatch: pytest.MonkeyPatch
@@ -193,7 +193,7 @@ class TestRefreshing:
         )
 
         with pytest.raises(GoogleError) as caught:
-            await oauth.access_token(seal("1//refresh"))
+            await _access_token(seal("1//refresh"))
 
         assert not isinstance(caught.value, NotConnected)
 
@@ -202,7 +202,7 @@ class TestRefreshing:
     ) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _answers({"access_token": "ya29.token"}))
 
-        assert await oauth.access_token(seal("1//refresh")) == "ya29.token"
+        assert await _access_token(seal("1//refresh")) == "ya29.token"
 
 
 class TestTheTokenAtRest:
@@ -277,3 +277,8 @@ class TestTheAccessTokenIsReused:
         assert await oauth.token_for(7) == "ya29.t"
         assert await oauth.token_for(7) == "ya29.t"
         assert len(refreshed) == 1
+
+
+async def _access_token(sealed: str) -> str:
+    token, _ = await oauth._fresh(sealed)
+    return token
