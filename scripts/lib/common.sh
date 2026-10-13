@@ -11,7 +11,7 @@ PG_PORT=5433
 API_PORT=8000
 
 # Named so a new compose service is never started by accident.
-INFRA=(postgres redis rabbitmq qdrant minio litellm)
+INFRA=(postgres redis redis-cache rabbitmq qdrant minio litellm)
 
 log()  { printf '\033[36m==\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m!!\033[0m %s\n' "$*" >&2; }
@@ -40,6 +40,7 @@ start_stores() {
   docker compose up -d "${INFRA[@]}"
   wait_for postgres "docker exec $(cid postgres) pg_isready -U mycel"
   wait_for redis    "docker exec $(cid redis) redis-cli ping"
+  wait_for redis-cache "docker exec $(cid redis-cache) redis-cli ping"
   # `ping` answers before the AMQP listener accepts connections.
   wait_for rabbitmq "docker exec $(cid rabbitmq) rabbitmq-diagnostics -q check_port_connectivity" 90
   wait_for qdrant   "curl -sf http://localhost:6333/readyz"

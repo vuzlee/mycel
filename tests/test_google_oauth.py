@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
+from mycel.infra.redis import access_tokens as access_store
 from mycel.services import google_oauth as oauth
 from mycel.services import oauth as shared_oauth
 from mycel.services.google_oauth import GoogleError, NotConnected
@@ -238,3 +239,41 @@ def _b64(claims: dict[str, str]) -> str:
     import json
 
     return base64.urlsafe_b64encode(json.dumps(claims).encode()).decode().rstrip("=")
+
+
+class TestTheAccessTokenIsReused:
+    async def test_two_calls_refresh_once(
+        self, configured: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Every mail and calendar tool call used to spend a round trip to Google."""
+        refreshed: list[int] = []
+        cache: dict[str, str] = {}
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            refreshed.append(1)
+            return httpx2.Response(200, json={"access_token": "ya29.t", "expires_in": 3599})
+
+        def client(**kwargs: Any) -> httpx2.AsyncClient:
+            kwargs.pop("transport", None)
+            return _REAL_CLIENT(transport=httpx2.MockTransport(handler), **kwargs)
+
+        class Cache:
+            async def get(self, key: str) -> str | None:
+                return cache.get(key)
+
+            async def set(self, key: str, value: str, ex: int) -> None:
+                cache[key] = value
+
+        async def connected(user_id: int) -> Any:
+            return type("Row", (), {"refresh_token_encrypted": seal("1//refresh")})()
+
+        async def cache_client() -> Cache:
+            return Cache()
+
+        monkeypatch.setattr(httpx2, "AsyncClient", client)
+        monkeypatch.setattr(oauth, "connected", connected)
+        monkeypatch.setattr(access_store, "get_cache_client", cache_client)
+
+        assert await oauth.token_for(7) == "ya29.t"
+        assert await oauth.token_for(7) == "ya29.t"
+        assert len(refreshed) == 1

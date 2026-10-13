@@ -121,8 +121,8 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://mycel:mycel@localhost:5672/"
     #: In-flight state (results, budgets, event streams), on a `noeviction` server.
     redis_url: str = "redis://localhost:6379/0"
-    #: Evictable cache, on its own db index.
-    redis_cache_url: str = "redis://localhost:6379/1"
+    #: Evictable cache (answers, access tokens), on its own `allkeys-lru` server.
+    redis_cache_url: str = "redis://localhost:6380/0"
     #: How long a finished answer stays readable.
     result_ttl_seconds: int = 3600
     #: Events kept per job stream; a lagging client sees a gap in `seq`.

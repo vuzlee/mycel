@@ -5,7 +5,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 source "$ROOT/scripts/lib/hostproc.sh"
 
 printf '\033[1m%-12s %-9s %s\033[0m\n' SERVICE STATE WHERE
-for c in "postgres:$PG_PORT" redis:6379 rabbitmq:5672; do
+for c in "postgres:$PG_PORT" redis:6379 redis-cache:6380 rabbitmq:5672; do
   name=${c%:*}; port=${c#*:}
   # `|| echo missing` would never fire: `compose ps` on a service it does not manage exits
   state=$(docker compose ps --format '{{.State}}' "$name" 2>/dev/null | head -1 || true)

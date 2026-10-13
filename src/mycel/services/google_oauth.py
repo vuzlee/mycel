@@ -9,7 +9,7 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
-from mycel.services import oauth
+from mycel.services import access_tokens, oauth
 from mycel.services.tokens import key_set, seal
 
 log = get_logger(__name__)
@@ -101,6 +101,11 @@ async def exchange(code: str) -> Grant:
 
 async def access_token(refresh_token_encrypted: str) -> str:
     """A fresh access token for one person, from the token kept for them."""
+    token, _ = await _fresh(refresh_token_encrypted)
+    return token
+
+
+async def _fresh(refresh_token_encrypted: str) -> access_tokens.Fresh:
     client_id, client_secret = _client()
     payload = await _token_call(
         {
@@ -113,7 +118,7 @@ async def access_token(refresh_token_encrypted: str) -> str:
     token = payload.get("access_token")
     if not token:
         raise GoogleError("Google returned no access token")
-    return str(token)
+    return str(token), access_tokens.lifetime(payload)
 
 
 async def revoke(refresh_token_encrypted: str) -> None:
@@ -153,6 +158,7 @@ async def disconnect(user_id: int) -> bool:
         if row is None:
             return False
         await revoke(row.refresh_token_encrypted)
+        await access_tokens.forget(PROVIDER, user_id)
         return await repo.delete_google_account(user_id)
 
 
@@ -161,7 +167,8 @@ async def token_for(user_id: int) -> str:
     row = await connected(user_id)
     if row is None:
         raise NotConnected("no Google account is connected; connect one in settings")
-    return await access_token(row.refresh_token_encrypted)
+    sealed = row.refresh_token_encrypted
+    return await access_tokens.cached(PROVIDER, user_id, lambda: _fresh(sealed))
 
 
 def unseal(refresh_token_encrypted: str) -> str:

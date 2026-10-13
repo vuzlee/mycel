@@ -5,7 +5,7 @@ x-stores: &stores
   DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mycel}
   RABBITMQ_URL: amqp://${RABBITMQ_USER:-mycel}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
   REDIS_URL: redis://redis:6379/0
-  REDIS_CACHE_URL: redis://redis:6379/1
+  REDIS_CACHE_URL: redis://redis-cache:6379/0
   QDRANT_URL: http://qdrant:6333
   S3_ENDPOINT_URL: http://minio:9000
   LITELLM_BASE_URL: http://litellm:4000
@@ -42,6 +42,7 @@ services:
       postgres: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
+      redis-cache: {condition: service_healthy}
 
   # Jira -> bronze -> silver -> gold. An advisory lock makes a second replica skip.
   scheduler:
@@ -69,6 +70,7 @@ services:
       postgres: {condition: service_healthy}
       rabbitmq: {condition: service_healthy}
       redis: {condition: service_healthy}
+      redis-cache: {condition: service_healthy}
 
   # Parses and embeds uploads. One replica: docling needs 3-4 GB; restarts after N jobs.
   ingest:
@@ -117,6 +119,17 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 10
+
+  # Cached answers and access tokens. Its own server: a full cache evicts here instead of
+  # refusing the state writes above.
+  redis-cache:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    ports: ["6380:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

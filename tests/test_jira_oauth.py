@@ -267,7 +267,7 @@ class TestARotatedTokenIsKept:
             _routes({"/oauth/token": {"access_token": "at", "refresh_token": "rt-2"}}),
         )
 
-        assert await oauth._access_for(7) == "at"
+        assert await oauth._access_for(7) == ("at", None)
         assert [(uid, unseal(sealed)) for uid, sealed in kept] == [(7, "rt-2")]
 
     async def test_no_successor_leaves_the_row_alone(
@@ -294,7 +294,7 @@ class TestARotatedTokenIsKept:
             httpx2, "AsyncClient", _routes({"/oauth/token": {"access_token": "at"}})
         )
 
-        assert await oauth._access_for(7) == "at"
+        assert await oauth._access_for(7) == ("at", None)
         assert kept == []
 
 
@@ -332,5 +332,5 @@ class TestTheTokenAtRest:
 
 
 async def _access_token(sealed: str) -> str:
-    token, _ = await oauth._refresh(sealed)
+    token, _, _ = await oauth._refresh(sealed)
     return token

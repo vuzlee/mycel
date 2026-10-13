@@ -10,7 +10,7 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
-from mycel.services import oauth
+from mycel.services import access_tokens, oauth
 from mycel.services.tokens import key_set, seal
 
 log = get_logger(__name__)
@@ -121,8 +121,8 @@ async def exchange(code: str) -> Grant:
     )
 
 
-async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None]:
-    """The access token, and the refresh token that replaces the one just spent, if any."""
+async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None, int | None]:
+    """The access token, its successor refresh token if any, and its lifetime."""
     client_id, client_secret = _client()
     payload = await _token_call(
         {
@@ -136,20 +136,20 @@ async def _refresh(refresh_token_encrypted: str) -> tuple[str, str | None]:
     if not token:
         raise JiraAuthError("Atlassian returned no access token")
     rotated = payload.get("refresh_token")
-    return str(token), str(rotated) if rotated else None
+    return str(token), str(rotated) if rotated else None, access_tokens.lifetime(payload)
 
 
-async def _access_for(user_id: int) -> str:
+async def _access_for(user_id: int) -> access_tokens.Fresh:
     """Refresh one person's grant and keep the successor, under a row lock."""
     async with session_scope() as session:
         repo = AccountRepository(session)
         row = await repo.jira_account_locked(user_id)
         if row is None:
             raise NotConnected("no Jira account is connected; connect one in settings")
-        token, rotated = await _refresh(row.refresh_token_encrypted)
+        token, rotated, lifetime = await _refresh(row.refresh_token_encrypted)
         if rotated:
             await repo.set_jira_refresh_token(user_id, seal(rotated))
-    return token
+    return token, lifetime
 
 
 async def connect(state: str, code: str) -> JiraAccountRow:
@@ -180,6 +180,7 @@ async def connected(user_id: int) -> JiraAccountRow | None:
 
 async def disconnect(user_id: int) -> bool:
     """Forget the grant here, and the project access it carried. Atlassian is not told."""
+    await access_tokens.forget(PROVIDER, user_id)
     async with session_scope() as session:
         return await AccountRepository(session).delete_jira_account(user_id)
 
@@ -189,7 +190,8 @@ async def token_for(user_id: int) -> tuple[str, str]:
     row = await connected(user_id)
     if row is None:
         raise NotConnected("no Jira account is connected; connect one in settings")
-    return await _access_for(user_id), row.cloud_id
+    token = await access_tokens.cached(PROVIDER, user_id, lambda: _access_for(user_id))
+    return token, row.cloud_id
 
 
 def _unseal(refresh_token_encrypted: str) -> str:
