@@ -86,3 +86,24 @@ class TestWhereSettingsComeFrom:
             assert get_settings().log_level == "DEBUG"
         finally:
             get_settings.cache_clear()
+
+
+class TestTheConnectionPool:
+    def test_the_engine_takes_pool_and_overflow_from_settings(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Both count against Postgres' max_connections, once per process."""
+        from mycel.infra.postgres.engine import POOL_TIMEOUT_SECONDS, get_engine
+
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:1/db")
+        monkeypatch.setenv("DB_POOL_SIZE", "3")
+        monkeypatch.setenv("DB_MAX_OVERFLOW", "2")
+        get_settings.cache_clear()
+        get_engine.cache_clear()
+        try:
+            pool = get_engine().pool
+            assert pool.size() == 3  # type: ignore[attr-defined]
+            assert pool._max_overflow == 2  # type: ignore[attr-defined]
+            assert pool._timeout == POOL_TIMEOUT_SECONDS  # type: ignore[attr-defined]
+        finally:
+            get_engine.cache_clear()

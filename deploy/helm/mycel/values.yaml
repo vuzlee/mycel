@@ -61,7 +61,10 @@ externalStores:
 config:
   MYCEL_ENV: prod
   LOG_LEVEL: INFO
-  DB_POOL_SIZE: "10"
+  # Budget: (pool + overflow) × processes must stay under Postgres max_connections (100)
+  # minus ~10 for migrations and psql. 5 processes × (5 + 5) = 50.
+  DB_POOL_SIZE: "5"
+  DB_MAX_OVERFLOW: "5"
   RESULT_TTL_SECONDS: "86400"
   EVENT_STREAM_MAX_EVENTS: "1000"
   JOB_CEILING_USD: "0.50"

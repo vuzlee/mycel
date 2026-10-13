@@ -8,6 +8,9 @@ from mycel.core.config import get_settings
 
 _ASYNC_DRIVER = "postgresql+asyncpg://"
 
+#: A starved pool fails fast rather than holding a request for SQLAlchemy's default 30 s.
+POOL_TIMEOUT_SECONDS = 10
+
 
 def async_dsn(url: str) -> str:
     """Rewrite a plain DSN onto the async driver, leaving an explicit one alone."""
@@ -23,6 +26,8 @@ def get_engine() -> AsyncEngine:
     return create_async_engine(
         async_dsn(settings.database_url),
         pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+        pool_timeout=POOL_TIMEOUT_SECONDS,
         pool_pre_ping=True,
     )
 

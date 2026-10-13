@@ -118,6 +118,8 @@ class Settings(BaseSettings):
     mycel_app_password: SecretStr | None = None
     #: Per process, so the real ceiling is this times the process count.
     db_pool_size: int = 5
+    #: Extra connections opened under a burst, closed when idle.
+    db_max_overflow: int = 5
     rabbitmq_url: str = "amqp://mycel:mycel@localhost:5672/"
     #: In-flight state (results, budgets, event streams), on a `noeviction` server.
     redis_url: str = "redis://localhost:6379/0"
