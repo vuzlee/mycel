@@ -20,11 +20,12 @@ class Counter:
         self.counts: dict[tuple[str, str], int] = {}
         self.down = False
 
-    async def hit(self, scope: str, key: str) -> tuple[int, int]:
+    async def hit(self, scope: str, key: str, limit: int) -> rate.Verdict:
         if self.down:
             raise RedisConnectionError("down")
         self.counts[scope, key] = self.counts.get((scope, key), 0) + 1
-        return self.counts[scope, key], 42
+        allowed = self.counts[scope, key] <= limit
+        return rate.Verdict(allowed, 0 if allowed else 42)
 
 
 @pytest.fixture

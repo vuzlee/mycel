@@ -15,17 +15,17 @@ async def _check(scope: str, key: str, per_minute: int) -> None:
     if not get_settings().rate_limits_enabled:
         return
     try:
-        count, retry_after = await rate.hit(scope, key)
+        verdict = await rate.hit(scope, key, per_minute)
     except RedisError:
         # A limiter must not take login down with it.
         log.warning("rate limit unchecked, redis unreachable", extra={"scope": scope})
         return
-    if count > per_minute:
-        log.warning("rate limited", extra={"scope": scope, "count": count})
+    if not verdict.allowed:
+        log.warning("rate limited", extra={"scope": scope})
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "too many requests; wait and try again",
-            headers={"Retry-After": str(retry_after)},
+            headers={"Retry-After": str(verdict.retry_after)},
         )
 
 
