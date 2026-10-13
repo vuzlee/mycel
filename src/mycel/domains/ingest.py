@@ -44,13 +44,14 @@ async def run(job: Job) -> None:
         await _fail(document_id, parsed)
         return
     pages, passages = parsed
+    embedded = await vectors.embed_passages([p.text for p in passages])
 
     await vectors.delete(document_id)
     async with session_scope() as session:
         repo = DocumentRepository(session)
+        # Held only for the writes; the embedding above ran with no transaction open.
         current = await repo.lock_document(document_id)
         if current is None or current.status == DELETING:
-            await vectors.delete(document_id)
             return
         chunk_ids = await repo.replace_chunks(
             document_id,
@@ -64,7 +65,7 @@ async def run(job: Job) -> None:
             document_id,
             current.enabled,
             chunk_ids,
-            [p.text for p in passages],
+            embedded,
         )
         await repo.set_status(document_id, READY, pages=pages)
     await document_events.changed(current.user_id)

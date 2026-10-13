@@ -67,18 +67,24 @@ async def embed_texts(texts: Sequence[str]) -> list[list[float]]:
     return await asyncio.to_thread(embed, list(texts), model)
 
 
+async def embed_passages(texts: Sequence[str]) -> list[list[float]]:
+    """Every passage's vector, `BATCH` at a time. Slow; call it with no transaction open."""
+    vectors: list[list[float]] = []
+    for start in range(0, len(texts), BATCH):
+        vectors.extend(await embed_texts(texts[start : start + BATCH]))
+    return vectors
+
+
 async def write(
     user_id: int,
     document_id: int,
     enabled: bool,
     chunk_ids: Sequence[int],
-    texts: Sequence[str],
+    vectors: Sequence[list[float]],
 ) -> None:
-    """Embed and upsert one document's passages, `BATCH` at a time."""
+    """Upsert one document's already-embedded passages."""
     name = await ensure()
-    for start in range(0, len(texts), BATCH):
-        part = texts[start : start + BATCH]
-        vectors = await embed_texts(part)
+    for start in range(0, len(vectors), BATCH):
         points = [
             PointStruct(
                 id=point_id(document_id, start + i),
@@ -90,7 +96,7 @@ async def write(
                     "enabled": enabled,
                 },
             )
-            for i, vector in enumerate(vectors)
+            for i, vector in enumerate(vectors[start : start + BATCH])
         ]
         await client().upsert(name, points=points)
 
