@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -128,11 +128,15 @@ async def change_password(
 async def forgot_password(
     body: ForgotRequest,
     session: Db,
+    background: BackgroundTasks,
 ) -> None:
-    """Ask for a reset link. 202 whether or not the address has an account."""
+    """Ask for a reset link. 202 at once whether or not the address has an account."""
     if not smtp.configured():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
-    await auth.begin_password_reset(session, body.email)
+    # Sent after the response, so its timing cannot tell which addresses exist.
+    mail = await auth.begin_password_reset(session, body.email)
+    if mail is not None:
+        background.add_task(mail.send)
 
 
 @router.post(

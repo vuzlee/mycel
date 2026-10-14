@@ -43,20 +43,28 @@ export function PdfPage({ url, first, last, quote }: Props) {
 
   useEffect(() => {
     let live = true;
+    // Destroyed on unmount: each loading task owns a worker thread and the parsed document.
+    let task: { destroy: () => Promise<void> } | null = null;
     void (async () => {
       try {
         const pdfjs = await import("pdfjs-dist");
         const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
 
-        const doc = await pdfjs.getDocument(url).promise;
+        const loading = pdfjs.getDocument(url);
+        task = loading;
+        if (!live) {
+          void loading.destroy();
+          return;
+        }
+        const doc = await loading.promise;
         const clamp = (n: number): number => Math.min(Math.max(n, 1), doc.numPages);
         const from = clamp(first);
         const to = Math.max(from, clamp(last));
 
         let page: PDFPageProxy | null = null;
         let marked: Item[] | null = null;
-        for (let n = from; n <= to && !marked; n++) {
+        for (let n = from; n <= to && !marked && live; n++) {
           const candidate = await doc.getPage(n);
           const content = await candidate.getTextContent();
           const items = content.items.filter((i): i is typeof i & Item => "str" in i);
@@ -109,6 +117,7 @@ export function PdfPage({ url, first, last, quote }: Props) {
     })();
     return () => {
       live = false;
+      void task?.destroy();
     };
   }, [url, first, last, quote]);
 

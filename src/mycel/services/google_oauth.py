@@ -131,14 +131,14 @@ async def connected(user_id: int) -> GoogleAccountRow | None:
 
 async def disconnect(user_id: int) -> bool:
     """Forget the grant here, and ask Google to forget it too."""
+    row = await connected(user_id)
+    if row is None:
+        return False
+    # Outside any transaction: Google can take its whole timeout to answer.
+    await revoke(row.refresh_token_encrypted)
+    await access_tokens.forget(PROVIDER, user_id)
     async with session_scope() as session:
-        repo = AccountRepository(session)
-        row = await repo.google_account(user_id)
-        if row is None:
-            return False
-        await revoke(row.refresh_token_encrypted)
-        await access_tokens.forget(PROVIDER, user_id)
-        return await repo.delete_google_account(user_id)
+        return await AccountRepository(session).delete_google_account(user_id)
 
 
 async def token_for(user_id: int) -> str:

@@ -89,6 +89,24 @@ def _free_port() -> int:
 
 
 @pytest.fixture(autouse=True)
+def free_claims(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every chat job finds itself unclaimed; tests/test_claims.py checks the real thing."""
+    from mycel.infra.redis import claims
+
+    if request.module.__name__.endswith("test_claims"):
+        return
+
+    async def take(job_id: str, ttl_seconds: int) -> bool:
+        return True
+
+    async def release(job_id: str) -> None:
+        pass
+
+    monkeypatch.setattr(claims, "take", take)
+    monkeypatch.setattr(claims, "release", release)
+
+
+@pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Strip inherited env vars and reset the settings cache around every test."""
     for key in list(os.environ):

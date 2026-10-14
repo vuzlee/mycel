@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import re
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
@@ -13,9 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import MycelError
+from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
 from mycel.infra import smtp
 from mycel.infra.postgres.repositories.identity import IdentityRepository, UserRow
+
+log = get_logger(__name__)
+
+#: How stale `last_seen_at` may be before a request writes it again.
+TOUCH_EVERY = timedelta(minutes=1)
 
 #: How long a session lives without being renewed.
 SESSION_TTL = timedelta(days=14)
@@ -95,20 +102,19 @@ async def close_session(session: AsyncSession, token: str) -> None:
 async def session_user(session: AsyncSession, token: str) -> Principal | None:
     """Who a cookie belongs to, or None if it names nothing usable."""
     repo = IdentityRepository(session)
-    row = await repo.session_by_id(token)
-    if row is None:
+    found = await repo.session_with_user(token)
+    if found is None:
         return None
+    row, user = found
 
     now = datetime.now(UTC)
     if row.expires_at <= now:
         await repo.delete_session(token)
         return None
 
-    user = await repo.user_by_id(row.user_id)
-    if user is None:
-        return None
-
-    await repo.touch_session(token, now)
+    # A write per request is a write per poll; last_seen only needs minute precision.
+    if now - row.last_seen_at >= TOUCH_EVERY:
+        await repo.touch_session(token, now)
     return _principal(user)
 
 
@@ -135,11 +141,11 @@ async def change_password(
     return await repo.delete_sessions_for(user_id, keep=keep_token)
 
 
-async def begin_password_reset(session: AsyncSession, email: str) -> None:
-    """Send a reset link, if that address has an account."""
+async def begin_password_reset(session: AsyncSession, email: str) -> "PendingMail | None":
+    """Record a reset link, if that address has an account; the caller sends it after."""
     user = await IdentityRepository(session).user_by_email(_normalize(email))
     if user is None:
-        return
+        return None
 
     token = secrets.token_urlsafe(RESET_BYTES)
     settings = get_settings()
@@ -148,13 +154,27 @@ async def begin_password_reset(session: AsyncSession, email: str) -> None:
 
     minutes = settings.password_reset_ttl_seconds // 60
     link = f"{settings.public_base_url}/app/reset?token={token}"
-    await smtp.send(
+    return PendingMail(
         user.email,
         "Reset your Mycel password",
         f"Someone asked to reset the password for this account.\n\n{link}\n\n"
         f"The link works once and stops working in {minutes} minutes. "
         "If it was not you, nothing has changed and you can ignore this.",
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PendingMail:
+    to: str
+    subject: str
+    body: str
+
+    async def send(self) -> None:
+        """Best effort, after the response: a failure is logged, never shown to the caller."""
+        try:
+            await smtp.send(self.to, self.subject, self.body)
+        except Exception:
+            log.warning("reset mail not sent", exc_info=True)
 
 
 async def reset_password(session: AsyncSession, token: str, new_password: str) -> int:

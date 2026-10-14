@@ -1,5 +1,6 @@
 """What a follow-up carries: history for the answer, a rewritten question for the search."""
 
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
 
@@ -9,7 +10,7 @@ from mycel.agents.core import runner
 from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core.principal import Principal
 from mycel.domains import chat as domain
-from mycel.infra.redis import budgets
+from mycel.infra.redis import budgets, results
 from mycel.queue.job import Job, JobKind
 from mycel.services import knowledge
 from mycel.services.chat import (
@@ -155,12 +156,21 @@ class TestSearch:
 
 
 async def test_an_answered_job_is_not_run_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A second delivery: the poll must read `done` again, not the `running` just written."""
+    stored: list[tuple[str, str]] = []
+
     async def answered(job_id: str) -> object:
-        return SimpleNamespace(status="done")
+        return SimpleNamespace(status="done", answer="42", spent_usd=Decimal("0.01"))
 
     async def must_not_run(*a: object, **k: object) -> None:
         raise AssertionError("the model was called for an answered job")
 
+    async def store(job_id: str, answer: str, spent_usd: str) -> None:
+        stored.append((answer, spent_usd))
+
     monkeypatch.setattr(domain, "find_turn", answered)
     monkeypatch.setattr(runner, "run", must_not_run)
+    monkeypatch.setattr(results, "store", store)
     await domain.run(Job(kind=JobKind.CHAT, payload={"question": "q", "user_id": 1}))
+
+    assert stored == [("42", "0.01")]

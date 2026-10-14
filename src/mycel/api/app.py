@@ -178,4 +178,5 @@ def _install_error_handlers(app: FastAPI) -> None:
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:
         """Anything raised on purpose that the handlers above did not name."""
         log.error("unhandled mycel error", extra={"detail": str(exc)})
-        return problem(500, "internal_error", str(exc))
+        # The detail stays in the log: it names hosts, ports and internal errors.
+        return problem(500, "internal_error", "something went wrong on our side")

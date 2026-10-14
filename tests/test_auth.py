@@ -4,6 +4,7 @@ import asyncio
 import threading
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -168,6 +169,23 @@ class TestSessions:
         token = await auth.open_session(session, user.id)
 
         assert (await auth.session_user(session, token)) == user
+
+    async def test_a_busy_session_is_written_at_most_once_a_minute(
+        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Every poll was an UPDATE; last_seen only needs minute precision."""
+        user = await auth.register(session, "busy@example.com", PASSWORD)
+        token = await auth.open_session(session, user.id)
+        touched: list[str] = []
+
+        async def touch(self: Any, token: str, at: Any) -> None:
+            touched.append(token)
+
+        monkeypatch.setattr(IdentityRepository, "touch_session", touch)
+        for _ in range(3):
+            assert await auth.session_user(session, token) == user
+
+        assert touched == []
 
     async def test_an_expired_session_reads_as_gone(self, session: AsyncSession) -> None:
         """Expiry is enforced on read, not by the database."""
@@ -438,6 +456,13 @@ class TestMembership:
         assert await AccountRepository(session).projects_for(two.id) == frozenset()
 
 
+async def _reset(session: AsyncSession, email: str) -> None:
+    """Begin a reset and send its mail, as the route's background task would."""
+    mail = await auth.begin_password_reset(session, email)
+    if mail is not None:
+        await mail.send()
+
+
 @needs_postgres
 class TestForgottenPasswords:
     """A one-shot token, mailed to the address on the account."""
@@ -462,7 +487,7 @@ class TestForgottenPasswords:
     ) -> None:
         user = await auth.register(session, "forgot@example.com", PASSWORD)
 
-        await auth.begin_password_reset(session, "forgot@example.com")
+        await _reset(session, "forgot@example.com")
         await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
 
         assert await auth.authenticate(session, "forgot@example.com", "a longer new one") == user
@@ -471,15 +496,28 @@ class TestForgottenPasswords:
         self, session: AsyncSession, outbox: list[tuple[str, str, str]]
     ) -> None:
         """Answering differently would turn this into a list of who has an account."""
-        await auth.begin_password_reset(session, "nobody@example.com")
+        await _reset(session, "nobody@example.com")
 
         assert outbox == []
+
+    async def test_a_mail_server_down_is_not_the_callers_problem(
+        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Its error would leak the server's address and say the account exists."""
+
+        async def down(to: str, subject: str, body: str) -> None:
+            raise smtp.MailError("mail: [Errno 111] connection refused to smtp:25")
+
+        monkeypatch.setattr(smtp, "send", down)
+        await auth.register(session, "down@example.com", PASSWORD)
+
+        await _reset(session, "down@example.com")
 
     async def test_a_link_works_once(
         self, session: AsyncSession, outbox: list[tuple[str, str, str]]
     ) -> None:
         await auth.register(session, "once@example.com", PASSWORD)
-        await auth.begin_password_reset(session, "once@example.com")
+        await _reset(session, "once@example.com")
         token = self._token(outbox[0][2])
 
         await auth.reset_password(session, token, "a longer new one")
@@ -496,7 +534,7 @@ class TestForgottenPasswords:
         monkeypatch.setenv("PASSWORD_RESET_TTL_SECONDS", "-1")
         get_settings.cache_clear()
         await auth.register(session, "stale@example.com", PASSWORD)
-        await auth.begin_password_reset(session, "stale@example.com")
+        await _reset(session, "stale@example.com")
 
         with pytest.raises(auth.AuthError):
             await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
@@ -511,7 +549,7 @@ class TestForgottenPasswords:
     ) -> None:
         """Refusing after spending it would cost the link for a typo."""
         await auth.register(session, "shortpw@example.com", PASSWORD)
-        await auth.begin_password_reset(session, "shortpw@example.com")
+        await _reset(session, "shortpw@example.com")
         token = self._token(outbox[0][2])
 
         with pytest.raises(auth.AuthError):
@@ -525,7 +563,7 @@ class TestForgottenPasswords:
         user = await auth.register(session, "sessions@example.com", PASSWORD)
         await auth.open_session(session, user.id)
         await auth.open_session(session, user.id)
-        await auth.begin_password_reset(session, "sessions@example.com")
+        await _reset(session, "sessions@example.com")
 
         ended = await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
 

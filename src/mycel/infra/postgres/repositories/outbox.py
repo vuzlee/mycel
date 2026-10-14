@@ -14,8 +14,10 @@ class OutboxRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def add(self, job_id: str, body: dict[str, Any]) -> None:
-        self._session.add(Outbox(job_id=job_id, body=body))
+    async def add(
+        self, job_id: str, body: dict[str, Any], headers: dict[str, Any] | None = None
+    ) -> None:
+        self._session.add(Outbox(job_id=job_id, body=body, headers=headers))
         await self._session.flush()
 
     async def mark_published(self, job_id: str) -> None:
@@ -23,8 +25,10 @@ class OutboxRepository:
             update(Outbox).where(Outbox.job_id == job_id).values(published_at=func.now())
         )
 
-    async def unpublished(self, older_than: timedelta, limit: int) -> list[dict[str, Any]]:
-        """Bodies the request never published, locked so a second relay skips them."""
+    async def unpublished(
+        self, older_than: timedelta, limit: int
+    ) -> list[tuple[dict[str, Any], dict[str, Any] | None]]:
+        """Bodies and headers the request never published, locked so a relay skips them."""
         rows = await self._session.scalars(
             select(Outbox)
             .where(Outbox.published_at.is_(None), Outbox.created_at < func.now() - older_than)
@@ -32,7 +36,7 @@ class OutboxRepository:
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
-        return [row.body for row in rows]
+        return [(row.body, row.headers) for row in rows]
 
     async def prune(self, older_than: timedelta) -> int:
         result = await self._session.execute(

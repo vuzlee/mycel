@@ -1,5 +1,7 @@
 """Publish a job, persistent and confirmed, to the queue its kind routes to."""
 
+from typing import Any
+
 from aio_pika import DeliveryMode, Message
 from aio_pika.abc import AbstractChannel, AbstractExchange
 from aiormq.exceptions import ChannelNotFoundEntity
@@ -21,12 +23,12 @@ def queue_for(job: Job) -> str:
     return topology.INGEST_QUEUE if job.kind in INGEST_KINDS else topology.QUEUE
 
 
-async def publish(job: Job) -> str:
-    """Put one job on the queue and return its `job_id`."""
+async def publish(job: Job, headers: dict[str, Any] | None = None) -> str:
+    """Put one job on the queue and return its `job_id`. `headers`: a context kept from earlier."""
     async with channel() as ch:
         exchange = await _exchange(ch)
 
-        headers = context.inject()
+        headers = dict(headers) if headers else context.inject()
         headers[ATTEMPT_HEADER] = 0
 
         message = Message(

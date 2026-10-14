@@ -119,15 +119,18 @@ class DocumentRepository:
         )
         return _document(row) if row else None
 
-    async def duplicate(self, user_id: int, sha256: str) -> bool:
-        return bool(
-            await self._count(
-                select(Document.id).where(Document.user_id == user_id, Document.sha256 == sha256)
-            )
+    async def duplicate(self, user_id: int, sha256: str) -> DocumentRow | None:
+        """The same file already uploaded, deleting or not."""
+        row = await self._session.scalar(
+            select(Document).where(Document.user_id == user_id, Document.sha256 == sha256)
         )
+        return _document(row) if row else None
 
     async def count_documents(self, user_id: int) -> int:
-        return await self._count(select(Document.id).where(Document.user_id == user_id))
+        """Documents that count against the limit: one being deleted is on its way out."""
+        return await self._count(
+            select(Document.id).where(Document.user_id == user_id, Document.status != DELETING)
+        )
 
     async def count_in_flight(self, user_id: int) -> int:
         return await self._count(

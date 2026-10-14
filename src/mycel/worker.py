@@ -19,6 +19,7 @@ from mycel.agents.core.exceptions import (
     TransportError,
 )
 from mycel.domains import chat, index, ingest
+from mycel.domains.chat import AlreadyRunning
 from mycel.llm.budget import BudgetExceeded
 from mycel.queue import consumer
 from mycel.queue.handler import Handler
@@ -42,6 +43,7 @@ FINAL: tuple[type[Exception], ...] = (
 #: Retried after a delay: a provider 503, a rate limit, a dropped socket or store.
 #: Qdrant and S3 wrap their socket errors in their own types, so each is named here.
 TRANSIENT: tuple[type[Exception], ...] = (
+    AlreadyRunning,
     TransportError,
     OSError,
     redis.exceptions.ConnectionError,

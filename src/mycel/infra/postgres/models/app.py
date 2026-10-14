@@ -191,5 +191,7 @@ class Outbox(Base):
 
     job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     body: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    #: The request's trace context and request id, so a relayed job is still traceable to it.
+    headers: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

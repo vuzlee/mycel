@@ -29,7 +29,7 @@ from mycel.infra.postgres.repositories.conversations import (
 )
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
-from mycel.infra.redis import answers, budgets, citations, results
+from mycel.infra.redis import answers, budgets, citations, claims, results
 from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.queue.job import Job
@@ -54,16 +54,29 @@ class _Turn:
     found: knowledge.Retrieved | None = None
 
 
+#: Longer than any one attempt; a worker killed mid-run frees the job after this.
+CLAIM_SECONDS = 15 * 60
+
+
+class AlreadyRunning(Exception):
+    """Another worker holds this job; the copy is retried, and finds it done."""
+
+
 async def run(job: Job) -> None:
     """Answer the job's question and record it. Raises; the consumer decides on retry."""
     turn = await _prepare(job)
     if turn is None:
         return
-    await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
-    if await _ground(turn):
-        return
-    answer = await _ask(turn)
-    await _settle(turn, answer)
+    if not await claims.take(job.job_id, CLAIM_SECONDS):
+        raise AlreadyRunning(job.job_id)
+    try:
+        await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
+        if await _ground(turn):
+            return
+        answer = await _ask(turn)
+        await _settle(turn, answer)
+    finally:
+        await claims.release(job.job_id)
 
 
 async def _prepare(job: Job) -> "_Turn | None":
@@ -73,6 +86,8 @@ async def _prepare(job: Job) -> "_Turn | None":
         raise ValueError("chat job has no question")
     done = await find_turn(job.job_id)
     if done is not None and done.status == "done":
+        # Delivered again: the consumer has just said `running`, so say `done` again.
+        await results.store(job.job_id, done.answer or "", str(done.spent_usd or 0))
         log.info("chat job already answered", extra={"job_id": job.job_id})
         return None
     principal = await _who_asked(job)

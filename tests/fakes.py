@@ -28,12 +28,20 @@ class FakeRedis:
         self.values: dict[str, str] = {}
         self.ttls: dict[str, int | None] = {}
 
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+    async def set(
+        self, key: str, value: str, ex: int | None = None, nx: bool = False
+    ) -> bool | None:
+        if nx and key in self.values:
+            return None
         self.values[key] = value
         self.ttls[key] = ex
+        return True
 
     async def getdel(self, key: str) -> str | None:
         return self.values.pop(key, None)
+
+    async def delete(self, key: str) -> int:
+        return 0 if self.values.pop(key, None) is None else 1
 
 
 @pytest.fixture

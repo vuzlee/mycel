@@ -118,11 +118,21 @@ export function useFollow(): Follow {
 
     element.addEventListener("scroll", read, { passive: true });
     const grows = new ResizeObserver(read);
-    for (const child of Array.from(element.children)) grows.observe(child);
+    const watch = (): void => {
+      for (const child of Array.from(element.children)) grows.observe(child);
+    };
+    watch();
     grows.observe(element);
+    // The first question swaps the blank page for the conversation: watch the newcomer too.
+    const swapped = new MutationObserver(() => {
+      watch();
+      read();
+    });
+    swapped.observe(element, { childList: true });
     stop.current = () => {
       element.removeEventListener("scroll", read);
       grows.disconnect();
+      swapped.disconnect();
     };
     read();
   }, []);

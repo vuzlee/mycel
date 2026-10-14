@@ -40,6 +40,28 @@ describe("useFollow (#7)", () => {
     expect(removed).toHaveBeenCalledTimes(1);
     expect(CountingObserver.live).toBe(0);
   });
+
+  it("watches the conversation that replaces the blank page", async () => {
+    const watched: Element[] = [];
+    class RecordingObserver {
+      observe(target: Element): void {
+        watched.push(target);
+      }
+      disconnect(): void {}
+    }
+    vi.stubGlobal("ResizeObserver", RecordingObserver);
+    const element = document.createElement("div");
+    const blank = document.createElement("div");
+    element.appendChild(blank);
+    const { result } = renderHook(() => useFollow());
+    act(() => result.current.ref(element));
+
+    const conversation = document.createElement("div");
+    element.replaceChild(conversation, blank);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(watched).toContain(conversation);
+  });
 });
 
 describe("SourcePanel (#8)", () => {

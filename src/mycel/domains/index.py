@@ -20,8 +20,10 @@ async def run(job: Job) -> None:
     embedded = 0
     epoch = datetime(1970, 1, 1, tzinfo=UTC)
     async with session_scope() as session:
-        gold = GoldRepository(session)
-        for project in await gold.projects():
-            items = await gold.items_between(project, since=epoch)
-            embedded += (await indexer.index_items(items)).embedded
+        projects = await GoldRepository(session).projects()
+    for project in projects:
+        # Read, close, then embed: no transaction stays open while the model runs.
+        async with session_scope() as session:
+            items = await GoldRepository(session).items_between(project, since=epoch)
+        embedded += (await indexer.index_items(items)).embedded
     log.info("gold indexed", extra={"embedded": embedded})

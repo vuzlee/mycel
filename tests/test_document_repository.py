@@ -115,8 +115,16 @@ class TestChunks:
         a, b = await _owner(session, "a@x.com"), await _owner(session, "b@x.com")
         await repo.add_document(a, "f.pdf", "application/pdf", 1, "same")
 
-        assert await repo.duplicate(a, "same") is True
-        assert await repo.duplicate(b, "same") is False
+        assert await repo.duplicate(a, "same") is not None
+        assert await repo.duplicate(b, "same") is None
+
+    async def test_a_document_being_deleted_frees_its_slot(self, session: AsyncSession) -> None:
+        repo = DocumentRepository(session)
+        a = await _owner(session, "a@x.com")
+        doc = await repo.add_document(a, "f.pdf", "application/pdf", 1, "s1")
+        await repo.set_status(doc.id, tables.DELETING)
+
+        assert await repo.count_documents(a) == 0
 
 
 class TestWatchdog:

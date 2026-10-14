@@ -1932,6 +1932,19 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
         <tr><td class="who">3000</td><td>grafana</td><td>Profile only</td></tr>
       </tbody>
     </table>
+
+    <p>The state Redis on 6379 is not persisted. If it restarts or is flushed:</p>
+    <table class="tbl">
+      <thead><tr><th>Lost</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Job results and event streams</td><td>Nothing visible: polls and reloads fall back to <code>app.turn</code> in Postgres</td></tr>
+        <tr><td>Job budgets</td><td>A job retried afterwards starts with a full ceiling again</td></tr>
+        <tr><td>Delivery counts and job claims</td><td>A job that kills its worker gets a few more tries; a duplicate delivery could run once more</td></tr>
+        <tr><td>Rate-limit windows</td><td>Every limit starts over</td></tr>
+        <tr><td>Unconfirmed drafts</td><td>The person asks for the draft again</td></tr>
+      </tbody>
+    </table>
+    <p>The cache Redis on 6380 can be flushed at any time; it only costs recomputation.</p>
   </section>
 
   <section id="s14">

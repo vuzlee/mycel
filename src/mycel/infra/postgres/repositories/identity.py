@@ -80,6 +80,17 @@ class IdentityRepository:
         row = await self._session.scalar(select(Session).where(Session.id == token))
         return _session(row) if row else None
 
+    async def session_with_user(self, token: str) -> tuple[SessionRow, UserRow] | None:
+        """A cookie's session and its user in one round trip."""
+        found = (
+            await self._session.execute(
+                select(Session, User)
+                .join(User, User.id == Session.user_id)
+                .where(Session.id == token)
+            )
+        ).first()
+        return None if found is None else (_session(found[0]), _user(found[1]))
+
     async def touch_session(self, token: str, at: datetime) -> None:
         """Record that the session was used. A missing row is not an error."""
         await self._session.execute(

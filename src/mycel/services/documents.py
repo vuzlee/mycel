@@ -5,6 +5,7 @@ import io
 from dataclasses import dataclass
 
 import filetype
+from sqlalchemy.exc import IntegrityError
 
 from mycel.core.config import get_settings
 from mycel.infra.objects import buckets, files
@@ -97,17 +98,25 @@ async def upload(user_id: int, file: Upload) -> DocumentRow:
     sha = hashlib.sha256(file.data).hexdigest()
     filename = _safe_name(file.filename)
 
-    async with session_scope() as session:
-        repo = DocumentRepository(session)
-        if await repo.duplicate(user_id, sha):
-            raise Conflict("Already uploaded.")
-        if await repo.count_documents(user_id) >= settings.documents_per_user:
-            raise Conflict("You have reached the document limit.")
-        if await repo.count_in_flight(user_id) >= settings.documents_in_flight_per_user:
-            raise Busy("Too many documents are processing. Try again shortly.")
-        doc = await repo.add_document(user_id, filename, mime, len(file.data), sha)
-        await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
-        job = await enqueue.stage(session, enqueue.ingest_job(doc.id))
+    try:
+        async with session_scope() as session:
+            repo = DocumentRepository(session)
+            same = await repo.duplicate(user_id, sha)
+            if same is not None and same.status == DELETING:
+                # The unique key still holds the old row until its delete job runs.
+                raise Busy("That file is still being removed. Try again shortly.")
+            if same is not None:
+                raise Conflict("Already uploaded.")
+            if await repo.count_documents(user_id) >= settings.documents_per_user:
+                raise Conflict("You have reached the document limit.")
+            if await repo.count_in_flight(user_id) >= settings.documents_in_flight_per_user:
+                raise Busy("Too many documents are processing. Try again shortly.")
+            doc = await repo.add_document(user_id, filename, mime, len(file.data), sha)
+            await files.put(buckets.documents(), doc.object_key, io.BytesIO(file.data), mime)
+            job = await enqueue.stage(session, enqueue.ingest_job(doc.id))
+    except IntegrityError as exc:
+        # The same file in two requests at once: both passed `duplicate`, one insert lost.
+        raise Conflict("Already uploaded.") from exc
 
     await document_events.changed(user_id)
     await enqueue.send(job)
@@ -132,16 +141,17 @@ async def rename(user_id: int, document_id: int, filename: str) -> DocumentRow:
 
 
 async def set_enabled(user_id: int, document_id: int, enabled: bool) -> DocumentRow:
-    """Postgres first, then the Qdrant payload. Vectors are never deleted here."""
+    """Qdrant first, then Postgres: if Qdrant fails, the row still says what search does."""
     async with session_scope() as session:
         repo = DocumentRepository(session)
         doc = await repo.owned_document(document_id, user_id)
         if doc is None or doc.status == DELETING:
             raise DocumentNotFound()
-        await repo.set_enabled(document_id, enabled)
     await vectors.set_enabled(document_id, enabled)
     async with session_scope() as session:
-        updated = await DocumentRepository(session).document(document_id)
+        repo = DocumentRepository(session)
+        await repo.set_enabled(document_id, enabled)
+        updated = await repo.document(document_id)
     assert updated is not None
     await document_events.changed(user_id)
     return updated
