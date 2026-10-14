@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
+from mycel.observability.turns import TurnAttributes
 
 if TYPE_CHECKING:
     from opentelemetry.sdk.trace import TracerProvider
@@ -16,6 +17,21 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 
 _configured = False
+
+#: Langfuse's own environment names, so dev traces never mix with production ones.
+_ENVIRONMENTS = {"dev": "development", "staging": "staging", "prod": "production"}
+
+
+def _release() -> str:
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("mycel")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+RELEASE = _release()
 
 
 def setup_tracing(settings: Settings | None = None) -> "TracerProvider | None":
@@ -37,9 +53,15 @@ def setup_tracing(settings: Settings | None = None) -> "TracerProvider | None":
     endpoint, headers = _otlp_target(cfg)
 
     resource = Resource.create(
-        {"service.name": cfg.otel_service_name, "deployment.environment": cfg.mycel_env}
+        {
+            "service.name": cfg.otel_service_name,
+            "service.version": RELEASE,
+            "deployment.environment": _ENVIRONMENTS[cfg.mycel_env],
+            "langfuse.release": RELEASE,
+        }
     )
     provider = TracerProvider(resource=resource)
+    provider.add_span_processor(TurnAttributes())
     # Batched so export never blocks the request being traced.
     provider.add_span_processor(
         BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, headers=headers))
@@ -75,7 +97,8 @@ def _otlp_target(cfg: Settings) -> tuple[str, dict[str, str]]:
     )
     token = base64.b64encode(pair.encode()).decode()
     endpoint = f"{cfg.langfuse_base_url.rstrip('/')}/api/public/otel/v1/traces"
-    return endpoint, {"Authorization": f"Basic {token}"}
+    # Without the ingestion version Langfuse may hold spans for up to ten minutes.
+    return endpoint, {"Authorization": f"Basic {token}", "x-langfuse-ingestion-version": "4"}
 
 
 def instrument_agents(capture_content: bool = False) -> None:

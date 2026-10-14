@@ -32,6 +32,7 @@ from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import answers, budgets, citations, claims, results
 from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
+from mycel.observability.turns import chat_turn, observe
 from mycel.queue.job import Job
 from mycel.services import knowledge
 from mycel.services.chat import find_turn
@@ -52,6 +53,8 @@ class _Turn:
     recorder: RecordingChannel
     deps: MycelDeps
     found: knowledge.Retrieved | None = None
+    #: The answer as stored, citations resolved: what the trace shows as the turn's output.
+    answer: str = ""
 
 
 async def run(job: Job) -> None:
@@ -60,11 +63,21 @@ async def run(job: Job) -> None:
     if turn is None:
         return
     async with claims.holding(job.job_id):
-        await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
-        if await _ground(turn):
-            return
-        answer = await _ask(turn)
-        await _settle(turn, answer)
+        with chat_turn(
+            question=turn.question,
+            conversation_id=int(str(job.payload.get("conversation_id", 0))),
+            user_id=turn.principal.id,
+            tags=sorted(str(c) for c in turn.chips or ()),
+            job_id=job.job_id,
+            content=get_settings().otel_capture_content,
+        ) as trace:
+            await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
+            if await _ground(turn):
+                trace.output(turn.answer)
+                return
+            answer = await _ask(turn)
+            await _settle(turn, answer)
+            trace.output(turn.answer)
 
 
 async def _prepare(job: Job) -> "_Turn | None":
@@ -99,12 +112,17 @@ async def _ground(turn: _Turn) -> bool:
     if turn.chips is None or Chip.KNOWLEDGE not in turn.chips:
         return False
     query = await search_query(turn.job, turn.question, turn.deps)
-    turn.found = await knowledge.retrieve(turn.principal.id, query)
+    content = get_settings().otel_capture_content
+    with observe("retrieve-passages", "retriever", input=query, content=content) as step:
+        turn.found = await knowledge.retrieve(turn.principal.id, query)
+        step.output([c.text for c in turn.found.labelled.values()])
+        step.metadata(passages=len(turn.found.labelled), busy=turn.found.busy)
     settled = await answer_without_model(turn.principal.id, turn.chips, turn.found)
     if settled is None:
         return False
     text, sources = settled
     await citations.store(turn.job.job_id, turn.principal.id, sources)
+    turn.answer = text
     await _finish(turn.job, text, turn.question, Decimal("0"), [], sources)
     await budgets.save(turn.deps.budget)
     return True
@@ -145,6 +163,7 @@ async def _settle(turn: _Turn, answer: str) -> None:
             )
     spent = turn.deps.budget.spent_usd
     await citations.store(job.job_id, turn.principal.id, sources)
+    turn.answer = answer
     await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources)
     log.info(
         "job finished",
