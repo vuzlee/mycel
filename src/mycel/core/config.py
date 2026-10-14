@@ -155,7 +155,7 @@ class Settings(BaseSettings):
     #: How long a stopping worker waits for its jobs; under the pod's grace period.
     worker_drain_seconds: float = 50
     ingest_threads: int = 2
-    document_min_score: float = 0.75
+    document_min_score: float = 0.68
     ask_top_k: int = 5
     ask_max_chars: int = 500
     #: Most one queued job may spend.

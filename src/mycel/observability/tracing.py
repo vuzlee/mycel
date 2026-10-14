@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
+from mycel.observability.export import QuietExporter
 from mycel.observability.turns import TurnAttributes
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ def setup_tracing(settings: Settings | None = None) -> "TracerProvider | None":
     provider.add_span_processor(TurnAttributes())
     # Batched so export never blocks the request being traced.
     provider.add_span_processor(
-        BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, headers=headers))
+        BatchSpanProcessor(QuietExporter(OTLPSpanExporter(endpoint=endpoint, headers=headers)))
     )
     trace.set_tracer_provider(provider)
 

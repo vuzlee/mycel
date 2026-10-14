@@ -112,3 +112,33 @@ def observe(name: str, kind: str, *, input: Any = None, content: bool) -> Iterat
 
 def _text(value: Any) -> str:
     return value if isinstance(value, str) else json.dumps(value, default=str)
+
+
+#: Attributes that only repeat another one or serve Logfire's UI; they land in Langfuse's
+#: metadata as noise.
+NOISE_PREFIXES = ("logfire.",)
+NOISE_KEYS = frozenset({"agent_name", "model_name"})
+
+
+def without_noise(span: ReadableSpan) -> ReadableSpan:
+    """The span with framework-only attributes dropped, everything else as it was."""
+    attrs = span.attributes or {}
+    kept = {
+        k: v for k, v in attrs.items() if k not in NOISE_KEYS and not k.startswith(NOISE_PREFIXES)
+    }
+    if len(kept) == len(attrs):
+        return span
+    return ReadableSpan(
+        name=span.name,
+        context=span.context,
+        parent=span.parent,
+        resource=span.resource,
+        attributes=kept,
+        events=span.events,
+        links=span.links,
+        kind=span.kind,
+        status=span.status,
+        start_time=span.start_time,
+        end_time=span.end_time,
+        instrumentation_scope=span.instrumentation_scope,
+    )

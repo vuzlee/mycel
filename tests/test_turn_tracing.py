@@ -92,3 +92,19 @@ def test_pydantic_ai_spans_get_their_langfuse_type(spans: InMemorySpanExporter) 
     types = {s.name: dict(s.attributes or {}).get(turns.TYPE) for s in spans.get_finished_spans()}
 
     assert types == {"invoke_agent analyst": "agent", "execute_tool run_sql": "tool"}
+
+
+def test_framework_only_attributes_are_dropped_before_export(
+    spans: InMemorySpanExporter,
+) -> None:
+    """Logfire's own keys and pydantic-ai's duplicates are noise in Langfuse's metadata."""
+    with turns._tracer.start_as_current_span("invoke_agent analyst") as span:
+        span.set_attribute("logfire.msg", "analyst run")
+        span.set_attribute("agent_name", "analyst")
+        span.set_attribute("gen_ai.agent.name", "analyst")
+    quiet = turns.without_noise(spans.get_finished_spans()[0])
+    attrs = dict(quiet.attributes or {})
+
+    assert "logfire.msg" not in attrs and "agent_name" not in attrs
+    assert attrs["gen_ai.agent.name"] == "analyst"
+    assert attrs[turns.TYPE] == "agent"

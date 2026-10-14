@@ -229,8 +229,10 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yaml"
       - "--storage.tsdb.retention.time=7d"
+    # File by file: mounting the folder and then alerts.yaml inside it made Docker create an
+    # empty, root-owned deploy/monitoring/alerts.yaml as the mount point.
     volumes:
-      - ./deploy/monitoring:/etc/prometheus
+      - ./deploy/monitoring/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - ./deploy/helm/mycel/files/alerts.yaml:/etc/prometheus/alerts.yaml:ro
       - promdata:/prometheus
     ports: ["9090:9090"]
