@@ -7,3 +7,35 @@ groups:
         for: 5m
         annotations:
           summary: "{{ $labels.queue }} holds {{ $value }} parked job(s); see scripts/stack.sh replay"
+
+      - alert: QueueBacklog
+        expr: max by (queue) (mycel_queue_ready) > 20
+        for: 10m
+        annotations:
+          summary: "{{ $labels.queue }} has had {{ $value }} jobs waiting for 10 minutes; workers are behind"
+
+      - alert: NoWorkerOnQueue
+        expr: max by (queue) (mycel_queue_ready) > 0 and max by (queue) (mycel_queue_consumers) == 0
+        for: 5m
+        annotations:
+          summary: "{{ $labels.queue }} has jobs and no worker consuming it"
+
+      - alert: JobsFailing
+        expr: sum by (kind) (increase(mycel_job_attempt_seconds_count{outcome="failed"}[1h])) > 3
+        for: 15m
+        annotations:
+          summary: "{{ $labels.kind }}: {{ $value }} jobs failed for good in the last hour"
+
+      - alert: StateRedisNearlyFull
+        expr: mycel_redis_memory_ratio > 0.8
+        for: 10m
+        annotations:
+          summary: "The state Redis is {{ $value | humanizePercentage }} full; it refuses writes at 100%"
+
+  - name: mycel-processes
+    rules:
+      - alert: ProcessDown
+        expr: up{job=~"mycel.*"} == 0
+        for: 5m
+        annotations:
+          summary: "{{ $labels.job }} on {{ $labels.instance }} has not answered a scrape for 5 minutes"

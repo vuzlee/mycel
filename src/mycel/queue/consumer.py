@@ -3,6 +3,7 @@
 import asyncio
 import os
 import sys
+import time
 
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
 from opentelemetry import context as otel_context
@@ -10,6 +11,7 @@ from opentelemetry import context as otel_context
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import deliveries, results
+from mycel.observability.metrics import job_attempts
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel
 from mycel.queue.handler import Handler
@@ -58,10 +60,13 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
         await retry.reject(message, dlx, reason="worker died on every attempt", give_up=True)
         return
 
+    started = time.monotonic()
+    outcome = "failed"
     try:
         await results.mark_running(job.job_id)
         await jobs.run(job)
         await message.ack()
+        outcome = "done"
     except jobs.final as exc:
         # Another attempt cannot succeed (budget, a stuck model): straight to the dead-letter queue.
         log.warning("job failed for good", extra={"job_id": job.job_id, "error": repr(exc)})
@@ -69,6 +74,7 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except jobs.transient as exc:
         # Transient: mark failed only on the last attempt, so pollers see `running`.
+        outcome = "retried"
         if retry.exhausted(message):
             await _record(jobs, job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
@@ -76,6 +82,8 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
         await _record(jobs, job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
+    finally:
+        job_attempts.labels(kind=str(job.kind), outcome=outcome).observe(time.monotonic() - started)
 
 
 async def _record(jobs: Handler, job: Job, error: str) -> None:

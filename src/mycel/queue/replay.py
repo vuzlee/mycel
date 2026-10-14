@@ -19,6 +19,17 @@ async def depths() -> dict[str, int]:
         }
 
 
+async def work_queues() -> dict[str, tuple[int, int]]:
+    """Each work queue's waiting messages and its consumer count."""
+    async with channel() as ch:
+        await topology.declare(ch)
+        found: dict[str, tuple[int, int]] = {}
+        for name in (topology.QUEUE, topology.INGEST_QUEUE):
+            result = (await ch.declare_queue(name, passive=True)).declaration_result
+            found[name] = (result.message_count or 0, result.consumer_count or 0)
+        return found
+
+
 async def replay(dead: str, limit: int = 100) -> int:
     """Move up to `limit` jobs from `dead` back to its work queue, attempts reset."""
     moved = 0

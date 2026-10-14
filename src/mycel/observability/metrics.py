@@ -31,11 +31,36 @@ jobs_total = Counter(
     ["kind", "status"],
 )
 
+job_attempts = Histogram(
+    "mycel_job_attempt_seconds",
+    "Wall time of one attempt at a job, by kind and how it ended.",
+    ["kind", "outcome"],
+    buckets=(0.5, 1, 5, 15, 30, 60, 120, 300, 600),
+)
+
+queue_ready = Gauge(
+    "mycel_queue_ready",
+    "Jobs waiting in a work queue, not yet handed to a worker.",
+    ["queue"],
+)
+
+queue_consumers = Gauge(
+    "mycel_queue_consumers",
+    "Workers consuming a work queue; zero with jobs waiting means nothing runs them.",
+    ["queue"],
+)
+
 
 dead_letters = Gauge(
     "mycel_dead_letters",
     "Jobs parked in a dead-letter queue; anything above zero needs a look.",
     ["queue"],
+)
+
+
+redis_memory_ratio = Gauge(
+    "mycel_redis_memory_ratio",
+    "The state Redis's used memory over its maxmemory; it refuses writes at 1.",
 )
 
 
