@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Waiting } from "./components/Waiting";
 import { AuthProvider, useAuth } from "./context/auth";
 import { Ask } from "./pages/Ask";
 import Dashboard from "./pages/dashboard";
@@ -20,7 +21,7 @@ import "./styles/index.css";
  *  asked for a password — the login form is what `Home` links to, not what greets it. */
 function Front() {
   const { user } = useAuth();
-  if (user === undefined) return <div className="waiting" />;
+  if (user === undefined) return <Waiting />;
   return user ? <Ask /> : <Home />;
 }
 
@@ -30,7 +31,7 @@ function Front() {
  *  come back to. */
 function Board() {
   const { user } = useAuth();
-  if (user === undefined) return <div className="waiting" />;
+  if (user === undefined) return <Waiting />;
   return user ? <Dashboard /> : <Navigate to="/login" replace />;
 }
 

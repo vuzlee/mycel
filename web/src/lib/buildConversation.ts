@@ -2,6 +2,7 @@
 
 import type { SequencedEvent } from "./types";
 import {
+  ATTEMPT_STARTED,
   TEXT,
   TEXT_DELTA,
   THINKING,
@@ -41,7 +42,7 @@ export interface RunMarkItem {
 export type Item = ProseItem | ToolItem | RunMarkItem;
 
 export function buildConversation(events: SequencedEvent[]): Item[] {
-  const root: Item[] = [];
+  let root: Item[] = [];
   const byToolCall = new Map<string, ToolItem>();
 
   const append = (event: SequencedEvent, item: Item): void => {
@@ -52,6 +53,13 @@ export function buildConversation(events: SequencedEvent[]): Item[] {
   };
 
   for (const event of events) {
+    if (event.type === ATTEMPT_STARTED) {
+      // A retry: the partial answer before it was abandoned, not the start of this one.
+      root = [];
+      byToolCall.clear();
+      continue;
+    }
+
     if (event.type === TEXT || event.type === TEXT_DELTA || event.type === THINKING) {
       // A delta is a piece of the same bubble a whole `text` would have filled, so both
       // land in one item and the reader cannot tell which model wrote in pieces.

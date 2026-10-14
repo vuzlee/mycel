@@ -159,8 +159,21 @@ export class Unauthorized extends Error {
   }
 }
 
+let onUnauthorized: () => void = () => {};
+
+/** Set by the auth provider: what a dead session means for the page. */
+export function whenUnauthorized(handler: () => void): void {
+  onUnauthorized = handler;
+}
+
+/** Every 401, reads and writes alike, drops the session here before it throws. */
+function unauthorized(): Unauthorized {
+  onUnauthorized();
+  return new Unauthorized();
+}
+
 async function json<T>(res: Response): Promise<T> {
-  if (res.status === 401) throw new Unauthorized();
+  if (res.status === 401) throw unauthorized();
   if (!res.ok) throw new Error(await detail(res));
   return (await res.json()) as T;
 }
@@ -190,7 +203,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     init.body = JSON.stringify(body);
   }
   const res = await fetch(path, init);
-  if (res.status === 401) throw new Unauthorized();
+  if (res.status === 401) throw unauthorized();
   if (!res.ok) throw new Error(await detail(res));
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;

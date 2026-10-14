@@ -11,6 +11,9 @@ const ME = ["me"] as const;
 
 interface AuthValue {
   user: User | null | undefined;
+  /** The API could not say who is signed in (down, restarting); `retry` asks again. */
+  failed: boolean;
+  retry: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   forget: () => void;
@@ -20,7 +23,12 @@ const Ctx = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
-  const { data: user } = useQuery({ queryKey: ME, queryFn: api.me, staleTime: Infinity });
+  const {
+    data: user,
+    isError: failed,
+    refetch,
+  } = useQuery({ queryKey: ME, queryFn: api.me, staleTime: Infinity });
+  const retry = useCallback(() => void refetch(), [refetch]);
   const setUser = useCallback(
     (next: User | null) => {
       client.setQueryData(ME, next);
@@ -47,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const forget = useCallback(() => setUser(null), [setUser]);
   useEffect(() => whenUnauthorized(forget), [forget]);
 
-  const value = useMemo(() => ({ user, signIn, signOut, forget }), [user, signIn, signOut, forget]);
+  const value = useMemo(
+    () => ({ user, failed, retry, signIn, signOut, forget }),
+    [user, failed, retry, signIn, signOut, forget],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

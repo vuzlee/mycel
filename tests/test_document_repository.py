@@ -137,6 +137,35 @@ class TestWatchdog:
         assert (after.status, after.fail_reason) == (tables.FAILED, "timeout")
         assert await repo.busy(a) is False
 
+    async def test_a_document_still_queued_is_not_failed(self, session: AsyncSession) -> None:
+        """A backlog is a queue, not a hang: its job would skip a row already failed."""
+        repo = DocumentRepository(session)
+        a = await _owner(session, "a@x.com")
+        doc = await repo.add_document(a, "f.pdf", "application/pdf", 1, "s1")
+        await _age(session, doc.id)
+
+        assert await repo.fail_stuck_parsing(timedelta(minutes=10)) == 0
+        after = await repo.document(doc.id)
+        assert after is not None and after.status == tables.UPLOADED
+
+    async def test_a_stuck_delete_is_resent_once_per_window(self, session: AsyncSession) -> None:
+        repo = DocumentRepository(session)
+        a = await _owner(session, "a@x.com")
+        doc = await repo.add_document(a, "f.pdf", "application/pdf", 1, "s1")
+        await repo.set_status(doc.id, tables.DELETING)
+        await _age(session, doc.id)
+
+        assert await repo.requeue_stuck_deletes(timedelta(minutes=10)) == [doc.id]
+        assert await repo.requeue_stuck_deletes(timedelta(minutes=10)) == []
+
+
+async def _age(session: AsyncSession, document_id: int) -> None:
+    await session.execute(
+        update(Document)
+        .where(Document.id == document_id)
+        .values(updated_at=text("now() - interval '1 hour'"))
+    )
+
 
 class TestRename:
     async def test_rename_changes_the_name_only(self, session: AsyncSession) -> None:

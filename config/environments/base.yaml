@@ -62,8 +62,10 @@ settings:
   documents_per_user: 200
   documents_in_flight_per_user: 5
   document_stuck_seconds: 600
-  # The ingest worker restarts after this many; docling leaks native memory.
+  # The ingest worker re-execs itself after this many; docling leaks native memory.
   ingest_worker_max_jobs: 20
+  # A stopping worker waits this long for its jobs; under the pod's grace period.
+  worker_drain_seconds: 50
   ingest_threads: 2
   # Below this top score no model is called. Measured: answerable 0.805+, off topic 0.72-.
   document_min_score: 0.75

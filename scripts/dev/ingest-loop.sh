@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The ingest worker, restarted each time it exits.
+# The ingest worker, restarted if it ever exits (it re-execs itself to recycle).
 
 set -uo pipefail
 

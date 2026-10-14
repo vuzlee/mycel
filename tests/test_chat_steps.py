@@ -16,6 +16,10 @@ from mycel.services import knowledge
 pytestmark = pytest.mark.anyio
 
 
+async def _drop(event: Any) -> None:
+    pass
+
+
 @pytest.fixture
 def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     seen: dict[str, Any] = {"model": 0, "finished": [], "cached": []}
@@ -51,7 +55,7 @@ def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(chat, "_deps", deps)
     monkeypatch.setattr(chat, "RedisEventChannel", lambda job_id: SimpleNamespace())
     monkeypatch.setattr(
-        chat, "RecordingChannel", lambda inner: SimpleNamespace(dropped=0, steps=[])
+        chat, "RecordingChannel", lambda inner: SimpleNamespace(dropped=0, steps=[], publish=_drop)
     )
     monkeypatch.setattr(chat, "search_query", query)
     monkeypatch.setattr(chat, "_finish", finish)

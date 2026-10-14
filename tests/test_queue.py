@@ -24,6 +24,7 @@ from mycel.core.principal import Principal
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
 from mycel.infra.redis import budgets, deliveries, results
+from mycel.infra.redis.streams import RedisEventChannel
 from mycel.llm.budget import BudgetExceeded, JobBudget
 from mycel.queue import consumer, producer, retry, topology
 from mycel.queue.job import Job, JobKind
@@ -184,6 +185,22 @@ class TestSuccess:
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
         assert store["job-1"]["status"] == "done"
 
+    async def test_each_attempt_starts_by_saying_so(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """A retry writes to the same stream; the page drops what came before this marker."""
+        published: list[str] = []
+
+        async def publish(self: Any, event: Any) -> None:
+            published.append(event.type)
+
+        monkeypatch.setattr(RedisEventChannel, "publish", publish)
+        _runs(monkeypatch, _ANSWER)
+
+        await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
+
+        assert published[0] == "attempt_started"
+
 
 class TestFailures:
     """Split by whether another attempt could possibly help."""
@@ -272,6 +289,37 @@ class TestFailures:
         await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
+    async def test_a_store_down_while_recording_the_failure_still_dead_letters(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """Postgres gone on the last attempt: the message must still leave the queue."""
+        _runs(monkeypatch, ValueError("bug"))
+
+        async def down(job: Job, error: str) -> None:
+            raise OperationalError("UPDATE", {}, Exception("server closed the connection"))
+
+        monkeypatch.setattr(chat_domain, "record_failure", down)
+        dlx = FakeExchange()
+
+        await consumer.handle(_message(), dlx, worker.HANDLER)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
+
+    async def test_a_broker_down_while_rejecting_returns_the_message(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
+    ) -> None:
+        """Unsettled, it would hold a prefetch slot until the broker's 30 minute timeout."""
+        _runs(monkeypatch, ValueError("bug"))
+
+        class DeadExchange:
+            async def publish(self, message: Any, routing_key: str = "") -> None:
+                raise ConnectionError("broker gone")
+
+        message = _message()
+        await consumer.handle(message, DeadExchange(), HANDLER)  # type: ignore[arg-type]
+
+        assert message.nacked
 
     async def test_an_unreadable_body_skips_the_retries(self) -> None:
         """It will be just as unreadable in a minute."""

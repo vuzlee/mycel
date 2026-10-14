@@ -7,6 +7,20 @@
   background: var(--ground);
 }
 
+.waiting.unreachable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.waiting.unreachable button.primary {
+  width: auto;
+}
+
 .gate {
   display: flex;
   align-items: center;

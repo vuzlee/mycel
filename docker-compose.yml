@@ -62,6 +62,8 @@ services:
     build: {context: ., target: app}
     profiles: [app]
     command: python -m mycel.worker
+    # Lets a job in flight finish; the worker drains for WORKER_DRAIN_SECONDS.
+    stop_grace_period: 60s
     env_file: .env
     environment:
       <<: *stores
@@ -72,10 +74,11 @@ services:
       redis: {condition: service_healthy}
       redis-cache: {condition: service_healthy}
 
-  # Parses and embeds uploads. One replica: docling needs 3-4 GB; restarts after N jobs.
+  # Parses and embeds uploads. One replica: docling needs 3-4 GB; re-execs after N jobs.
   ingest:
     build: {context: ., target: ingest}
     profiles: [app]
+    stop_grace_period: 60s
     env_file: .env
     environment:
       <<: *stores

@@ -23,6 +23,7 @@ from mycel.domains.chat_knowledge import (
     search_query,
 )
 from mycel.events.channel import EventChannel, RecordingChannel
+from mycel.events.event import ATTEMPT_STARTED, AgentEvent
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
 )
@@ -56,7 +57,10 @@ class _Turn:
 async def run(job: Job) -> None:
     """Answer the job's question and record it. Raises; the consumer decides on retry."""
     turn = await _prepare(job)
-    if turn is None or await _ground(turn):
+    if turn is None:
+        return
+    await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
+    if await _ground(turn):
         return
     answer = await _ask(turn)
     await _settle(turn, answer)

@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { askChat, Unauthorized } from "../api";
 import { makeQueryClient, whenUnauthorized } from "../lib/queryClient";
 import { usePastTurns } from "./usePastTurns";
 import { useRun } from "./useRun";
@@ -63,7 +64,7 @@ describe("useRun", () => {
 });
 
 describe("a 401", () => {
-  it("drops the session once, through the query cache", async () => {
+  it("drops the session once on a read", async () => {
     const dropped = vi.fn();
     whenUnauthorized(dropped);
     vi.stubGlobal(
@@ -74,6 +75,19 @@ describe("a 401", () => {
     renderHook(() => usePastTurns(5, null), { wrapper });
 
     await waitFor(() => expect(dropped).toHaveBeenCalledTimes(1));
+  });
+
+  it("drops the session on a write too, not only on reads", async () => {
+    const dropped = vi.fn();
+    whenUnauthorized(dropped);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 401 })),
+    );
+
+    await expect(askChat("how many?")).rejects.toBeInstanceOf(Unauthorized);
+
+    expect(dropped).toHaveBeenCalledTimes(1);
   });
 });
 

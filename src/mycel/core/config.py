@@ -152,6 +152,8 @@ class Settings(BaseSettings):
     documents_in_flight_per_user: int = 5
     document_stuck_seconds: int = 600
     ingest_worker_max_jobs: int = 20
+    #: How long a stopping worker waits for its jobs; under the pod's grace period.
+    worker_drain_seconds: float = 50
     ingest_threads: int = 2
     document_min_score: float = 0.75
     ask_top_k: int = 5

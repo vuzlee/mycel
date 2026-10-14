@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 #: Event types; clients ignore unknown ones, so adding is safe and removing is not.
+#: First on the stream of each attempt at a job: what came before belongs to one abandoned.
+ATTEMPT_STARTED = "attempt_started"
 RUN_STARTED = "run_started"
 RUN_FINISHED = "run_finished"
 TEXT = "text"

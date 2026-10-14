@@ -1,6 +1,7 @@
 """The worker's consume loop: receive a job, run it, ack."""
 
 import asyncio
+import os
 import sys
 
 from aio_pika.abc import AbstractExchange, AbstractIncomingMessage
@@ -12,6 +13,7 @@ from mycel.infra.redis import deliveries, results
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel
 from mycel.queue.handler import Handler
+from mycel.queue.inflight import InFlight
 from mycel.queue.job import Job
 
 log = get_logger(__name__)
@@ -26,6 +28,14 @@ async def handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs: 
     token = otel_context.attach(ctx) if ctx is not None else None
     try:
         await _handle(message, dlx, jobs)
+    except Exception:
+        # The failure path itself failed (the broker or Postgres went away): give the message
+        # back rather than hold a prefetch slot until the broker's consumer timeout.
+        log.exception("job could not be settled; returned to the queue")
+        try:
+            await message.nack(requeue=True)
+        except Exception:
+            log.exception("nack failed; the broker redelivers when the channel closes")
     finally:
         if token is not None:
             otel_context.detach(token)
@@ -44,7 +54,7 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
     # Redelivered means a worker took it and never acked: it may be what killed that worker.
     if message.redelivered and await deliveries.count(job.job_id) > topology.MAX_ATTEMPTS:
         log.error("job keeps killing its worker", extra={"job_id": job.job_id})
-        await jobs.record_failure(job, "worker died on every attempt")
+        await _record(jobs, job, "worker died on every attempt")
         await retry.reject(message, dlx, reason="worker died on every attempt", give_up=True)
         return
 
@@ -55,28 +65,38 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
     except jobs.final as exc:
         # Another attempt cannot succeed (budget, a stuck model): straight to the dead-letter queue.
         log.warning("job failed for good", extra={"job_id": job.job_id, "error": repr(exc)})
-        await jobs.record_failure(job, str(exc))
+        await _record(jobs, job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except jobs.transient as exc:
         # Transient: mark failed only on the last attempt, so pollers see `running`.
         if retry.exhausted(message):
-            await jobs.record_failure(job, str(exc))
+            await _record(jobs, job, str(exc))
         await retry.reject(message, dlx, reason=str(exc))
     except Exception as exc:  # the loop must survive; see the docstring
         log.exception("job raised an unexpected error", extra={"job_id": job.job_id})
-        await jobs.record_failure(job, repr(exc))
+        await _record(jobs, job, repr(exc))
         await retry.reject(message, dlx, reason=repr(exc), give_up=True)
+
+
+async def _record(jobs: Handler, job: Job, error: str) -> None:
+    """Best effort: a store that is down must not stop the message being settled."""
+    try:
+        await jobs.record_failure(job, error)
+    except Exception:
+        log.exception("could not record the failure", extra={"job_id": job.job_id})
 
 
 async def run_worker(
     jobs: Handler, stop: asyncio.Event | None = None, queue: str = topology.QUEUE
-) -> None:
-    """Consume until `stop` is set, then finish the job in flight."""
+) -> bool:
+    """Consume until `stop` is set, then finish the jobs in flight. True: stopped to recycle."""
     stop = stop or asyncio.Event()
 
+    settings = get_settings()
     ingest = queue == topology.INGEST_QUEUE
-    budget = get_settings().ingest_worker_max_jobs if ingest else 0
+    budget = settings.ingest_worker_max_jobs if ingest else 0
     done = 0
+    inflight = InFlight()
 
     async with channel() as ch:
         await ch.set_qos(prefetch_count=1 if ingest else PREFETCH)
@@ -86,17 +106,21 @@ async def run_worker(
             nonlocal done
             await handle(message, topo.dlx, jobs)
             done += 1
-            # docling keeps native memory it never gives back; exit and be restarted.
+            # docling keeps native memory it never gives back; stop, then re-exec.
             if budget and done >= budget:
                 log.info("ingest worker recycling", extra={"jobs": done})
                 stop.set()
 
         source = topo.ingest if ingest else topo.jobs
-        await source.consume(_on_message, no_ack=False)
+        tag = await source.consume(inflight.track(_on_message), no_ack=False)
         log.info("worker ready", extra={"queue": queue})
 
         await stop.wait()
-        log.info("worker stopping")
+        # Closing the channel cancels the handlers, so stop taking jobs and let them finish.
+        await source.cancel(tag)
+        left = await inflight.drain(settings.worker_drain_seconds)
+        log.info("worker stopping", extra={"jobs_cut_short": left})
+    return bool(budget) and done >= budget
 
 
 def main(jobs: Handler, argv: list[str] | None = None) -> int:
@@ -108,9 +132,12 @@ def main(jobs: Handler, argv: list[str] | None = None) -> int:
     process = "ingest" if queue == topology.INGEST_QUEUE else "worker"
     start(process)
 
-    async def _main() -> None:
+    async def _main() -> bool:
         async with running(process):
-            await run_worker(jobs, stop_on_signals(), queue)
+            return await run_worker(jobs, stop_on_signals(), queue)
 
-    asyncio.run(_main())
+    if asyncio.run(_main()):
+        # A fresh process image gives docling's memory back without a container restart,
+        # which Kubernetes would back off.
+        os.execv(sys.executable, [sys.executable, *sys.orig_argv[1:]])
     return 0

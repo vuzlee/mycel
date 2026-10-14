@@ -8,6 +8,8 @@ export interface SequencedEvent {
   parent_tool_call_id: string | null;
 }
 
+/** Each attempt at a job starts with this; anything before it was abandoned. */
+export const ATTEMPT_STARTED = "attempt_started";
 export const RUN_FINISHED = "run_finished";
 export const TEXT = "text";
 /** A piece of `TEXT`, arriving while the model writes. Merged into the same bubble. */

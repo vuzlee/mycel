@@ -94,11 +94,11 @@ async def watchdog() -> None:
     async with session_scope() as session:
         repo = DocumentRepository(session)
         failed = await repo.fail_stuck_parsing(stuck)
-        deleting = await repo.stuck(DELETING, stuck)
+        deleting = await repo.requeue_stuck_deletes(stuck)
     if failed:
         log.warning("stuck documents failed", extra={"count": failed})
-    for doc in deleting:
-        await publish(delete_job(doc.id))
+    for document_id in deleting:
+        await publish(delete_job(document_id))
 
 
 async def record_failure(job: Job, error: str) -> None:

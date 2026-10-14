@@ -176,21 +176,25 @@ class DocumentRepository:
     async def delete_document(self, document_id: int) -> None:
         await self._session.execute(delete(Document).where(Document.id == document_id))
 
-    async def stuck(self, status: str, older_than: timedelta) -> list[DocumentRow]:
-        """Documents left in `status` longer than they should take."""
-        rows = await self._session.scalars(
-            select(Document).where(
-                Document.status == status,
+    async def requeue_stuck_deletes(self, older_than: timedelta) -> list[int]:
+        """Deletes left longer than they should take, stamped so each is re-sent once a window."""
+        result = await self._session.scalars(
+            update(Document)
+            .where(
+                Document.status == DELETING,
                 Document.updated_at < func.now() - older_than,
             )
+            .values(updated_at=func.now())
+            .returning(Document.id)
         )
-        return [_document(r) for r in rows]
+        return list(result)
 
     async def fail_stuck_parsing(self, older_than: timedelta) -> int:
+        """Parsing that outlived its window. Not `uploaded`: that is a queue, not a hang."""
         result = await self._session.execute(
             update(Document)
             .where(
-                Document.status.in_(IN_FLIGHT),
+                Document.status == PARSING,
                 Document.updated_at < func.now() - older_than,
             )
             .values(status=FAILED, fail_reason="timeout", updated_at=func.now())
