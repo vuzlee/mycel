@@ -5,11 +5,19 @@ python -m mycel.worker [--queue ingest]
 
 from types import ModuleType
 
-import httpx
+import botocore.exceptions
+import httpx2
 import redis.exceptions
 import sqlalchemy.exc
+from qdrant_client.http.exceptions import ResponseHandlingException
 
-from mycel.agents.core.exceptions import AgentError
+from mycel.agents.core.exceptions import (
+    DegenerateLoop,
+    OutputValidationFailed,
+    RunawayStopped,
+    ToolFailed,
+    TransportError,
+)
 from mycel.domains import chat, index, ingest
 from mycel.llm.budget import BudgetExceeded
 from mycel.queue import consumer
@@ -22,17 +30,29 @@ class UnknownJob(Exception):
 
 
 #: Never retried: another attempt spends money the job does not have, or cannot run at all.
-FINAL: tuple[type[Exception], ...] = (BudgetExceeded, UnknownJob)
+FINAL: tuple[type[Exception], ...] = (
+    BudgetExceeded,
+    UnknownJob,
+    RunawayStopped,
+    DegenerateLoop,
+    OutputValidationFailed,
+    ToolFailed,
+)
 
 #: Retried after a delay: a provider 503, a rate limit, a dropped socket or store.
+#: Qdrant and S3 wrap their socket errors in their own types, so each is named here.
 TRANSIENT: tuple[type[Exception], ...] = (
-    AgentError,
+    TransportError,
     OSError,
     redis.exceptions.ConnectionError,
     redis.exceptions.TimeoutError,
     sqlalchemy.exc.OperationalError,
     sqlalchemy.exc.InterfaceError,
-    httpx.TransportError,
+    sqlalchemy.exc.TimeoutError,
+    httpx2.TransportError,
+    ResponseHandlingException,
+    botocore.exceptions.ConnectionError,
+    botocore.exceptions.HTTPClientError,
 )
 
 

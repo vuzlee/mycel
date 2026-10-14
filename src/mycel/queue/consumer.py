@@ -53,8 +53,8 @@ async def _handle(message: AbstractIncomingMessage, dlx: AbstractExchange, jobs:
         await jobs.run(job)
         await message.ack()
     except jobs.final as exc:
-        # Out of budget is not transient: straight to the dead-letter queue.
-        log.warning("job refused for budget", extra={"job_id": job.job_id})
+        # Another attempt cannot succeed (budget, a stuck model): straight to the dead-letter queue.
+        log.warning("job failed for good", extra={"job_id": job.job_id, "error": repr(exc)})
         await jobs.record_failure(job, str(exc))
         await retry.reject(message, dlx, reason=str(exc), give_up=True)
     except jobs.transient as exc:

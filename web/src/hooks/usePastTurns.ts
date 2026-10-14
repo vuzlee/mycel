@@ -11,7 +11,8 @@ export function usePastTurns(conversationId: number | null, jobId: string | null
   // Cleared by "new conversation" until the next conversation id arrives.
   const [cleared, setCleared] = useState(false);
   const query = useQuery({
-    queryKey: ["turns", conversationId],
+    // Per job: the turn before it was still queued when the last run's list was fetched.
+    queryKey: ["turns", conversationId, jobId],
     queryFn: () => fetchTurns(conversationId as number),
     enabled: conversationId !== null,
     placeholderData: keepPreviousData,

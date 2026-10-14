@@ -572,8 +572,19 @@ class TestTheGoogleRoutesOverHttp:
         assert response.status_code == 307
         assert "google_error=cancelled" in response.headers["location"]
 
-    def test_the_callback_needs_no_cookie(self, client: TestClient) -> None:
-        """Deliberately not behind `current_user`."""
+    def test_a_signed_out_callback_connects_nothing(self, client: TestClient) -> None:
+        """Only the account that started the round may finish it: still a redirect, not a 401."""
+        response = client.get(
+            "/auth/google/callback",
+            params={"code": "c", "state": "never-issued"},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert "google_error=signed_out" in response.headers["location"]
+
+    def test_a_callback_with_an_unknown_state_fails(self, client: TestClient) -> None:
+        self._sign_in(client)
         response = client.get(
             "/auth/google/callback",
             params={"code": "c", "state": "never-issued"},

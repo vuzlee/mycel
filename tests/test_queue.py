@@ -5,15 +5,21 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
-import httpx
+import botocore.exceptions
+import httpx2
 import pytest
 import redis.exceptions
 from aiormq.exceptions import ChannelNotFoundEntity
+from qdrant_client.http.exceptions import ResponseHandlingException
 from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 
 import mycel.agents.core.runner as runner
 from mycel import worker
-from mycel.agents.core.exceptions import AgentError
+from mycel.agents.core.exceptions import (
+    DegenerateLoop,
+    ModelCallFailed,
+    OutputValidationFailed,
+)
 from mycel.core.principal import Principal
 from mycel.domains import chat as chat_domain
 from mycel.domains import ingest as ingest_domain
@@ -185,7 +191,7 @@ class TestFailures:
     async def test_a_transient_failure_goes_to_the_retry_queue(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
-        _runs(monkeypatch, AgentError("provider returned 503"))
+        _runs(monkeypatch, ModelCallFailed("provider returned 503"))
         dlx = FakeExchange()
         message = _message()
 
@@ -202,14 +208,17 @@ class TestFailures:
             redis.exceptions.TimeoutError("redis slow"),
             OperationalError("SELECT 1", {}, Exception("server closed the connection")),
             InterfaceError("SELECT 1", {}, Exception("connection is closed")),
-            httpx.ConnectError("refused"),
-            httpx.ReadTimeout("slow"),
+            httpx2.ConnectError("refused"),
+            httpx2.ReadTimeout("slow"),
+            ResponseHandlingException(ConnectionRefusedError("qdrant restarting")),
+            botocore.exceptions.EndpointConnectionError(endpoint_url="http://minio:9000"),
+            ModelCallFailed("provider returned 503"),
         ],
     )
     async def test_a_dropped_store_or_socket_is_retried(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], error: Exception
     ) -> None:
-        """A blip in Redis, Postgres or an HTTP call is not a reason to give up."""
+        """A blip in Redis, Postgres, Qdrant, S3 or an HTTP call is not a reason to give up."""
         _runs(monkeypatch, error)
         dlx = FakeExchange()
 
@@ -221,14 +230,14 @@ class TestFailures:
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
         """A caller polling between attempts must not be told the job is dead."""
-        _runs(monkeypatch, AgentError("provider returned 503"))
+        _runs(monkeypatch, ModelCallFailed("provider returned 503"))
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]
         assert store["job-1"]["status"] == "running"
 
     async def test_the_last_attempt_lands_in_the_dead_letter_queue(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any]
     ) -> None:
-        _runs(monkeypatch, AgentError("still down"))
+        _runs(monkeypatch, ModelCallFailed("still down"))
         dlx = FakeExchange()
         message = FakeMessage(_message().body, {retry.ATTEMPT_HEADER: topology.MAX_ATTEMPTS - 1})
 
@@ -248,6 +257,21 @@ class TestFailures:
 
         assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
         assert store["job-1"]["status"] == "failed"
+
+    @pytest.mark.parametrize(
+        "error",
+        [DegenerateLoop("rag_search", 3), OutputValidationFailed("no valid answer")],
+    )
+    async def test_a_run_that_will_fail_again_skips_the_retries(
+        self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], error: Exception
+    ) -> None:
+        """Three more orchestrator runs would only make the person wait for the same failure."""
+        _runs(monkeypatch, error)
+        dlx = FakeExchange()
+
+        await consumer.handle(_message(), dlx, HANDLER)  # type: ignore[arg-type]
+
+        assert [key for _, key in dlx.published] == [topology.DEAD_QUEUE]
 
     async def test_an_unreadable_body_skips_the_retries(self) -> None:
         """It will be just as unreadable in a minute."""
@@ -487,7 +511,7 @@ class TestTheBudgetSurvivesARetry:
 
         async def fake_run(agent: object, prompt: str, deps: Any) -> str:
             deps.budget.spent_usd = Decimal("0.40")
-            raise AgentError("provider returned 503")
+            raise ModelCallFailed("provider returned 503")
 
         monkeypatch.setattr(runner, "run", fake_run)
         await consumer.handle(_message(), FakeExchange(), HANDLER)  # type: ignore[arg-type]

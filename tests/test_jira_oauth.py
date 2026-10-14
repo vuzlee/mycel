@@ -145,17 +145,26 @@ class TestTheStateIsSpentOnce:
     ) -> None:
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
-        assert await oauth.spend_state(query["state"][0]) == 7
+        assert await oauth.spend_state(query["state"][0], 7) == 7
 
     async def test_a_replayed_callback_connects_nothing(
         self, configured: None, redis: FakeRedis
     ) -> None:
         """A callback url lands in a history file and a referrer header."""
         state = parse_qs(urlsplit(await oauth.consent_url(7)).query)["state"][0]
-        await oauth.spend_state(state)
+        await oauth.spend_state(state, 7)
 
         with pytest.raises(JiraAuthError):
-            await oauth.spend_state(state)
+            await oauth.spend_state(state, 7)
+
+    async def test_a_round_started_by_someone_else_is_refused(
+        self, configured: None, redis: FakeRedis
+    ) -> None:
+        """A consent link sent to another person must not attach their account to the sender."""
+        state = parse_qs(urlsplit(await oauth.consent_url(7)).query)["state"][0]
+
+        with pytest.raises(JiraAuthError, match="another account"):
+            await oauth.spend_state(state, 8)
 
     async def test_the_state_expires_on_its_own(self, configured: None, redis: FakeRedis) -> None:
         await oauth.consent_url(7)

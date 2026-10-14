@@ -57,8 +57,8 @@ class OAuthProvider:
         base = {"client_id": client_id, "redirect_uri": self.redirect_uri()}
         return await consent_url(self.key, self.auth_url, user_id, {**base, **params})
 
-    async def owner_of(self, state: str) -> int:
-        return await owner_of(self.key, state, self.error)
+    async def owner_of(self, state: str, user_id: int) -> int:
+        return await owner_of(self.key, state, user_id, self.error)
 
     async def code_grant(self, code: str) -> dict[str, Any]:
         """Exchange a consent code; the response must carry a refresh token."""
@@ -104,12 +104,14 @@ async def consent_url(provider: str, auth_url: str, user_id: int, params: dict[s
     return f"{auth_url}?{urlencode({**params, 'state': state})}"
 
 
-async def owner_of(provider: str, state: str, error: type[MycelError]) -> int:
-    """Whose consent round a callback belongs to, or `error`."""
-    user_id = await _spend_state(provider, state)
-    if user_id is None:
+async def owner_of(provider: str, state: str, user_id: int, error: type[MycelError]) -> int:
+    """`user_id` if the round is theirs, else `error`: a link someone else started is refused."""
+    owner = await _spend_state(provider, state)
+    if owner is None:
         raise error("that consent link has expired; start again from settings")
-    return user_id
+    if owner != user_id:
+        raise error("that consent link was started by another account")
+    return owner
 
 
 async def token_call(

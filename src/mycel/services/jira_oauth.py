@@ -94,8 +94,8 @@ async def consent_url(user_id: int) -> str:
     return await JIRA.consent_url(user_id, params)
 
 
-async def spend_state(state: str) -> int:
-    return await JIRA.owner_of(state)
+async def spend_state(state: str, user_id: int) -> int:
+    return await JIRA.owner_of(state, user_id)
 
 
 async def exchange(code: str) -> Grant:
@@ -141,9 +141,9 @@ async def _access_for(user_id: int) -> access_tokens.Fresh:
     return token, lifetime
 
 
-async def connect(state: str, code: str) -> JiraAccountRow:
+async def connect(state: str, code: str, user_id: int) -> JiraAccountRow:
     """Finish a consent round: check the state, exchange the code, keep the token."""
-    user_id = await spend_state(state)
+    await spend_state(state, user_id)
     grant = await exchange(code)
     async with session_scope() as session:
         repo = AccountRepository(session)

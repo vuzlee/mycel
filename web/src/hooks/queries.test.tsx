@@ -87,4 +87,27 @@ describe("usePastTurns", () => {
     await waitFor(() => expect(result.current.pastFor).toBe("now"));
     expect(result.current.past.map((t) => t.job_id)).toEqual(["old"]);
   });
+
+  it("refetches when a new run starts, so the last one shows its answer", async () => {
+    const lists = [
+      [{ job_id: "q1", status: "queued", answer: null }],
+      [
+        { job_id: "q1", status: "done", answer: "42" },
+        { job_id: "q2", status: "queued", answer: null },
+      ],
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ok(lists.shift() ?? [])),
+    );
+    const { result, rerender } = renderHook(({ job }) => usePastTurns(5, job), {
+      wrapper,
+      initialProps: { job: "q1" },
+    });
+    await waitFor(() => expect(result.current.pastFor).toBe("q1"));
+
+    rerender({ job: "q2" });
+    await waitFor(() => expect(result.current.pastFor).toBe("q2"));
+    expect(result.current.past).toEqual([{ job_id: "q1", status: "done", answer: "42" }]);
+  });
 });

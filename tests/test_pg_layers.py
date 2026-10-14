@@ -105,6 +105,16 @@ class TestSilverRepository:
     async def test_writing_nothing_is_allowed(self, session: AsyncSession) -> None:
         assert await SilverRepository(session).upsert_items([]) == 0
 
+    async def test_a_big_first_sync_fits_under_the_parameter_limit(
+        self, session: AsyncSession
+    ) -> None:
+        """2,000 issues × 23 columns is past asyncpg's 32,767 parameters in one statement."""
+        repo = SilverRepository(session)
+        written = await repo.upsert_items([_item(f"MYC-{n}") for n in range(1, 2001)])
+
+        assert written == 2000
+        assert len(await repo.items()) == 2000
+
 
 @needs_postgres
 class TestGoldRepository:

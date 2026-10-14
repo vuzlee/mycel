@@ -80,8 +80,8 @@ async def consent_url(user_id: int) -> str:
     return await GOOGLE.consent_url(user_id, params)
 
 
-async def spend_state(state: str) -> int:
-    return await GOOGLE.owner_of(state)
+async def spend_state(state: str, user_id: int) -> int:
+    return await GOOGLE.owner_of(state, user_id)
 
 
 async def exchange(code: str) -> Grant:
@@ -108,9 +108,9 @@ async def revoke(refresh_token_encrypted: str) -> None:
         log.warning("google revoke failed", extra={"error": str(exc)})
 
 
-async def connect(state: str, code: str) -> GoogleAccountRow:
+async def connect(state: str, code: str, user_id: int) -> GoogleAccountRow:
     """Finish a consent round: check the state, exchange the code, keep the token."""
-    user_id = await spend_state(state)
+    await spend_state(state, user_id)
     grant = await exchange(code)
     async with session_scope() as session:
         repo = AccountRepository(session)

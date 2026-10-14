@@ -7,9 +7,10 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from mycel.api.dependencies import CurrentUser
+from mycel.api.dependencies import CurrentUser, MaybeUser
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.core.principal import Principal
 from mycel.services import access, google_oauth, jira_oauth
 from mycel.services.permission import readable_projects
 
@@ -60,12 +61,13 @@ async def start_google_connection(
 
 @router.get("/google/callback")
 async def finish_google_connection(
+    user: MaybeUser,
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
 ) -> RedirectResponse:
     """Where Google sends the browser back. Connects the account, then returns to the app."""
-    return await _finish_connect("google", google_oauth.connect, code, state, error)
+    return await _finish_connect("google", google_oauth.connect, user, code, state, error)
 
 
 @router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
@@ -112,6 +114,7 @@ async def start_jira_connection(user: CurrentUser) -> RedirectResponse:
 
 @router.get("/jira/callback")
 async def finish_jira_connection(
+    user: MaybeUser,
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
@@ -119,7 +122,7 @@ async def finish_jira_connection(
     """Where Atlassian sends the browser back. Connects the account, then returns to the app."""
     # Refresh access now rather than at the next sync.
     return await _finish_connect(
-        "jira", jira_oauth.connect, code, state, error, then=access.refresh
+        "jira", jira_oauth.connect, user, code, state, error, then=access.refresh
     )
 
 
@@ -132,17 +135,24 @@ async def delete_jira_connection(user: CurrentUser) -> None:
 
 async def _finish_connect(
     provider: str,
-    connect: Callable[[str, str], Awaitable[_Connected]],
+    connect: Callable[[str, str, int], Awaitable[_Connected]],
+    user: Principal | None,
     code: str | None,
     state: str | None,
     error: str | None,
     then: Callable[[int], Awaitable[object]] | None = None,
 ) -> RedirectResponse:
-    """The end of a consent round, the same for every provider: always a redirect."""
+    """The end of a consent round, the same for every provider: always a redirect.
+
+    Only the account that started the round may finish it, or a link sent to someone else
+    would attach their account to the sender's.
+    """
     if error or not code or not state:
         return _back(f"{provider}_error={error or 'cancelled'}")
+    if user is None:
+        return _back(f"{provider}_error=signed_out")
     try:
-        row = await connect(state, code)
+        row = await connect(state, code, user.id)
     except Exception:  # any failure must still redirect to a readable page
         log.warning(f"{provider} connect failed", exc_info=True)
         return _back(f"{provider}_error=failed")

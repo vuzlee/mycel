@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.models import JiraIssue, JiraWorklog
+from mycel.infra.postgres.repositories._sql import chunks
 
 
 class BronzeRepository:
@@ -48,12 +49,11 @@ class BronzeRepository:
         return [{**dict(payload), "issue_key": key} for key, payload in rows]
 
     async def _upsert(self, table: Any, rows: list[dict[str, Any]], key: str) -> int:
-        if not rows:
-            return 0
-        stmt = insert(table).values(rows)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[key],
-            set_={"payload": stmt.excluded.payload, "fetched_at": stmt.excluded.fetched_at},
-        )
-        await self._session.execute(stmt)
+        for chunk in chunks(rows):
+            stmt = insert(table).values(chunk)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[key],
+                set_={"payload": stmt.excluded.payload, "fetched_at": stmt.excluded.fetched_at},
+            )
+            await self._session.execute(stmt)
         return len(rows)

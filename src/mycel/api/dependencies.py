@@ -24,13 +24,21 @@ async def get_db() -> AsyncIterator[AsyncSession]:
 Db = Annotated[AsyncSession, Depends(get_db, scope="function")]
 
 
-async def current_user(
-    session: Db,
+async def signed_in(
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+) -> Principal | None:
+    """Who is calling, or None. Its own short transaction: the handler's work needs the pool."""
+    if not mycel_session:
+        return None
+    async with session_scope() as session:
+        return await session_user(session, mycel_session)
+
+
+async def current_user(
+    user: Annotated[Principal | None, Depends(signed_in)],
 ) -> Principal:
     """Who is calling, or 401."""
-    user = mycel_session and await session_user(session, mycel_session)
-    if not user:
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="not signed in",
@@ -40,3 +48,4 @@ async def current_user(
 
 
 CurrentUser = Annotated[Principal, Depends(current_user)]
+MaybeUser = Annotated[Principal | None, Depends(signed_in)]
