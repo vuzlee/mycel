@@ -54,29 +54,17 @@ class _Turn:
     found: knowledge.Retrieved | None = None
 
 
-#: Longer than any one attempt; a worker killed mid-run frees the job after this.
-CLAIM_SECONDS = 15 * 60
-
-
-class AlreadyRunning(Exception):
-    """Another worker holds this job; the copy is retried, and finds it done."""
-
-
 async def run(job: Job) -> None:
     """Answer the job's question and record it. Raises; the consumer decides on retry."""
     turn = await _prepare(job)
     if turn is None:
         return
-    if not await claims.take(job.job_id, CLAIM_SECONDS):
-        raise AlreadyRunning(job.job_id)
-    try:
+    async with claims.holding(job.job_id):
         await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
         if await _ground(turn):
             return
         answer = await _ask(turn)
         await _settle(turn, answer)
-    finally:
-        await claims.release(job.job_id)
 
 
 async def _prepare(job: Job) -> "_Turn | None":

@@ -19,7 +19,7 @@ from mycel.agents.core.exceptions import (
     TransportError,
 )
 from mycel.domains import chat, index, ingest
-from mycel.domains.chat import AlreadyRunning
+from mycel.infra.redis.claims import AlreadyRunning
 from mycel.llm.budget import BudgetExceeded
 from mycel.queue import consumer
 from mycel.queue.handler import Handler

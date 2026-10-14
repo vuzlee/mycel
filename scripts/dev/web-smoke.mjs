@@ -1,4 +1,5 @@
-// The batch A web fixes (#6–#9), driven in headless Chrome against a running api.
+// The web fixes from batch A (#6–#9) and batches 081–083, driven in headless Chrome against a
+// running api.
 //
 //   PUPPETEER_DIR=<dir with node_modules/puppeteer-core> node scripts/dev/web-smoke.mjs [base]
 //
@@ -98,6 +99,44 @@ check(
   "#7 Ask keeps one scroll listener and no stray observers",
   live.scroll <= 1 && live.observers <= 2 && pageErrors.length === 0,
   `scroll ${live.scroll}, observers ${live.observers}${pageErrors.length ? `; ${pageErrors.join("; ")}` : ""}`,
+);
+
+// 083 #60 — the same file twice is "Already uploaded", not a 500.
+await input.uploadFile(file);
+await page.waitForSelector(".kb-list li", { timeout: 20_000 });
+await input.uploadFile(file);
+await page.waitForFunction(() => document.querySelector(".kb-panel")?.textContent?.includes("Already uploaded"), { timeout: 10_000 }).catch(() => {});
+const twice = await page.$eval(".kb-panel", (panel) => panel.textContent ?? "");
+check("083 #60 the same file twice is refused as already uploaded", twice.includes("Already uploaded"), twice.slice(0, 120));
+await page.click('.kb-list li button[aria-label^="Delete"], .kb-list li button[title^="Delete"]');
+await pause(1000);
+
+// 082 #52 — a 401 on a write (asking) drops the session, not only a 401 on a read.
+await page.evaluate(() => fetch("/auth/logout", { method: "POST" }));
+await page.type(".composer textarea", "still there?");
+await page.keyboard.press("Enter");
+await page.waitForFunction(() => /Sign in|Create an account/.test(document.body.innerText), { timeout: 10_000 }).catch(() => {});
+const afterWrite = await page.evaluate(() => document.body.innerText);
+check("082 #52 a 401 on a write leaves the app", /Sign in|Create an account/.test(afterWrite));
+
+// 082 #51 — /auth/me failing shows a way to try again, not a blank page.
+await page.setRequestInterception(true);
+const refuseMe = (request) =>
+  request.url().endsWith("/auth/me") ? request.respond({ status: 502, body: "bad gateway" }) : request.continue();
+page.on("request", refuseMe);
+await page.goto(`${base}/app/`, { waitUntil: "load" });
+await page.waitForFunction(() => document.body.innerText.includes("Try again"), { timeout: 15_000 }).catch(() => {});
+const unreachable = await page.evaluate(() => document.body.innerText);
+check("082 #51 an unreachable api offers Try again", unreachable.includes("Try again"));
+page.off("request", refuseMe);
+await page.setRequestInterception(false);
+await page.evaluate(
+  async (e, p) => {
+    const body = JSON.stringify({ email: e, password: p });
+    await fetch("/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body });
+  },
+  email,
+  password,
 );
 
 // #9 — a killed session sends the reader to sign in rather than showing "no documents".

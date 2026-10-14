@@ -3,7 +3,8 @@
 import asyncio
 import os
 import socket
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
 from urllib.parse import urlsplit, urlunsplit
 
 import asyncpg
@@ -96,14 +97,11 @@ def free_claims(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch)
     if request.module.__name__.endswith("test_claims"):
         return
 
-    async def take(job_id: str, ttl_seconds: int) -> bool:
-        return True
+    @asynccontextmanager
+    async def holding(job_id: str) -> AsyncIterator[None]:
+        yield
 
-    async def release(job_id: str) -> None:
-        pass
-
-    monkeypatch.setattr(claims, "take", take)
-    monkeypatch.setattr(claims, "release", release)
+    monkeypatch.setattr(claims, "holding", holding)
 
 
 @pytest.fixture(autouse=True)
