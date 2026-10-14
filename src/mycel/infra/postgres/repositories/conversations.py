@@ -174,6 +174,20 @@ class ConversationRepository:
         )
         return {cid: (job_id, status) for cid, job_id, status in rows}
 
+    async def spent_since(self, user_id: int, since: datetime) -> tuple[Decimal, int]:
+        """What this person's turns have spent since `since`, and how many are still open."""
+        row = (
+            await self._session.execute(
+                select(
+                    func.coalesce(func.sum(Turn.spent_usd), 0),
+                    func.count().filter(Turn.status.in_(("queued", "running"))),
+                )
+                .join(Conversation, Conversation.id == Turn.conversation_id)
+                .where(Conversation.user_id == user_id, Turn.created_at >= since)
+            )
+        ).one()
+        return Decimal(row[0]), int(row[1])
+
     async def turns_for_conversation(self, conversation_id: int) -> list[TurnRow]:
         """Every turn in a conversation, oldest first."""
         rows = await self._session.scalars(

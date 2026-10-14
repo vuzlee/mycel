@@ -1,6 +1,9 @@
 """Queue a chat question with what the worker needs to answer it."""
 
+from datetime import UTC, datetime, timedelta
+
 from mycel.core.chips import Chip
+from mycel.core.config import get_settings
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
     ConversationRow,
@@ -27,6 +30,23 @@ class ConversationNotFound(Exception):
     """The conversation asked for is not this person's, or not there."""
 
 
+class DailyLimitReached(Exception):
+    """This person's chat has spent its 24-hour allowance, open jobs included."""
+
+
+async def _check_allowance(repo: ConversationRepository, user_id: int) -> None:
+    """Refuse before queueing: a job already queued would spend before anyone could stop it."""
+    settings = get_settings()
+    if not settings.user_daily_usd:
+        return
+    spent, open_jobs = await repo.spent_since(user_id, datetime.now(UTC) - timedelta(days=1))
+    if spent + open_jobs * settings.job_ceiling_usd >= settings.user_daily_usd:
+        raise DailyLimitReached(
+            f"You have used today's allowance of ${settings.user_daily_usd}. "
+            "It frees up as your questions from the last 24 hours age out."
+        )
+
+
 async def request_chat(
     user_id: int,
     question: str,
@@ -36,6 +56,7 @@ async def request_chat(
     """Queue a question; returns the job id and its conversation (new if none is given)."""
     async with session_scope() as session:
         repo = ConversationRepository(session)
+        await _check_allowance(repo, user_id)
         if conversation_id is None:
             conversation = await repo.create_conversation(
                 user_id, kind="chat", title=question[:TITLE_CHARS]

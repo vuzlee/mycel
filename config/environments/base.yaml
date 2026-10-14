@@ -44,6 +44,8 @@ settings:
   model_prices_usd:
     claude-sonnet-5: [2.00, 10.00]
   job_ceiling_usd: 0.50
+  # Per person per 24 hours; open jobs count at their ceiling. 0 turns it off.
+  user_daily_usd: 5.00
 
   # Empty disables rag_search.
   qdrant_url: http://localhost:6333

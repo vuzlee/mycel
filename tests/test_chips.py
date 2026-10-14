@@ -107,6 +107,9 @@ class TestKnowledgeGoesThroughTheOrchestrator:
 
             async def add_turn(self, *a: object, **k: object) -> None: ...
 
+            async def spent_since(self, *a: object) -> tuple[Decimal, int]:
+                return Decimal(0), 0
+
         @asynccontextmanager
         async def scope():  # type: ignore[no-untyped-def]
             yield None

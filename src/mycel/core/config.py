@@ -160,6 +160,8 @@ class Settings(BaseSettings):
     ask_max_chars: int = 500
     #: Most one queued job may spend.
     job_ceiling_usd: Decimal = Decimal("0.50")
+    #: Most one person's chat may spend in 24 hours, counting open jobs at their ceiling. 0: off.
+    user_daily_usd: Decimal = Decimal("5.00")
 
     log_level: str = "INFO"
 

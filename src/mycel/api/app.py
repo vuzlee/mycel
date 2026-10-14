@@ -32,7 +32,7 @@ from mycel.llm.budget import BudgetExceeded
 from mycel.observability.tracing import setup_tracing
 from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
-from mycel.services.chat import ConversationNotFound
+from mycel.services.chat import ConversationNotFound, DailyLimitReached
 
 log = get_logger(__name__)
 
@@ -173,6 +173,10 @@ def _install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConversationNotFound)
     async def _no_conversation(request: Request, exc: ConversationNotFound) -> JSONResponse:
         return problem(404, "not_found", f"no conversation {exc.args[0]}")
+
+    @app.exception_handler(DailyLimitReached)
+    async def _allowance(request: Request, exc: DailyLimitReached) -> JSONResponse:
+        return problem(429, "daily_limit", str(exc))
 
     @app.exception_handler(MycelError)
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:
