@@ -5,6 +5,7 @@ import signal
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
+from mycel.agents.core.model_builder import close_clients as close_models
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
 from mycel.infra.postgres.engine import dispose_engine
@@ -25,6 +26,7 @@ CLOSERS: tuple[tuple[str, Callable[[], Awaitable[None]]], ...] = (
     ("redis", close_clients),
     ("postgres", dispose_engine),
     ("qdrant", close_vectors),
+    ("models", close_models),
 )
 
 

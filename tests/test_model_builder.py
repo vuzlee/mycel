@@ -5,6 +5,7 @@ from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, ModelH
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
+from mycel.agents.core import model_builder
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.exceptions import (
     ModelCallFailed,
@@ -54,6 +55,35 @@ class TestOneClient:
     def test_a_bad_spec_raises_before_any_call(self) -> None:
         with pytest.raises(ConfigError):
             build_model("gpu:qwen3-4b", settings=_settings())
+
+
+@pytest.mark.anyio
+class TestClientsAreShared:
+    async def test_runs_reuse_one_client_per_gateway(self) -> None:
+        """A client per run never reused a connection, and none was ever closed."""
+        first = build_model("cloud:claude-sonnet-5", settings=_settings())
+        second = build_model("cloud:gemini-3.6-flash", settings=_settings())
+
+        assert isinstance(first, OpenAIChatModel) and isinstance(second, OpenAIChatModel)
+        assert first.client is second.client
+        await model_builder.close_clients()
+
+    async def test_a_different_key_gets_its_own_client(self) -> None:
+        first = build_model("cloud:claude-sonnet-5", settings=_settings(litellm_api_key="a"))
+        second = build_model("cloud:claude-sonnet-5", settings=_settings(litellm_api_key="b"))
+
+        assert isinstance(first, OpenAIChatModel) and isinstance(second, OpenAIChatModel)
+        assert first.client is not second.client
+        await model_builder.close_clients()
+
+    async def test_closing_starts_over(self) -> None:
+        first = build_model("cloud:claude-sonnet-5", settings=_settings())
+        await model_builder.close_clients()
+        second = build_model("cloud:claude-sonnet-5", settings=_settings())
+
+        assert isinstance(first, OpenAIChatModel) and isinstance(second, OpenAIChatModel)
+        assert first.client is not second.client
+        await model_builder.close_clients()
 
 
 class TestModelSettings:

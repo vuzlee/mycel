@@ -44,14 +44,14 @@ def closed(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 async def test_leaving_closes_every_store_even_when_one_fails(closed: list[str]) -> None:
     async with lifecycle.running("worker"):
         pass
-    assert closed == ["metrics", "broker", "redis", "postgres", "qdrant"]
+    assert closed == ["metrics", "broker", "redis", "postgres", "qdrant", "models"]
 
 
 async def test_a_crash_inside_still_closes_everything(closed: list[str]) -> None:
     with pytest.raises(RuntimeError):
         async with lifecycle.running("scheduler"):
             raise RuntimeError("tick blew up")
-    assert closed[-4:] == ["broker", "redis", "postgres", "qdrant"]
+    assert closed[-5:] == ["broker", "redis", "postgres", "qdrant", "models"]
 
 
 async def test_sigterm_sets_the_stop_event() -> None:

@@ -3,6 +3,7 @@
 Building a model makes no network call, so agents can be constructed at import time.
 """
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from mycel.agents.core.config import AgentSettings
@@ -12,8 +13,13 @@ from mycel.core.exceptions import ConfigError
 from mycel.llm.router import resolve
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
     from pydantic_ai.models import Model
     from pydantic_ai.settings import ModelSettings
+
+#: One client (and its connection pool) per gateway, key and retry count, per event loop:
+#: a client built for every run never reused a connection and was never closed.
+_clients: dict[tuple[int, str, str, int], "AsyncOpenAI"] = {}
 
 #: Statuses that move to the next fallback model; a 429 means LiteLLM already tried every key.
 _UNAVAILABLE_STATUS = (429, 500, 502, 503, 504)
@@ -39,7 +45,6 @@ def build_model(
 
 
 def _one_model(spec: str, env: Settings, agent_cfg: AgentSettings) -> "Model":
-    from openai import AsyncOpenAI
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.litellm import LiteLLMProvider
 
@@ -47,14 +52,34 @@ def _one_model(spec: str, env: Settings, agent_cfg: AgentSettings) -> "Model":
     if not env.litellm_base_url:
         raise ConfigError(f"litellm_base_url is not set, but model spec {spec} needs it")
     key = env.litellm_api_key.get_secret_value() if env.litellm_api_key else "not-needed"
-    client = AsyncOpenAI(
-        base_url=env.litellm_base_url, api_key=key, max_retries=agent_cfg.transient_retries
-    )
+    client = _client(env.litellm_base_url, key, agent_cfg.transient_retries)
     return OpenAIChatModel(
         name,
         provider=LiteLLMProvider(openai_client=client),
         settings=_model_settings(agent_cfg),
     )
+
+
+def _client(base_url: str, key: str, retries: int) -> "AsyncOpenAI":
+    from openai import AsyncOpenAI
+
+    try:
+        loop = id(asyncio.get_running_loop())
+    except RuntimeError:
+        loop = 0
+    found = _clients.get((loop, base_url, key, retries))
+    if found is None:
+        found = AsyncOpenAI(base_url=base_url, api_key=key, max_retries=retries)
+        _clients[(loop, base_url, key, retries)] = found
+    return found
+
+
+async def close_clients() -> None:
+    """Close every gateway client; the next run builds fresh ones."""
+    clients = list(_clients.values())
+    _clients.clear()
+    for client in clients:
+        await client.close()
 
 
 def _is_unavailable(exc: Exception) -> bool:
