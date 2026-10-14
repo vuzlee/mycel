@@ -79,9 +79,11 @@ config:
   EVENT_STREAM_MAX_EVENTS: "1000"
   JOB_CEILING_USD: "0.50"
   SYNC_INTERVAL_SECONDS: "900"
-  OTEL_ENABLED: "false"
+  # Traces to Langfuse with prompts and answers: what people ask and what they are told
+  # leaves the cluster for cloud.langfuse.com. Decided 2026-10-15; turn off to keep it in.
+  OTEL_ENABLED: "true"
   OTEL_SERVICE_NAME: mycel
-  OTEL_CAPTURE_CONTENT: "false"
+  OTEL_CAPTURE_CONTENT: "true"
   LANGFUSE_BASE_URL: https://cloud.langfuse.com
   METRICS_PORT: "9100"
   PUBLIC_BASE_URL: ""

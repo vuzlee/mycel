@@ -34,6 +34,7 @@ Pods reach the stores at `externalStores.host` (`host.minikube.internal`).
 |---|---|
 | Create the Secret with `scripts/stack.sh k8s secret` | `localhost` inside a pod is that pod; the script rewrites the store URLs |
 | Settings that must hold go in the container `env:` | the Secret carries all of `.env` and overrides the ConfigMap |
+| The Secret needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | tracing is on with content: without the keys every pod refuses to start (`ConfigError`) |
 | Migrations run as a `pre-install,pre-upgrade` hook | new pods never start on an old schema |
 | Every migration is backward compatible by one step | the old code serves while it runs; drop a column in two releases |
 | `scheduler`: `replicas: 1`, `strategy: Recreate` | two schedulers fire every schedule twice |

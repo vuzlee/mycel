@@ -3,3 +3,9 @@
 agents:
   defaults:
     timeout_s: 120.0
+
+settings:
+  # Traces to Langfuse with prompts and answers: user content leaves for cloud.langfuse.com.
+  # Decided 2026-10-15; the Helm chart sets the same.
+  otel_enabled: true
+  otel_capture_content: true
