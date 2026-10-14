@@ -65,6 +65,17 @@ def test_the_lookup_is_a_retriever_under_the_turn(spans: InMemorySpanExporter) -
     assert lookup.parent is not None and lookup.parent.span_id == root.context.span_id
 
 
+def test_the_turn_is_a_root_linked_to_the_request(spans: InMemorySpanExporter) -> None:
+    """A parent from the api made Langfuse list the turn as a child, hidden under a root filter."""
+    with turns._tracer.start_as_current_span("POST /chat") as request:
+        _turn(content=True)
+    root = next(s for s in spans.get_finished_spans() if s.name == "answer-question")
+
+    assert root.parent is None
+    assert root.context.trace_id != request.get_span_context().trace_id
+    assert [link.context.span_id for link in root.links] == [request.get_span_context().span_id]
+
+
 def test_no_content_leaves_without_consent(spans: InMemorySpanExporter) -> None:
     """OTEL_CAPTURE_CONTENT off: questions, passages and answers stay on the machine."""
     _turn(content=False)

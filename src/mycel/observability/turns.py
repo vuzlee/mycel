@@ -81,9 +81,14 @@ def chat_turn(
         ctx = baggage.set_baggage(key, value, ctx)
     if tags:
         ctx = baggage.set_baggage(TAGS, ",".join(sorted(tags)), ctx)
+    # A new trace per turn: the request that queued it is a link, not a parent, so the turn
+    # is the root Langfuse lists and names, whatever the api exported.
+    parent = trace.get_current_span(ctx).get_span_context()
+    links = [trace.Link(parent)] if parent.is_valid else []
+    ctx = trace.set_span_in_context(trace.INVALID_SPAN, ctx)
     token = context.attach(ctx)
     try:
-        with _tracer.start_as_current_span("answer-question") as span:
+        with _tracer.start_as_current_span("answer-question", links=links) as span:
             span.set_attribute("langfuse.trace.name", "answer-question")
             span.set_attribute(TYPE, "chain")
             if content:
