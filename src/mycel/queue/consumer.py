@@ -11,12 +11,12 @@ from opentelemetry import context as otel_context
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import deliveries, results
-from mycel.observability.metrics import job_attempts
+from mycel.observability.metrics import job_attempts, start_job_series
 from mycel.queue import context, retry, topology
 from mycel.queue.connection import channel
 from mycel.queue.handler import Handler
 from mycel.queue.inflight import InFlight
-from mycel.queue.job import Job
+from mycel.queue.job import INGEST_KINDS, Job, JobKind
 
 log = get_logger(__name__)
 
@@ -105,6 +105,7 @@ async def run_worker(
     budget = settings.ingest_worker_max_jobs if ingest else 0
     done = 0
     inflight = InFlight()
+    start_job_series([str(k) for k in JobKind if (k in INGEST_KINDS) == ingest])
 
     async with channel() as ch:
         await ch.set_qos(prefetch_count=1 if ingest else PREFETCH)

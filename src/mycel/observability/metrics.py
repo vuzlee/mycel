@@ -64,6 +64,14 @@ redis_memory_ratio = Gauge(
 )
 
 
+def start_job_series(kinds: list[str]) -> None:
+    """Every kind and outcome at zero: `increase()` misses a series' first sample, so a counter
+    that appears at 4 reads as no failures at all."""
+    for kind in kinds:
+        for outcome in ("done", "retried", "failed"):
+            job_attempts.labels(kind=kind, outcome=outcome)
+
+
 def render() -> tuple[bytes, str]:
     """The registry in Prometheus text format, with its content type."""
     return generate_latest(), CONTENT_TYPE_LATEST

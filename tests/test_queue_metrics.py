@@ -62,3 +62,12 @@ async def test_each_attempt_is_timed_with_how_it_ended(monkeypatch: pytest.Monke
 
     after = _value("mycel_job_attempt_seconds_count", kind="index_gold", outcome="failed")
     assert after == before + 1
+
+
+def test_every_kind_starts_at_zero_so_the_first_failure_counts() -> None:
+    """Prometheus' increase() ignores a series' first sample: absent -> 4 reads as 0."""
+    from mycel.observability.metrics import start_job_series
+
+    start_job_series(["delete_document"])
+
+    assert _value("mycel_job_attempt_seconds_count", kind="delete_document", outcome="failed") == 0
