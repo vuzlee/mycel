@@ -20,6 +20,12 @@ for pair in "app:mycel" "ingest:mycel-ingest"; do
   log "building $name:$TAG"
   docker build --target "$target" -t "$name:$TAG" "$ROOT"
   log "loading $name:$TAG into minikube"
+  # Removed first: a load onto an existing tag can keep the old image, and the pods then
+  # run stale code while everything reports success.
+  minikube image rm "$name:$TAG" >/dev/null 2>&1 || true
   minikube image load "$name:$TAG"
+  want=$(docker image inspect --format '{{.Id}}' "$name:$TAG")
+  minikube image ls --format json 2>/dev/null | grep -q "\"$want\"" \
+    || die "$name:$TAG on the node is not the image just built (${want:7:12})"
 done
 log "mycel:$TAG and mycel-ingest:$TAG are on the node"
