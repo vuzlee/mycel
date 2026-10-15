@@ -209,25 +209,54 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
-/** The body checked for the fields the page reads, so a wrong shape fails here, by name,
- *  instead of as `undefined` deep in a component. An array checks each item. */
-export function shaped<T>(value: unknown, keys: readonly string[], what: string): T {
-  const items = Array.isArray(value) ? value : [value];
-  for (const item of items) {
-    const missing =
-      item && typeof item === "object" ? keys.filter((k) => !(k in item)) : ["(object)"];
-    if (missing.length) throw new Error(`the server sent an unexpected ${what}: no ${missing[0]}`);
+/** What a field must be: a `typeof` name, `?` suffix for nullable, or a list of literals. */
+type FieldKind =
+  "string" | "number" | "boolean" | "string?" | "number?" | "array" | readonly string[];
+export type Shape = Record<string, FieldKind>;
+
+function fits(value: unknown, kind: FieldKind): boolean {
+  if (Array.isArray(kind)) return kind.includes(value as string);
+  if (kind === "array") return Array.isArray(value);
+  if (typeof kind === "string" && kind.endsWith("?"))
+    return value === null || typeof value === kind.slice(0, -1);
+  return typeof value === kind;
+}
+
+/** The body checked against the fields the page reads, so a wrong shape fails here, by
+ *  name, instead of as `undefined` deep in a component. An array checks each item. */
+export function shaped<T>(value: unknown, shape: Shape, what: string): T {
+  for (const item of Array.isArray(value) ? value : [value]) {
+    if (!item || typeof item !== "object")
+      throw new Error(`the server sent an unexpected ${what}: not an object`);
+    for (const [key, kind] of Object.entries(shape)) {
+      const field = (item as Record<string, unknown>)[key];
+      if (!fits(field, kind))
+        throw new Error(
+          `the server sent an unexpected ${what}: bad ${key} (${JSON.stringify(field)})`,
+        );
+    }
   }
   return value as T;
 }
+
+const STATUS = ["running", "done", "failed"] as const;
+const USER: Shape = { id: "number", email: "string" };
+const ACCEPTED: Shape = { job_id: "string", conversation_id: "number" };
+const CHAT_RESULT: Shape = {
+  job_id: "string",
+  status: STATUS,
+  answer: "string?",
+  conversation_id: "number?",
+  question: "string?",
+};
+const CONVERSATION: Shape = { id: "number", title: "string", pinned: "boolean" };
+const TURN: Shape = { job_id: "string", question: "string", status: "string", answer: "string?" };
 
 const get = <T>(path: string): Promise<T> => request<T>("GET", path);
 const post = <T>(path: string, body?: unknown): Promise<T> => request<T>("POST", path, body);
 const del = (path: string): Promise<void> => request<void>("DELETE", path);
 
 // -- auth -------------------------------------------------------------------
-
-const USER = ["id", "email"] as const;
 
 export const register = (email: string, password: string): Promise<User> =>
   post<unknown>("/auth/register", { email, password }).then((v) => shaped<User>(v, USER, "user"));
@@ -324,13 +353,13 @@ export const askChat = (
     question,
     conversation_id: conversationId ?? null,
     chips,
-  }).then((v) => shaped<Accepted>(v, ["job_id", "conversation_id"], "accepted run"));
+  }).then((v) => shaped<Accepted>(v, ACCEPTED, "accepted run"));
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
 export async function fetchChat(jobId: string): Promise<ChatResult | null> {
   const res = await fetch(`/chat/${jobId}`);
   if (res.status === 404) return null;
-  return shaped<ChatResult>(await json<unknown>(res), ["job_id", "status"], "chat result");
+  return shaped<ChatResult>(await json<unknown>(res), CHAT_RESULT, "chat result");
 }
 
 // -- lists ------------------------------------------------------------------
@@ -339,14 +368,12 @@ export const fetchProjects = (): Promise<string[]> => get<string[]>("/projects")
 
 export const fetchConversations = (): Promise<ConversationSummary[]> =>
   get<unknown>("/conversations").then((v) =>
-    shaped<ConversationSummary[]>(v, ["id", "title", "pinned"], "conversation"),
+    shaped<ConversationSummary[]>(v, CONVERSATION, "conversation"),
   );
 
 /** Every run in one conversation, oldest first. What a conversation said before this tab opened it. */
 export const fetchTurns = (id: number): Promise<Turn[]> =>
-  get<unknown>(`/conversations/${id}/turns`).then((v) =>
-    shaped<Turn[]>(v, ["job_id", "question", "status"], "turn"),
-  );
+  get<unknown>(`/conversations/${id}/turns`).then((v) => shaped<Turn[]>(v, TURN, "turn"));
 
 /** Its runs go with it. */
 export const deleteConversation = (id: number): Promise<void> => del(`/conversations/${id}`);

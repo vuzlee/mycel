@@ -34,11 +34,21 @@ describe("useRun", () => {
   it("polls until the run settles, then stops", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const answers = [
-      { job_id: "j", status: "running" },
-      { job_id: "j", status: "running" },
-      { job_id: "j", status: "done", answer: "42", conversation_id: 1 },
+      { job_id: "j", status: "running", answer: null, conversation_id: 1, question: "q" },
+      { job_id: "j", status: "running", answer: null, conversation_id: 1, question: "q" },
+      { job_id: "j", status: "done", answer: "42", conversation_id: 1, question: "q" },
     ];
-    const fetchMock = vi.fn(async () => ok(answers.shift() ?? { job_id: "j", status: "done" }));
+    const fetchMock = vi.fn(async () =>
+      ok(
+        answers.shift() ?? {
+          job_id: "j",
+          status: "done",
+          answer: "42",
+          conversation_id: 1,
+          question: "q",
+        },
+      ),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useRun("job-1"), { wrapper });
@@ -97,8 +107,8 @@ describe("usePastTurns", () => {
       "fetch",
       vi.fn(async () =>
         ok([
-          { job_id: "old", question: "a", status: "done" },
-          { job_id: "now", question: "b", status: "queued" },
+          { job_id: "old", question: "a", status: "done", answer: "x" },
+          { job_id: "now", question: "b", status: "queued", answer: null },
         ]),
       ),
     );

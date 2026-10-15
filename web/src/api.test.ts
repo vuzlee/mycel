@@ -28,9 +28,21 @@ describe("request", () => {
 });
 
 describe("shaped", () => {
-  it("passes a body with the fields and names the first one missing", () => {
-    expect(shaped({ id: 1, email: "a" }, ["id", "email"], "user")).toEqual({ id: 1, email: "a" });
-    expect(() => shaped([{ id: 1 }], ["id", "email"], "user")).toThrow("no email");
-    expect(() => shaped("<html>", ["id"], "user")).toThrow("unexpected user");
+  const user = { id: "number", email: "string", note: "string?", state: ["a", "b"] } as const;
+
+  it("passes a body whose fields have the right kinds", () => {
+    const body = { id: 1, email: "a", note: null, state: "a" };
+    expect(shaped(body, user, "user")).toBe(body);
+  });
+
+  it("names the first field that is missing or of the wrong kind", () => {
+    expect(() => shaped([{ id: 1, note: null, state: "a" }], user, "user")).toThrow("bad email");
+    expect(() => shaped({ id: "1", email: "a", note: null, state: "a" }, user, "user")).toThrow(
+      "bad id",
+    );
+    expect(() => shaped({ id: 1, email: "a", note: null, state: "c" }, user, "user")).toThrow(
+      "bad state",
+    );
+    expect(() => shaped("<html>", user, "user")).toThrow("not an object");
   });
 });
