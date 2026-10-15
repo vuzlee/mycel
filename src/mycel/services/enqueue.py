@@ -96,6 +96,18 @@ def chat_job(
     )
 
 
+async def queue(job: Job) -> None:
+    """Stage and send one job that belongs to no other row."""
+    async with session_scope() as session:
+        await stage(session, job)
+    await send(job)
+
+
+def key_check_job(user_id: int, model_ref: str) -> Job:
+    """Test every key of one own model; the worker holds the keys, never the request."""
+    return Job(kind=JobKind.CHECK_KEYS, payload={"user_id": user_id, "model_ref": model_ref})
+
+
 def ingest_job(document_id: int) -> Job:
     return Job(kind=JobKind.INGEST, payload={"document_id": document_id})
 

@@ -24,7 +24,7 @@ from mycel.agents.core.exceptions import (
     ToolFailed,
     TransportError,
 )
-from mycel.domains import chat, index, ingest
+from mycel.domains import chat, index, ingest, key_check
 from mycel.infra.redis.claims import AlreadyRunning
 from mycel.lifecycle import running, start, stop_on_signals
 from mycel.llm.budget import BudgetExceeded
@@ -75,6 +75,7 @@ RUNS: dict[JobKind, tuple[ModuleType, str]] = {
     JobKind.INGEST: (ingest, "run"),
     JobKind.DELETE_DOCUMENT: (ingest, "delete"),
     JobKind.INDEX_GOLD: (index, "run"),
+    JobKind.CHECK_KEYS: (key_check, "run"),
 }
 
 

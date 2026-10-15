@@ -207,3 +207,86 @@ button.link {
 button.link:disabled {
   color: var(--muted);
 }
+.model-list li[data-source="own"] .switch span::after {
+  content: " · your key";
+  color: var(--faint);
+  font-size: 12px;
+}
+.own-models {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+.own-models > header h4 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.own-models .model-list li.own {
+  display: grid;
+  gap: 6px;
+}
+.own-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.own-head .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.own-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.key-test ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.key-test li[data-ok="true"] {
+  color: var(--accent);
+}
+.key-test li[data-ok="false"] {
+  color: var(--flag);
+}
+.add-own {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.own-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.own-form fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.own-form .presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

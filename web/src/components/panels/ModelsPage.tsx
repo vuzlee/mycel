@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Models } from "../../api";
 import { fetchModels, setDefaultModel, toggleModel } from "../../api";
+import { OwnModels } from "./OwnModels";
 
 export const MODELS_KEY = ["models"];
 
-/** The models this person may ask with: a switch per model and the one picked first.
- *  The host's list comes from its config; a model that is off leaves the composer's picker. */
+/** The models this person may ask with: a switch per model and the one picked first, then
+ *  the ones they added with their own keys. The host's list comes from its config; a model
+ *  that is off leaves the composer's picker. */
 export function ModelsPage() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: MODELS_KEY, queryFn: fetchModels });
@@ -31,7 +33,7 @@ export function ModelsPage() {
         {models.map((m) => {
           const last = m.enabled && on === 1;
           return (
-            <li key={m.ref}>
+            <li key={m.ref} data-source={m.source}>
               <label className="switch" title={last ? "At least one model stays on" : undefined}>
                 <input
                   type="checkbox"
@@ -57,6 +59,7 @@ export function ModelsPage() {
         })}
       </ul>
       {failure && <p className="failure">{failure.message}</p>}
+      <OwnModels onChange={() => void client.invalidateQueries({ queryKey: MODELS_KEY })} />
     </div>
   );
 }

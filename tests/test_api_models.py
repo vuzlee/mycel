@@ -126,3 +126,27 @@ class TestOwnModelsApi:
         body = client.get("/models/own/presets").json()
         assert body["max_models"] == 10 and body["max_keys"] == 5
         assert "Gemini" in body["presets"]
+
+
+class TestTheTestButtonApi:
+    def test_starting_a_test_answers_202_with_a_job(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _own(monkeypatch, "start_key_check", "job-kc")
+        response = client.post("/models/own/3/test")
+        assert response.status_code == 202
+        assert response.json() == {"job_id": "job-kc", "status": "running", "checks": []}
+
+    def test_a_finished_test_shows_hints_and_kinds(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        check = {"hint": "…0001", "ok": False, "kind": "auth", "detail": "key rejected"}
+        _own(monkeypatch, "key_check_result", [check])
+        body = client.get("/models/own/tests/job-kc").json()
+        assert body["status"] == "done" and body["checks"] == [check]
+
+    def test_someone_elses_test_is_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _own(monkeypatch, "key_check_result", own_models.OwnModelNotFound("job-kc"))
+        assert client.get("/models/own/tests/job-kc").status_code == 404

@@ -18,6 +18,7 @@ from mycel.agents.registry import build_deps
 from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core import redact
 from mycel.core.logging import JsonFormatter
+from mycel.domains import chat_model
 from mycel.infra.redis import key_rotation
 
 pytestmark = pytest.mark.anyio
@@ -144,3 +145,29 @@ async def test_a_key_in_a_failure_message_never_reaches_a_log_line(
 
     assert lines and not any(SPENT in line or GOOD in line for line in lines)
     assert redact.REDACTED in json.dumps(lines)
+
+
+class TestTheTestButton:
+    async def test_each_key_answers_for_itself(
+        self, endpoint: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A spent key and a good one: two results, no rotation, nothing set aside."""
+        own: OwnEndpoint = _deps(SPENT, GOOD).own
+
+        async def found(owner_id: int, model_ref: str) -> OwnEndpoint:
+            return own
+
+        monkeypatch.setattr(chat_model, "own_endpoint", found)
+        monkeypatch.setattr(chat_model, "_hints", _two_hints)
+        checks = await chat_model.test_keys(7, "own:3")
+
+        assert [(c.hint, c.ok, c.kind) for c in checks] == [
+            ("…bbbb", False, "quota"),
+            ("…aaaa", True, None),
+        ]
+        assert endpoint["cooled"] == []
+        assert not any(SPENT in c.detail for c in checks)
+
+
+async def _two_hints(owner_id: int, model_id: int) -> dict[int, str]:
+    return {0: "…bbbb", 1: "…aaaa"}

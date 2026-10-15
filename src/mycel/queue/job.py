@@ -11,6 +11,7 @@ class JobKind(StrEnum):
     INGEST = "ingest"
     DELETE_DOCUMENT = "delete_document"
     INDEX_GOLD = "index_gold"
+    CHECK_KEYS = "check_keys"
 
 
 #: Kinds that run on the ingest worker, which holds the embedding models and the RAM.

@@ -5,11 +5,13 @@ the last four characters, and a run unseals them only for itself (see `own_model
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 from mycel.infra.postgres.repositories.models import ModelPrefRepository
 from mycel.infra.postgres.repositories.own_models import OwnKey, OwnModelRepository, OwnModelRow
 from mycel.infra.postgres.session import session_scope
-from mycel.services import tokens, url_guard
+from mycel.infra.redis import key_checks
+from mycel.services import enqueue, tokens, url_guard
 from mycel.services.models import OWN
 
 #: Enough for a handful of providers each; a list longer than this is a mistake.
@@ -138,3 +140,24 @@ async def remove_own(owner_id: int, model_id: int) -> None:
         if not await OwnModelRepository(session).remove(owner_id, model_id):
             raise OwnModelNotFound(model_id)
         await ModelPrefRepository(session).forget(own_ref(model_id))
+
+
+async def start_key_check(owner_id: int, model_id: int) -> str:
+    """Queue a test of every key; returns the job id to read the result with."""
+    async with session_scope() as session:
+        if await OwnModelRepository(session).one(owner_id, model_id) is None:
+            raise OwnModelNotFound(model_id)
+    job = enqueue.key_check_job(owner_id, own_ref(model_id))
+    await enqueue.queue(job)
+    return job.job_id
+
+
+async def key_check_result(owner_id: int, job_id: str) -> list[dict[str, Any]] | None:
+    """The checks once the worker is done, None before; another person's test is not found."""
+    found = await key_checks.fetch(job_id)
+    if found is None:
+        return None
+    if found.get("user_id") != owner_id:
+        raise OwnModelNotFound(job_id)
+    checks: list[dict[str, Any]] = found["checks"]
+    return checks

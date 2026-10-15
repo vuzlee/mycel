@@ -87,7 +87,7 @@ _transport: Any = None
 
 
 def build_own_model(
-    own: OwnEndpoint, agent_cfg: AgentSettings, on_failure: OnFailure
+    own: OwnEndpoint, agent_cfg: AgentSettings, on_failure: OnFailure, rotate: bool = True
 ) -> "tuple[Model, list[AsyncOpenAI]]":
     """One client per key, for this run only: a person's key never sits in a shared cache.
 
@@ -102,7 +102,7 @@ def build_own_model(
         AsyncOpenAI(
             base_url=own.api_base,
             api_key=key.get_secret_value(),
-            max_retries=OWN_RETRIES,
+            max_retries=OWN_RETRIES if rotate else 0,
             http_client=DefaultAsyncHttpxClient(follow_redirects=False, transport=_transport),
         )
         for _, key in own.keys
@@ -118,4 +118,6 @@ def build_own_model(
         )
         for (position, _), client in zip(own.keys, clients, strict=True)
     ]
+    if not rotate:
+        return keyed[0][1], clients
     return RotatingModel(keyed, on_failure), clients

@@ -1,15 +1,20 @@
 """The models a person may pick: list, toggle, default."""
 
 from dataclasses import asdict
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
+from mycel.api.limits import per_user
 from mycel.services import models as domain
 from mycel.services import own_models as own
 
 router = APIRouter(prefix="/models", tags=["models"])
+
+#: Each test spends one request per key of the person's own quota.
+TESTS_PER_MINUTE = 6
 
 
 class ModelChoiceResponse(BaseModel):
@@ -139,3 +144,44 @@ async def remove_own_model(model_id: int, user: CurrentUser) -> None:
         await own.remove_own(user.id, model_id)
     except own.OwnModelNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None
+
+
+class KeyCheckResponse(BaseModel):
+    hint: str
+    ok: bool
+    kind: str | None
+    detail: str
+
+
+class KeyCheckState(BaseModel):
+    job_id: str
+    status: Literal["running", "done"]
+    checks: list[KeyCheckResponse] = []
+
+
+@router.post(
+    "/own/{model_id}/test",
+    response_model=KeyCheckState,
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[per_user("model_test", TESTS_PER_MINUTE)],
+)
+async def test_own_model(model_id: int, user: CurrentUser) -> KeyCheckState:
+    """One one-token request per key, run by the worker; poll the returned job."""
+    try:
+        job_id = await own.start_key_check(user.id, model_id)
+    except own.OwnModelNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None
+    return KeyCheckState(job_id=job_id, status="running")
+
+
+@router.get("/own/tests/{job_id}", response_model=KeyCheckState)
+async def own_model_test_result(job_id: str, user: CurrentUser) -> KeyCheckState:
+    try:
+        checks = await own.key_check_result(user.id, job_id)
+    except own.OwnModelNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such test") from None
+    if checks is None:
+        return KeyCheckState(job_id=job_id, status="running")
+    return KeyCheckState(
+        job_id=job_id, status="done", checks=[KeyCheckResponse(**c) for c in checks]
+    )
