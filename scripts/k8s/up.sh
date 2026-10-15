@@ -30,6 +30,9 @@ if ! minikube_running; then
   minikube start --driver=docker
 fi
 
+# A fresh start restarts CoreDNS; the migration Job fails on name resolution until it is up.
+kubectl -n kube-system rollout status deploy/coredns --timeout=120s >/dev/null
+
 # nginx rather than whatever is default: values-minikube.yaml names it, and an Ingress
 if ! kubectl get ingressclass nginx >/dev/null 2>&1; then
   log "enabling the ingress addon"
