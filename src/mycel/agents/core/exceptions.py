@@ -70,6 +70,10 @@ class ModelUnreachable(ModelCallFailed):
     """No answer at the network level: connection refused, DNS or TLS failure."""
 
 
+class ModelBlocked(ModelCallFailed):
+    """An own model's base URL now points somewhere a call must not go."""
+
+
 class ModelProviderError(ModelCallFailed):
     """A 5xx from the provider or the gateway, after the gateway's own retries."""
 

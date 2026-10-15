@@ -12,6 +12,8 @@ from typing import Any
 from opentelemetry import baggage, context, trace
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 
+from mycel.core.redact import scrub
+
 #: Attribute keys Langfuse reads; see langfuse.com/integrations/native/opentelemetry.
 SESSION = "langfuse.session.id"
 USER = "langfuse.user.id"
@@ -120,13 +122,24 @@ NOISE_PREFIXES = ("logfire.",)
 NOISE_KEYS = frozenset({"agent_name", "model_name"})
 
 
+def _scrubbed(value: Any) -> Any:
+    """Live secrets out of a string attribute, or of each string in a list of them."""
+    if isinstance(value, str):
+        return scrub(value)
+    if isinstance(value, (list, tuple)):
+        return type(value)(scrub(v) if isinstance(v, str) else v for v in value)
+    return value
+
+
 def without_noise(span: ReadableSpan) -> ReadableSpan:
-    """The span with framework-only attributes dropped, everything else as it was."""
+    """The span with framework-only attributes and live secrets dropped, the rest as it was."""
     attrs = span.attributes or {}
     kept = {
-        k: v for k, v in attrs.items() if k not in NOISE_KEYS and not k.startswith(NOISE_PREFIXES)
+        k: _scrubbed(v)
+        for k, v in attrs.items()
+        if k not in NOISE_KEYS and not k.startswith(NOISE_PREFIXES)
     }
-    if len(kept) == len(attrs):
+    if kept == dict(attrs):
         return span
     return ReadableSpan(
         name=span.name,

@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -209,8 +209,17 @@ class ConversationRepository:
         row = (
             await self._session.execute(
                 select(
-                    func.coalesce(func.sum(Turn.spent_usd), 0),
-                    func.count().filter(Turn.status.in_(("queued", "running"))),
+                    # A turn on a person's own key is paid by them, not by this allowance.
+                    func.coalesce(
+                        func.sum(Turn.spent_usd).filter(
+                            or_(Turn.model_ref.is_(None), ~Turn.model_ref.startswith("own:"))
+                        ),
+                        0,
+                    ),
+                    func.count().filter(
+                        Turn.status.in_(("queued", "running")),
+                        or_(Turn.model_ref.is_(None), ~Turn.model_ref.startswith("own:")),
+                    ),
                 )
                 .join(Conversation, Conversation.id == Turn.conversation_id)
                 .where(Conversation.user_id == user_id, Turn.created_at >= since)

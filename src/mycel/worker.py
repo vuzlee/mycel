@@ -17,6 +17,7 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 from mycel.agents.core.exceptions import (
     DegenerateLoop,
     ModelAuth,
+    ModelBlocked,
     ModelNotFound,
     OutputValidationFailed,
     RunawayStopped,
@@ -46,6 +47,7 @@ FINAL: tuple[type[Exception], ...] = (
     ToolFailed,
     ModelAuth,
     ModelNotFound,
+    ModelBlocked,
 )
 
 #: Retried after a delay: a provider 503, a rate limit, a dropped socket or store.

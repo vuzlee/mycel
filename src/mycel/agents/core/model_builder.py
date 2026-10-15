@@ -4,9 +4,11 @@ Building a model makes no network call, so agents can be constructed at import t
 """
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.rotating import OnFailure, RotatingModel
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.llm.router import resolve
@@ -75,3 +77,45 @@ def _model_settings(agent_cfg: AgentSettings) -> "ModelSettings":
     if agent_cfg.max_tokens is not None:
         model_settings["max_tokens"] = agent_cfg.max_tokens
     return model_settings
+
+
+#: Own models skip the gateway, so the app's client is the only one retrying.
+OWN_RETRIES = 2
+
+#: Tests swap in a mock transport; None is the real network.
+_transport: Any = None
+
+
+def build_own_model(
+    own: OwnEndpoint, agent_cfg: AgentSettings, on_failure: OnFailure
+) -> "tuple[Model, list[AsyncOpenAI]]":
+    """One client per key, for this run only: a person's key never sits in a shared cache.
+
+    Returns the clients too, so the caller closes them when the run ends. Redirects are not
+    followed: a checked base URL must not hand the request on to an address it was not.
+    """
+    from openai import AsyncOpenAI, DefaultAsyncHttpxClient
+    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    clients = [
+        AsyncOpenAI(
+            base_url=own.api_base,
+            api_key=key.get_secret_value(),
+            max_retries=OWN_RETRIES,
+            http_client=DefaultAsyncHttpxClient(follow_redirects=False, transport=_transport),
+        )
+        for _, key in own.keys
+    ]
+    keyed = [
+        (
+            position,
+            OpenAIChatModel(
+                own.endpoint_model,
+                provider=OpenAIProvider(openai_client=client),
+                settings=_model_settings(agent_cfg),
+            ),
+        )
+        for (position, _), client in zip(own.keys, clients, strict=True)
+    ]
+    return RotatingModel(keyed, on_failure), clients

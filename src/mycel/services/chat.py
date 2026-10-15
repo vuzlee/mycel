@@ -62,7 +62,9 @@ async def request_chat(
     model_ref = await models.usable(user_id, model_ref)
     async with session_scope() as session:
         repo = ConversationRepository(session)
-        await _check_allowance(repo, user_id)
+        # A question on the asker's own key does not spend the deployment's money.
+        if not model_ref.startswith(f"{models.OWN}:"):
+            await _check_allowance(repo, user_id)
         if conversation_id is None:
             conversation = await repo.create_conversation(
                 user_id, kind="chat", title=question[:TITLE_CHARS]

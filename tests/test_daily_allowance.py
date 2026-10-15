@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
 from mycel.infra.postgres.models import Turn
+from mycel.llm.usage import TurnUsage
 from mycel.queue.job import Job
 from mycel.services import chat, enqueue, models
 from tests.fakes import needs_postgres
@@ -129,3 +131,32 @@ class TestPickedModel:
         with pytest.raises(models.UnknownModel):
             await chat.request_chat(user.id, "q?", model_ref="host:off")
         assert await session.scalar(select(func.count()).select_from(Turn)) == 0
+
+
+@needs_postgres
+class TestOwnKeysAreNotTheDeployments:
+    async def test_own_model_spend_does_not_count(
+        self, session: AsyncSession, on_session: None
+    ) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("ownkey@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "q")
+        usage = TurnUsage("own:3", 1, 1, 1)
+        await repo.upsert_turn(
+            thread.id, "job-own", "q", "done", spent_usd=Decimal("4.00"), usage=usage
+        )
+
+        spent, _ = await repo.spent_since(user.id, datetime.now(UTC) - timedelta(days=1))
+        assert spent == 0
+
+    async def test_a_question_on_an_own_model_skips_the_allowance(
+        self, session: AsyncSession, on_session: None
+    ) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("over@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "q")
+        await repo.upsert_turn(thread.id, "job-x", "q", "done", spent_usd=Decimal("5"))
+
+        with pytest.raises(chat.DailyLimitReached):
+            await chat.request_chat(user.id, "host model?")
+        await chat.request_chat(user.id, "own model?", model_ref="own:3")

@@ -6,6 +6,7 @@ are recorded once, by the caller. `iter()` rather than `run()` so a run stopped 
 still reports what it spent.
 """
 
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic_ai import Agent
@@ -13,16 +14,19 @@ from pydantic_ai.models import Model
 
 from mycel.agents.core.emit import RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
-from mycel.agents.core.model_builder import build_model
+from mycel.agents.core.model_builder import build_model, build_own_model
+from mycel.core import redact
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.events.event import RUN_FINISHED, RUN_STARTED
-from mycel.llm.budget import BudgetExceeded, price_usd
+from mycel.infra.redis import key_rotation
+from mycel.llm.budget import BudgetExceeded, own_price, price_usd
+from mycel.llm.quota import cooldown_seconds
 from mycel.llm.router import resolve
 from mycel.observability.metrics import tokens_spent_total
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import AsyncIterator, Callable
 
     from pydantic_ai import RunContext
     from pydantic_ai.agent import AgentRun
@@ -86,9 +90,12 @@ def _record_usage(
     tokens_spent_total.labels(model=cfg.model_spec, direction="input").inc(usage.input_tokens)
     tokens_spent_total.labels(model=cfg.model_spec, direction="output").inc(usage.output_tokens)
 
-    model = resolve(cfg.model_spec).name
+    if deps.own is not None:
+        price = own_price(deps.own.endpoint_model, deps.own.api_base, usage)
+    else:
+        price = price_usd(get_settings().model_prices_usd, resolve(cfg.model_spec).name, usage)
     try:
-        deps.budget.record(usage, price_usd(get_settings().model_prices_usd, model, usage))
+        deps.budget.record(usage, price)
         overdrawn = None
     except BudgetExceeded as exc:
         overdrawn = exc
@@ -126,20 +133,49 @@ async def _iterate(
     parent_tool_call_id: str | None,
     on_usage: "Callable[[RunUsage], None] | None" = None,
 ) -> OutputT:
-    model = build_model(cfg.model_spec, cfg)
     emitter = RunEmitter(deps, _name_of(agent), parent_tool_call_id)
-    with translate_agent_errors(cfg.model_spec):
-        async with agent.iter(
-            prompt, deps=deps, model=model, usage=usage, usage_limits=limits
-        ) as agent_run:
-            try:
-                await emitter.emit(RUN_STARTED, prompt=prompt)
-                await _iterate_nodes(agent_run, emitter)
-                await emitter.emit(RUN_FINISHED)
-            finally:
-                if on_usage is not None:
-                    on_usage(agent_run.usage)
-        result = agent_run.result
-        if result is None:  # pragma: no cover - iter() always sets it on success
-            raise RuntimeError("agent run produced no result")
+    async with _model_for(deps, cfg) as (model, name):
+        with translate_agent_errors(name):
+            async with agent.iter(
+                prompt, deps=deps, model=model, usage=usage, usage_limits=limits
+            ) as agent_run:
+                try:
+                    await emitter.emit(RUN_STARTED, prompt=prompt)
+                    await _iterate_nodes(agent_run, emitter)
+                    await emitter.emit(RUN_FINISHED)
+                finally:
+                    if on_usage is not None:
+                        on_usage(agent_run.usage)
+            result = agent_run.result
+            if result is None:  # pragma: no cover - iter() always sets it on success
+                raise RuntimeError("agent run produced no result")
     return result.output
+
+
+@asynccontextmanager
+async def _model_for(deps: "MycelDeps", cfg: "AgentSettings") -> "AsyncIterator[tuple[Model, str]]":
+    """The gateway model, or the run's own model with its per-run clients closed after."""
+    if deps.own is None:
+        yield build_model(cfg.model_spec, cfg), cfg.model_spec
+        return
+    own = deps.own
+
+    async def set_aside(position: int, status: int, error: str) -> None:
+        log.warning(
+            "own model key set aside",
+            extra={
+                "job_id": deps.job_id,
+                "own_model": own.model_id,
+                "key": position,
+                "status": status,
+            },
+        )
+        await key_rotation.cool(own.model_id, position, cooldown_seconds(status, error))
+
+    model, clients = build_own_model(own, cfg, set_aside)
+    try:
+        with redact.holding(*(key.get_secret_value() for _, key in own.keys)):
+            yield model, own.label
+    finally:
+        for client in clients:
+            await client.close()

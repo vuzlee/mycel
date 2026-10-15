@@ -2,16 +2,21 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import pytest
 from cryptography.fernet import Fernet
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mycel.agents.core.exceptions import ModelBlocked
 from mycel.core.config import get_settings
+from mycel.core.exceptions import ConfigError
+from mycel.domains import chat_model
 from mycel.infra.postgres.models import OwnModelKey
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.repositories.models import ModelPrefRepository
+from mycel.infra.redis import key_rotation
 from mycel.services import models, own_models, tokens, url_guard
 from mycel.services.own_models import OwnModelNotFound, OwnModelRefused
 from tests.fakes import needs_postgres
@@ -128,3 +133,64 @@ class TestRotatingTheEncryptionKey:
         get_settings.cache_clear()
         assert tokens.unseal(sealed) == "secret"
         assert Fernet(new.encode()).decrypt(tokens.seal("x").encode()) == b"x"
+
+
+class TestTheEndpointARunGets:
+    @pytest.fixture
+    def rotation(self, monkeypatch: pytest.MonkeyPatch, session: AsyncSession) -> dict[str, Any]:
+        state: dict[str, Any] = {"start": 0, "cooling": set()}
+
+        async def next_start(model_id: int, count: int) -> int:
+            return int(state["start"])
+
+        async def cooling(model_id: int, count: int) -> set[int]:
+            return set(state["cooling"])
+
+        monkeypatch.setattr(key_rotation, "next_start", next_start)
+        monkeypatch.setattr(key_rotation, "cooling", cooling)
+
+        @asynccontextmanager
+        async def scope() -> AsyncIterator[AsyncSession]:
+            yield session
+
+        monkeypatch.setattr(chat_model, "session_scope", scope)
+        return state
+
+    async def test_keys_come_unsealed_in_turn_order_cooling_last(
+        self, people: tuple[int, int], rotation: dict[str, Any]
+    ) -> None:
+        keys = ["key-zero-0000000", "key-one-11111111", "key-two-22222222"]
+        view = await _add(people[0], keys)
+        rotation.update(start=1, cooling={2})
+
+        own = await chat_model.own_endpoint(people[0], view.ref)
+
+        assert own is not None
+        assert [(p, k.get_secret_value()) for p, k in own.keys] == [
+            (1, keys[1]),
+            (0, keys[0]),
+            (2, keys[2]),
+        ]
+        assert keys[0] not in repr(own)
+
+    async def test_someone_elses_model_does_not_run(
+        self, people: tuple[int, int], rotation: dict[str, Any]
+    ) -> None:
+        view = await _add(people[0])
+        with pytest.raises(ConfigError):
+            await chat_model.own_endpoint(people[1], view.ref)
+
+    async def test_a_base_url_that_turned_private_stops_the_run(
+        self, people: tuple[int, int], rotation: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        view = await _add(people[0])
+
+        async def private(url: str) -> None:
+            raise url_guard.BlockedUrl("resolves to a private or internal address")
+
+        monkeypatch.setattr(url_guard, "check", private)
+        with pytest.raises(ModelBlocked, match="private"):
+            await chat_model.own_endpoint(people[0], view.ref)
+
+    async def test_a_host_model_has_no_endpoint(self, people: tuple[int, int]) -> None:
+        assert await chat_model.own_endpoint(people[0], "host:claude-sonnet-5") is None

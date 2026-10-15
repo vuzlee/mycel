@@ -8,6 +8,8 @@ from typing import Any
 
 from opentelemetry import trace
 
+from mycel.core.redact import scrub
+
 #: The id of the request being handled, or empty outside one.
 current_request_id: ContextVar[str] = ContextVar("current_request_id", default="")
 
@@ -47,7 +49,7 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
 
-        return json.dumps(payload, default=str)
+        return scrub(json.dumps(payload, default=str))
 
 
 #: Libraries that log full request URLs (which may carry credentials) at INFO.

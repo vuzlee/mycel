@@ -104,3 +104,21 @@ def price_usd(
     per_input, per_output = found
     million = Decimal(1_000_000)
     return (usage.input_tokens * per_input + usage.output_tokens * per_output) / million
+
+
+def own_price(model_id: str, api_base: str, usage: "RunUsage") -> Decimal | None:
+    """What a provider charges for an own model, from the price data pydantic-ai ships.
+
+    `None` when the endpoint or the model is not in it, e.g. a self-hosted model.
+    """
+    from genai_prices import Usage, calc_price
+
+    try:
+        found = calc_price(
+            Usage(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens),
+            model_ref=model_id,
+            provider_api_url=api_base,
+        )
+    except LookupError:
+        return None
+    return Decimal(found.total_price)
