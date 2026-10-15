@@ -68,3 +68,25 @@ class TestDailyAllowance:
         await repo.upsert_turn(thread.id, "job-b", "q", "done", spent_usd=Decimal("5"))
 
         await chat.request_chat(small.id, "mine is fine")
+
+
+@needs_postgres
+class TestOneTurnAtATime:
+    async def test_a_second_question_waits_for_the_first(
+        self, session: AsyncSession, on_session: None
+    ) -> None:
+        user = await AppRepository(session).create_user("twice@example.com", "x")
+        _, thread = await chat.request_chat(user.id, "first")
+
+        with pytest.raises(chat.TurnInProgress):
+            await chat.request_chat(user.id, "second", thread)
+
+    async def test_an_answered_turn_frees_the_conversation(
+        self, session: AsyncSession, on_session: None
+    ) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("after@example.com", "x")
+        thread = await repo.create_conversation(user.id, "chat", "q")
+        await repo.upsert_turn(thread.id, "job-c", "q", "done", spent_usd=Decimal("0.01"))
+
+        await chat.request_chat(user.id, "next", thread.id)

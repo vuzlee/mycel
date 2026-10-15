@@ -49,21 +49,21 @@ subjects:
     namespace: {{ .Release.Namespace }}
 ---
 {{/*
-Promtail reads log files off the node, so it needs the same discovery to know which pod a
+Alloy reads log files off the node, so it needs the same discovery to know which pod a
 file belongs to. Without it every line arrives labelled by filename and nothing else.
 */}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "mycel.fullname" . }}-promtail
+  name: {{ include "mycel.fullname" . }}-alloy
   labels:
     {{- include "mycel.labels" . | nindent 4 }}
-    app.kubernetes.io/component: promtail
+    app.kubernetes.io/component: alloy
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "mycel.fullname" . }}-promtail
+  name: {{ include "mycel.fullname" . }}-alloy
   labels:
     {{- include "mycel.labels" . | nindent 4 }}
 rules:
@@ -74,15 +74,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "mycel.fullname" . }}-promtail
+  name: {{ include "mycel.fullname" . }}-alloy
   labels:
     {{- include "mycel.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "mycel.fullname" . }}-promtail
+  name: {{ include "mycel.fullname" . }}-alloy
 subjects:
   - kind: ServiceAccount
-    name: {{ include "mycel.fullname" . }}-promtail
+    name: {{ include "mycel.fullname" . }}-alloy
     namespace: {{ .Release.Namespace }}
 {{- end }}

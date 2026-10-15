@@ -34,11 +34,11 @@ describe("useRun", () => {
   it("polls until the run settles, then stops", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const answers = [
-      { status: "running" },
-      { status: "running" },
-      { status: "done", answer: "42", conversation_id: 1 },
+      { job_id: "j", status: "running" },
+      { job_id: "j", status: "running" },
+      { job_id: "j", status: "done", answer: "42", conversation_id: 1 },
     ];
-    const fetchMock = vi.fn(async () => ok(answers.shift() ?? { status: "done" }));
+    const fetchMock = vi.fn(async () => ok(answers.shift() ?? { job_id: "j", status: "done" }));
     vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useRun("job-1"), { wrapper });
@@ -95,7 +95,12 @@ describe("usePastTurns", () => {
   it("leaves out the run being watched", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ok([{ job_id: "old" }, { job_id: "now" }])),
+      vi.fn(async () =>
+        ok([
+          { job_id: "old", question: "a", status: "done" },
+          { job_id: "now", question: "b", status: "queued" },
+        ]),
+      ),
     );
     const { result } = renderHook(() => usePastTurns(5, "now"), { wrapper });
     await waitFor(() => expect(result.current.pastFor).toBe("now"));
@@ -104,10 +109,10 @@ describe("usePastTurns", () => {
 
   it("refetches when a new run starts, so the last one shows its answer", async () => {
     const lists = [
-      [{ job_id: "q1", status: "queued", answer: null }],
+      [{ job_id: "q1", question: "a", status: "queued", answer: null }],
       [
-        { job_id: "q1", status: "done", answer: "42" },
-        { job_id: "q2", status: "queued", answer: null },
+        { job_id: "q1", question: "a", status: "done", answer: "42" },
+        { job_id: "q2", question: "b", status: "queued", answer: null },
       ],
     ];
     vi.stubGlobal(
@@ -122,6 +127,8 @@ describe("usePastTurns", () => {
 
     rerender({ job: "q2" });
     await waitFor(() => expect(result.current.pastFor).toBe("q2"));
-    expect(result.current.past).toEqual([{ job_id: "q1", status: "done", answer: "42" }]);
+    expect(result.current.past).toEqual([
+      { job_id: "q1", question: "a", status: "done", answer: "42" },
+    ]);
   });
 });

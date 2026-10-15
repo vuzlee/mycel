@@ -1,0 +1,40 @@
+// Reads stdout from every container and pushes it to Loki. Replaces Promtail (end of life).
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.containers.output
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.app.receiver]
+}
+
+// App logs are JSON; level becomes a label. trace_id is NOT one: unbounded cardinality.
+loki.process "app" {
+  stage.json {
+    expressions = { level = "level", trace_id = "trace_id", job_id = "job_id" }
+  }
+  stage.labels {
+    values = { level = "" }
+  }
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

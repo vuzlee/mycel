@@ -11,6 +11,38 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "mycel"
 FORBIDDEN = {
     "services": ("mycel.agents",),
     "core": ("mycel.agents", "mycel.services", "mycel.domains", "mycel.api"),
+    # Stores and value types sit under everything that runs work.
+    "infra": (
+        "mycel.agents",
+        "mycel.services",
+        "mycel.domains",
+        "mycel.api",
+        "mycel.queue",
+        "mycel.lifecycle",
+    ),
+    # Value types: `infra` may store them, so they never reach back into `infra`.
+    "llm": (
+        "mycel.infra",
+        "mycel.agents",
+        "mycel.services",
+        "mycel.domains",
+        "mycel.api",
+        "mycel.queue",
+        "mycel.lifecycle",
+    ),
+    "events": (
+        "mycel.infra",
+        "mycel.agents",
+        "mycel.services",
+        "mycel.domains",
+        "mycel.api",
+        "mycel.queue",
+        "mycel.lifecycle",
+    ),
+    # The queue moves jobs; the process that runs it is `worker.py`.
+    "queue": ("mycel.agents", "mycel.services", "mycel.domains", "mycel.api", "mycel.lifecycle"),
+    # The API queues work; agents run only in the worker.
+    "api": ("mycel.agents", "mycel.domains"),
 }
 
 

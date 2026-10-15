@@ -15,7 +15,6 @@ from mycel.api.dependencies import current_user
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.conversations import TurnRow
-from mycel.infra.redis.results import JobResult
 
 #: Who every request in this file is made by.
 SIGNED_IN = Principal(id=1, email="tester@example.com")
@@ -46,27 +45,6 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
         return result, conversation_id or 1
 
     monkeypatch.setattr("mycel.api.routes.chat.request_chat", fake_request)
-
-
-def _stored(
-    monkeypatch: pytest.MonkeyPatch,
-    result: JobResult | None,
-    kept: TurnRow | None = None,
-) -> None:
-    """Make everything the route reads answer, with neither Redis nor Postgres here."""
-
-    async def fake_fetch(job_id: str) -> JobResult | None:
-        return result
-
-    async def fake_find(job_id: str) -> TurnRow | None:
-        return kept
-
-    async def no_citations(job_id: str) -> dict[str, Any] | None:
-        return None
-
-    monkeypatch.setattr("mycel.api.routes.chat.results.fetch", fake_fetch)
-    monkeypatch.setattr("mycel.api.routes.chat.find_turn", fake_find)
-    monkeypatch.setattr("mycel.api.routes.chat.citations.fetch", no_citations)
 
 
 #: What a finished run left behind, for the tests that read a kept row.

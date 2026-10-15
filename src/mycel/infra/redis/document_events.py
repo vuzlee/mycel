@@ -1,7 +1,6 @@
 """Per-user pub/sub signal that a document changed; listeners re-read Postgres."""
 
 import asyncio
-from collections.abc import AsyncIterator
 from typing import Any
 
 from mycel.infra.redis import _kv
@@ -42,13 +41,3 @@ class Listener:
         if self._pubsub is not None:
             await self._pubsub.unsubscribe(_channel(self._user_id))
             await self._pubsub.aclose()
-
-
-async def listen(user_id: int, timeout_s: float) -> AsyncIterator[bool]:
-    """Yields True when something changed, False when `timeout_s` passed in silence."""
-    listener = await Listener(user_id).open()
-    try:
-        while True:
-            yield await listener.next(timeout_s)
-    finally:
-        await listener.close()

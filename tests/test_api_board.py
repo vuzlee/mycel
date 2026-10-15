@@ -22,7 +22,6 @@ from mycel.infra.postgres.repositories.gold_stats import (
     KindTally,
     SprintTally,
 )
-from mycel.infra.redis.results import JobResult
 from mycel.services.conversations import ConversationSummary
 from mycel.services.dashboard import Dashboard, EpicProgress
 
@@ -55,27 +54,6 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
         return result, conversation_id or 1
 
     monkeypatch.setattr("mycel.api.routes.chat.request_chat", fake_request)
-
-
-def _stored(
-    monkeypatch: pytest.MonkeyPatch,
-    result: JobResult | None,
-    kept: TurnRow | None = None,
-) -> None:
-    """Make everything the route reads answer, with neither Redis nor Postgres here."""
-
-    async def fake_fetch(job_id: str) -> JobResult | None:
-        return result
-
-    async def fake_find(job_id: str) -> TurnRow | None:
-        return kept
-
-    async def no_citations(job_id: str) -> dict[str, Any] | None:
-        return None
-
-    monkeypatch.setattr("mycel.api.routes.chat.results.fetch", fake_fetch)
-    monkeypatch.setattr("mycel.api.routes.chat.find_turn", fake_find)
-    monkeypatch.setattr("mycel.api.routes.chat.citations.fetch", no_citations)
 
 
 #: What a finished run left behind, for the tests that read a kept row.

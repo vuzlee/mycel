@@ -30,6 +30,10 @@ class ConversationNotFound(Exception):
     """The conversation asked for is not this person's, or not there."""
 
 
+class TurnInProgress(Exception):
+    """The conversation already has a question being answered."""
+
+
 class DailyLimitReached(Exception):
     """This person's chat has spent its 24-hour allowance, open jobs included."""
 
@@ -65,6 +69,7 @@ async def request_chat(
         else:
             conversation = await _conversation_of(repo, user_id, conversation_id)
             turns = await repo.turns_for_conversation(conversation.id)
+            _refuse_if_running(turns)
 
         previous = context = ""
         if chips is not None and Chip.KNOWLEDGE in chips:
@@ -82,6 +87,14 @@ async def request_chat(
         await enqueue.stage(session, job)
     await enqueue.send(job)
     return job.job_id, conversation.id
+
+
+def _refuse_if_running(turns: list[TurnRow]) -> None:
+    """One question at a time per conversation; a turn queued past the result TTL is dead."""
+    limit = timedelta(seconds=get_settings().result_ttl_seconds)
+    now = datetime.now(UTC)
+    if any(t.status == "queued" and now - t.created_at < limit for t in turns):
+        raise TurnInProgress("this conversation is still answering the last question")
 
 
 def _last_question(turns: list[TurnRow]) -> str:
@@ -105,7 +118,7 @@ async def _conversation_of(
     repo: ConversationRepository, user_id: int, conversation_id: int
 ) -> ConversationRow:
     """The conversation a follow-up names, once it is established that it is this person's."""
-    conversation = await repo.conversation_by_id(conversation_id)
+    conversation = await repo.conversation_by_id(conversation_id, lock=True)
     if conversation is None or conversation.user_id != user_id:
         raise ConversationNotFound(conversation_id)
     return conversation

@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.infra.http import shared
+from mycel.infra.redis._kv import key
 from mycel.infra.redis.client import get_client
 from mycel.services.tokens import TokenUnreadable, key_set, unseal
 
@@ -48,7 +49,12 @@ class OAuthProvider:
 
     def credentials(self) -> tuple[str, str]:
         client_id, secret = self.client(get_settings())
-        return credentials(client_id, secret, self.configured(), self.env)
+        if not self.configured() or client_id is None or secret is None:
+            raise ConfigError(
+                f"this deployment has no {self.env} OAuth client configured; "
+                f"set {self.env}_CLIENT_ID, {self.env}_CLIENT_SECRET and TOKEN_ENCRYPTION_KEY"
+            )
+        return client_id, secret.get_secret_value()
 
     def redirect_uri(self) -> str:
         return redirect_uri(self.callback_path)
@@ -56,10 +62,17 @@ class OAuthProvider:
     async def consent_url(self, user_id: int, params: dict[str, str]) -> str:
         client_id, _ = self.credentials()
         base = {"client_id": client_id, "redirect_uri": self.redirect_uri()}
-        return await consent_url(self.key, self.auth_url, user_id, {**base, **params})
+        state = await _start_state(self.key, user_id)
+        return f"{self.auth_url}?{urlencode({**base, **params, 'state': state})}"
 
     async def owner_of(self, state: str, user_id: int) -> int:
-        return await owner_of(self.key, state, user_id, self.error)
+        """`user_id` if the round is theirs: a link someone else started is refused."""
+        owner = await _spend_state(self.key, state)
+        if owner is None:
+            raise self.error("that consent link has expired; start again from settings")
+        if owner != user_id:
+            raise self.error("that consent link was started by another account")
+        return owner
 
     async def code_grant(self, code: str) -> dict[str, Any]:
         """Exchange a consent code; the response must carry a refresh token."""
@@ -84,81 +97,33 @@ class OAuthProvider:
         return payload
 
     def unseal(self, sealed: str) -> str:
-        return unseal_for(sealed, self.name, self.revoked)
+        """Decrypt a stored refresh token; a rotated key means connecting again."""
+        try:
+            return unseal(sealed)
+        except TokenUnreadable as exc:
+            msg = f"the stored {self.name} token cannot be read; connect your account again"
+            raise self.revoked(msg) from exc
 
     async def _token_call(self, data: dict[str, str]) -> dict[str, Any]:
+        """One POST to the token endpoint; a revoked grant raises `revoked`, others `error`."""
         client_id, client_secret = self.credentials()
-        return await token_call(
-            self.token_url,
-            {**data, "client_id": client_id, "client_secret": client_secret},
-            as_json=self.json_body,
-            name=self.name,
-            error=self.error,
-            revoked=self.revoked,
-            revoked_codes=self.revoked_codes,
-        )
-
-
-async def consent_url(provider: str, auth_url: str, user_id: int, params: dict[str, str]) -> str:
-    """The provider's consent screen, carrying a fresh state remembered as this person's."""
-    state = await _start_state(provider, user_id)
-    return f"{auth_url}?{urlencode({**params, 'state': state})}"
-
-
-async def owner_of(provider: str, state: str, user_id: int, error: type[MycelError]) -> int:
-    """`user_id` if the round is theirs, else `error`: a link someone else started is refused."""
-    owner = await _spend_state(provider, state)
-    if owner is None:
-        raise error("that consent link has expired; start again from settings")
-    if owner != user_id:
-        raise error("that consent link was started by another account")
-    return owner
-
-
-async def token_call(
-    url: str,
-    data: dict[str, str],
-    *,
-    as_json: bool,
-    name: str,
-    error: type[MycelError],
-    revoked: type[MycelError],
-    revoked_codes: tuple[str, ...],
-) -> dict[str, Any]:
-    """One POST to a token endpoint; a revoked grant raises `revoked`, others `error`."""
-    try:
-        status, payload = (
-            await post_token(url, json=data) if as_json else await post_token(url, data=data)
-        )
-    except httpx2.HTTPError as exc:
-        raise error(f"{name} could not be reached: {exc}") from exc
-    if status >= 400:
-        code = str(payload.get("error", status))
-        if code in revoked_codes:
-            raise revoked(f"your {name} account is no longer connected; connect it again")
-        raise error(f"{name} refused the request: {code}")
-    return payload
-
-
-def unseal_for(sealed: str, name: str, revoked: type[MycelError]) -> str:
-    """Decrypt a stored refresh token; a rotated key means connecting again."""
-    try:
-        return unseal(sealed)
-    except TokenUnreadable as exc:
-        msg = f"the stored {name} token cannot be read; connect your account again"
-        raise revoked(msg) from exc
-
-
-def credentials(
-    client_id: str | None, secret: SecretStr | None, configured: bool, env: str
-) -> tuple[str, str]:
-    """The client id and secret, or `ConfigError` naming what to set."""
-    if not configured or client_id is None or secret is None:
-        raise ConfigError(
-            f"this deployment has no {env} OAuth client configured; "
-            f"set {env}_CLIENT_ID, {env}_CLIENT_SECRET and TOKEN_ENCRYPTION_KEY"
-        )
-    return client_id, secret.get_secret_value()
+        body = {**data, "client_id": client_id, "client_secret": client_secret}
+        try:
+            status, payload = await (
+                post_token(self.token_url, json=body)
+                if self.json_body
+                else post_token(self.token_url, data=body)
+            )
+        except httpx2.HTTPError as exc:
+            raise self.error(f"{self.name} could not be reached: {exc}") from exc
+        if status >= 400:
+            code = str(payload.get("error", status))
+            if code in self.revoked_codes:
+                raise self.revoked(
+                    f"your {self.name} account is no longer connected; connect it again"
+                )
+            raise self.error(f"{self.name} refused the request: {code}")
+        return payload
 
 
 async def _start_state(provider: str, user_id: int) -> str:
@@ -197,4 +162,4 @@ async def post_token(
 
 
 def _state_key(provider: str, state: str) -> str:
-    return f"mycel:{provider}:state:{state}"
+    return key(provider, "state", state)

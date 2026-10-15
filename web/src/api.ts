@@ -209,17 +209,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+/** The body checked for the fields the page reads, so a wrong shape fails here, by name,
+ *  instead of as `undefined` deep in a component. An array checks each item. */
+export function shaped<T>(value: unknown, keys: readonly string[], what: string): T {
+  const items = Array.isArray(value) ? value : [value];
+  for (const item of items) {
+    const missing =
+      item && typeof item === "object" ? keys.filter((k) => !(k in item)) : ["(object)"];
+    if (missing.length) throw new Error(`the server sent an unexpected ${what}: no ${missing[0]}`);
+  }
+  return value as T;
+}
+
 const get = <T>(path: string): Promise<T> => request<T>("GET", path);
 const post = <T>(path: string, body?: unknown): Promise<T> => request<T>("POST", path, body);
 const del = (path: string): Promise<void> => request<void>("DELETE", path);
 
 // -- auth -------------------------------------------------------------------
 
+const USER = ["id", "email"] as const;
+
 export const register = (email: string, password: string): Promise<User> =>
-  post<User>("/auth/register", { email, password });
+  post<unknown>("/auth/register", { email, password }).then((v) => shaped<User>(v, USER, "user"));
 
 export const login = (email: string, password: string): Promise<User> =>
-  post<User>("/auth/login", { email, password });
+  post<unknown>("/auth/login", { email, password }).then((v) => shaped<User>(v, USER, "user"));
 
 export async function logout(): Promise<void> {
   await fetch("/auth/logout", { method: "POST" });
@@ -230,7 +244,7 @@ export async function logout(): Promise<void> {
 export async function me(): Promise<User | null> {
   const res = await fetch("/auth/me");
   if (res.status === 401) return null;
-  return json<User>(res);
+  return shaped<User>(await json<unknown>(res), USER, "user");
 }
 
 /** 202 whether or not the address has an account, so this call cannot be used to find
@@ -306,17 +320,17 @@ export const askChat = (
   conversationId?: number,
   chips: Chip[] = [],
 ): Promise<Accepted> =>
-  post<Accepted>("/chat", {
+  post<unknown>("/chat", {
     question,
     conversation_id: conversationId ?? null,
     chips,
-  });
+  }).then((v) => shaped<Accepted>(v, ["job_id", "conversation_id"], "accepted run"));
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
 export async function fetchChat(jobId: string): Promise<ChatResult | null> {
   const res = await fetch(`/chat/${jobId}`);
   if (res.status === 404) return null;
-  return json<ChatResult>(res);
+  return shaped<ChatResult>(await json<unknown>(res), ["job_id", "status"], "chat result");
 }
 
 // -- lists ------------------------------------------------------------------
@@ -324,11 +338,15 @@ export async function fetchChat(jobId: string): Promise<ChatResult | null> {
 export const fetchProjects = (): Promise<string[]> => get<string[]>("/projects");
 
 export const fetchConversations = (): Promise<ConversationSummary[]> =>
-  get<ConversationSummary[]>("/conversations");
+  get<unknown>("/conversations").then((v) =>
+    shaped<ConversationSummary[]>(v, ["id", "title", "pinned"], "conversation"),
+  );
 
 /** Every run in one conversation, oldest first. What a conversation said before this tab opened it. */
 export const fetchTurns = (id: number): Promise<Turn[]> =>
-  get<Turn[]>(`/conversations/${id}/turns`);
+  get<unknown>(`/conversations/${id}/turns`).then((v) =>
+    shaped<Turn[]>(v, ["job_id", "question", "status"], "turn"),
+  );
 
 /** Its runs go with it. */
 export const deleteConversation = (id: number): Promise<void> => del(`/conversations/${id}`);

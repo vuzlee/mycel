@@ -20,9 +20,9 @@ class TestTheSignal:
         await listener.close()
 
     async def test_silence_is_a_keepalive(self) -> None:
-        stream = document_events.listen(990_002, timeout_s=0.2)
-        assert await stream.__anext__() is False
-        await stream.aclose()  # type: ignore[attr-defined]
+        listener = await document_events.Listener(990_002).open()
+        assert await listener.next(timeout_s=0.2) is False
+        await listener.close()
 
     async def test_another_users_change_is_not_heard(self) -> None:
         listener = await document_events.Listener(990_003).open()

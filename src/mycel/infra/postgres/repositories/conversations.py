@@ -76,11 +76,15 @@ class ConversationRepository:
         )
         return [_conversation(row) for row in rows]
 
-    async def conversation_by_id(self, conversation_id: int) -> ConversationRow | None:
-        """One conversation, whoever owns it. The caller checks ownership."""
-        row = await self._session.scalar(
-            select(Conversation).where(Conversation.id == conversation_id)
-        )
+    async def conversation_by_id(
+        self, conversation_id: int, *, lock: bool = False
+    ) -> ConversationRow | None:
+        """One conversation, whoever owns it. The caller checks ownership.
+
+        `lock` holds the row until commit, so two requests on it take turns.
+        """
+        query = select(Conversation).where(Conversation.id == conversation_id)
+        row = await self._session.scalar(query.with_for_update() if lock else query)
         return _conversation(row) if row else None
 
     async def pin_conversation(self, conversation_id: int, user_id: int, pinned: bool) -> bool:

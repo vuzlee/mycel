@@ -10,7 +10,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from mycel.agents.core.exceptions import AgentError, ModelTimeout, RunawayStopped
+from mycel.agents.core.exceptions import ModelTimeout
 from mycel.api.app import create_app
 from mycel.api.dependencies import current_user
 from mycel.api.middleware import HEADER
@@ -19,7 +19,7 @@ from mycel.core.exceptions import ConfigError
 from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis.results import JobResult
-from mycel.llm.budget import BudgetExceeded
+from mycel.services.chat import TurnInProgress
 
 #: Who every request in this file is made by.
 SIGNED_IN = Principal(id=1, email="tester@example.com")
@@ -354,10 +354,8 @@ class TestErrorsComeBackAsThemselves:
     @pytest.mark.parametrize(
         ("raised", "status", "kind"),
         [
-            (BudgetExceeded("job", Decimal("1"), Decimal("2")), 402, "budget_exceeded"),
-            (RunawayStopped("hit the ceiling"), 504, "runaway_stopped"),
             (ConfigError("no key"), 500, "config_error"),
-            (AgentError("provider is down"), 502, "agent_failed"),
+            (TurnInProgress("busy"), 409, "turn_in_progress"),
         ],
     )
     def test_each_failure_maps_to_its_own_status(

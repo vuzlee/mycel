@@ -5,17 +5,18 @@ from typing import Any
 
 from mycel.core.config import get_settings
 from mycel.events.event import AgentEvent, SequencedEvent
+from mycel.infra.redis._kv import key
 from mycel.infra.redis.client import get_client
 
 FIRST = "0"
 
 
 def _key(job_id: str) -> str:
-    return f"mycel:events:{job_id}"
+    return key("events", job_id)
 
 
 def _seq_key(job_id: str) -> str:
-    return f"mycel:events:{job_id}:seq"
+    return key("events", job_id, "seq")
 
 
 async def exists(job_id: str) -> bool:

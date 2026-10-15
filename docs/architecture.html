@@ -1508,7 +1508,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </div>
       <div class="tree-row">
         <span class="tree-path"><span class="dim">├─ </span>observability/</span>
-        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Promtail ships it to Loki), <code>metrics</code> feeds Prometheus and <code>metrics_server</code> serves <code>/metrics</code> on each process&rsquo;s own port (worker 9100, scheduler 9101, ingest 9102, api 9103). Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
+        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Alloy ships it to Loki), <code>metrics</code> feeds Prometheus and <code>metrics_server</code> serves <code>/metrics</code> on each process&rsquo;s own port (worker 9100, scheduler 9101, ingest 9102, api 9103). Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
       </div>
       <div class="tree-row is-epic">
         <span class="tree-path">E2 · Entrypoints</span>
@@ -1626,7 +1626,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </div>
       <div class="tree-row">
         <span class="tree-path">deploy/</span>
-        <span class="tree-note">Infrastructure config: <code>otel/</code> (Prometheus, Loki, Promtail config), <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code>.</span>
+        <span class="tree-note">Infrastructure config: <code>otel/</code> (Prometheus, Loki, Alloy config), <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code>.</span>
       </div>
       <div class="tree-row">
         <span class="tree-path">config/</span>
@@ -1895,7 +1895,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
         <p>~8&nbsp;GiB and a GPU. The cloud tier is Gemini, so this stays off until there is hardware to carry it.</p>
       </article>
       <article class="op">
-        <span class="op-svc">prometheus &middot; grafana<br>loki &middot; promtail</span>
+        <span class="op-svc">prometheus &middot; grafana<br>loki &middot; alloy</span>
         <span class="op-role">Observability &middot; <code>--profile monitoring</code></span>
         <p>Every process serves <code>/metrics</code> on its own port: worker 9100, scheduler 9101, ingest 9102, api 9103.</p>
       </article>
@@ -2274,7 +2274,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
         </tr>
         <tr>
           <td class="who">docker compose · observability</td>
-          <td>Running: postgres, rabbitmq, redis, qdrant, minio. Behind a profile: api, vllm, prometheus, loki, promtail, grafana. Dropped: kafka (JVM)</td>
+          <td>Running: postgres, rabbitmq, redis, qdrant, minio. Behind a profile: api, vllm, prometheus, loki, alloy, grafana. Dropped: kafka (JVM)</td>
         </tr>
         <tr>
           <td class="who">CI · build image</td>

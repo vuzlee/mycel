@@ -223,7 +223,7 @@ services:
   # ceiling the OOM killer picks a victim by size, which is postgres rather than whatever
   # actually leaked.
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.15.0
     profiles: [monitoring]
     # Fifteen days of samples is the default and more than a dev box has questions for.
     command:
@@ -241,7 +241,7 @@ services:
 
   # Where Prometheus sends firing alerts; the receiver is in deploy/monitoring/alertmanager.yaml.
   alertmanager:
-    image: prom/alertmanager:v0.28.0
+    image: prom/alertmanager:v0.34.1
     profiles: [monitoring]
     command: ["--config.file=/etc/alertmanager/alertmanager.yaml"]
     volumes: ["./deploy/monitoring/alertmanager.yaml:/etc/alertmanager/alertmanager.yaml:ro"]
@@ -250,7 +250,7 @@ services:
 
   # Traces go to Langfuse, not here.
   loki:
-    image: grafana/loki:3.3.2
+    image: grafana/loki:3.7.8
     profiles: [monitoring]
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes: ["./deploy/helm/mycel/files/loki.yaml:/etc/loki/loki.yaml:ro", "lokidata:/loki"]
@@ -258,20 +258,18 @@ services:
     mem_limit: 512m
 
   # Ships container stdout (JSON logs) to Loki.
-  promtail:
-    image: grafana/promtail:3.3.2
+  alloy:
+    image: grafana/alloy:v1.20.1
     profiles: [monitoring]
-    command: ["-config.file=/etc/promtail/promtail.yaml"]
+    command: ["run", "--storage.path=/var/lib/alloy", "/etc/alloy/config.alloy"]
     volumes:
-      - ./deploy/monitoring:/etc/promtail
-      - /var/log:/var/log
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./deploy/monitoring/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on: [loki]
-    mem_limit: 128m
+    mem_limit: 256m
 
   grafana:
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:13.2.4
     profiles: [monitoring]
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"

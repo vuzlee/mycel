@@ -11,7 +11,6 @@ from starlette.responses import Response
 from starlette.types import Scope
 
 from mycel import REPO_ROOT
-from mycel.agents.core.exceptions import AgentError, RunawayStopped
 from mycel.api import health
 from mycel.api.middleware import RequestIdMiddleware
 from mycel.api.routes import (
@@ -28,11 +27,10 @@ from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
 from mycel.core.logging import current_request_id, get_logger, setup_logging
 from mycel.lifecycle import running
-from mycel.llm.budget import BudgetExceeded
 from mycel.observability.tracing import setup_tracing
 from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
-from mycel.services.chat import ConversationNotFound, DailyLimitReached
+from mycel.services.chat import ConversationNotFound, DailyLimitReached, TurnInProgress
 
 log = get_logger(__name__)
 
@@ -145,26 +143,11 @@ def _install_error_handlers(app: FastAPI) -> None:
         """A refused registration or login. 400, not 500: the caller's input was wrong."""
         return problem(400, "auth_failed", str(exc))
 
-    @app.exception_handler(BudgetExceeded)
-    async def _budget(request: Request, exc: BudgetExceeded) -> JSONResponse:
-        log.warning("request refused for budget", extra={"detail": str(exc)})
-        return problem(402, "budget_exceeded", str(exc))
-
-    @app.exception_handler(RunawayStopped)
-    async def _runaway(request: Request, exc: RunawayStopped) -> JSONResponse:
-        log.warning("run hit its ceiling", extra={"detail": str(exc)})
-        return problem(504, "runaway_stopped", str(exc))
-
     @app.exception_handler(ConfigError)
     async def _config(request: Request, exc: ConfigError) -> JSONResponse:
         # Logged at error: this one is a deployment problem, not a caller's mistake.
         log.error("misconfigured", extra={"detail": str(exc)})
         return problem(500, "config_error", str(exc))
-
-    @app.exception_handler(AgentError)
-    async def _agent(request: Request, exc: AgentError) -> JSONResponse:
-        log.warning("agent run failed", extra={"detail": str(exc)})
-        return problem(502, "agent_failed", str(exc))
 
     @app.exception_handler(document_service.DocumentError)
     async def _document(request: Request, exc: document_service.DocumentError) -> JSONResponse:
@@ -177,6 +160,10 @@ def _install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DailyLimitReached)
     async def _allowance(request: Request, exc: DailyLimitReached) -> JSONResponse:
         return problem(429, "daily_limit", str(exc))
+
+    @app.exception_handler(TurnInProgress)
+    async def _turn_running(request: Request, exc: TurnInProgress) -> JSONResponse:
+        return problem(409, "turn_in_progress", str(exc))
 
     @app.exception_handler(MycelError)
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:

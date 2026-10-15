@@ -7,7 +7,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   # slim: the full package pulls in every provider and Logfire.
-  "pydantic-ai-slim[google,mcp,openai]>=2.44,<3",
+  "pydantic-ai-slim[mcp,openai]>=2.44,<3",
   "pydantic-settings>=2.4",
   # Imported directly, so declared even though pydantic-ai brings it.
   "httpx2>=2.13",

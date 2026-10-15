@@ -3,7 +3,7 @@ The scheduler. One replica, and Recreate rather than RollingUpdate.
 
 RollingUpdate starts the new pod BEFORE removing the old one, so every upgrade opens a
 window with two live schedulers and every schedule fires twice. The advisory lock in
-domains/sync.py absorbs most of the damage; not running two is still the correct fix.
+infra/postgres/locks.py absorbs most of the damage; not running two is still the correct fix.
 
 THE METRICS PORT IS NOT SET HERE, and that is the point. `scheduler/__main__.py` already
 serves on `METRICS_PORT + 1` — one above the worker's, so the two can run side by side on

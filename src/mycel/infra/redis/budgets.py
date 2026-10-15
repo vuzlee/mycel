@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from mycel.core.config import get_settings
+from mycel.infra.redis._kv import key
 from mycel.infra.redis.client import get_client
 from mycel.llm.budget import JobBudget
 
@@ -17,7 +18,7 @@ redis.call('EXPIRE', KEYS[1], ARGV[4])
 
 
 def _key(job_id: str) -> str:
-    return f"mycel:budget:{job_id}"
+    return key("budget", job_id)
 
 
 async def load(job_id: str, ceiling_usd: Decimal | str) -> JobBudget:

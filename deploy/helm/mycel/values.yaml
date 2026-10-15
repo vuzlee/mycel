@@ -34,7 +34,7 @@ worker:
 
 scheduler:
   # Always 1. Two schedulers = every schedule fires twice. The advisory lock in
-  # domains/sync.py absorbs most of it; not running two is still the correct fix.
+  # infra/postgres/locks.py absorbs most of it; not running two is still the correct fix.
   replicas: 1
   resources:
     requests: {cpu: 100m, memory: 256Mi}
@@ -116,31 +116,31 @@ migrations:
 monitoring:
   enabled: false
   prometheus:
-    image: prom/prometheus:v3.1.0
+    image: prom/prometheus:v3.15.0
     retention: 7d
     scrapeInterval: 15s
     resources:
       requests: {cpu: 100m, memory: 256Mi}
       limits: {memory: 1Gi}
   alertmanager:
-    image: prom/alertmanager:v0.28.0
+    image: prom/alertmanager:v0.34.1
     # Where firing alerts are POSTed. Empty = held on Alertmanager's own page.
     webhookUrl: ""
     resources:
       requests: {cpu: 20m, memory: 32Mi}
       limits: {memory: 128Mi}
   loki:
-    image: grafana/loki:3.3.2
+    image: grafana/loki:3.7.8
     resources:
       requests: {cpu: 100m, memory: 256Mi}
       limits: {memory: 1Gi}
-  promtail:
-    image: grafana/promtail:3.3.2
+  alloy:
+    image: grafana/alloy:v1.20.1
     resources:
       requests: {cpu: 50m, memory: 128Mi}
       limits: {memory: 256Mi}
   grafana:
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:13.2.4
     # Anonymous admin, the same as compose, and the right default for a cluster reachable
     # only through `minikube ip` plus a hosts entry.
     #
