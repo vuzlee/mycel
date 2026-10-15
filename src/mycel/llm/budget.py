@@ -49,6 +49,9 @@ class JobBudget:
     spent_usd: Decimal = Decimal(0)
     tokens: int = 0
     requests: int = 0
+    #: `tokens` split by direction, for the line under an answer.
+    tokens_in: int = 0
+    tokens_out: int = 0
 
     def remaining_usd(self) -> Decimal:
         """Never negative — an overshot budget has zero headroom, not a debt."""
@@ -79,6 +82,8 @@ class JobBudget:
     def record(self, usage: "RunUsage", fallback_cost: Decimal | None = None) -> None:
         """Charge one top-level run (sub-agent usage is already merged in); raise if over."""
         self.tokens += usage.total_tokens
+        self.tokens_in += usage.input_tokens
+        self.tokens_out += usage.output_tokens
         self.requests += usage.requests
         # pydantic-ai cannot price gateway models; the caller's price table fills in.
         cost = usage.cost if usage.cost is not None else fallback_cost

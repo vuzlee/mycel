@@ -13,6 +13,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
+from mycel.services import models
 from mycel.services.chat import find_own_turn, request_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -59,6 +60,12 @@ class ChatResponse(BaseModel):
     question: str | None = None
     #: The passages a Knowledge answer cites, so the page can open them.
     sources: list[dict[str, Any]] = []
+    model_ref: str | None = None
+    model_label: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    duration_ms: int | None = None
+    created_at: datetime | None = None
 
 
 @router.post(
@@ -110,6 +117,10 @@ async def get_chat(
             "answer": result.answer,
             "spent_usd": result.spent_usd,
             "error": result.error,
+            "model_ref": result.model_ref or kept.model_ref,
+            "tokens_in": result.tokens_in,
+            "tokens_out": result.tokens_out,
+            "duration_ms": result.duration_ms,
         }
     else:
         state = {
@@ -117,6 +128,10 @@ async def get_chat(
             "answer": kept.answer,
             "spent_usd": str(kept.spent_usd) if kept.spent_usd is not None else None,
             "error": kept.error,
+            "model_ref": kept.model_ref,
+            "tokens_in": kept.tokens_in,
+            "tokens_out": kept.tokens_out,
+            "duration_ms": kept.duration_ms,
         }
 
     cited = await citations.fetch(job_id)
@@ -126,5 +141,7 @@ async def get_chat(
         conversation_id=kept.conversation_id,
         question=kept.question,
         sources=sources,
+        model_label=models.label_of(state["model_ref"]),
+        created_at=kept.created_at,
         **state,
     )

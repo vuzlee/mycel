@@ -101,3 +101,10 @@ def test_gateway_name_only_for_listed_host_models() -> None:
     assert models.gateway_name("host:claude-sonnet-5", settings) == "claude-sonnet-5"
     assert models.gateway_name("host:not-listed", settings) is None
     assert models.gateway_name("own:3", settings) is None
+
+
+def test_label_of() -> None:
+    settings = Settings()
+    assert models.label_of("host:claude-sonnet-5", settings) == "Claude Sonnet 5"
+    assert models.label_of("host:gone", settings) == "host:gone"
+    assert models.label_of(None, settings) is None

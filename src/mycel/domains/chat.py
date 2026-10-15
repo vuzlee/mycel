@@ -1,6 +1,7 @@
 """The chat domain: ask something, and let a worker answer it."""
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
@@ -32,6 +33,7 @@ from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import answers, budgets, citations, claims, results
 from mycel.infra.redis.streams import RedisEventChannel
+from mycel.llm.usage import TurnUsage
 from mycel.observability.metrics import jobs_total
 from mycel.observability.turns import chat_turn, observe
 from mycel.queue.job import Job
@@ -60,6 +62,17 @@ class _Turn:
     notice: str | None = None
     #: The answer as stored, citations resolved: what the trace shows as the turn's output.
     answer: str = ""
+    #: When this attempt started, for the run time under the answer.
+    started: float = field(default_factory=time.monotonic)
+
+    def usage(self) -> TurnUsage:
+        budget = self.deps.budget
+        return TurnUsage(
+            model_ref=self.model_ref,
+            tokens_in=budget.tokens_in,
+            tokens_out=budget.tokens_out,
+            duration_ms=round((time.monotonic() - self.started) * 1000),
+        )
 
 
 async def run(job: Job) -> None:
@@ -138,7 +151,7 @@ async def _ground(turn: _Turn) -> bool:
     text, sources = settled
     await citations.store(turn.job.job_id, turn.principal.id, sources)
     turn.answer = text
-    await _finish(turn.job, text, turn.question, Decimal("0"), [], sources, turn.model_ref)
+    await _finish(turn.job, text, turn.question, Decimal("0"), [], sources, turn.usage())
     await budgets.save(turn.deps.budget)
     return True
 
@@ -179,7 +192,7 @@ async def _settle(turn: _Turn, answer: str) -> None:
     spent = turn.deps.budget.spent_usd
     await citations.store(job.job_id, turn.principal.id, sources)
     turn.answer = answer
-    await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources, turn.model_ref)
+    await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources, turn.usage())
     log.info(
         "job finished",
         extra={"job_id": job.job_id, "chars": len(answer), "spent_usd": str(spent)},
@@ -231,10 +244,10 @@ async def _finish(
     spent: Decimal,
     steps: list[dict[str, Any]],
     sources: list[dict[str, Any]] | None = None,
-    model_ref: str | None = None,
+    usage: TurnUsage | None = None,
 ) -> None:
     """Write a finished run to both stores: Redis to be polled, Postgres to be kept."""
-    await results.store(job.job_id, answer, str(spent))
+    await results.store(job.job_id, answer, str(spent), usage)
     await _record(
         job,
         status="done",
@@ -242,7 +255,7 @@ async def _finish(
         answer=knowledge.with_sources(answer, sources or []),
         spent_usd=spent,
         steps=steps or None,
-        model_ref=model_ref,
+        usage=usage,
     )
 
 
@@ -254,7 +267,7 @@ async def _record(
     error: str | None = None,
     spent_usd: Decimal | None = None,
     steps: list[dict[str, Any]] | None = None,
-    model_ref: str | None = None,
+    usage: TurnUsage | None = None,
 ) -> None:
     """Update the durable row this job already has, if it still has one."""
     # Counted here: both the done and the failed paths go through this function.
@@ -275,7 +288,7 @@ async def _record(
                 error=error,
                 spent_usd=spent_usd,
                 steps=steps,
-                model_ref=model_ref,
+                usage=usage,
             )
     except IntegrityError:
         log.warning(

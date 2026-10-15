@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from mycel.api.dependencies import CurrentUser
 from mycel.services import conversations as domain
+from mycel.services import models
 from mycel.services.conversations import HISTORY_LIMIT
 
 router = APIRouter(tags=["conversations"])
@@ -36,6 +37,11 @@ class TurnResponse(BaseModel):
     error: str | None = None
     steps: list[dict[str, Any]] | None = None
     created_at: datetime
+    model_ref: str | None = None
+    model_label: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    duration_ms: int | None = None
 
 
 @router.get("/conversations", response_model=list[ConversationResponse])
@@ -72,6 +78,11 @@ async def list_turns(conversation_id: int, user: CurrentUser) -> list[TurnRespon
             error=turn.error,
             steps=turn.steps,
             created_at=turn.created_at,
+            model_ref=turn.model_ref,
+            model_label=models.label_of(turn.model_ref),
+            tokens_in=turn.tokens_in,
+            tokens_out=turn.tokens_out,
+            duration_ms=turn.duration_ms,
         )
         for turn in await domain.conversation_turns(user.id, conversation_id)
     ]

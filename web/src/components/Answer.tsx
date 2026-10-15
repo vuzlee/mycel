@@ -1,6 +1,7 @@
-/** The kept answer, for a turn whose stream is over. */
+/** The kept answer, for a turn whose stream is over, and the line under it. */
 
 import type { ChatResult, SourceRef } from "../api";
+import { AnswerMeta } from "./AnswerMeta";
 import { Markdown } from "./Markdown";
 
 interface Props {
@@ -12,7 +13,9 @@ interface Props {
 }
 
 export function Answer({ result, streamed, onSource }: Props) {
-  if (!result.answer || streamed) return null;
+  if (!result.answer) return null;
+  // The stream already wrote the text; only the line under it is still to come.
+  if (streamed) return <AnswerMeta answer={result.answer} usage={result} />;
 
   return (
     <section className="answer">
@@ -40,6 +43,7 @@ export function Answer({ result, streamed, onSource }: Props) {
           ))}
         </ol>
       )}
+      <AnswerMeta answer={result.answer} usage={result} />
     </section>
   );
 }

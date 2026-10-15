@@ -26,14 +26,11 @@ export function PastTurns({ turns }: Props) {
           {turn.status === "done" && turn.answer ? (
             <Answer
               result={{
-                job_id: turn.job_id,
+                ...turn,
                 status: "done",
-                answer: turn.answer,
-                spent_usd: turn.spent_usd,
                 sources: [],
                 error: null,
                 conversation_id: null,
-                question: turn.question,
               }}
             />
           ) : (

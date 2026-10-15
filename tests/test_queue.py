@@ -110,7 +110,7 @@ def store(monkeypatch: pytest.MonkeyPatch, spent: dict[str, Decimal]) -> dict[st
     async def mark_running(job_id: str) -> None:
         written[job_id] = {"status": "running"}
 
-    async def store_result(job_id: str, answer: Any, spent_usd: str) -> None:
+    async def store_result(job_id: str, answer: Any, spent_usd: str, usage: Any = None) -> None:
         written[job_id] = {"status": "done", "spent_usd": spent_usd}
 
     async def store_failure(job_id: str, error: str) -> None:

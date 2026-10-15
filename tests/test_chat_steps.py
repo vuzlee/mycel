@@ -22,7 +22,7 @@ async def _drop(event: Any) -> None:
 
 @pytest.fixture
 def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    seen: dict[str, Any] = {"model": 0, "finished": [], "cached": []}
+    seen: dict[str, Any] = {"model": 0, "finished": [], "cached": [], "usage": []}
 
     async def nothing(*_: Any, **__: Any) -> None: ...
 
@@ -32,7 +32,8 @@ def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         return Principal(id=7, email="a@example.com")
 
     async def deps(*_: Any) -> Any:
-        return SimpleNamespace(budget=SimpleNamespace(spent_usd=Decimal("0")))
+        budget = SimpleNamespace(spent_usd=Decimal("0"), tokens_in=700, tokens_out=200)
+        return SimpleNamespace(budget=budget)
 
     async def query(*_: Any) -> str:
         return "q"
@@ -41,8 +42,9 @@ def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         seen["model"] += 1
         return "from the model [1]"
 
-    async def finish(job: Job, answer: str, *_: Any) -> None:
+    async def finish(job: Job, answer: str, *rest: Any) -> None:
         seen["finished"].append(answer)
+        seen["usage"].append(rest[-1])
 
     async def no_cache(*_: Any) -> None:
         return None
@@ -105,3 +107,15 @@ async def test_without_knowledge_nothing_is_retrieved(
     await chat.run(_job(["web"]))
     assert world["model"] == 1
     assert world["cached"] == []
+
+
+async def test_an_answer_records_what_it_used(world: dict[str, Any]) -> None:
+    """Model, tokens and run time reach the turn with the answer."""
+    await chat.run(_job(["web"]))
+    usage = world["usage"][0]
+    assert (usage.model_ref, usage.tokens_in, usage.tokens_out) == (
+        "host:claude-sonnet-5",
+        700,
+        200,
+    )
+    assert usage.duration_ms >= 0

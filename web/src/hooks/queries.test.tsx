@@ -22,6 +22,15 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const ok = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 });
 
+/** What every chat result and turn carries for the line under the answer; null when not kept. */
+const NO_USAGE = {
+  model_label: null,
+  tokens_in: null,
+  tokens_out: null,
+  duration_ms: null,
+  spent_usd: null,
+};
+
 beforeEach(() => {
   vi.stubGlobal("EventSource", SilentEventSource);
 });
@@ -34,13 +43,28 @@ describe("useRun", () => {
   it("polls until the run settles, then stops", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const answers = [
-      { job_id: "j", status: "running", answer: null, conversation_id: 1, question: "q" },
-      { job_id: "j", status: "running", answer: null, conversation_id: 1, question: "q" },
-      { job_id: "j", status: "done", answer: "42", conversation_id: 1, question: "q" },
+      {
+        ...NO_USAGE,
+        job_id: "j",
+        status: "running",
+        answer: null,
+        conversation_id: 1,
+        question: "q",
+      },
+      {
+        ...NO_USAGE,
+        job_id: "j",
+        status: "running",
+        answer: null,
+        conversation_id: 1,
+        question: "q",
+      },
+      { ...NO_USAGE, job_id: "j", status: "done", answer: "42", conversation_id: 1, question: "q" },
     ];
     const fetchMock = vi.fn(async () =>
       ok(
         answers.shift() ?? {
+          ...NO_USAGE,
           job_id: "j",
           status: "done",
           answer: "42",
@@ -107,8 +131,8 @@ describe("usePastTurns", () => {
       "fetch",
       vi.fn(async () =>
         ok([
-          { job_id: "old", question: "a", status: "done", answer: "x" },
-          { job_id: "now", question: "b", status: "queued", answer: null },
+          { ...NO_USAGE, job_id: "old", question: "a", status: "done", answer: "x" },
+          { ...NO_USAGE, job_id: "now", question: "b", status: "queued", answer: null },
         ]),
       ),
     );
@@ -119,10 +143,10 @@ describe("usePastTurns", () => {
 
   it("refetches when a new run starts, so the last one shows its answer", async () => {
     const lists = [
-      [{ job_id: "q1", question: "a", status: "queued", answer: null }],
+      [{ ...NO_USAGE, job_id: "q1", question: "a", status: "queued", answer: null }],
       [
-        { job_id: "q1", question: "a", status: "done", answer: "42" },
-        { job_id: "q2", question: "b", status: "queued", answer: null },
+        { ...NO_USAGE, job_id: "q1", question: "a", status: "done", answer: "42" },
+        { ...NO_USAGE, job_id: "q2", question: "b", status: "queued", answer: null },
       ],
     ];
     vi.stubGlobal(
@@ -138,7 +162,7 @@ describe("usePastTurns", () => {
     rerender({ job: "q2" });
     await waitFor(() => expect(result.current.pastFor).toBe("q2"));
     expect(result.current.past).toEqual([
-      { job_id: "q1", question: "a", status: "done", answer: "42" },
+      { ...NO_USAGE, job_id: "q1", question: "a", status: "done", answer: "42" },
     ]);
   });
 });

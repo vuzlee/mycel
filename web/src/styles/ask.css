@@ -518,3 +518,32 @@ details[open] > summary .chevron {
 .scrim {
   display: none;
 }
+
+.answer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 10px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.answer-meta span,
+.answer-meta time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.answer-meta .icon-button {
+  width: 26px;
+  height: 26px;
+  margin-left: -6px;
+  color: var(--faint);
+}
+
+.answer-meta .icon-button:hover {
+  color: var(--ink);
+}

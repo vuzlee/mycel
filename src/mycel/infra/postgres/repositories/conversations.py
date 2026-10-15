@@ -12,6 +12,7 @@ from mycel.infra.postgres.models import (
     Turn,
 )
 from mycel.infra.postgres.repositories._sql import rowcount, to_row
+from mycel.llm.usage import TurnUsage
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,10 @@ class TurnRow:
     #: Tool calls as streamed; `None` when none were recorded or the turn failed.
     steps: list[Any] | None
     created_at: datetime
+    model_ref: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    duration_ms: int | None = None
 
 
 class ConversationRepository:
@@ -136,7 +141,7 @@ class ConversationRepository:
         error: str | None = None,
         spent_usd: Decimal | None = None,
         steps: list[Any] | None = None,
-        model_ref: str | None = None,
+        usage: TurnUsage | None = None,
     ) -> None:
         """Write a turn's state, replacing what that job id last wrote."""
         stmt = insert(Turn).values(
@@ -148,7 +153,10 @@ class ConversationRepository:
             error=error,
             spent_usd=spent_usd,
             steps=steps,
-            model_ref=model_ref,
+            model_ref=usage.model_ref if usage else None,
+            tokens_in=usage.tokens_in if usage else None,
+            tokens_out=usage.tokens_out if usage else None,
+            duration_ms=usage.duration_ms if usage else None,
         )
         await self._session.execute(
             stmt.on_conflict_do_update(
@@ -162,6 +170,9 @@ class ConversationRepository:
                     "steps": func.coalesce(stmt.excluded.steps, Turn.steps),
                     # The model that answered, which may not be the one asked for.
                     "model_ref": func.coalesce(stmt.excluded.model_ref, Turn.model_ref),
+                    "tokens_in": stmt.excluded.tokens_in,
+                    "tokens_out": stmt.excluded.tokens_out,
+                    "duration_ms": stmt.excluded.duration_ms,
                     "updated_at": func.now(),
                 },
             )

@@ -11,7 +11,8 @@ from mycel.llm.budget import JobBudget
 _MERGE = """
 local cur = tonumber(redis.call('HGET', KEYS[1], 'spent_usd')) or -1
 if tonumber(ARGV[1]) > cur then
-  redis.call('HSET', KEYS[1], 'spent_usd', ARGV[1], 'tokens', ARGV[2], 'requests', ARGV[3])
+  redis.call('HSET', KEYS[1], 'spent_usd', ARGV[1], 'tokens', ARGV[2], 'requests', ARGV[3],
+    'tokens_in', ARGV[5], 'tokens_out', ARGV[6])
 end
 redis.call('EXPIRE', KEYS[1], ARGV[4])
 """
@@ -32,6 +33,8 @@ async def load(job_id: str, ceiling_usd: Decimal | str) -> JobBudget:
         spent_usd=Decimal(raw.get("spent_usd", "0")),
         tokens=int(raw.get("tokens", "0")),
         requests=int(raw.get("requests", "0")),
+        tokens_in=int(raw.get("tokens_in", "0")),
+        tokens_out=int(raw.get("tokens_out", "0")),
     )
 
 
@@ -46,4 +49,6 @@ async def save(budget: JobBudget) -> None:
         str(budget.tokens),
         str(budget.requests),
         str(get_settings().result_ttl_seconds),
+        str(budget.tokens_in),
+        str(budget.tokens_out),
     )

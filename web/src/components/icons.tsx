@@ -259,3 +259,47 @@ export function Chip({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+export function Copy({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.6" />
+      <path d="M10.5 5.5V3.6A1.6 1.6 0 0 0 8.9 2H3.6A1.6 1.6 0 0 0 2 3.6v5.3a1.6 1.6 0 0 0 1.6 1.6h1.9" />
+    </svg>
+  );
+}
+
+export function Check({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="m3 8.4 3.2 3.1L13 4.6" />
+    </svg>
+  );
+}
+
+export function Tokens({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <ellipse cx="8" cy="4.2" rx="5" ry="2" />
+      <path d="M3 4.2v3.8c0 1.1 2.2 2 5 2s5-.9 5-2V4.2M3 8v3.8c0 1.1 2.2 2 5 2s5-.9 5-2V8" />
+    </svg>
+  );
+}
+
+export function Clock({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 4.8V8l2.2 1.4" />
+    </svg>
+  );
+}
+
+export function Coin({ size = 13 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M9.8 5.9c-.3-.6-1-1-1.8-1-1 0-1.8.6-1.8 1.4 0 1.9 3.6 1 3.6 2.9 0 .8-.8 1.4-1.8 1.4-.8 0-1.5-.4-1.8-1M8 3.8v1.1m0 6.2v1.1" />
+    </svg>
+  );
+}

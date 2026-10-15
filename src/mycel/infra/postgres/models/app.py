@@ -193,6 +193,11 @@ class Turn(Base):
     steps: Mapped[list[Any] | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     #: The model asked for, as a `model_ref`; NULL on turns from before models could be picked.
     model_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    #: What the turn used; NULL on turns from before they were counted.
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: From the worker starting the job to the answer, queue wait excluded.
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

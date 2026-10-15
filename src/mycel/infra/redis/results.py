@@ -1,5 +1,6 @@
 """A finished job's answer, held with a TTL until polled; Postgres holds the record."""
 
+from dataclasses import asdict
 from typing import Literal
 
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
+from mycel.llm.usage import TurnUsage
 
 log = get_logger(__name__)
 
@@ -20,6 +22,10 @@ class JobResult(BaseModel):
     answer: str | None = None
     spent_usd: str | None = None
     error: str | None = None
+    model_ref: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    duration_ms: int | None = None
 
 
 def _key(job_id: str) -> str:
@@ -31,8 +37,11 @@ async def mark_running(job_id: str) -> None:
     await _write(JobResult(job_id=job_id, status="running"))
 
 
-async def store(job_id: str, answer: str, spent_usd: str) -> None:
-    await _write(JobResult(job_id=job_id, status="done", answer=answer, spent_usd=spent_usd))
+async def store(job_id: str, answer: str, spent_usd: str, usage: TurnUsage | None = None) -> None:
+    used = asdict(usage) if usage is not None else {}
+    await _write(
+        JobResult(job_id=job_id, status="done", answer=answer, spent_usd=spent_usd, **used)
+    )
 
 
 async def store_failure(job_id: str, error: str) -> None:

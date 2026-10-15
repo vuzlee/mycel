@@ -18,6 +18,15 @@ def _usage(cost: str | None = "0.10", tokens: int = 100) -> RunUsage:
     )
 
 
+class TestTokensByDirection:
+    def test_in_and_out_are_kept_apart(self) -> None:
+        """The line under an answer shows both; the total stays what limits read."""
+        b = JobBudget("j")
+        b.record(RunUsage(input_tokens=700, output_tokens=200, requests=1))
+        b.record(RunUsage(input_tokens=100, output_tokens=50, requests=1))
+        assert (b.tokens_in, b.tokens_out, b.tokens) == (800, 250, 1050)
+
+
 class TestRemaining:
     def test_starts_at_the_ceiling(self) -> None:
         assert JobBudget("j", Decimal("1.00")).remaining_usd() == Decimal("1.00")

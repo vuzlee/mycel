@@ -43,6 +43,15 @@ def host_ref(name: str) -> str:
     return f"{HOST}:{name}"
 
 
+def label_of(ref: str | None, settings: Settings | None = None) -> str | None:
+    """What the line under an answer calls a model; the ref itself when it is gone from config."""
+    if ref is None:
+        return None
+    _, _, name = ref.partition(":")
+    found = {m.name: m.label for m in (settings or get_settings()).host_models}
+    return found.get(name, ref) if ref.startswith(f"{HOST}:") else ref
+
+
 def gateway_name(ref: str, settings: Settings | None = None) -> str | None:
     """The gateway `model_name` a host ref points at, or None if it is not a host model."""
     source, _, name = ref.partition(":")

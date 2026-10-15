@@ -260,6 +260,39 @@ class TestCollectingAnAnswer:
         assert isinstance(body["spent_usd"], str)
         Decimal(body["spent_usd"])
 
+    def test_a_finished_answer_carries_what_it_used(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Model, tokens and run time, for the line under the answer."""
+        _stored(
+            monkeypatch,
+            JobResult(
+                job_id="job-abc",
+                status="done",
+                answer=KEPT_ANSWER,
+                spent_usd="0.01",
+                model_ref="host:claude-sonnet-5",
+                tokens_in=7100,
+                tokens_out=1800,
+                duration_ms=3420,
+            ),
+            kept=_kept("job-abc"),
+        )
+        body = client.get("/chat/job-abc").json()
+
+        assert body["model_label"] == "Claude Sonnet 5"
+        assert (body["tokens_in"], body["tokens_out"], body["duration_ms"]) == (7100, 1800, 3420)
+        assert body["created_at"] is not None
+
+    def test_a_kept_turn_without_usage_leaves_it_empty(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Turns from before usage was counted show nothing, not zero."""
+        _stored(monkeypatch, None, kept=_kept("job-old"))
+        body = client.get("/chat/job-old").json()
+
+        assert body["tokens_in"] is None and body["model_label"] is None
+
     def test_a_running_job_says_so_rather_than_404ing(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:

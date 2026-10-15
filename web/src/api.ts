@@ -12,12 +12,22 @@ export interface Accepted {
 /** `conversation_id` and `question` belong to this run, not to its conversation: a conversation's
  *  title is the question that opened it, which is the wrong caption for every later
  *  turn, and its latest job id is the wrong conversation for a link naming an earlier one. */
-export interface ChatResult {
+/** What a turn used, for the line under its answer. Null on turns from before it was kept. */
+export interface TurnUsage {
+  model_ref: string | null;
+  model_label: string | null;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  duration_ms: number | null;
+  spent_usd: string | null;
+  created_at: string | null;
+}
+
+export interface ChatResult extends TurnUsage {
   job_id: string;
   status: "running" | "done" | "failed";
   /** Markdown the orchestrator wrote. Null while it is still running. */
   answer: string | null;
-  spent_usd: string | null;
   error: string | null;
   conversation_id: number | null;
   question: string | null;
@@ -46,12 +56,11 @@ export interface ConversationSummary {
 
 /** One run inside a conversation, as the page replays it. `answer` is the same markdown
  *  `ChatResult.answer` carries, because it is the same stored text. */
-export interface Turn {
+export interface Turn extends TurnUsage {
   job_id: string;
   question: string;
   status: string;
   answer: string | null;
-  spent_usd: string | null;
   error: string | null;
   /** The tool calls that turn made, in the same shape the stream sends — so a finished
    *  turn replays through `buildConversation`, not through a second builder. Null for a turn
@@ -242,7 +251,15 @@ export function shaped<T>(value: unknown, shape: Shape, what: string): T {
 const STATUS = ["running", "done", "failed"] as const;
 const USER: Shape = { id: "number", email: "string" };
 const ACCEPTED: Shape = { job_id: "string", conversation_id: "number" };
+const USAGE: Shape = {
+  model_label: "string?",
+  tokens_in: "number?",
+  tokens_out: "number?",
+  duration_ms: "number?",
+  spent_usd: "string?",
+};
 const CHAT_RESULT: Shape = {
+  ...USAGE,
   job_id: "string",
   status: STATUS,
   answer: "string?",
@@ -250,7 +267,13 @@ const CHAT_RESULT: Shape = {
   question: "string?",
 };
 const CONVERSATION: Shape = { id: "number", title: "string", pinned: "boolean" };
-const TURN: Shape = { job_id: "string", question: "string", status: "string", answer: "string?" };
+const TURN: Shape = {
+  ...USAGE,
+  job_id: "string",
+  question: "string",
+  status: "string",
+  answer: "string?",
+};
 
 const get = <T>(path: string): Promise<T> => request<T>("GET", path);
 const post = <T>(path: string, body?: unknown): Promise<T> => request<T>("POST", path, body);
