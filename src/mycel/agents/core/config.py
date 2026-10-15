@@ -33,7 +33,8 @@ class AgentSettings:
     tool_retries: int = 3
 
     # HTTP-level retries in the provider SDK (not a replay of the agent loop); 0 disables.
-    transient_retries: int = 2
+    # 0 behind the gateway, which already retries (`num_retries` in config/litellm/config.yaml).
+    transient_retries: int = 0
 
     # Passed to pydantic-ai as `UsageLimits`.
     request_limit: int = 12
@@ -46,12 +47,9 @@ class AgentSettings:
     # Servers from `config/mcp/servers.yaml` this agent may call.
     mcp_servers: tuple[str, ...] = ()
 
-    # Models tried in order when `model_spec` is unavailable (see `model_builder.py`).
-    fallback_specs: tuple[str, ...] = ()
-
     def __post_init__(self) -> None:
         """Freeze list-valued fields (YAML lists) into tuples."""
-        for name in ("mcp_servers", "fallback_specs"):
+        for name in ("mcp_servers",):
             value = getattr(self, name)
             if isinstance(value, tuple):
                 continue

@@ -1,14 +1,9 @@
 # Copy to models.yaml (gitignored) and keep the providers you have.
 model_list:
-  # Anthropic directly.
+  # Anthropic directly. Several entries under one name, one key each, spread load and
+  # cool down a key that is out of quota.
   - model_name: claude-sonnet-5
     litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/CLAUDE_API_KEY_1}
-
-  # Google Gemini. Several keys under one name spread load and cool down a key out of quota.
-  - model_name: gemini-3.6-flash
-    litellm_params: {model: gemini/gemini-3.6-flash, api_key: os.environ/GEMINI_API_KEY_1}
-  - model_name: gemini-3.5-flash-lite
-    litellm_params: {model: gemini/gemini-3.5-flash-lite, api_key: os.environ/GEMINI_API_KEY_1}
 
   # Any OpenAI-compatible endpoint: a proxy, vLLM, Ollama, a hosted gateway.
   # - model_name: my-model

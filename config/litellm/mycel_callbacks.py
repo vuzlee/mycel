@@ -1,9 +1,9 @@
 """Bench a key that spent its daily quota until the quota resets, not for one minute.
 
-LiteLLM cools a deployment down for `cooldown_time` whatever the 429 said. Gemini's
-per-day quota answers 429 with a short `retryDelay` too, so a spent key would be retried
-every minute until midnight. The body names the window in `quotaId`
-(`...PerDay...` vs `...PerMinute...`); this reads it and extends the cooldown.
+LiteLLM cools a deployment down for `cooldown_time` whatever the 429 said. A provider whose
+per-day quota answers 429 with a short retry delay would see a spent key retried every
+minute until the reset. Google names the window in `quotaId` (`...PerDay...` vs
+`...PerMinute...`); this reads it and extends the cooldown. Other providers' 429s pass by.
 
 Loaded by the gateway through `litellm_settings.callbacks` in config.yaml.
 """
@@ -17,7 +17,7 @@ try:
 except ImportError:  # imported by the repo's tests, where litellm is not installed
     CustomLogger = object  # type: ignore[misc,assignment]
 
-#: Gemini names the quota window in `quotaId`: `GenerateRequestsPerDayPerProjectPerModel`.
+#: Google names the quota window in `quotaId`: `GenerateRequestsPerDayPerProjectPerModel`.
 DAILY_MARKERS = ("perday", "requestsperday", "per_day")
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
@@ -29,7 +29,7 @@ def is_daily_quota(error: str) -> bool:
 
 
 def seconds_until_reset(now: datetime | None = None) -> float:
-    """Gemini's daily quota resets at midnight Pacific time."""
+    """Google's daily quota resets at midnight Pacific time."""
     moment = (now or datetime.now(UTC)).astimezone(PACIFIC)
     midnight = (moment + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     return max(60.0, (midnight - moment).total_seconds())

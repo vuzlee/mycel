@@ -57,10 +57,8 @@ async def answer_without_model(
 
 
 def cache_writer(settings: AgentSettings) -> str:
-    """What a cached Knowledge answer depends on besides the documents: prompt and models."""
-    return answers.writer(
-        Orchestrator.instructions, (settings.model_spec, *settings.fallback_specs)
-    )
+    """What a cached Knowledge answer depends on besides the documents: prompt and model."""
+    return answers.writer(Orchestrator.instructions, (settings.model_spec,))
 
 
 def cite(job: Job, answer: str, found: knowledge.Retrieved) -> tuple[str, list[dict[str, Any]]]:

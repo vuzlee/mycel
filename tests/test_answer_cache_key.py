@@ -10,9 +10,6 @@ class TestWriter:
     def test_a_model_swap_changes_the_key(self) -> None:
         assert writer("p", ("cloud:a",)) != writer("p", ("cloud:b",))
 
-    def test_a_fallback_change_changes_the_key(self) -> None:
-        assert writer("p", ("m",)) != writer("p", ("m", "fallback"))
-
     def test_the_same_writer_is_stable(self) -> None:
         assert writer("p", ("m",)) == writer("p", ("m",))
 

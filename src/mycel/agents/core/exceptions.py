@@ -54,14 +54,64 @@ class ModelCallFailed(TransportError):
     """The provider rejected the request or was unreachable."""
 
 
-def _all_models_failed(model_spec: str, group: BaseException) -> TransportError:
-    """One error for a failed fallback chain; a timeout only if every model timed out."""
-    causes = list(getattr(group, "exceptions", ()))
-    said = "; ".join(str(cause) for cause in causes) or str(group)
-    detail = f"{model_spec} and its fallbacks all failed: {said}"
-    if causes and all(caused_by_timeout(cause) for cause in causes):
-        return ModelTimeout(detail)
-    return ModelCallFailed(detail)
+class ModelQuota(ModelCallFailed):
+    """429 or 402: out of quota, rate limited after the gateway's retries, or out of credit."""
+
+
+class ModelAuth(ModelCallFailed):
+    """401 or 403: the key was rejected."""
+
+
+class ModelNotFound(ModelCallFailed):
+    """404: the endpoint does not serve this model id."""
+
+
+class ModelUnreachable(ModelCallFailed):
+    """No answer at the network level: connection refused, DNS or TLS failure."""
+
+
+class ModelProviderError(ModelCallFailed):
+    """A 5xx from the provider or the gateway, after the gateway's own retries."""
+
+
+#: HTTP status → (error class, what the user reads).
+_BY_STATUS: dict[int, tuple[type[ModelCallFailed], str]] = {
+    402: (ModelQuota, "out of credit"),
+    429: (ModelQuota, "out of quota or rate limited"),
+    401: (ModelAuth, "API key rejected"),
+    403: (ModelAuth, "API key not allowed to use this model"),
+    404: (ModelNotFound, "model not found at this endpoint"),
+}
+
+
+def _by_kind(model_spec: str, exc: BaseException) -> ModelCallFailed:
+    """The `ModelCallFailed` subclass that says what went wrong, by status or cause."""
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    if isinstance(exc, ModelHTTPError):
+        status = exc.status_code
+        if status in _BY_STATUS:
+            cls, said = _BY_STATUS[status]
+            return cls(f"{model_spec}: {said} (HTTP {status})")
+        if status >= 500:
+            return ModelProviderError(f"{model_spec}: provider error (HTTP {status}): {exc}")
+    if _caused_by_connection(exc):
+        return ModelUnreachable(f"{model_spec}: cannot reach the model endpoint: {exc}")
+    return ModelCallFailed(f"{model_spec}: {exc}")
+
+
+def _caused_by_connection(exc: BaseException) -> bool:
+    """Whether a connect, DNS or TLS failure is anywhere in the cause chain."""
+    import httpx2
+
+    seen: BaseException | None = exc
+    while seen is not None:
+        if isinstance(seen, (httpx2.ConnectError, ConnectionError)):
+            return True
+        if type(seen).__name__ in ("APIConnectionError", "ConnectError"):
+            return True
+        seen = seen.__cause__ or seen.__context__
+    return False
 
 
 def caused_by_timeout(exc: BaseException) -> bool:
@@ -82,7 +132,6 @@ def caused_by_timeout(exc: BaseException) -> bool:
 def translate_agent_errors(model_spec: str) -> Iterator[None]:
     """Turn pydantic-ai's exceptions into Mycel's, naming which backend was at fault."""
     from pydantic_ai.exceptions import (
-        FallbackExceptionGroup,
         ModelAPIError,
         UnexpectedModelBehavior,
         UsageLimitExceeded,
@@ -90,9 +139,6 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
 
     try:
         yield
-    except FallbackExceptionGroup as exc:
-        # Not a `ModelAPIError`, so it would otherwise skip the transport clause below.
-        raise _all_models_failed(model_spec, exc) from exc
     except UsageLimitExceeded as exc:
         raise RunawayStopped(f"{model_spec}: {exc}") from exc
     except UnexpectedModelBehavior as exc:
@@ -100,4 +146,4 @@ def translate_agent_errors(model_spec: str) -> Iterator[None]:
     except ModelAPIError as exc:
         if caused_by_timeout(exc):
             raise ModelTimeout(f"{model_spec} did not respond in time: {exc}") from exc
-        raise ModelCallFailed(f"{model_spec}: {exc}") from exc
+        raise _by_kind(model_spec, exc) from exc

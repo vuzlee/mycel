@@ -163,7 +163,7 @@ environments, agents, sources — is YAML under `config/`.
 | | |
 |---|---|
 | `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` · `S3_*` | the stores |
-| `GEMINI_API_KEYS` · `CLAUDE_API_KEYS` | model keys, comma-separated; which models exist is `config/litellm/models.yaml` |
+| `CLAUDE_API_KEYS` | model keys, comma-separated; which models exist is `config/litellm/models.yaml` |
 | `LITELLM_API_KEY` | the app's key to the gateway |
 | `JIRA_SERVICE_TOKEN` · `JIRA_CLOUD_ID` | the sync's own read-only identity |
 | `JIRA_CLIENT_ID` · `JIRA_CLIENT_SECRET` | "Connect Jira", read and written as whoever is asking |

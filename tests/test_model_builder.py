@@ -1,19 +1,11 @@
 """One client for every model: OpenAI Chat Completions to the LiteLLM gateway."""
 
 import pytest
-from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, ModelHTTPError
-from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from mycel.agents.core import model_builder
 from mycel.agents.core.config import AgentSettings
-from mycel.agents.core.exceptions import (
-    ModelCallFailed,
-    ModelTimeout,
-    TransportError,
-    translate_agent_errors,
-)
-from mycel.agents.core.model_builder import _is_unavailable, build_model
+from mycel.agents.core.model_builder import build_model
 from mycel.core.config import Settings
 from mycel.core.exceptions import ConfigError
 
@@ -110,83 +102,15 @@ class TestModelSettings:
         assert model.client.max_retries == 4
 
 
-class TestFallbackChain:
-    def test_no_fallbacks_is_one_plain_model(self) -> None:
+class TestOneModel:
+    def test_it_is_one_plain_model(self) -> None:
+        """No fallback chain: a failure names this model and why."""
         assert isinstance(
             build_model("cloud:claude-sonnet-5", settings=_settings()), OpenAIChatModel
         )
 
-    def test_the_chain_is_built_in_the_order_it_was_written(self) -> None:
-        model = build_model(
-            "cloud:claude-sonnet-5",
-            AgentSettings(fallback_specs=("cloud:gemini-3.5-flash-lite", "cloud:gemini-3.6-flash")),
-            settings=_settings(),
-        )
-        assert isinstance(model, FallbackModel)
-        assert [inner.model_name for inner in model.models] == [
-            "claude-sonnet-5",
-            "gemini-3.5-flash-lite",
-            "gemini-3.6-flash",
-        ]
-
-    @pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
-    def test_unavailable_moves_to_the_next_model(self, status: int) -> None:
-        """429 included: the gateway has already tried every key it holds for this model."""
-        assert _is_unavailable(ModelHTTPError(model_name="m", status_code=status, body=None))
-
-    @pytest.mark.parametrize("status", [400, 401, 403, 404, 422])
-    def test_our_own_bad_request_does_not(self, status: int) -> None:
-        assert not _is_unavailable(ModelHTTPError(model_name="m", status_code=status, body=None))
-
-    def test_a_timeout_moves_to_the_next_model(self) -> None:
-        assert _is_unavailable(ModelAPIError("m", "timed out")) is False
-        timed_out = ModelAPIError("m", "timed out")
-        timed_out.__cause__ = TimeoutError()
-        assert _is_unavailable(timed_out)
-
-
-class TestWhenTheWholeChainFails:
-    """`FallbackModel` raises a `FallbackExceptionGroup`, which is not a `ModelAPIError`."""
-
-    def test_it_becomes_a_transport_error_so_the_job_is_retried(self) -> None:
-        group = FallbackExceptionGroup(
-            "All models from FallbackModel failed",
-            [ModelHTTPError(model_name="a", status_code=503, body=None)],
-        )
-        with pytest.raises(TransportError) as raised:
-            with translate_agent_errors("cloud:gemini-3.5-flash-lite"):
-                raise group
-        assert "cloud:gemini-3.5-flash-lite" in str(raised.value)
-
-    def test_it_says_what_each_model_answered(self) -> None:
-        """One sentence per model."""
-        group = FallbackExceptionGroup(
-            "All models from FallbackModel failed",
-            [
-                ModelHTTPError(model_name="a", status_code=503, body="overloaded"),
-                ModelHTTPError(model_name="b", status_code=504, body="gateway"),
-            ],
-        )
-        with pytest.raises(TransportError) as raised:
-            with translate_agent_errors("spec"):
-                raise group
-        assert "503" in str(raised.value)
-        assert "504" in str(raised.value)
-
-    def test_all_of_them_timing_out_is_a_timeout(self) -> None:
-        timed_out = ModelAPIError("a", "no answer")
-        timed_out.__cause__ = TimeoutError()
-        with pytest.raises(ModelTimeout):
-            with translate_agent_errors("spec"):
-                raise FallbackExceptionGroup("failed", [timed_out])
-
-    def test_one_of_them_answering_503_is_not_a_timeout(self) -> None:
-        """ "did not respond in time" is the wrong sentence when a model answered."""
-        timed_out = ModelAPIError("a", "no answer")
-        timed_out.__cause__ = TimeoutError()
-        with pytest.raises(ModelCallFailed):
-            with translate_agent_errors("spec"):
-                raise FallbackExceptionGroup(
-                    "failed",
-                    [timed_out, ModelHTTPError(model_name="b", status_code=503, body=None)],
-                )
+    def test_the_gateway_path_does_not_retry_by_default(self) -> None:
+        """The gateway retries; a second layer would multiply the calls."""
+        model = build_model("cloud:claude-sonnet-5", settings=_settings())
+        assert isinstance(model, OpenAIChatModel)
+        assert model.client.max_retries == 0

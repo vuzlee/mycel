@@ -10,8 +10,13 @@ from pydantic_ai.exceptions import (
 )
 
 from mycel.agents.core.exceptions import (
+    ModelAuth,
     ModelCallFailed,
+    ModelNotFound,
+    ModelProviderError,
+    ModelQuota,
     ModelTimeout,
+    ModelUnreachable,
     OutputValidationFailed,
     RunawayStopped,
     translate_agent_errors,
@@ -48,6 +53,39 @@ class TestTranslation:
         with pytest.raises(ModelCallFailed) as exc:
             _raise(ModelAPIError(model_name="qwen", message="refused"))
         assert SPEC in str(exc.value)
+
+
+class TestErrorKinds:
+    """Each kind asks the user for a different action, so each is its own class."""
+
+    @pytest.mark.parametrize(
+        ("status", "kind"),
+        [
+            (402, ModelQuota),
+            (429, ModelQuota),
+            (401, ModelAuth),
+            (403, ModelAuth),
+            (404, ModelNotFound),
+            (500, ModelProviderError),
+            (503, ModelProviderError),
+        ],
+    )
+    def test_a_status_maps_to_its_kind(self, status: int, kind: type[ModelCallFailed]) -> None:
+        with pytest.raises(kind) as exc:
+            _raise(ModelHTTPError(status_code=status, model_name="qwen"))
+        assert SPEC in str(exc.value)
+        assert str(status) in str(exc.value)
+
+    def test_a_refused_connection_is_unreachable(self) -> None:
+        wrapped = ModelAPIError(model_name="qwen", message="connection error")
+        wrapped.__cause__ = httpx2.ConnectError("connection refused")
+        with pytest.raises(ModelUnreachable):
+            _raise(wrapped)
+
+    def test_an_unknown_failure_stays_the_parent(self) -> None:
+        with pytest.raises(ModelCallFailed) as exc:
+            _raise(ModelHTTPError(status_code=400, model_name="qwen"))
+        assert type(exc.value) is ModelCallFailed
 
 
 class TestTimeoutDetection:
