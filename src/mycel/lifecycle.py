@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from mycel.agents.core.model_builder import close_clients as close_models
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger, setup_logging
+from mycel.infra.http import close_clients as close_http
+from mycel.infra.objects.client import close as close_objects
 from mycel.infra.postgres.engine import dispose_engine
 from mycel.infra.redis.client import close_clients
 from mycel.infra.vectors.client import close as close_vectors
@@ -27,6 +29,8 @@ CLOSERS: tuple[tuple[str, Callable[[], Awaitable[None]]], ...] = (
     ("postgres", dispose_engine),
     ("qdrant", close_vectors),
     ("models", close_models),
+    ("http", close_http),
+    ("s3", close_objects),
 )
 
 

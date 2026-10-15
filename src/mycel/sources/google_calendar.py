@@ -9,7 +9,8 @@ import httpx2
 
 from mycel.core.config import get_settings, team_zone
 from mycel.core.logging import get_logger
-from mycel.sources import SourceError, google_client
+from mycel.infra.http import shared
+from mycel.sources import GOOGLE_TIMEOUT_SECONDS, SourceError
 
 API = "https://www.googleapis.com/calendar/v3"
 #: The person's own calendar.
@@ -79,10 +80,16 @@ async def _call(
 ) -> dict[str, Any]:
     """One authorized request; raises `SourceError`."""
     try:
-        async with google_client(token) as client:
-            response = await client.request(method, f"{API}{path}", params=params, json=json)
-            response.raise_for_status()
-            payload = response.json()
+        response = await shared().request(
+            method,
+            f"{API}{path}",
+            params=params,
+            json=json,
+            headers={"authorization": f"Bearer {token}"},
+            timeout=GOOGLE_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        payload = response.json()
     except httpx2.HTTPError as exc:
         raise SourceError(f"the calendar could not be reached: {exc}") from exc
     if not isinstance(payload, dict):

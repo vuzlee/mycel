@@ -49,9 +49,7 @@ async def fetch_jira(
         worklogs = await _worklogs(auth, keys)
 
     stored = await bronze.save_issues(issues)
-    logged = 0
-    for key, entries in zip(keys, worklogs, strict=True):
-        logged += await bronze.save_worklogs(key, entries)
+    logged = await bronze.save_all_worklogs(dict(zip(keys, worklogs, strict=True)))
 
     log.info(
         "fetched into bronze", extra={"issues": stored, "worklogs": logged, "since": str(since)}

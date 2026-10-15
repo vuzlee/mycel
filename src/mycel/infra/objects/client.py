@@ -1,7 +1,8 @@
 """The S3 client and presigned URLs, opened on first use."""
 
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 import aioboto3
@@ -9,6 +10,8 @@ import aioboto3
 from mycel.core.config import Settings, get_settings
 
 _session: aioboto3.Session | None = None
+#: One open client per loop, so every operation reuses its connection pool.
+_clients: dict[asyncio.AbstractEventLoop, tuple[AsyncExitStack, Any]] = {}
 
 
 class ObjectsUnavailable(RuntimeError):
@@ -33,8 +36,23 @@ async def s3() -> AsyncIterator[Any]:
             aws_secret_access_key=settings.s3_secret_key.get_secret_value(),
             region_name="us-east-1",
         )
-    async with _session.client("s3", endpoint_url=settings.s3_endpoint_url) as client:
-        yield client
+    loop = asyncio.get_running_loop()
+    if loop not in _clients:
+        stack = AsyncExitStack()
+        client = await stack.enter_async_context(
+            _session.client("s3", endpoint_url=settings.s3_endpoint_url)
+        )
+        _clients[loop] = (stack, client)
+    yield _clients[loop][1]
+
+
+async def close() -> None:
+    """Close this loop's client and forget those of closed loops."""
+    for loop in [loop for loop in _clients if loop.is_closed()]:
+        del _clients[loop]
+    found = _clients.pop(asyncio.get_running_loop(), None)
+    if found is not None:
+        await found[0].aclose()
 
 
 PRESIGN_SECONDS = 300

@@ -1,6 +1,6 @@
 """Write raw provider payloads, untransformed, so later stages can be replayed."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -26,8 +26,13 @@ class BronzeRepository:
 
     async def save_worklogs(self, key: str, worklogs: Sequence[dict[str, Any]]) -> int:
         """Store one issue's logged entries under Jira's own worklog id."""
+        return await self.save_all_worklogs({key: worklogs})
+
+    async def save_all_worklogs(self, by_key: Mapping[str, Sequence[dict[str, Any]]]) -> int:
+        """Store many issues' worklogs in chunked upserts, not one INSERT per issue."""
         rows = [
             {"worklog_id": str(w["id"]), "issue_key": key, "payload": w}
+            for key, worklogs in by_key.items()
             for w in worklogs
             if w.get("id")
         ]

@@ -11,6 +11,7 @@ from pydantic import SecretStr
 
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
+from mycel.infra.http import shared
 from mycel.infra.redis.client import get_client
 from mycel.services.tokens import TokenUnreadable, key_set, unseal
 
@@ -184,8 +185,7 @@ async def post_token(
     url: str, *, data: dict[str, str] | None = None, json: Any = None
 ) -> tuple[int, dict[str, Any]]:
     """One POST to a token endpoint: the status and the JSON body, or `{}` when it has none."""
-    async with httpx2.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS) as client:
-        response = await client.post(url, data=data, json=json)
+    response = await shared().post(url, data=data, json=json, timeout=HTTP_TIMEOUT_SECONDS)
     payload: dict[str, Any] = {}
     try:
         parsed = response.json()

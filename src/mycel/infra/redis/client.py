@@ -21,7 +21,15 @@ async def _client_for(url: str) -> redis.Redis:
     _forget_dead_loops()
     key = (asyncio.get_running_loop(), url)
     if key not in _clients:
-        _clients[key] = redis.from_url(url, decode_responses=True)
+        settings = get_settings()
+        # Blocking: a full pool waits for a free connection instead of raising at once.
+        pool = redis.BlockingConnectionPool.from_url(
+            url,
+            decode_responses=True,
+            max_connections=settings.redis_max_connections,
+            timeout=settings.redis_pool_timeout_seconds,
+        )
+        _clients[key] = redis.Redis(connection_pool=pool)
     return _clients[key]
 
 
@@ -41,5 +49,5 @@ async def close_clients() -> None:
     loop = asyncio.get_running_loop()
     for key, client in list(_clients.items()):
         if key[0] is loop:
-            await client.aclose()
+            await client.aclose(close_connection_pool=True)
             del _clients[key]

@@ -125,12 +125,18 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     #: Evictable cache (answers, access tokens), on its own `allkeys-lru` server.
     redis_cache_url: str = "redis://localhost:6380/0"
+    #: Connections per client; each open SSE stream holds one while it blocks on a read.
+    redis_max_connections: int = 500
+    #: How long a call waits for a free connection before it fails.
+    redis_pool_timeout_seconds: float = 5.0
     #: Off only for a load test: login, signup, reset and chat are capped per minute.
     rate_limits_enabled: bool = True
     #: How long a finished answer stays readable.
     result_ttl_seconds: int = 3600
     #: Events kept per job stream; a lagging client sees a gap in `seq`.
     event_stream_max_events: int = 1000
+    #: How long a job's event stream lives: only for a reconnect, shorter than the result.
+    event_stream_ttl_seconds: int = 900
 
     #: Empty disables search, and `rag_search` is not offered.
     qdrant_url: str = ""

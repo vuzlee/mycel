@@ -36,9 +36,19 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
   const passage = fetched.data?.passage ?? null;
   const failure = fetched.error?.message ?? null;
 
-  const open = async (): Promise<void> => {
-    const original = url ?? (await fetchSourceUrl(source.document_id));
-    window.open(isPdf ? `${original}#page=${source.page}` : original, "_blank", "noopener");
+  // The tab opens inside the click; an await first would get it blocked as a popup.
+  const open = (): void => {
+    if (url) {
+      window.open(isPdf ? `${url}#page=${source.page}` : url, "_blank", "noopener");
+      return;
+    }
+    const tab = window.open("", "_blank");
+    if (!tab) return;
+    tab.opener = null;
+    void fetchSourceUrl(source.document_id).then(
+      (original) => tab.location.replace(original),
+      () => tab.close(),
+    );
   };
 
   const pages =
@@ -70,7 +80,7 @@ export function SourcePanel({ source, onClose }: { source: SourceRef; onClose: (
         </Suspense>
       )}
       {passage && <Marked text={passage.text} quote={quote} />}
-      <button className="primary" onClick={() => void open()}>
+      <button className="primary" onClick={open}>
         Open the original
       </button>
     </Modal>

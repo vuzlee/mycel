@@ -35,7 +35,7 @@ async def append(job_id: str, event: SequencedEvent) -> None:
         maxlen=settings.event_stream_max_events,
         approximate=True,
     )
-    await client.expire(key, settings.result_ttl_seconds)
+    await client.expire(key, settings.event_stream_ttl_seconds)
 
 
 async def read(
@@ -66,5 +66,5 @@ class RedisEventChannel:
     async def publish(self, event: AgentEvent) -> None:
         client = await get_client()
         seq = await client.incr(_seq_key(self.job_id))
-        await client.expire(_seq_key(self.job_id), get_settings().result_ttl_seconds)
+        await client.expire(_seq_key(self.job_id), get_settings().event_stream_ttl_seconds)
         await append(self.job_id, SequencedEvent(seq=seq, **event.model_dump()))

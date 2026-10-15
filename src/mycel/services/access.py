@@ -1,5 +1,7 @@
 """Who may read which project, asked of Jira on each person's own token."""
 
+import asyncio
+
 import httpx2
 
 from mycel.core.exceptions import MycelError
@@ -11,6 +13,9 @@ from mycel.sources import jira
 from mycel.sources.jira_http import session as jira_session
 
 log = get_logger(__name__)
+
+#: People refreshed at once: enough to overlap Jira round trips, few enough for its limits.
+PARALLEL = 8
 
 
 async def refresh(user_id: int) -> frozenset[str]:
@@ -32,7 +37,12 @@ async def refresh_everyone() -> int:
     """Refresh every connected person. Returns how many were refreshed."""
     async with session_scope() as session:
         users = await AccountRepository(session).jira_connected_users()
-    async with jira_session():
-        for user_id in users:
+    gate = asyncio.Semaphore(PARALLEL)
+
+    async def one(user_id: int) -> None:
+        async with gate:
             await refresh(user_id)
+
+    async with jira_session():
+        await asyncio.gather(*(one(u) for u in users))
     return len(users)

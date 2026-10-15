@@ -119,3 +119,13 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_http_client() -> Iterator[None]:
+    """Each test builds its own shared client, so a patched `AsyncClient` is the one used."""
+    from mycel.infra import http
+
+    http._clients.clear()
+    yield
+    http._clients.clear()

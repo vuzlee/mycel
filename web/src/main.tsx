@@ -1,21 +1,22 @@
 /** Routes. `/home`, `/login`, `/register` are open; `/` is Ask signed in, Home signed out. */
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { lazy, StrictMode, Suspense } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Waiting } from "./components/Waiting";
 import { AuthProvider, useAuth } from "./context/auth";
-import { Ask } from "./pages/Ask";
-import Dashboard from "./pages/dashboard";
-import { Home } from "./pages/Home";
-import { Forgot } from "./pages/Forgot";
-import { Login } from "./pages/Login";
-import { Register } from "./pages/Register";
-import { Reset } from "./pages/Reset";
 import { ConversationsProvider } from "./context/ConversationsContext";
 import { queryClient } from "./lib/queryClient";
 import "./styles/index.css";
+
+const Ask = lazy(() => import("./pages/Ask").then((m) => ({ default: m.Ask })));
+const Dashboard = lazy(() => import("./pages/dashboard"));
+const Home = lazy(() => import("./pages/Home").then((m) => ({ default: m.Home })));
+const Forgot = lazy(() => import("./pages/Forgot").then((m) => ({ default: m.Forgot })));
+const Login = lazy(() => import("./pages/Login").then((m) => ({ default: m.Login })));
+const Register = lazy(() => import("./pages/Register").then((m) => ({ default: m.Register })));
+const Reset = lazy(() => import("./pages/Reset").then((m) => ({ default: m.Reset })));
 
 /** The front door, which is two doors. A stranger at `/app` is asked what this is, not
  *  asked for a password — the login form is what `Home` links to, not what greets it. */
@@ -31,8 +32,10 @@ function Front() {
  *  come back to. */
 function Board() {
   const { user } = useAuth();
+  const { pathname, search } = useLocation();
   if (user === undefined) return <Waiting />;
-  return user ? <Dashboard /> : <Navigate to="/login" replace />;
+  if (user) return <Dashboard />;
+  return <Navigate to="/login" replace state={{ from: pathname + search }} />;
 }
 
 function Root() {
@@ -40,16 +43,18 @@ function Root() {
     <BrowserRouter basename="/app">
       <AuthProvider>
         <ConversationsProvider>
-          <Routes>
-            <Route path="/home" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot" element={<Forgot />} />
-            <Route path="/reset" element={<Reset />} />
-            <Route path="/dashboard" element={<Board />} />
-            <Route path="/" element={<Front />} />
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
+          <Suspense fallback={<Waiting />}>
+            <Routes>
+              <Route path="/home" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot" element={<Forgot />} />
+              <Route path="/reset" element={<Reset />} />
+              <Route path="/dashboard" element={<Board />} />
+              <Route path="/" element={<Front />} />
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </Suspense>
         </ConversationsProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -10,6 +10,7 @@ from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.core.config import get_settings
+from mycel.infra.http import shared
 
 _ENDPOINT = "https://api.tavily.com/search"
 
@@ -83,16 +84,16 @@ async def _post(query: str, timeout_s: float) -> dict[str, Any]:
         raise ToolFailed("web_search", "TAVILY_API_KEY is not set")
 
     try:
-        async with httpx2.AsyncClient(timeout=timeout_s) as client:
-            response = await client.post(
-                _ENDPOINT,
-                headers={"Authorization": f"Bearer {settings.tavily_api_key.get_secret_value()}"},
-                json={
-                    "query": query,
-                    "max_results": _MAX_RESULTS,
-                    "include_published_date": True,
-                },
-            )
+        response = await shared().post(
+            _ENDPOINT,
+            headers={"Authorization": f"Bearer {settings.tavily_api_key.get_secret_value()}"},
+            json={
+                "query": query,
+                "max_results": _MAX_RESULTS,
+                "include_published_date": True,
+            },
+            timeout=timeout_s,
+        )
     except httpx2.TimeoutException as exc:
         raise ToolFailed("web_search", f"the search API did not respond in {timeout_s}s") from exc
     except httpx2.HTTPError as exc:

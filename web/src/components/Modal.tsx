@@ -1,6 +1,6 @@
 /** A dialog over whatever page you were on. */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Close } from "./icons";
 
 interface Props {
@@ -13,19 +13,47 @@ interface Props {
   wide?: boolean;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ title, lede, onClose, children, wide }: Props) {
+  const box = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+
+  // Focus moves in on open, Tab stays inside, and focus goes back on close.
   useEffect(() => {
+    const before = document.activeElement as HTMLElement | null;
+    box.current?.focus();
     const key = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") close.current();
+      if (event.key !== "Tab" || !box.current) return;
+      const items = box.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return event.preventDefault();
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === box.current)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", key);
-    return () => document.removeEventListener("keydown", key);
-  }, [onClose]);
+    return () => {
+      document.removeEventListener("keydown", key);
+      before?.focus();
+    };
+  }, []);
 
   return (
     <div className="scrim asking" data-open onClick={onClose}>
       <div
         className={wide ? "modal wide" : "modal"}
+        ref={box}
+        tabIndex={-1}
         role="dialog"
         aria-modal
         aria-label={title}

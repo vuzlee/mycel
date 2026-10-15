@@ -5,6 +5,7 @@ Field defaults are the fallback when `config/` is absent; `from_config()` layers
 
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -71,10 +72,19 @@ class AgentSettings:
         merged.update(_mapping(cfg.get("agents", {}).get("defaults", {}), "agents.defaults"))
 
         own = directory / AGENTS_SUBDIR / f"{name}.yaml"
-        if own.exists():
-            merged.update(_mapping(read_yaml(own), str(own)))
+        merged.update(_own_yaml(own) if config_dir is None else _read_own(own))
 
         return cls(**_checked(merged, name))
+
+
+def _read_own(path: Path) -> dict[str, Any]:
+    return _mapping(read_yaml(path), str(path)) if path.exists() else {}
+
+
+@lru_cache
+def _own_yaml(path: Path) -> dict[str, Any]:
+    """An agent's own file, read once per process like `get_config`."""
+    return _read_own(path)
 
 
 def _checked(values: dict[str, Any], name: str) -> dict[str, Any]:

@@ -54,7 +54,8 @@ export function Ask() {
   const { reload } = useConversations();
 
   const [asked, setAsked] = useState<string | null>(null);
-  const [seed, setSeed] = useState("");
+  // A fresh object per click, so the same seed picked twice still fills the box.
+  const [seed, setSeed] = useState<{ text: string } | null>(null);
   const { data: projects } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const firstProject = projects?.[0] ?? null;
   const seeds = useMemo(
@@ -224,7 +225,7 @@ export function Ask() {
           <span className="label">Try one</span>
           <div className="seeds">
             {seeds.map((text) => (
-              <button key={text} onClick={() => setSeed(text)}>
+              <button key={text} onClick={() => setSeed({ text })}>
                 {text}
                 <ArrowRight />
               </button>

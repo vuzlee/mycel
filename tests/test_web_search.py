@@ -13,6 +13,7 @@ from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.core.config import Settings
+from mycel.infra import http
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
@@ -156,6 +157,7 @@ class TestFailures:
         with pytest.raises(ToolFailed, match="rejected"):
             await _search("anything", monkeypatch)
 
+        http._clients.clear()
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=432))
         with pytest.raises(ToolFailed, match="usage limit"):
             await _search("anything", monkeypatch)

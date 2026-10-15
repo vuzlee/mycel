@@ -15,7 +15,7 @@ export const PROCESSING_NOTE =
 
 interface Props {
   busy: boolean;
-  seed: string;
+  seed: { text: string } | null;
   handle: React.Ref<ComposerHandle>;
   chips: Chip[];
   onChips: (chips: Chip[]) => void;
@@ -35,7 +35,7 @@ export function Composer({
   onAsk,
   onDropFiles,
 }: Props) {
-  const [value, setValue] = useState(seed);
+  const [value, setValue] = useState(seed?.text ?? "");
   const [menu, setMenu] = useState(false);
   const [over, setOver] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -45,7 +45,7 @@ export function Composer({
 
   useEffect(() => {
     if (!seed) return;
-    setValue(seed);
+    setValue(seed.text);
     box.current?.focus();
   }, [seed]);
 
