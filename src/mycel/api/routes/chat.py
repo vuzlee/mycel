@@ -100,6 +100,11 @@ def _state_of(kept: TurnRow) -> Literal["running", "done", "failed"]:
     return "running" if age.total_seconds() < get_settings().result_ttl_seconds else "failed"
 
 
+def _label(ref: str | None, labels: dict[str, str]) -> str | None:
+    """A removed model still shows as its ref rather than nothing."""
+    return labels.get(ref, ref) if ref else None
+
+
 @router.get("/{job_id}", response_model=ChatResponse)
 async def get_chat(
     job_id: str,
@@ -141,7 +146,7 @@ async def get_chat(
         conversation_id=kept.conversation_id,
         question=kept.question,
         sources=sources,
-        model_label=models.label_of(state["model_ref"]),
+        model_label=_label(state["model_ref"], await models.labels_for(user.id)),
         created_at=kept.created_at,
         **state,
     )

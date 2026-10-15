@@ -6,11 +6,15 @@ A `model_ref` names a model in one string: `host:<gateway name>` for a model in
 
 from dataclasses import dataclass
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from mycel.core.config import Settings, get_settings
 from mycel.infra.postgres.repositories.models import ModelPrefRepository
+from mycel.infra.postgres.repositories.own_models import OwnModelRepository
 from mycel.infra.postgres.session import session_scope
 
 HOST = "host"
+OWN = "own"
 
 
 class UnknownModel(Exception):
@@ -43,13 +47,13 @@ def host_ref(name: str) -> str:
     return f"{HOST}:{name}"
 
 
-def label_of(ref: str | None, settings: Settings | None = None) -> str | None:
-    """What the line under an answer calls a model; the ref itself when it is gone from config."""
-    if ref is None:
-        return None
-    _, _, name = ref.partition(":")
-    found = {m.name: m.label for m in (settings or get_settings()).host_models}
-    return found.get(name, ref) if ref.startswith(f"{HOST}:") else ref
+async def labels_for(user_id: int) -> dict[str, str]:
+    """Every ref this person's turns may name, host and own, to the label it shows as."""
+    async with session_scope() as session:
+        own = await OwnModelRepository(session).all_of(user_id)
+    labels = {host_ref(m.name): m.label for m in get_settings().host_models}
+    labels.update({f"{OWN}:{m.id}": m.label for m in own})
+    return labels
 
 
 def gateway_name(ref: str, settings: Settings | None = None) -> str | None:
@@ -59,16 +63,23 @@ def gateway_name(ref: str, settings: Settings | None = None) -> str | None:
     return name if source == HOST and name in names else None
 
 
-def _choices(toggles: dict[str, bool], settings: Settings) -> list[ModelChoice]:
+def _choices(
+    toggles: dict[str, bool], own: list[tuple[int, str]], settings: Settings
+) -> list[ModelChoice]:
+    """Host models first, then the person's own; a model with no toggle is on."""
+    hosted = [(host_ref(m.name), m.label, HOST) for m in settings.host_models]
+    owned = [(f"{OWN}:{i}", label, OWN) for i, label in own]
     return [
-        ModelChoice(
-            ref=host_ref(m.name),
-            label=m.label,
-            source=HOST,
-            enabled=toggles.get(host_ref(m.name), True),
-        )
-        for m in settings.host_models
+        ModelChoice(ref=ref, label=label, source=source, enabled=toggles.get(ref, True))
+        for ref, label, source in hosted + owned
     ]
+
+
+async def _load(session: AsyncSession, user_id: int) -> tuple[list[ModelChoice], str | None]:
+    repo = ModelPrefRepository(session)
+    own = [(m.id, m.label) for m in await OwnModelRepository(session).all_of(user_id)]
+    choices = _choices(await repo.toggles(user_id), own, get_settings())
+    return choices, await repo.default(user_id)
 
 
 def _pick_default(choices: list[ModelChoice], chosen: str | None, settings: Settings) -> str:
@@ -81,19 +92,15 @@ def _pick_default(choices: list[ModelChoice], chosen: str | None, settings: Sett
 
 
 async def models_for(user_id: int) -> Models:
-    settings = get_settings()
     async with session_scope() as session:
-        repo = ModelPrefRepository(session)
-        toggles, chosen = await repo.toggles(user_id), await repo.default(user_id)
-    choices = _choices(toggles, settings)
-    return Models(choices=choices, default_ref=_pick_default(choices, chosen, settings))
+        choices, chosen = await _load(session, user_id)
+    return Models(choices=choices, default_ref=_pick_default(choices, chosen, get_settings()))
 
 
 async def set_enabled(user_id: int, ref: str, enabled: bool) -> Models:
-    settings = get_settings()
     async with session_scope() as session:
         repo = ModelPrefRepository(session)
-        choices = _choices(await repo.toggles(user_id), settings)
+        choices, _ = await _load(session, user_id)
         if ref not in {c.ref for c in choices}:
             raise UnknownModel(ref)
         if not enabled and [c.ref for c in choices if c.enabled] == [ref]:

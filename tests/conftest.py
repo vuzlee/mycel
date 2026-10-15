@@ -109,7 +109,7 @@ def default_model(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatc
     """Every turn runs on the host default; tests/test_models_service.py checks the real thing."""
     from mycel.services import models
 
-    if request.module.__name__.endswith("test_models_service"):
+    if request.module.__name__.endswith(("test_models_service", "test_own_models")):
         return
     default = models.host_ref(Settings().default_host_model.name)
 
@@ -119,8 +119,12 @@ def default_model(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatc
     async def resolve(user_id: int, ref: str | None) -> tuple[str, str | None]:
         return ref or default, None
 
+    async def labels_for(user_id: int) -> dict[str, str]:
+        return {models.host_ref(m.name): m.label for m in Settings().host_models}
+
     monkeypatch.setattr(models, "usable", usable)
     monkeypatch.setattr(models, "resolve", resolve)
+    monkeypatch.setattr(models, "labels_for", labels_for)
 
 
 @pytest.fixture(autouse=True)

@@ -10,6 +10,7 @@ from mycel.api.dependencies import current_user
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
 from mycel.services import models as domain
+from mycel.services import own_models
 
 SIGNED_IN = Principal(id=1, email="tester@example.com")
 FOUND = domain.Models(
@@ -64,3 +65,64 @@ class TestModelsApi:
         app = create_app(Settings(otel_enabled=False))
         with TestClient(app) as anonymous:
             assert anonymous.get("/models").status_code == 401
+
+
+VIEW = own_models.OwnModelView(
+    id=3,
+    ref="own:3",
+    label="My Gemini",
+    model_id="gemini-3.6-flash",
+    api_base="https://generativelanguage.googleapis.com/v1beta/openai",
+    key_hints=["…0001"],
+)
+
+
+def _own(monkeypatch: pytest.MonkeyPatch, name: str, result: object) -> None:
+    async def fake(*args: object) -> object:
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr(f"mycel.api.routes.models.own.{name}", fake)
+
+
+class TestOwnModelsApi:
+    BODY = {
+        "label": "My Gemini",
+        "model_id": "gemini-3.6-flash",
+        "api_base": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "keys": ["AIzaSy-a-real-looking-key-0001"],
+    }
+
+    def test_adding_answers_with_hints_never_keys(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _own(monkeypatch, "add_own", VIEW)
+        response = client.post("/models/own", json=self.BODY)
+        assert response.status_code == 201
+        assert "AIzaSy" not in response.text
+        assert response.json()["key_hints"] == ["…0001"]
+
+    def test_a_refusal_is_422_with_the_reason(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _own(monkeypatch, "add_own", own_models.OwnModelRefused("plain http is not allowed"))
+        response = client.post("/models/own", json=self.BODY)
+        assert response.status_code == 422 and "plain http" in response.text
+
+    def test_too_many_keys_never_reach_the_service(self, client: TestClient) -> None:
+        body = {**self.BODY, "keys": [f"k-{i}" for i in range(6)]}
+        assert client.post("/models/own", json=body).status_code == 422
+
+    def test_someone_elses_model_is_404(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _own(monkeypatch, "remove_own", own_models.OwnModelNotFound(3))
+        assert client.delete("/models/own/3").status_code == 404
+        _own(monkeypatch, "edit_own", own_models.OwnModelNotFound(3))
+        assert client.patch("/models/own/3", json=self.BODY).status_code == 404
+
+    def test_presets_and_limits(self, client: TestClient) -> None:
+        body = client.get("/models/own/presets").json()
+        assert body["max_models"] == 10 and body["max_keys"] == 5
+        assert "Gemini" in body["presets"]

@@ -68,6 +68,7 @@ async def list_conversations(
 @router.get("/conversations/{conversation_id}/turns", response_model=list[TurnResponse])
 async def list_turns(conversation_id: int, user: CurrentUser) -> list[TurnResponse]:
     """Every run in one conversation, oldest first."""
+    labels = await models.labels_for(user.id)
     return [
         TurnResponse(
             job_id=turn.job_id,
@@ -79,7 +80,7 @@ async def list_turns(conversation_id: int, user: CurrentUser) -> list[TurnRespon
             steps=turn.steps,
             created_at=turn.created_at,
             model_ref=turn.model_ref,
-            model_label=models.label_of(turn.model_ref),
+            model_label=labels.get(turn.model_ref, turn.model_ref) if turn.model_ref else None,
             tokens_in=turn.tokens_in,
             tokens_out=turn.tokens_out,
             duration_ms=turn.duration_ms,

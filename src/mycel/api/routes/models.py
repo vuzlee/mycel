@@ -1,10 +1,13 @@
 """The models a person may pick: list, toggle, default."""
 
+from dataclasses import asdict
+
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
 from mycel.services import models as domain
+from mycel.services import own_models as own
 
 router = APIRouter(prefix="/models", tags=["models"])
 
@@ -63,3 +66,76 @@ async def set_default_model(body: DefaultRequest, user: CurrentUser) -> ModelsRe
         return _response(await domain.set_default(user.id, body.ref))
     except domain.UnknownModel:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model, or it is off") from None
+
+
+class OwnModelRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=80)
+    model_id: str = Field(min_length=1, max_length=200, description="What the endpoint calls it.")
+    api_base: str = Field(min_length=8, max_length=500)
+    #: Omitted on an edit: the stored keys are kept, since they are never sent back.
+    keys: list[str] | None = Field(default=None, max_length=own.MAX_KEYS)
+
+
+class OwnModelResponse(BaseModel):
+    id: int
+    ref: str
+    label: str
+    model_id: str
+    api_base: str
+    key_hints: list[str]
+
+
+class PresetsResponse(BaseModel):
+    presets: dict[str, str]
+    max_models: int
+    max_keys: int
+
+
+def _own(view: own.OwnModelView) -> OwnModelResponse:
+    return OwnModelResponse(**asdict(view))
+
+
+@router.get("/own", response_model=list[OwnModelResponse])
+async def list_own_models(user: CurrentUser) -> list[OwnModelResponse]:
+    """This person's own models; keys show as their last four characters only."""
+    return [_own(v) for v in await own.list_own(user.id)]
+
+
+@router.get("/own/presets", response_model=PresetsResponse)
+async def own_model_presets(user: CurrentUser) -> PresetsResponse:
+    return PresetsResponse(presets=own.PRESETS, max_models=own.MAX_MODELS, max_keys=own.MAX_KEYS)
+
+
+@router.post("/own", response_model=OwnModelResponse, status_code=status.HTTP_201_CREATED)
+async def add_own_model(body: OwnModelRequest, user: CurrentUser) -> OwnModelResponse:
+    try:
+        return _own(
+            await own.add_own(user.id, body.label, body.model_id, body.api_base, body.keys or [])
+        )
+    except own.OwnModelRefused as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+
+
+@router.patch("/own/{model_id}", response_model=OwnModelResponse)
+async def edit_own_model(
+    model_id: int, body: OwnModelRequest, user: CurrentUser
+) -> OwnModelResponse:
+    try:
+        return _own(
+            await own.edit_own(
+                user.id, model_id, body.label, body.model_id, body.api_base, body.keys
+            )
+        )
+    except own.OwnModelNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None
+    except own.OwnModelRefused as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+
+
+@router.delete("/own/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_own_model(model_id: int, user: CurrentUser) -> None:
+    """The model and every key it held are deleted, not hidden."""
+    try:
+        await own.remove_own(user.id, model_id)
+    except own.OwnModelNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None

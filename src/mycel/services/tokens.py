@@ -1,6 +1,10 @@
-"""Encrypt and decrypt the refresh tokens this deployment keeps."""
+"""Encrypt and decrypt the secrets this deployment keeps: refresh tokens and own model keys.
 
-from cryptography.fernet import Fernet, InvalidToken
+`TOKEN_ENCRYPTION_KEY` may list several Fernet keys, comma-separated, newest first: new
+values are sealed with the first, and any of them opens an old one, so a key can rotate.
+"""
+
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError, MycelError
@@ -28,11 +32,12 @@ def unseal(refresh_token_encrypted: str) -> str:
         raise TokenUnreadable("the stored token cannot be read") from exc
 
 
-def _fernet() -> Fernet:
+def _fernet() -> MultiFernet:
     cfg = get_settings()
     if cfg.token_encryption_key is None:
         raise ConfigError("TOKEN_ENCRYPTION_KEY is not set; no account can be connected")
+    keys = [k.strip() for k in cfg.token_encryption_key.get_secret_value().split(",") if k.strip()]
     try:
-        return Fernet(cfg.token_encryption_key.get_secret_value())
+        return MultiFernet([Fernet(k) for k in keys])
     except (ValueError, TypeError) as exc:
         raise ConfigError(f"TOKEN_ENCRYPTION_KEY is not a valid Fernet key: {exc}") from exc

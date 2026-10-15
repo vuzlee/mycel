@@ -50,6 +50,39 @@ class ModelPref(Base):
     enabled: Mapped[bool] = mapped_column(Boolean)
 
 
+class OwnModel(Base):
+    """A model one person added: an OpenAI-compatible endpoint, reached with their own keys."""
+
+    __tablename__ = "own_model"
+    __table_args__ = (
+        Index("ix_own_model_owner", "owner_id"),
+        {"schema": APP},
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
+    label: Mapped[str] = mapped_column(String(80))
+    #: What the endpoint calls the model, sent as `model` in each request.
+    model_id: Mapped[str] = mapped_column(String(200))
+    api_base: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OwnModelKey(Base):
+    """One key of an own model, sealed; `position` is the rotation order, from 0."""
+
+    __tablename__ = "own_model_key"
+    __table_args__ = ({"schema": APP},)
+
+    own_model_id: Mapped[int] = mapped_column(
+        ForeignKey(f"{APP}.own_model.id", ondelete="CASCADE"), primary_key=True
+    )
+    position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key_sealed: Mapped[str] = mapped_column(Text)
+    #: The last four characters, the only part of a key ever shown again.
+    hint: Mapped[str] = mapped_column(String(16))
+
+
 class Session(Base):
     """A logged-in browser; the id is the opaque cookie value, revocable by deleting the row."""
 
