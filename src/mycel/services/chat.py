@@ -10,7 +10,7 @@ from mycel.infra.postgres.repositories.conversations import (
     TurnRow,
 )
 from mycel.infra.postgres.session import session_scope
-from mycel.services import enqueue
+from mycel.services import enqueue, models
 
 #: How much of a question becomes the conversation's title in the sidebar.
 TITLE_CHARS = 80
@@ -56,8 +56,10 @@ async def request_chat(
     question: str,
     conversation_id: int | None = None,
     chips: list[str] | None = None,
+    model_ref: str | None = None,
 ) -> tuple[str, int]:
     """Queue a question; returns the job id and its conversation (new if none is given)."""
+    model_ref = await models.usable(user_id, model_ref)
     async with session_scope() as session:
         repo = ConversationRepository(session)
         await _check_allowance(repo, user_id)
@@ -82,8 +84,11 @@ async def request_chat(
             chips=chips,
             previous=previous,
             context=context,
+            model_ref=model_ref,
         )
-        await repo.add_turn(conversation.id, job.job_id, question, status="queued")
+        await repo.add_turn(
+            conversation.id, job.job_id, question, status="queued", model_ref=model_ref
+        )
         await enqueue.stage(session, job)
     await enqueue.send(job)
     return job.job_id, conversation.id

@@ -15,6 +15,8 @@ TEXT_DELTA = "text_delta"
 THINKING = "thinking"
 TOOL_CALLED = "tool_called"
 TOOL_RETURNED = "tool_returned"
+#: Something the asker should know about the run itself, e.g. another model answered.
+NOTICE = "notice"
 
 
 class AgentEvent(BaseModel):

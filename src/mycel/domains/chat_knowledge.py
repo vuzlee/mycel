@@ -27,7 +27,9 @@ async def search_query(job: Job, question: str, deps: MycelDeps) -> str:
     stitched = knowledge.search_text(question, previous[: get_settings().ask_max_chars])
     if not context:
         return stitched
-    settings = AgentSettings.from_config(Rewriter.name)
+    settings = replace(
+        AgentSettings.from_config(Rewriter.name), model_spec=deps.settings.model_spec
+    )
     rewrite_deps = replace(deps, settings=settings, events=NullChannel())
     prompt = f"{context}\n\nThe question now:\n{question}"
     try:
@@ -40,7 +42,7 @@ async def search_query(job: Job, question: str, deps: MycelDeps) -> str:
 
 
 async def answer_without_model(
-    user_id: int, chips: frozenset[Chip], found: knowledge.Retrieved
+    user_id: int, chips: frozenset[Chip], found: knowledge.Retrieved, model_ref: str
 ) -> tuple[str, list[dict[str, Any]]] | None:
     """A Knowledge-only turn the documents settle alone: busy, nothing found, or cached."""
     if chips != frozenset({Chip.KNOWLEDGE}):
@@ -49,16 +51,15 @@ async def answer_without_model(
         return knowledge.BUSY, []
     if not found.labelled:
         return knowledge.NOT_FOUND, []
-    settings = AgentSettings.from_config(Orchestrator.name)
-    cached = await answers.get(user_id, found.version, cache_writer(settings), found.query)
+    cached = await answers.get(user_id, found.version, cache_writer(model_ref), found.query)
     if cached is None:
         return None
     return cached["answer"], cached["sources"]
 
 
-def cache_writer(settings: AgentSettings) -> str:
+def cache_writer(model_ref: str) -> str:
     """What a cached Knowledge answer depends on besides the documents: prompt and model."""
-    return answers.writer(Orchestrator.instructions, (settings.model_spec,))
+    return answers.writer(Orchestrator.instructions, (model_ref,))
 
 
 def cite(job: Job, answer: str, found: knowledge.Retrieved) -> tuple[str, list[dict[str, Any]]]:

@@ -1,7 +1,7 @@
 /** Ask a question. Enter sends, Shift+Enter breaks the line. */
 
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
-import type { Chip } from "../api";
+import type { Chip, ModelChoice } from "../api";
 import { ChipMenu, labelOf } from "./ChipMenu";
 import { ArrowRight, Sliders, Spinner } from "./icons";
 
@@ -21,6 +21,10 @@ interface Props {
   onChips: (chips: Chip[]) => void;
   /** True while a document is processing: Knowledge cannot be asked. */
   knowledgeLocked: boolean;
+  /** Models that are on; the picker hides itself when there is only one. */
+  models: ModelChoice[];
+  model: string | null;
+  onModel: (ref: string) => void;
   onAsk: (question: string) => void;
   onDropFiles: (files: File[]) => void;
 }
@@ -32,6 +36,9 @@ export function Composer({
   chips,
   onChips,
   knowledgeLocked,
+  models,
+  model,
+  onModel,
   onAsk,
   onDropFiles,
 }: Props) {
@@ -152,6 +159,20 @@ export function Composer({
               }}
             />
           </div>
+          {models.length > 1 && model !== null && (
+            <select
+              className="model-pick"
+              aria-label="Model"
+              value={model}
+              onChange={(event) => onModel(event.target.value)}
+            >
+              {models.map((m) => (
+                <option key={m.ref} value={m.ref}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             className="send"
             type="submit"

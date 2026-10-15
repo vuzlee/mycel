@@ -43,7 +43,11 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
     """Make the chat domain accept a job or fail, with no broker anywhere in sight."""
 
     async def fake_request(
-        user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
+        user_id: int,
+        question: str,
+        conversation_id: int | None = None,
+        chips: Any = None,
+        model_ref: Any = None,
     ) -> tuple[str, int]:
         if isinstance(result, Exception):
             raise result
@@ -196,7 +200,11 @@ class TestQueueingAQuestion:
         seen: list[int | None] = []
 
         async def fake_request(
-            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
+            user_id: int,
+            question: str,
+            conversation_id: int | None = None,
+            chips: Any = None,
+            model_ref: Any = None,
         ) -> tuple[str, int]:
             seen.append(conversation_id)
             return "job-2", conversation_id or 99
@@ -207,6 +215,16 @@ class TestQueueingAQuestion:
         assert response.status_code == 202
         assert seen == [7]
         assert response.json()["conversation_id"] == 7
+
+    def test_a_model_not_available_is_a_422(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mycel.services.models import UnknownModel
+
+        _queues(monkeypatch, UnknownModel("host:off"))
+        response = client.post("/chat", json={"question": "q?", "model_ref": "host:off"})
+        assert response.status_code == 422
+        assert "host:off" in response.text
 
     def test_someone_elses_thread_is_a_404(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -401,7 +419,11 @@ class TestTheThingsThatFailSilently:
         release = threading.Event()
 
         async def first_waits(
-            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
+            user_id: int,
+            question: str,
+            conversation_id: int | None = None,
+            chips: Any = None,
+            model_ref: Any = None,
         ) -> tuple[str, int]:
             if question == "slow":
                 started.set()
@@ -443,7 +465,11 @@ class TestTheThingsThatFailSilently:
         monkeypatch.setattr("mycel.api.app.setup_tracing", lambda cfg: provider)
 
         async def one_span(
-            user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
+            user_id: int,
+            question: str,
+            conversation_id: int | None = None,
+            chips: Any = None,
+            model_ref: Any = None,
         ) -> tuple[str, int]:
             with provider.get_tracer("test").start_as_current_span("publish"):
                 return "job-abc", 1

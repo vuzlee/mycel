@@ -10,6 +10,12 @@ class TestWriter:
     def test_a_model_swap_changes_the_key(self) -> None:
         assert writer("p", ("cloud:a",)) != writer("p", ("cloud:b",))
 
+    def test_the_picked_model_changes_the_key(self) -> None:
+        """The same question asked on another model must not get the first model's answer."""
+        from mycel.domains.chat_knowledge import cache_writer
+
+        assert cache_writer("host:a") != cache_writer("host:b")
+
     def test_the_same_writer_is_stable(self) -> None:
         assert writer("p", ("m",)) == writer("p", ("m",))
 

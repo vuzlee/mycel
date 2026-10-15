@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef } from "../api";
-import { askChat, fetchProjects } from "../api";
+import { askChat, fetchModels, fetchProjects } from "../api";
 import { Answer } from "../components/Answer";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
+import { MODELS_KEY } from "../components/panels/ModelsPage";
 import { PastTurns } from "../components/PastTurns";
 import { Shell } from "../components/Shell";
 import { Conversation } from "../components/Conversation";
@@ -65,6 +66,11 @@ export function Ask() {
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
   const [chips, setChips] = useState<Chip[]>([]);
+  const { data: models } = useQuery({ queryKey: MODELS_KEY, queryFn: fetchModels });
+  const usable = useMemo(() => models?.models.filter((m) => m.enabled) ?? [], [models]);
+  // The reader's pick for this tab; the default until they choose, and again if it goes off.
+  const [picked, setPicked] = useState<string | null>(null);
+  const model = usable.some((m) => m.ref === picked) ? picked : (models?.default_ref ?? null);
   const [panel, setPanel] = useState(false);
   const [source, setSource] = useState<SourceRef | null>(null);
   const docs = useDocuments();
@@ -112,7 +118,12 @@ export function Ask() {
       // The open conversation by default, a new one only when the reader asked for one with
       // `+` or Cmd+K. Continuing is what every other conversation does; splitting is the
       // thing that takes a click.
-      const { job_id, conversation_id } = await askChat(text, conversationId ?? undefined, chips);
+      const { job_id, conversation_id } = await askChat(
+        text,
+        conversationId ?? undefined,
+        chips,
+        model ?? undefined,
+      );
       setAsked(text);
       setParams({ job: job_id, conversation: String(conversation_id) });
       reload();
@@ -180,6 +191,9 @@ export function Ask() {
           chips={chips}
           onChips={setChips}
           knowledgeLocked={docs.busy || docs.loading || docs.error !== null}
+          models={usable}
+          model={model}
+          onModel={setPicked}
           onAsk={(text) => void ask(text)}
           onDropFiles={(files) => {
             setPanel(true);

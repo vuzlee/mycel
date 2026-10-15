@@ -9,10 +9,18 @@ from functools import lru_cache
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr, model_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from mycel.core.settings_source import EnvironmentFileSource
+
+
+class HostModel(BaseModel):
+    """One model the host offers to everyone, by its LiteLLM `model_name`."""
+
+    name: str
+    label: str
+    default: bool = False
 
 
 class Settings(BaseSettings):
@@ -50,6 +58,26 @@ class Settings(BaseSettings):
     litellm_api_key: SecretStr | None = None
     #: USD per million tokens, (input, output), by gateway model name.
     model_prices_usd: dict[str, tuple[Decimal, Decimal]] = {}
+    #: The models everyone may pick, each a gateway `model_name`; exactly one is the default.
+    host_models: tuple[HostModel, ...] = (
+        HostModel(name="claude-sonnet-5", label="Claude Sonnet 5", default=True),
+    )
+    #: Hosts an own model may reach over plain http (a LAN Ollama); others need https.
+    model_http_hosts: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def _one_default_model(self) -> "Settings":
+        defaults = [m.name for m in self.host_models if m.default]
+        if len(defaults) != 1:
+            raise ValueError(f"host_models needs exactly one default, found {defaults or 'none'}")
+        if len({m.name for m in self.host_models}) != len(self.host_models):
+            raise ValueError("host_models lists a name twice")
+        return self
+
+    @property
+    def default_host_model(self) -> HostModel:
+        """The model a person gets before choosing one."""
+        return next(m for m in self.host_models if m.default)
 
     tavily_api_key: SecretStr | None = None
 

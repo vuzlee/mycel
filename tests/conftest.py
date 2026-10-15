@@ -105,6 +105,25 @@ def free_claims(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.fixture(autouse=True)
+def default_model(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every turn runs on the host default; tests/test_models_service.py checks the real thing."""
+    from mycel.services import models
+
+    if request.module.__name__.endswith("test_models_service"):
+        return
+    default = models.host_ref(Settings().default_host_model.name)
+
+    async def usable(user_id: int, ref: str | None) -> str:
+        return ref or default
+
+    async def resolve(user_id: int, ref: str | None) -> tuple[str, str | None]:
+        return ref or default, None
+
+    monkeypatch.setattr(models, "usable", usable)
+    monkeypatch.setattr(models, "resolve", resolve)
+
+
+@pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Strip inherited env vars and reset the settings cache around every test."""
     for key in list(os.environ):

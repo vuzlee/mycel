@@ -110,7 +110,16 @@ class TestRelay:
             return job.job_id
 
         monkeypatch.setattr(enqueue, "publish", keep)
-        job = enqueue.chat_job("q?", 1, "", user_id=7, chips=["jira"], previous="", context="")
+        job = enqueue.chat_job(
+            "q?",
+            1,
+            "",
+            user_id=7,
+            chips=["jira"],
+            previous="",
+            context="",
+            model_ref="host:claude-sonnet-5",
+        )
         await enqueue.stage(session, job)
         await _age(session, 60)
 

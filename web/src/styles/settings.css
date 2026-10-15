@@ -167,3 +167,43 @@ button.outline:hover {
   width: 14px;
   height: 14px;
 }
+.model-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.model-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.model-list .switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.model-list .switch input {
+  accent-color: var(--accent);
+}
+.model-list .pill,
+.model-list button.link {
+  margin-left: auto;
+}
+button.link {
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12.5px;
+}
+button.link:disabled {
+  color: var(--muted);
+}

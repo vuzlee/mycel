@@ -21,6 +21,7 @@ from mycel.api.routes import (
     dashboard,
     documents,
     events,
+    models,
     projects,
 )
 from mycel.core.config import Settings, get_settings
@@ -31,6 +32,7 @@ from mycel.observability.tracing import setup_tracing
 from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
 from mycel.services.chat import ConversationNotFound, DailyLimitReached, TurnInProgress
+from mycel.services.models import UnknownModel
 
 log = get_logger(__name__)
 
@@ -76,6 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(events.router)
+    app.include_router(models.router)
 
     _install_error_handlers(app)
     _mount_web(app)
@@ -160,6 +163,10 @@ def _install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DailyLimitReached)
     async def _allowance(request: Request, exc: DailyLimitReached) -> JSONResponse:
         return problem(429, "daily_limit", str(exc))
+
+    @app.exception_handler(UnknownModel)
+    async def _unknown_model(request: Request, exc: UnknownModel) -> JSONResponse:
+        return problem(422, "unknown_model", f"model {exc.args[0]} is not available to you")
 
     @app.exception_handler(TurnInProgress)
     async def _turn_running(request: Request, exc: TurnInProgress) -> JSONResponse:

@@ -38,7 +38,11 @@ def _queues(monkeypatch: pytest.MonkeyPatch, result: str | Exception) -> None:
     """Make the chat domain accept a job or fail, with no broker anywhere in sight."""
 
     async def fake_request(
-        user_id: int, question: str, conversation_id: int | None = None, chips: Any = None
+        user_id: int,
+        question: str,
+        conversation_id: int | None = None,
+        chips: Any = None,
+        model_ref: Any = None,
     ) -> tuple[str, int]:
         if isinstance(result, Exception):
             raise result

@@ -351,6 +351,25 @@ details[open] > summary .chevron {
   color: var(--faint);
 }
 
+.model-pick {
+  flex: none;
+  max-width: 11rem;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.model-pick:hover,
+.model-pick:focus-visible {
+  color: var(--ink);
+  border-color: var(--accent-line);
+}
+
 .send {
   flex: none;
   display: grid;

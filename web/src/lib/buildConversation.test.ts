@@ -27,4 +27,20 @@ describe("buildConversation", () => {
       { kind: "text", seq: 4, agent: "orchestrator", body: "The whole answer." },
     ]);
   });
+
+  it("shows a notice as a mark in the trail", () => {
+    const items = buildConversation([
+      event(1, "attempt_started"),
+      event(2, "notice", { text: "Answered with the default model instead." }),
+    ]);
+
+    expect(items).toEqual([
+      {
+        kind: "mark",
+        seq: 2,
+        agent: "orchestrator",
+        label: "Answered with the default model instead.",
+      },
+    ]);
+  });
 });

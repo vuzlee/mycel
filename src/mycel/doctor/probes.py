@@ -158,10 +158,16 @@ def _service_token_expiry(env: Settings) -> Check | None:
 
 
 async def _gateway(settings: Settings) -> str:
-    """The LiteLLM gateway answers and lists its models. Free: no model is called."""
+    """The gateway answers and serves every host model. Free: no model is called."""
     names = sorted({m["id"] for m in (await _ask_gateway(settings, "/v1/models"))["data"]})
     if not names:
         raise RuntimeError("the gateway answers but serves no model")
+    missing = [m.name for m in settings.host_models if m.name not in names]
+    if missing:
+        raise RuntimeError(
+            f"host_models names {', '.join(missing)}, which the gateway does not serve "
+            f"(it serves {', '.join(names)})"
+        )
     return f"{len(names)} models: {', '.join(names)}"
 
 

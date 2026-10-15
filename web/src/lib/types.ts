@@ -17,6 +17,8 @@ export const TEXT_DELTA = "text_delta";
 export const THINKING = "thinking";
 export const TOOL_CALLED = "tool_called";
 export const TOOL_RETURNED = "tool_returned";
+/** Something about the run itself, e.g. another model answered than the one picked. */
+export const NOTICE = "notice";
 
 /** Connection state of a job's stream, as the composer and the header read it. */
 export type StreamState = "idle" | "running" | "done" | "error";

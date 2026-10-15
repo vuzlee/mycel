@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Moon, Person, Screen, Sun } from "../icons";
+import { Chip, Moon, Person, Screen, Sun } from "../icons";
 import type { Theme } from "../../lib/theme";
 import { useTheme } from "../../lib/theme";
 import { CONNECTIONS, Connection } from "./Connections";
+import { ModelsPage } from "./ModelsPage";
 
 const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
   { value: "system", label: "System", icon: <Screen size={17} /> },
@@ -32,6 +33,13 @@ const SECTIONS: SettingsSection[] = [
     icon: <Screen size={15} />,
     hint: "How it looks in this browser.",
     render: () => <AppearancePage />,
+  },
+  {
+    id: "models",
+    label: "Models",
+    icon: <Chip size={15} />,
+    hint: "Which models you can ask with, and the one picked first.",
+    render: () => <ModelsPage />,
   },
   {
     id: "accounts",

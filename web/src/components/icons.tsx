@@ -192,8 +192,13 @@ export function Person({ size = 14 }: IconProps) {
 export function Gear({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>
-      <circle cx="8" cy="8" r="2.2" />
-      <path d="M8 1.6v1.7M8 12.7v1.7M14.4 8h-1.7M3.3 8H1.6M12.5 3.5l-1.2 1.2M4.7 11.3l-1.2 1.2M12.5 12.5l-1.2-1.2M4.7 4.7 3.5 3.5" />
+      <g transform="scale(0.6667)">
+        <path
+          d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          strokeWidth={2.25}
+        />
+        <circle cx="12" cy="12" r="3" strokeWidth={2.25} />
+      </g>
     </svg>
   );
 }
@@ -242,6 +247,15 @@ export function Upload({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>
       <path d="M8 10.5V2.5M5 5.5l3-3 3 3M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2" />
+    </svg>
+  );
+}
+
+export function Chip({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="4" y="4" width="8" height="8" rx="1.5" />
+      <path d="M6.5 6.5h3v3h-3zM6 1.8V4M10 1.8V4M6 12v2.2M10 12v2.2M1.8 6H4M1.8 10H4M12 6h2.2M12 10h2.2" />
     </svg>
   );
 }

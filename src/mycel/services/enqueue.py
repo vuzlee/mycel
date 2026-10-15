@@ -78,8 +78,9 @@ def chat_job(
     chips: list[str] | None,
     previous: str,
     context: str,
+    model_ref: str,
 ) -> Job:
-    """History rides in the payload, read once here."""
+    """History rides in the payload, read once here. A model rides as its ref, never a key."""
     return Job(
         kind=JobKind.CHAT,
         payload={
@@ -90,6 +91,7 @@ def chat_job(
             "chips": sorted(chips) if chips is not None else None,
             "previous": previous,
             "context": context,
+            "model_ref": model_ref,
         },
     )
 

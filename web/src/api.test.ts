@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Unauthorized, deleteDocument, fetchProjects, shaped } from "./api";
+import {
+  Unauthorized,
+  deleteDocument,
+  fetchModels,
+  fetchProjects,
+  shaped,
+  toggleModel,
+} from "./api";
 
 function answer(status: number, body: string): void {
   vi.stubGlobal(
@@ -44,5 +51,27 @@ describe("shaped", () => {
       "bad state",
     );
     expect(() => shaped("<html>", user, "user")).toThrow("not an object");
+  });
+});
+
+describe("models", () => {
+  const list = {
+    models: [{ ref: "host:a", label: "A", source: "host", enabled: true }],
+    default_ref: "host:a",
+  };
+
+  it("reads the list and checks each model", async () => {
+    answer(200, JSON.stringify(list));
+    await expect(fetchModels()).resolves.toEqual(list);
+  });
+
+  it("refuses a model with an unknown source", async () => {
+    answer(200, JSON.stringify({ ...list, models: [{ ...list.models[0], source: "x" }] }));
+    await expect(fetchModels()).rejects.toThrow("bad source");
+  });
+
+  it("says why the last model cannot go off", async () => {
+    answer(409, JSON.stringify({ detail: "at least one model must stay on" }));
+    await expect(toggleModel("host:a", false)).rejects.toThrow("at least one model");
   });
 });

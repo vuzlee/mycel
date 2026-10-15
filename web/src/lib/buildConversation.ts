@@ -3,6 +3,7 @@
 import type { SequencedEvent } from "./types";
 import {
   ATTEMPT_STARTED,
+  NOTICE,
   TEXT,
   TEXT_DELTA,
   THINKING,
@@ -57,6 +58,11 @@ export function buildConversation(events: SequencedEvent[]): Item[] {
       // A retry: the partial answer before it was abandoned, not the start of this one.
       root = [];
       byToolCall.clear();
+      continue;
+    }
+
+    if (event.type === NOTICE) {
+      append(event, { kind: "mark", seq: event.seq, agent: event.agent, label: text(event) });
       continue;
     }
 

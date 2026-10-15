@@ -5,10 +5,13 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.config import get_settings
-from mycel.services import chat, enqueue
+from mycel.infra.postgres.models import Turn
+from mycel.queue.job import Job
+from mycel.services import chat, enqueue, models
 from tests.fakes import needs_postgres
 from tests.pg import AppRepository
 
@@ -90,3 +93,39 @@ class TestOneTurnAtATime:
         await repo.upsert_turn(thread.id, "job-c", "q", "done", spent_usd=Decimal("0.01"))
 
         await chat.request_chat(user.id, "next", thread.id)
+
+
+@needs_postgres
+class TestPickedModel:
+    async def test_the_ref_rides_on_the_turn_and_the_job(
+        self, session: AsyncSession, on_session: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sent: list[Job] = []
+
+        async def keep(job: Job) -> None:
+            sent.append(job)
+
+        monkeypatch.setattr(enqueue, "send", keep)
+        user = await AppRepository(session).create_user("picks@example.com", "x")
+
+        _, thread = await chat.request_chat(user.id, "q?", model_ref="host:claude-sonnet-5")
+
+        turns = await AppRepository(session).turns_for_conversation(thread)
+        stored = await session.scalar(select(Turn.model_ref).where(Turn.conversation_id == thread))
+        assert stored == "host:claude-sonnet-5"
+        assert sent[0].payload["model_ref"] == "host:claude-sonnet-5"
+        assert "api_key" not in sent[0].payload
+        assert len(turns) == 1
+
+    async def test_a_model_that_is_off_is_refused_before_queueing(
+        self, session: AsyncSession, on_session: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        async def refuse(user_id: int, ref: str | None) -> str:
+            raise models.UnknownModel(ref)
+
+        monkeypatch.setattr(models, "usable", refuse)
+        user = await AppRepository(session).create_user("off@example.com", "x")
+
+        with pytest.raises(models.UnknownModel):
+            await chat.request_chat(user.id, "q?", model_ref="host:off")
+        assert await session.scalar(select(func.count()).select_from(Turn)) == 0

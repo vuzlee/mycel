@@ -37,6 +37,12 @@ settings:
   jira_allow_create_project: false
 
   litellm_base_url: http://localhost:4000
+  # What the model picker offers everyone. Each name must be a model_name in
+  # config/litellm/models.yaml; exactly one is the default. doctor checks both.
+  host_models:
+    - {name: claude-sonnet-5, label: Claude Sonnet 5, default: true}
+  # Hosts an own model may reach over plain http (e.g. a LAN Ollama); the rest need https.
+  model_http_hosts: []
   # USD per million tokens [input, output] by gateway name. Unlisted models cost $0.
   model_prices_usd:
     claude-sonnet-5: [2.00, 10.00]

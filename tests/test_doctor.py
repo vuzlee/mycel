@@ -144,8 +144,34 @@ class TestTheGateway:
             "AsyncClient",
             lambda **kw: real(transport=httpx2.MockTransport(handler), **kw),
         )
-        detail = await probes._gateway(_settings(litellm_base_url="http://gw:4000"))
+        detail = await probes._gateway(
+            _settings(
+                litellm_base_url="http://gw:4000",
+                host_models=[{"name": "a", "label": "A", "default": True}],
+            )
+        )
         assert detail == "2 models: a, b"
+
+    async def test_a_host_model_the_gateway_lacks_is_broken(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A typo in host_models fails here, not on someone's first question."""
+        import httpx2
+
+        real = httpx2.AsyncClient
+        monkeypatch.setattr(
+            httpx2,
+            "AsyncClient",
+            lambda **kw: real(
+                transport=httpx2.MockTransport(
+                    lambda r: httpx2.Response(200, json={"data": [{"id": "claude-sonnet-5"}]})
+                ),
+                **kw,
+            ),
+        )
+        models = [{"name": "claude-sonet-5", "label": "Typo", "default": True}]
+        with pytest.raises(RuntimeError, match="claude-sonet-5"):
+            await probes._gateway(_settings(host_models=models))
 
     async def test_a_gateway_with_no_model_is_broken(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import httpx2

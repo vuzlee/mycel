@@ -22,8 +22,9 @@ from mycel.domains.chat_knowledge import (
     cite,
     search_query,
 )
+from mycel.domains.chat_model import model_settings
 from mycel.events.channel import EventChannel, RecordingChannel
-from mycel.events.event import ATTEMPT_STARTED, AgentEvent
+from mycel.events.event import ATTEMPT_STARTED, NOTICE, AgentEvent
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
 )
@@ -34,7 +35,7 @@ from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.observability.turns import chat_turn, observe
 from mycel.queue.job import Job
-from mycel.services import knowledge
+from mycel.services import knowledge, models
 from mycel.services.chat import find_turn
 
 log = get_logger(__name__)
@@ -53,6 +54,10 @@ class _Turn:
     recorder: RecordingChannel
     deps: MycelDeps
     found: knowledge.Retrieved | None = None
+    #: The model that answers, as a `model_ref`.
+    model_ref: str = ""
+    #: Set when the asked model could not be used and the default answered instead.
+    notice: str | None = None
     #: The answer as stored, citations resolved: what the trace shows as the turn's output.
     answer: str = ""
 
@@ -72,6 +77,10 @@ async def run(job: Job) -> None:
             content=get_settings().otel_capture_content,
         ) as trace:
             await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=ATTEMPT_STARTED))
+            if turn.notice:
+                await turn.recorder.publish(
+                    AgentEvent(agent=Orchestrator.name, type=NOTICE, payload={"text": turn.notice})
+                )
             if await _ground(turn):
                 trace.output(turn.answer)
                 return
@@ -93,7 +102,11 @@ async def _prepare(job: Job) -> "_Turn | None":
         return None
     principal = await _who_asked(job)
     chips = parse_chips(job.payload.get("chips"))
-    settings = AgentSettings.from_config(Orchestrator.name)
+    asked = job.payload.get("model_ref")
+    model_ref, notice = await models.resolve(
+        principal.id, asked if isinstance(asked, str) else None
+    )
+    settings = model_settings(Orchestrator.name, model_ref)
     recorder = RecordingChannel(RedisEventChannel(job.job_id))
     return _Turn(
         job=job,
@@ -104,6 +117,8 @@ async def _prepare(job: Job) -> "_Turn | None":
         settings=settings,
         recorder=recorder,
         deps=await _deps(job, settings, recorder, principal, chips),
+        model_ref=model_ref,
+        notice=notice,
     )
 
 
@@ -117,13 +132,13 @@ async def _ground(turn: _Turn) -> bool:
         turn.found = await knowledge.retrieve(turn.principal.id, query)
         step.output([c.text for c in turn.found.labelled.values()])
         step.metadata(passages=len(turn.found.labelled), busy=turn.found.busy)
-    settled = await answer_without_model(turn.principal.id, turn.chips, turn.found)
+    settled = await answer_without_model(turn.principal.id, turn.chips, turn.found, turn.model_ref)
     if settled is None:
         return False
     text, sources = settled
     await citations.store(turn.job.job_id, turn.principal.id, sources)
     turn.answer = text
-    await _finish(turn.job, text, turn.question, Decimal("0"), [], sources)
+    await _finish(turn.job, text, turn.question, Decimal("0"), [], sources, turn.model_ref)
     await budgets.save(turn.deps.budget)
     return True
 
@@ -157,14 +172,14 @@ async def _settle(turn: _Turn, answer: str) -> None:
             await answers.put(
                 turn.principal.id,
                 found.version,
-                cache_writer(turn.settings),
+                cache_writer(turn.model_ref),
                 found.query,
                 {"answer": answer, "sources": sources},
             )
     spent = turn.deps.budget.spent_usd
     await citations.store(job.job_id, turn.principal.id, sources)
     turn.answer = answer
-    await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources)
+    await _finish(job, answer, turn.question, spent, turn.recorder.steps, sources, turn.model_ref)
     log.info(
         "job finished",
         extra={"job_id": job.job_id, "chars": len(answer), "spent_usd": str(spent)},
@@ -216,6 +231,7 @@ async def _finish(
     spent: Decimal,
     steps: list[dict[str, Any]],
     sources: list[dict[str, Any]] | None = None,
+    model_ref: str | None = None,
 ) -> None:
     """Write a finished run to both stores: Redis to be polled, Postgres to be kept."""
     await results.store(job.job_id, answer, str(spent))
@@ -226,6 +242,7 @@ async def _finish(
         answer=knowledge.with_sources(answer, sources or []),
         spent_usd=spent,
         steps=steps or None,
+        model_ref=model_ref,
     )
 
 
@@ -237,6 +254,7 @@ async def _record(
     error: str | None = None,
     spent_usd: Decimal | None = None,
     steps: list[dict[str, Any]] | None = None,
+    model_ref: str | None = None,
 ) -> None:
     """Update the durable row this job already has, if it still has one."""
     # Counted here: both the done and the failed paths go through this function.
@@ -257,6 +275,7 @@ async def _record(
                 error=error,
                 spent_usd=spent_usd,
                 steps=steps,
+                model_ref=model_ref,
             )
     except IntegrityError:
         log.warning(

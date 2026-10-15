@@ -34,6 +34,9 @@ class ChatRequest(BaseModel):
         default=None,
         description="Sources for this turn; empty means no tools, absent means every tool.",
     )
+    model_ref: str | None = Field(
+        default=None, max_length=200, description="Which model answers; absent is the default."
+    )
 
 
 class AcceptedResponse(BaseModel):
@@ -74,6 +77,7 @@ async def create_chat(
         body.question,
         body.conversation_id,
         chips=[str(c) for c in body.chips] if body.chips is not None else None,
+        model_ref=body.model_ref,
     )
     log.info("chat queued", extra={"job_id": job_id, "conversation_id": conversation_id})
     return AcceptedResponse(job_id=job_id, conversation_id=conversation_id)

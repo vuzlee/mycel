@@ -2,7 +2,7 @@
 
 import pytest
 
-from mycel.core.config import Settings, get_settings
+from mycel.core.config import HostModel, Settings, get_settings
 
 
 def test_defaults_need_no_environment() -> None:
@@ -107,3 +107,18 @@ class TestTheConnectionPool:
             assert pool._timeout == POOL_TIMEOUT_SECONDS  # type: ignore[attr-defined]
         finally:
             get_engine.cache_clear()
+
+
+class TestHostModels:
+    def test_exactly_one_default(self) -> None:
+        with pytest.raises(ValueError, match="exactly one default"):
+            Settings(host_models=(HostModel(name="a", label="A"),))
+
+    def test_a_name_listed_twice_is_refused(self) -> None:
+        twice = (HostModel(name="a", label="A", default=True), HostModel(name="a", label="B"))
+        with pytest.raises(ValueError, match="twice"):
+            Settings(host_models=twice)
+
+    def test_the_default_is_found(self) -> None:
+        listed = (HostModel(name="a", label="A"), HostModel(name="b", label="B", default=True))
+        assert Settings(host_models=listed).default_host_model.name == "b"

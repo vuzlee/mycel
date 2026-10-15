@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -31,6 +32,22 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(254), unique=True)
     password_hash: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    #: The model picked before any question, as a `model_ref`; NULL is the host default.
+    default_model_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+
+class ModelPref(Base):
+    """One person's toggle on one model. No row: a host model is on."""
+
+    __tablename__ = "model_pref"
+    __table_args__ = ({"schema": APP},)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(f"{APP}.user.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: `host:<gateway name>` or `own:<id>`.
+    model_ref: Mapped[str] = mapped_column(String(200), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean)
 
 
 class Session(Base):
@@ -174,6 +191,8 @@ class Turn(Base):
     spent_usd: Mapped[Any | None] = mapped_column(Numeric(12, 6), nullable=True)
     # NULL, not JSON null: the upsert coalesces on this column and must not wipe earlier steps.
     steps: Mapped[list[Any] | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    #: The model asked for, as a `model_ref`; NULL on turns from before models could be picked.
+    model_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

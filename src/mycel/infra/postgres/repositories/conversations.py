@@ -105,12 +105,23 @@ class ConversationRepository:
         )
         return bool(rowcount(result))
 
-    async def add_turn(self, conversation_id: int, job_id: str, question: str, status: str) -> None:
+    async def add_turn(
+        self,
+        conversation_id: int,
+        job_id: str,
+        question: str,
+        status: str,
+        model_ref: str | None = None,
+    ) -> None:
         """The request's row. Never overwrites: the worker may already have finished."""
         await self._session.execute(
             insert(Turn)
             .values(
-                conversation_id=conversation_id, job_id=job_id, question=question, status=status
+                conversation_id=conversation_id,
+                job_id=job_id,
+                question=question,
+                status=status,
+                model_ref=model_ref,
             )
             .on_conflict_do_nothing(constraint="uq_turn_job_id")
         )
@@ -125,6 +136,7 @@ class ConversationRepository:
         error: str | None = None,
         spent_usd: Decimal | None = None,
         steps: list[Any] | None = None,
+        model_ref: str | None = None,
     ) -> None:
         """Write a turn's state, replacing what that job id last wrote."""
         stmt = insert(Turn).values(
@@ -136,6 +148,7 @@ class ConversationRepository:
             error=error,
             spent_usd=spent_usd,
             steps=steps,
+            model_ref=model_ref,
         )
         await self._session.execute(
             stmt.on_conflict_do_update(
@@ -147,6 +160,8 @@ class ConversationRepository:
                     "spent_usd": stmt.excluded.spent_usd,
                     # Coalesce: a failed redelivery must not wipe steps an earlier attempt wrote.
                     "steps": func.coalesce(stmt.excluded.steps, Turn.steps),
+                    # The model that answered, which may not be the one asked for.
+                    "model_ref": func.coalesce(stmt.excluded.model_ref, Turn.model_ref),
                     "updated_at": func.now(),
                 },
             )

@@ -348,11 +348,13 @@ export const askChat = (
   question: string,
   conversationId?: number,
   chips: Chip[] = [],
+  modelRef?: string,
 ): Promise<Accepted> =>
   post<unknown>("/chat", {
     question,
     conversation_id: conversationId ?? null,
     chips,
+    model_ref: modelRef ?? null,
   }).then((v) => shaped<Accepted>(v, ACCEPTED, "accepted run"));
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */
@@ -361,6 +363,43 @@ export async function fetchChat(jobId: string): Promise<ChatResult | null> {
   if (res.status === 404) return null;
   return shaped<ChatResult>(await json<unknown>(res), CHAT_RESULT, "chat result");
 }
+
+// -- models -----------------------------------------------------------------
+
+/** One model the picker offers; `ref` is what a question is sent with. */
+export interface ModelChoice {
+  ref: string;
+  label: string;
+  source: "host" | "own";
+  enabled: boolean;
+}
+
+export interface Models {
+  models: ModelChoice[];
+  default_ref: string;
+}
+
+const MODEL: Shape = {
+  ref: "string",
+  label: "string",
+  source: ["host", "own"],
+  enabled: "boolean",
+};
+
+const models = (value: unknown): Models => {
+  const found = shaped<Models>(value, { default_ref: "string", models: "array" }, "model list");
+  shaped<ModelChoice[]>(found.models, MODEL, "model");
+  return found;
+};
+
+export const fetchModels = (): Promise<Models> => get<unknown>("/models").then(models);
+
+/** 409 when it is the last one on: something must answer. */
+export const toggleModel = (ref: string, enabled: boolean): Promise<Models> =>
+  request<unknown>("PUT", `/models/prefs/${encodeURIComponent(ref)}`, { enabled }).then(models);
+
+export const setDefaultModel = (ref: string): Promise<Models> =>
+  request<unknown>("PUT", "/models/default", { ref }).then(models);
 
 // -- lists ------------------------------------------------------------------
 
