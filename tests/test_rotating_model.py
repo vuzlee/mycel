@@ -58,3 +58,18 @@ async def test_every_key_spent_raises_the_last_failure() -> None:
     with pytest.raises(ModelHTTPError) as raised:
         await _run(429, 429, 401)
     assert raised.value.status_code == 401
+
+
+async def test_a_400_about_the_key_moves_on() -> None:
+    said: list[str] = []
+
+    def bad_key(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        said.append("k0")
+        raise ModelHTTPError(status_code=400, model_name="k0", body="Please pass a valid API key")
+
+    async def keep(position: int, status: int, error: str) -> None:
+        pass
+
+    keyed: list[tuple[int, Any]] = [(0, FunctionModel(bad_key)), (1, _key(None, said, "k1"))]
+    result = await Agent(RotatingModel(keyed, keep)).run("q")
+    assert result.output == "from k1" and said == ["k0", "k1"]

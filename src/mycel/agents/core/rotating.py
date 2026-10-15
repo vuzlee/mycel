@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.wrapper import WrapperModel
 
+from mycel.agents.core.exceptions import key_rejected
+
 if TYPE_CHECKING:
     from pydantic_ai.messages import ModelMessage, ModelResponse
     from pydantic_ai.models import Model, ModelRequestParameters, StreamedResponse
@@ -22,6 +24,10 @@ ROTATE_ON = (401, 402, 403, 429)
 
 #: Called with the position of a key that failed and the HTTP status it failed with.
 OnFailure = Callable[[int, int, str], Awaitable[None]]
+
+
+def _rotates(exc: ModelHTTPError) -> bool:
+    return exc.status_code in ROTATE_ON or key_rejected(exc.status_code, exc.body)
 
 
 class RotatingModel(WrapperModel):
@@ -43,7 +49,7 @@ class RotatingModel(WrapperModel):
             try:
                 return await model.request(messages, model_settings, model_request_parameters)
             except ModelHTTPError as exc:
-                if exc.status_code not in ROTATE_ON:
+                if not _rotates(exc):
                     raise
                 await self._on_failure(position, exc.status_code, str(exc.body or exc))
                 last = exc
@@ -71,7 +77,7 @@ class RotatingModel(WrapperModel):
                     yield stream
                     return
             except ModelHTTPError as exc:
-                if opened or exc.status_code not in ROTATE_ON:
+                if opened or not _rotates(exc):
                     raise
                 await self._on_failure(position, exc.status_code, str(exc.body or exc))
                 last = exc

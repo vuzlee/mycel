@@ -88,12 +88,23 @@ _BY_STATUS: dict[int, tuple[type[ModelCallFailed], str]] = {
 }
 
 
+#: Words a 400 uses when it is about the key: Google answers a bad key with 400, not 401.
+_KEY_WORDS = ("api key", "api_key", "apikey")
+
+
+def key_rejected(status: int, body: object) -> bool:
+    """A 400 whose body is about the key, which is an auth failure in all but its status."""
+    return status == 400 and any(w in str(body).lower() for w in _KEY_WORDS)
+
+
 def _by_kind(model_spec: str, exc: BaseException) -> ModelCallFailed:
     """The `ModelCallFailed` subclass that says what went wrong, by status or cause."""
     from pydantic_ai.exceptions import ModelHTTPError
 
     if isinstance(exc, ModelHTTPError):
         status = exc.status_code
+        if key_rejected(status, exc.body):
+            return ModelAuth(f"{model_spec}: API key rejected (HTTP {status})")
         if status in _BY_STATUS:
             cls, said = _BY_STATUS[status]
             return cls(f"{model_spec}: {said} (HTTP {status})")

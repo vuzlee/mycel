@@ -76,6 +76,12 @@ class TestErrorKinds:
         assert SPEC in str(exc.value)
         assert str(status) in str(exc.value)
 
+    def test_a_400_about_the_key_is_auth(self) -> None:
+        """Google answers a bad key with 400 'Please pass a valid API key'."""
+        body = {"error": {"code": 400, "message": "Please pass a valid API key"}}
+        with pytest.raises(ModelAuth):
+            _raise(ModelHTTPError(status_code=400, model_name="qwen", body=body))
+
     def test_a_refused_connection_is_unreachable(self) -> None:
         wrapped = ModelAPIError(model_name="qwen", message="connection error")
         wrapped.__cause__ = httpx2.ConnectError("connection refused")

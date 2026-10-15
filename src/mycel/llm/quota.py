@@ -25,6 +25,6 @@ def seconds_until_reset(now: datetime | None = None) -> int:
 
 
 def cooldown_seconds(status: int, error: str) -> int:
-    if status in (401, 403):
+    if status in (400, 401, 403):
         return REJECTED_SECONDS
     return seconds_until_reset() if is_daily_quota(error) else BURST_SECONDS
