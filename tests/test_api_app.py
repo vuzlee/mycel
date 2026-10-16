@@ -92,7 +92,7 @@ class TestTheSinglePageApp:
     """A reload at a deep route must serve the page, not a 404."""
 
     @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
-    @pytest.mark.parametrize("path", ["/app/", "/app/home", "/app/login", "/app/register"])
+    @pytest.mark.parametrize("path", ["/app/", "/app/home", "/app/login", "/app/knowledge"])
     def test_every_route_serves_the_page(self, client: TestClient, path: str) -> None:
         response = client.get(path)
 

@@ -19,7 +19,7 @@ pytestmark = [
 
 
 async def _owner(session: AsyncSession, email: str) -> int:
-    return (await IdentityRepository(session).create_user(email, "x")).id
+    return (await IdentityRepository(session).create_user(email)).id
 
 
 async def _ready_doc(repo: DocumentRepository, user_id: int, sha: str) -> int:

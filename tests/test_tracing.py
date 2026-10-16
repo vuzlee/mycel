@@ -127,6 +127,6 @@ class TestWhatIsNotTraced:
         assert self._excluded("/app/login")
 
     def test_real_work_is_kept(self) -> None:
-        assert not self._excluded("/auth/login")
+        assert not self._excluded("/auth/code/verify")
         assert not self._excluded("/conversations")
         assert not self._excluded("/dashboard/MYC")

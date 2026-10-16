@@ -1325,9 +1325,9 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </thead>
       <tbody>
         <tr>
-          <td class="who">Argon2id, not bcrypt</td>
-          <td>bcrypt truncates silently at 72 bytes, so a long passphrase is only ever its
-            first 72 and nobody finds out.</td>
+          <td class="who">No passwords: Google or an emailed code</td>
+          <td>Mycel already lives on Google, so a password is one more secret to leak and
+            reset. The id token is checked against Google's keys; a code works once.</td>
         </tr>
         <tr>
           <td class="who">An opaque token, not a JWT</td>
@@ -2301,7 +2301,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
         </tr>
         <tr>
           <td class="who">app/ — sign-in and Ask</td>
-          <td>Built — Argon2id, an opaque session cookie. Chat is the main screen;
+          <td>Built — Google or an emailed code, an opaque session cookie. Chat is the main screen;
             the old report page went once an agent could answer it</td>
         </tr>
         <tr class="tone-bronze">

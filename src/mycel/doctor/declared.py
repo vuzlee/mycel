@@ -21,12 +21,12 @@ def declared(env: Settings) -> list[Check]:
     mail_out = smtp.configured(env)
     out.append(
         Check(
-            "REGISTRATION",
-            "password reset",
+            "SIGN-IN",
+            "emailed code",
             State.OK if mail_out else State.OFF,
             f"mail from {env.smtp_from} via {env.smtp_host}"
             if mail_out
-            else "off — no SMTP, so a forgotten password cannot be reset",
+            else "off — no SMTP, so only Google sign-in works",
         )
     )
     configured = google_oauth.configured(env)
@@ -57,21 +57,16 @@ def declared(env: Settings) -> list[Check]:
     )
 
     # The one with a default that is wrong as soon as the app is not on a laptop.
-    if env.registration_invite_code is None and not env.allowed_domains:
-        out.append(
-            Check(
-                "REGISTRATION",
-                "who may sign up",
-                State.BROKEN,
-                "ANYONE who can reach the URL — set REGISTRATION_INVITE_CODE",
-            )
+    domains = env.allowed_domains
+    out.append(
+        Check(
+            "SIGN-IN",
+            "who may sign in",
+            State.OK if domains else State.BROKEN,
+            f"domains: {', '.join(sorted(domains))}"
+            if domains
+            else "ANY Google account or mailbox — set REGISTRATION_ALLOWED_DOMAINS",
         )
-    else:
-        how = []
-        if env.registration_invite_code is not None:
-            how.append("invite code")
-        if env.allowed_domains:
-            how.append(f"domains: {', '.join(sorted(env.allowed_domains))}")
-        out.append(Check("REGISTRATION", "who may sign up", State.OK, " + ".join(how)))
+    )
 
     return out

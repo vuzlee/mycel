@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Using Mycel — from sign-up to a progress report</title>
+<title>Using Mycel — from sign-in to a progress report</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
@@ -362,7 +362,7 @@ li{margin:8px 0}
   <a href="../README.md">readme</a>
 </nav>
 
-<h1>From sign-up to a progress report</h1>
+<h1>From sign-in to a progress report</h1>
 <p class="lede">Mycel turns the work already in your issue tracker into a report and a
 dashboard. Nothing is asked of anyone except the habit they already have: keep issues in
 Jira. This page walks the whole path, in order, and says what to check when a step does
@@ -427,7 +427,7 @@ nobody ever picks up, which on screen looks exactly like a slow model.</p>
   command to end it. Kill it and run <code>up</code> again.</p>
 </div>
 
-<h2 data-n="02">Create an account</h2>
+<h2 data-n="02">Sign in</h2>
 
 <div class="step key">
   <h3 data-n="01">Open the app</h3>
@@ -436,24 +436,25 @@ nobody ever picks up, which on screen looks exactly like a slow model.</p>
 </div>
 
 <div class="step">
-  <h3 data-n="02">Choose “Create one”</h3>
-  <p>The form is one form with two verbs: the link under the button switches it between
-  signing in and registering. Registration is open — anyone who can reach the page can
-  make an account, which is fine for a machine on your desk and is the first thing to
-  change if this is ever put on the Internet.</p>
+  <h3 data-n="02">Continue with Google, or type your email</h3>
+  <p>The button opens Google's account chooser. Typing an address and pressing Continue
+  goes to Google too, straight to that account's password. There is no separate sign-up:
+  the first sign-in makes the account. Anyone may sign in until
+  <code>REGISTRATION_ALLOWED_DOMAINS</code> is set — fine on your desk, the first thing to
+  change on the Internet.</p>
 </div>
 
 <div class="step">
-  <h3 data-n="03">Email and a password of at least 8 characters</h3>
-  <p>The email is only an identifier; nothing is sent to it. The password is hashed with
-  Argon2id and the plain text is never stored or logged.</p>
+  <h3 data-n="03">No Google account? Email me a code</h3>
+  <p>A six-digit code arrives by mail and works once, for ten minutes; five wrong tries
+  burn it. Mycel stores no password at all.</p>
 </div>
 
 <div class="step">
-  <h3 data-n="04">You are already signed in</h3>
-  <p>Registering logs you in, so there is no second form. A session cookie is set that
-  lasts 14 days. It is <code>HttpOnly</code>, so the page itself cannot read it — which is
-  the point: a token JavaScript can read is a token a script can steal.</p>
+  <h3 data-n="04">You are signed in</h3>
+  <p>A session cookie is set that lasts 14 days. It is <code>HttpOnly</code>, so the page
+  itself cannot read it — which is the point: a token JavaScript can read is a token a
+  script can steal.</p>
 </div>
 
 <p>Signing out is the icon at the bottom of the left rail, beside your email. It deletes

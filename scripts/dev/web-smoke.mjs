@@ -7,6 +7,7 @@
 // /usr/bin/google-chrome. Calls no model: nothing is asked. Leaves one throwaway account,
 // smoke-<time>@example.com, for the caller to delete.
 
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 
 const require = createRequire(`${process.env.PUPPETEER_DIR ?? process.cwd()}/`);
@@ -15,7 +16,11 @@ const puppeteer = require("puppeteer-core");
 const base = process.argv[2] ?? "http://localhost:8000";
 const chrome = process.env.CHROME ?? "/usr/bin/google-chrome";
 const email = `smoke-${Date.now()}@example.com`;
-const password = "smoke-password-1";
+// A code from the dev helper, since there is no mailbox to read it from.
+const code = () =>
+  execFileSync("uv", ["run", "python", "-m", "mycel.devtools.signin_code", email], {
+    encoding: "utf8",
+  }).trim();
 const results = [];
 const check = (name, ok, detail = "") => {
   results.push(ok);
@@ -57,14 +62,12 @@ page.on("dialog", (dialog) => void dialog.accept());
 
 await page.goto(`${base}/app/home`, { waitUntil: "load" });
 await page.evaluate(
-  async (e, p) => {
-    const body = JSON.stringify({ email: e, password: p });
-    const headers = { "content-type": "application/json" };
-    await fetch("/auth/register", { method: "POST", headers, body });
-    await fetch("/auth/login", { method: "POST", headers, body });
+  async (e, c) => {
+    const body = JSON.stringify({ email: e, code: c });
+    await fetch("/auth/code/verify", { method: "POST", headers: { "content-type": "application/json" }, body });
   },
   email,
-  password,
+  code(),
 );
 
 // #9 — the documents panel settles: no list stuck on "Loading…".
@@ -131,12 +134,12 @@ check("082 #51 an unreachable api offers Try again", unreachable.includes("Try a
 page.off("request", refuseMe);
 await page.setRequestInterception(false);
 await page.evaluate(
-  async (e, p) => {
-    const body = JSON.stringify({ email: e, password: p });
-    await fetch("/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body });
+  async (e, c) => {
+    const body = JSON.stringify({ email: e, code: c });
+    await fetch("/auth/code/verify", { method: "POST", headers: { "content-type": "application/json" }, body });
   },
   email,
-  password,
+  code(),
 );
 
 // #9 — a killed session sends the reader to sign in rather than showing "no documents".

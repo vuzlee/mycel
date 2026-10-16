@@ -1,8 +1,9 @@
-"""Sign up, sign in, sign out, and ask who you are."""
+"""Sign in with Google or an emailed code, sign out, and ask who you are."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Cookie, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, HTTPException, Query, Response, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,87 +11,128 @@ from mycel.api.dependencies import SESSION_COOKIE, CurrentUser, Db
 from mycel.api.limits import per_ip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.infra import smtp
-from mycel.services import auth
+from mycel.services import auth, google_signin, signin_code
+from mycel.services.oauth import STATE_TTL_SECONDS
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 log = get_logger(__name__)
 
-#: Per client address. Login guesses passwords; the others send mail or create rows.
-LOGIN_PER_MINUTE = 10
-SIGNUP_PER_MINUTE = 5
+#: Per client address. A code request sends mail; a verify guesses a code.
+CODE_PER_MINUTE = 5
+VERIFY_PER_MINUTE = 10
+
+#: Binds a Google round to the browser that started it.
+OIDC_COOKIE = "mycel_oidc"
 
 
-class Credentials(BaseModel):
-    """An email and a password. The same shape signs up and signs in."""
-
-    #: Not `EmailStr`: that pulls in `email-validator` to enforce a spec nobody logs in by.
-    email: str = Field(min_length=3, max_length=254)
-    password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
-
-
-class Registration(Credentials):
-    """Credentials plus the invite code, when the deployment asks for one."""
-
-    #: Ignored where registration is open, so the same form posts to both.
-    invite_code: str | None = Field(default=None, max_length=256)
-
-
-class PasswordChange(BaseModel):
-    """The old password and the new one. Both are required."""
-
-    current_password: str = Field(min_length=1, max_length=1024)
-    new_password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
-
-
-class ForgotRequest(BaseModel):
-    """An address to send a reset link to, if it has an account."""
-
+class CodeRequest(BaseModel):
+    #: Not `EmailStr`: that pulls in `email-validator` to enforce a spec nobody signs in by.
     email: str = Field(min_length=3, max_length=254)
 
 
-class PasswordReset(BaseModel):
-    """The token out of the link, and the password to set with it."""
-
-    token: str = Field(min_length=1, max_length=256)
-    new_password: str = Field(min_length=auth.MIN_PASSWORD, max_length=1024)
+class CodeCheck(CodeRequest):
+    code: str = Field(min_length=4, max_length=12)
 
 
 class UserResponse(BaseModel):
-    """A person, as the API describes them. No hash, by construction — see `Principal`."""
+    """A person, as the API describes them."""
 
     id: int
     email: str
 
 
-@router.post(
-    "/register",
-    status_code=status.HTTP_201_CREATED,
-    response_model=UserResponse,
-    dependencies=[per_ip("register", SIGNUP_PER_MINUTE)],
-)
-async def register(
-    body: Registration,
-    session: Db,
-) -> UserResponse:
-    """Create an account. No session: the new account has to be signed into."""
-    user = await auth.register(session, body.email, body.password, body.invite_code)
-    log.info("user registered", extra={"user_id": user.id})
-    return UserResponse(id=user.id, email=user.email)
+class Methods(BaseModel):
+    """Which ways in this deployment offers, so the page shows only those."""
+
+    google: bool
+    code: bool
 
 
-@router.post(
-    "/login", response_model=UserResponse, dependencies=[per_ip("login", LOGIN_PER_MINUTE)]
-)
-async def login(
-    body: Credentials,
-    response: Response,
+@router.get("/methods", response_model=Methods)
+async def methods() -> Methods:
+    return Methods(google=google_signin.configured(), code=signin_code.configured())
+
+
+@router.get("/google/signin")
+async def start_google_signin(
+    hint: Annotated[str | None, Query(max_length=254)] = None,
+    next: Annotated[str | None, Query(max_length=512)] = None,  # noqa: A002 - the URL's own word
+) -> RedirectResponse:
+    """Send the browser to Google, straight to `hint`'s password when one is given."""
+    if not google_signin.configured():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment has no Google client"
+        )
+    url, state = await google_signin.start(hint, next)
+    response = RedirectResponse(url)
+    response.set_cookie(
+        OIDC_COOKIE,
+        state,
+        max_age=STATE_TTL_SECONDS,
+        httponly=True,
+        # Lax: the cookie rides the top-level GET back from Google.
+        samesite="lax",
+        secure=_secure(),
+        path="/auth/google/signin",
+    )
+    return response
+
+
+@router.get("/google/signin/callback")
+async def finish_google_signin(
     session: Db,
-) -> UserResponse:
-    """Exchange an email and password for a session cookie."""
-    user = await auth.authenticate(session, body.email, body.password)
+    code: Annotated[str | None, Query()] = None,
+    state: Annotated[str | None, Query()] = None,
+    error: Annotated[str | None, Query()] = None,
+    mycel_oidc: Annotated[str | None, Cookie(alias=OIDC_COOKIE)] = None,
+) -> RedirectResponse:
+    """Where Google sends the browser back. Always a redirect, never a bare error page."""
+    if error or not code or not state:
+        return _to_login(error or "cancelled")
+    try:
+        who = await google_signin.finish(state, mycel_oidc, code)
+        user = await auth.account_for(session, who.email, who.sub)
+    except (google_signin.SignInError, auth.AuthError) as exc:
+        log.warning("google sign-in refused", extra={"error": str(exc)})
+        return _to_login("refused")
+    except Exception:  # any failure must still land on a readable page
+        log.warning("google sign-in failed", exc_info=True)
+        return _to_login("failed")
+
+    response = RedirectResponse(f"{_base()}{who.next}")
     await _issue_cookie(session, response, user.id)
+    response.delete_cookie(OIDC_COOKIE, path="/auth/google/signin")
+    log.info("signed in with google", extra={"user_id": user.id})
+    return response
+
+
+@router.post(
+    "/code",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[per_ip("signin-code", CODE_PER_MINUTE)],
+)
+async def request_code(body: CodeRequest, background: BackgroundTasks) -> None:
+    """Mail a sign-in code. 202 whatever the address, so this cannot map who has an account."""
+    if not signin_code.configured():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
+    code = await signin_code.issue(body.email)
+    if code is not None:
+        # After the response, so its timing says nothing either.
+        background.add_task(signin_code.send, body.email, code)
+
+
+@router.post(
+    "/code/verify",
+    response_model=UserResponse,
+    dependencies=[per_ip("signin-verify", VERIFY_PER_MINUTE)],
+)
+async def verify_code(body: CodeCheck, response: Response, session: Db) -> UserResponse:
+    """Exchange a right code for a session; the first one makes the account."""
+    email = await signin_code.spend(body.email, body.code)
+    user = await auth.account_for(session, email)
+    await _issue_cookie(session, response, user.id)
+    log.info("signed in with a code", extra={"user_id": user.id})
     return UserResponse(id=user.id, email=user.email)
 
 
@@ -104,53 +146,6 @@ async def logout(
     if mycel_session:
         await auth.close_session(session, mycel_session)
     response.delete_cookie(SESSION_COOKIE, path="/")
-
-
-@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(
-    body: PasswordChange,
-    user: CurrentUser,
-    session: Db,
-    mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
-) -> None:
-    """Change the password. The current one is required even though the cookie is valid."""
-    ended = await auth.change_password(
-        session, user.id, body.current_password, body.new_password, keep_token=mycel_session
-    )
-    log.info("password changed", extra={"user_id": user.id, "sessions_ended": ended})
-
-
-@router.post(
-    "/forgot",
-    status_code=status.HTTP_202_ACCEPTED,
-    dependencies=[per_ip("forgot", SIGNUP_PER_MINUTE)],
-)
-async def forgot_password(
-    body: ForgotRequest,
-    session: Db,
-    background: BackgroundTasks,
-) -> None:
-    """Ask for a reset link. 202 at once whether or not the address has an account."""
-    if not smtp.configured():
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment cannot send mail")
-    # Sent after the response, so its timing cannot tell which addresses exist.
-    mail = await auth.begin_password_reset(session, body.email)
-    if mail is not None:
-        background.add_task(mail.send)
-
-
-@router.post(
-    "/reset",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[per_ip("reset", SIGNUP_PER_MINUTE)],
-)
-async def reset_password(
-    body: PasswordReset,
-    session: Db,
-) -> None:
-    """Spend a reset link. Every session of that account ends, including any still open."""
-    ended = await auth.reset_password(session, body.token, body.new_password)
-    log.info("password reset", extra={"sessions_ended": ended})
 
 
 @router.get("/me", response_model=UserResponse)
@@ -168,6 +163,18 @@ async def _issue_cookie(session: AsyncSession, response: Response, user_id: int)
         max_age=int(auth.SESSION_TTL.total_seconds()),
         httponly=True,
         samesite="lax",
-        secure=get_settings().mycel_env != "dev",
+        secure=_secure(),
         path="/",
     )
+
+
+def _to_login(reason: str) -> RedirectResponse:
+    return RedirectResponse(f"{_base()}/app/login?error={reason}")
+
+
+def _base() -> str:
+    return get_settings().public_base_url.rstrip("/")
+
+
+def _secure() -> bool:
+    return get_settings().mycel_env != "dev"

@@ -20,7 +20,7 @@ class TestATurnKeepsItsToolCalls:
 
     async def test_the_steps_come_back_as_they_were_written(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("steps@example.com", "x")
+        user = await repo.create_user("steps@example.com")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")
         steps = [{"seq": 1, "agent": "analyst", "type": "tool_called", "payload": {"t": "sql"}}]
 
@@ -36,7 +36,7 @@ class TestATurnKeepsItsToolCalls:
         recorded.
         """
         repo = AppRepository(session)
-        user = await repo.create_user("redeliver@example.com", "x")
+        user = await repo.create_user("redeliver@example.com")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")
         steps = [{"seq": 1, "agent": "analyst", "type": "tool_called", "payload": {}}]
 
@@ -51,8 +51,8 @@ class TestATurnKeepsItsToolCalls:
 class TestATurnBelongsToItsAsker:
     async def test_only_the_owner_finds_it(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        owner = await repo.create_user("owner@example.com", "x")
-        other = await repo.create_user("other@example.com", "x")
+        owner = await repo.create_user("owner@example.com")
+        other = await repo.create_user("other@example.com")
         thread = await repo.create_conversation(owner.id, "chat", "mine")
         await repo.upsert_turn(thread.id, "job-own", "q", "done", answer="a")
 
@@ -67,7 +67,7 @@ class TestForgettingAThread:
     async def test_the_runs_under_it_go_too(self, session: AsyncSession) -> None:
         """`ON DELETE CASCADE` on `turn.conversation_id`, proved rather than assumed."""
         repo = AppRepository(session)
-        user = await repo.create_user("keep@example.com", "x")
+        user = await repo.create_user("keep@example.com")
         thread = await repo.create_conversation(user.id, "chat", "what happened?")
         await repo.upsert_turn(thread.id, "job-1", "q", "done")
 
@@ -76,8 +76,8 @@ class TestForgettingAThread:
 
     async def test_someone_elses_thread_is_left_alone(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        mine = await repo.create_user("mine@example.com", "x")
-        theirs = await repo.create_user("theirs@example.com", "x")
+        mine = await repo.create_user("mine@example.com")
+        theirs = await repo.create_user("theirs@example.com")
         thread = await repo.create_conversation(theirs.id, "chat", "not yours")
 
         assert await repo.delete_conversation(thread.id, mine.id) is False
@@ -101,7 +101,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
     async def test_a_finished_run_lifts_its_thread(self, session: AsyncSession) -> None:
         """The second write of a turn moves the thread."""
         repo = AppRepository(session)
-        user = await repo.create_user("finished@example.com", "x")
+        user = await repo.create_user("finished@example.com")
         early = await repo.create_conversation(user.id, "chat", "asked first")
         later = await repo.create_conversation(user.id, "chat", "asked second")
         await repo.upsert_turn(early.id, "job-early", "q", "queued")
@@ -122,7 +122,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
     async def test_a_reopened_thread_comes_back_to_the_top(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("sidebar@example.com", "x")
+        user = await repo.create_user("sidebar@example.com")
         old = await repo.create_conversation(user.id, "chat", "opened first")
         new = await repo.create_conversation(user.id, "chat", "opened second")
         await repo.upsert_turn(old.id, "job-old", "q", "done")
@@ -137,7 +137,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
     async def test_a_pinned_thread_stays_on_top(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("pin@example.com", "x")
+        user = await repo.create_user("pin@example.com")
         old = await repo.create_conversation(user.id, "chat", "pinned")
         new = await repo.create_conversation(user.id, "chat", "newer")
         await session.flush()
@@ -155,8 +155,8 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
     async def test_someone_elses_thread_cannot_be_pinned(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        mine = await repo.create_user("pin-mine@example.com", "x")
-        theirs = await repo.create_user("pin-theirs@example.com", "x")
+        mine = await repo.create_user("pin-mine@example.com")
+        theirs = await repo.create_user("pin-theirs@example.com")
         thread = await repo.create_conversation(theirs.id, "chat", "not yours")
 
         assert await repo.pin_conversation(thread.id, mine.id, True) is False
@@ -164,7 +164,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
     async def test_a_thread_with_no_turns_still_sorts(self, session: AsyncSession) -> None:
         """`COALESCE` back to its own `created_at`."""
         repo = AppRepository(session)
-        user = await repo.create_user("empty@example.com", "x")
+        user = await repo.create_user("empty@example.com")
         spoken = await repo.create_conversation(user.id, "chat", "answered")
         silent = await repo.create_conversation(user.id, "chat", "never answered")
         await repo.upsert_turn(spoken.id, "job-spoken", "q", "done")
@@ -180,7 +180,7 @@ class TestTheSidebarFollowsTheLastThingSaid:
     async def test_the_latest_turn_of_each_thread_in_one_query(self, session: AsyncSession) -> None:
         """The sidebar shows each thread's last status without loading every turn."""
         repo = AppRepository(session)
-        user = await repo.create_user("latest@example.com", "x")
+        user = await repo.create_user("latest@example.com")
         a = await repo.create_conversation(user.id, "chat", "a")
         b = await repo.create_conversation(user.id, "chat", "b")
         silent = await repo.create_conversation(user.id, "chat", "silent")
@@ -213,7 +213,7 @@ class TestAConnectedGoogleAccount:
 
     async def test_connecting_keeps_what_the_calendar_needs(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("cal@example.com", "x")
+        user = await repo.create_user("cal@example.com")
 
         await repo.upsert_google_account(user.id, "cal@gmail.com", "sealed-token", "openid email")
 
@@ -226,7 +226,7 @@ class TestAConnectedGoogleAccount:
     async def test_reconnecting_replaces_the_token(self, session: AsyncSession) -> None:
         """A second consent round supersedes the first."""
         repo = AppRepository(session)
-        user = await repo.create_user("again@example.com", "x")
+        user = await repo.create_user("again@example.com")
 
         await repo.upsert_google_account(user.id, "a@gmail.com", "first", "openid")
         await repo.upsert_google_account(user.id, "b@gmail.com", "second", "openid email")
@@ -239,13 +239,13 @@ class TestAConnectedGoogleAccount:
     async def test_nobody_connected_is_no_row(self, session: AsyncSession) -> None:
         """The normal state, and it must read as `None` rather than as an error."""
         repo = AppRepository(session)
-        user = await repo.create_user("none@example.com", "x")
+        user = await repo.create_user("none@example.com")
 
         assert await repo.google_account(user.id) is None
 
     async def test_disconnecting_removes_it(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("gone@example.com", "x")
+        user = await repo.create_user("gone@example.com")
         await repo.upsert_google_account(user.id, "g@gmail.com", "token", "openid")
 
         assert await repo.delete_google_account(user.id) is True
@@ -254,14 +254,14 @@ class TestAConnectedGoogleAccount:
     async def test_disconnecting_twice_is_not_an_error(self, session: AsyncSession) -> None:
         """The end state is what was asked for, which is all a disconnect promises."""
         repo = AppRepository(session)
-        user = await repo.create_user("twice@example.com", "x")
+        user = await repo.create_user("twice@example.com")
 
         assert await repo.delete_google_account(user.id) is False
 
     async def test_one_persons_account_is_not_anothers(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        mine = await repo.create_user("mine@example.com", "x")
-        theirs = await repo.create_user("theirs@example.com", "x")
+        mine = await repo.create_user("mine@example.com")
+        theirs = await repo.create_user("theirs@example.com")
         await repo.upsert_google_account(mine.id, "m@gmail.com", "token", "openid")
 
         assert await repo.google_account(theirs.id) is None
@@ -274,7 +274,7 @@ class TestAConnectedJiraAccount:
     async def _connect(
         self, repo: AppRepository, email: str, *, account: str = "acct-1", token: str = "sealed"
     ) -> int:
-        user = await repo.create_user(email, "x")
+        user = await repo.create_user(email)
         await repo.upsert_jira_account(
             user.id, account, "Nam Nguyen", "cloud-1", token, "read:jira-work"
         )
@@ -294,7 +294,7 @@ class TestAConnectedJiraAccount:
     async def test_reconnecting_replaces_the_token(self, session: AsyncSession) -> None:
         """A dead token sitting beside a live one is two answers to "whose grant"."""
         repo = AppRepository(session)
-        user = await repo.create_user("again@example.com", "x")
+        user = await repo.create_user("again@example.com")
         await repo.upsert_jira_account(
             user.id, "acct-1", "Nam", "cloud-1", "first", "read:jira-work"
         )
@@ -342,7 +342,7 @@ class TestAConnectedJiraAccount:
 
     async def test_disconnecting_twice_is_not_an_error(self, session: AsyncSession) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("twice-jira@example.com", "x")
+        user = await repo.create_user("twice-jira@example.com")
 
         assert await repo.delete_jira_account(user.id) is False
 

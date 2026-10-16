@@ -30,7 +30,8 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(254), unique=True)
-    password_hash: Mapped[str] = mapped_column(Text)
+    #: Google's stable id for the account; set on the first Google sign-in.
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     #: The model picked before any question, as a `model_ref`; NULL is the host default.
     default_model_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -115,23 +116,6 @@ class Membership(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
     project: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class PasswordReset(Base):
-    """An outstanding password reset; stores a hash of the token, never the token."""
-
-    __tablename__ = "password_reset"
-    __table_args__ = (
-        Index("ix_password_reset_user", "user_id"),
-        {"schema": APP},
-    )
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(f"{APP}.user.id", ondelete="CASCADE"))
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class GoogleAccount(Base):

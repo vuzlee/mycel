@@ -1,12 +1,15 @@
-"""Registering, signing in, and what a cookie is worth afterwards."""
+"""Signing in with Google or an emailed code, and what a cookie is worth afterwards."""
 
 import asyncio
-import threading
+import time
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
+import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -19,13 +22,114 @@ from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.repositories.identity import IdentityRepository
-from mycel.services import auth, permission
+from mycel.services import auth, google_signin, oauth, permission, signin_code
 from tests.fakes import DSN, SCHEMAS, needs_postgres
 
 pytestmark = pytest.mark.anyio
 
+CLIENT_ID = "client-id.apps.googleusercontent.com"
+_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
-PASSWORD = "correct horse battery"
+
+class CodeRedis:
+    """Enough Redis for a code: get, set, incr, expire, getdel, delete, a pipeline."""
+
+    def __init__(self) -> None:
+        self.values: dict[str, Any] = {}
+
+    async def get(self, key: str) -> Any:
+        return self.values.get(key)
+
+    async def set(self, key: str, value: Any, ex: int | None = None) -> bool:
+        self.values[key] = value
+        return True
+
+    async def incr(self, key: str) -> int:
+        self.values[key] = int(self.values.get(key, 0)) + 1
+        return int(self.values[key])
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        return True
+
+    async def getdel(self, key: str) -> Any:
+        return self.values.pop(key, None)
+
+    async def delete(self, *keys: str) -> int:
+        return sum(self.values.pop(k, None) is not None for k in keys)
+
+    def pipeline(self) -> "CodeRedis.Pipe":
+        return CodeRedis.Pipe(self)
+
+    class Pipe:
+        def __init__(self, owner: "CodeRedis") -> None:
+            self.owner = owner
+            self.calls: list[Any] = []
+
+        def set(self, *args: Any, **kwargs: Any) -> None:
+            self.calls.append(self.owner.set(*args, **kwargs))
+
+        def delete(self, *keys: str) -> None:
+            self.calls.append(self.owner.delete(*keys))
+
+        async def execute(self) -> list[Any]:
+            return [await c for c in self.calls]
+
+
+@pytest.fixture
+def redis(monkeypatch: pytest.MonkeyPatch) -> CodeRedis:
+    fake = CodeRedis()
+
+    async def _get_client() -> CodeRedis:
+        return fake
+
+    monkeypatch.setattr(signin_code, "get_client", _get_client)
+    monkeypatch.setattr(google_signin, "get_client", _get_client)
+    return fake
+
+
+@pytest.fixture
+def mailbox(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str]]:
+    """Mail as a list; `smtp.configured()` is true while it is in use."""
+    sent: list[tuple[str, str]] = []
+
+    async def send(to: str, subject: str, body: str) -> None:
+        sent.append((to, body))
+
+    monkeypatch.setattr(smtp, "configured", lambda settings=None: True)
+    monkeypatch.setattr(smtp, "send", send)
+    return sent
+
+
+@pytest.fixture
+def google(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """Google as a client id, a token endpoint and a key: `claims` is what the next token says."""
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", CLIENT_ID)
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://mycel.example.com")
+    get_settings.cache_clear()
+    state: dict[str, Any] = {"claims": {}}
+
+    async def post_token(url: str, **kwargs: Any) -> tuple[int, dict[str, Any]]:
+        return 200, {"id_token": id_token(state["claims"])}
+
+    monkeypatch.setattr(oauth, "post_token", post_token)
+    monkeypatch.setattr(google_signin, "signing_key", lambda token: _KEY.public_key())
+    return state
+
+
+def id_token(claims: dict[str, Any], key: Any = _KEY) -> str:
+    now = int(time.time())
+    body = {
+        "iss": "https://accounts.google.com",
+        "aud": CLIENT_ID,
+        "iat": now,
+        "exp": now + 300,
+        "sub": "g-1",
+        "email": "ann@example.com",
+        "email_verified": True,
+        **claims,
+    }
+    return jwt.encode(body, key, algorithm="RS256")
 
 
 @pytest.fixture
@@ -61,111 +165,325 @@ async def _drop_schema() -> None:
 
 
 @needs_postgres
-class TestRegistering:
-    async def test_an_address_can_only_be_taken_once(self, session: AsyncSession) -> None:
-        """The index is what enforces this, not a prior SELECT."""
-        await auth.register(session, "a@example.com", PASSWORD)
-        await session.commit()
+class TestTheAccountBehindASignIn:
+    async def test_the_first_sign_in_makes_the_account(self, session: AsyncSession) -> None:
+        user = await auth.account_for(session, "New@Example.com ")
 
-        with pytest.raises(auth.AuthError):
-            await auth.register(session, "a@example.com", PASSWORD)
+        assert user.email == "new@example.com"
 
-    async def test_case_and_space_are_not_identity(self, session: AsyncSession) -> None:
-        """`A@Example.com ` and `a@example.com` are one person, and one account."""
-        await auth.register(session, "a@example.com", PASSWORD)
-        await session.commit()
+    async def test_the_same_address_is_the_same_account(self, session: AsyncSession) -> None:
+        first = await auth.account_for(session, "same@example.com")
 
-        with pytest.raises(auth.AuthError):
-            await auth.register(session, "  A@Example.COM ", PASSWORD)
+        assert await auth.account_for(session, "SAME@example.com") == first
 
-    async def test_a_taken_address_leaves_the_callers_work_alone(
-        self, session: AsyncSession
+    async def test_google_links_to_an_account_made_with_a_code(self, session: AsyncSession) -> None:
+        """Someone who came in by mail keeps their history once they use Google."""
+        by_code = await auth.account_for(session, "link@example.com")
+
+        by_google = await auth.account_for(session, "link@example.com", "g-link")
+
+        assert by_google == by_code
+        found = await IdentityRepository(session).user_by_google_sub("g-link")
+        assert found is not None and found.id == by_code.id
+
+    async def test_the_google_id_wins_over_a_changed_address(self, session: AsyncSession) -> None:
+        """Google lets people rename their address; the account follows the id."""
+        first = await auth.account_for(session, "old@example.com", "g-moved")
+
+        assert await auth.account_for(session, "new-name@example.com", "g-moved") == first
+
+    async def test_a_domain_outside_the_allowlist_gets_no_account(
+        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The refusal undoes the insert only, not what the same session did before it."""
-        first = await auth.register(session, "taken@example.com", PASSWORD)
-        await IdentityRepository(session).set_password_hash(first.id, "kept")
+        monkeypatch.setenv("REGISTRATION_ALLOWED_DOMAINS", "example.com")
+        get_settings.cache_clear()
 
         with pytest.raises(auth.AuthError):
-            await auth.register(session, "taken@example.com", PASSWORD)
+            await auth.account_for(session, "o@elsewhere.org")
+        assert (await auth.account_for(session, "o@example.com")).id
 
-        user = await IdentityRepository(session).user_by_id(first.id)
-        assert user is not None and user.password_hash == "kept"
 
-    async def test_a_short_password_is_refused(self, session: AsyncSession) -> None:
+class TestTheEmailedCode:
+    async def test_the_right_code_works_once(self, redis: CodeRedis) -> None:
+        code = await signin_code.issue("ann@example.com")
+        assert code is not None and len(code) == signin_code.DIGITS
+
+        assert await signin_code.spend("ANN@example.com", code) == "ann@example.com"
         with pytest.raises(auth.AuthError):
-            await auth.register(session, "b@example.com", "short")
+            await signin_code.spend("ann@example.com", code)
 
-    async def test_the_plaintext_is_never_stored(self, session: AsyncSession) -> None:
-        """The one thing that must be true of every row in this table."""
-        user = await auth.register(session, "c@example.com", PASSWORD)
-        stored = await IdentityRepository(session).user_by_id(user.id)
+    async def test_a_wrong_code_is_refused(self, redis: CodeRedis) -> None:
+        code = await signin_code.issue("ann@example.com")
+        assert code is not None
+        wrong = "000000" if code != "000000" else "111111"
 
-        assert stored is not None
-        assert PASSWORD not in stored.password_hash
-        assert stored.password_hash.startswith("$argon2id$")
+        with pytest.raises(auth.AuthError):
+            await signin_code.spend("ann@example.com", wrong)
+        assert await signin_code.spend("ann@example.com", code) == "ann@example.com"
+
+    async def test_five_wrong_guesses_burn_the_code(self, redis: CodeRedis) -> None:
+        """Without a cap, a million codes is a million requests away."""
+        code = await signin_code.issue("ann@example.com")
+        assert code is not None
+        wrong = "000000" if code != "000000" else "111111"
+        for _ in range(signin_code.MAX_TRIES):
+            with pytest.raises(auth.AuthError):
+                await signin_code.spend("ann@example.com", wrong)
+
+        with pytest.raises(auth.AuthError):
+            await signin_code.spend("ann@example.com", code)
+
+    async def test_a_new_code_replaces_the_old_one(self, redis: CodeRedis) -> None:
+        old = await signin_code.issue("ann@example.com")
+        new = await signin_code.issue("ann@example.com")
+        assert old is not None and new is not None
+
+        if old != new:
+            with pytest.raises(auth.AuthError):
+                await signin_code.spend("ann@example.com", old)
+        assert await signin_code.spend("ann@example.com", new) == "ann@example.com"
+
+    async def test_nothing_is_stored_in_the_clear(self, redis: CodeRedis) -> None:
+        code = await signin_code.issue("ann@example.com")
+
+        assert code not in [str(v) for v in redis.values.values()]
+
+    async def test_an_address_outside_the_allowlist_gets_no_code(
+        self, redis: CodeRedis, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("REGISTRATION_ALLOWED_DOMAINS", "example.com")
+        get_settings.cache_clear()
+
+        assert await signin_code.issue("o@elsewhere.org") is None
 
 
-class TestTheEmailShape:
-    """A reset link has to reach the address, so sign-up refuses what cannot be one."""
+class TestTheGoogleToken:
+    def test_a_good_token_reads(self, google: dict[str, Any]) -> None:
+        claims = google_signin.verify(id_token({}), CLIENT_ID)
 
-    @pytest.mark.parametrize("bad", ["nam", "nam@acme", "@acme.com", "a b@acme.com"])
-    async def test_a_string_that_is_not_an_address_is_refused(self, bad: str) -> None:
-        with pytest.raises(auth.AuthError, match="not an email"):
-            await auth.register(None, bad, PASSWORD)  # type: ignore[arg-type]
+        assert claims["email"] == "ann@example.com"
+
+    def test_another_key_is_refused(self, google: dict[str, Any]) -> None:
+        stranger = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+        with pytest.raises(google_signin.SignInError):
+            google_signin.verify(id_token({}, stranger), CLIENT_ID)
+
+    def test_a_token_for_another_app_is_refused(self, google: dict[str, Any]) -> None:
+        with pytest.raises(google_signin.SignInError):
+            google_signin.verify(id_token({"aud": "someone-else"}), CLIENT_ID)
+
+    def test_an_expired_token_is_refused(self, google: dict[str, Any]) -> None:
+        with pytest.raises(google_signin.SignInError):
+            google_signin.verify(id_token({"exp": int(time.time()) - 60}), CLIENT_ID)
+
+    def test_another_issuer_is_refused(self, google: dict[str, Any]) -> None:
+        with pytest.raises(google_signin.SignInError):
+            google_signin.verify(id_token({"iss": "https://evil.example"}), CLIENT_ID)
+
+
+class TestTheGoogleRound:
+    async def test_a_hint_goes_straight_to_that_account(
+        self, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        url, _ = await google_signin.start("ann@example.com", None)
+        query = parse_qs(urlsplit(url).query)
+
+        assert query["login_hint"] == ["ann@example.com"]
+        assert query["scope"] == ["openid email"]
+        assert "prompt" not in query
+        assert query["redirect_uri"] == ["https://mycel.example.com/auth/google/signin/callback"]
+
+    async def test_no_hint_shows_the_chooser(
+        self, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        url, _ = await google_signin.start(None, None)
+
+        assert parse_qs(urlsplit(url).query)["prompt"] == ["select_account"]
+
+    async def test_the_round_finishes_once(self, google: dict[str, Any], redis: CodeRedis) -> None:
+        url, state = await google_signin.start(None, "/app/knowledge")
+        google["claims"] = {"nonce": parse_qs(urlsplit(url).query)["nonce"][0]}
+
+        who = await google_signin.finish(state, state, "code")
+
+        assert (who.sub, who.email, who.next) == ("g-1", "ann@example.com", "/app/knowledge")
+        with pytest.raises(google_signin.SignInError):
+            await google_signin.finish(state, state, "code")
+
+    async def test_another_browser_cannot_finish_it(
+        self, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        """Login CSRF: my callback link opened in your browser signs you into me."""
+        _, state = await google_signin.start(None, None)
+
+        with pytest.raises(google_signin.SignInError):
+            await google_signin.finish(state, None, "code")
+
+    async def test_a_token_from_another_round_is_refused(
+        self, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        _, state = await google_signin.start(None, None)
+        google["claims"] = {"nonce": "from-somewhere-else"}
+
+        with pytest.raises(google_signin.SignInError):
+            await google_signin.finish(state, state, "code")
+
+    async def test_an_unverified_address_is_refused(
+        self, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        """Linking by an address Google has not checked hands an account to whoever typed it."""
+        url, state = await google_signin.start(None, None)
+        nonce = parse_qs(urlsplit(url).query)["nonce"][0]
+        google["claims"] = {"nonce": nonce, "email_verified": False}
+
+        with pytest.raises(google_signin.SignInError):
+            await google_signin.finish(state, state, "code")
+
+    @pytest.mark.parametrize(
+        ("asked", "lands"),
+        [
+            ("/app/knowledge", "/app/knowledge"),
+            ("https://evil.example/", "/app/"),
+            ("//evil.example/app/", "/app/"),
+            ("/app//evil.example", "/app/"),
+            (None, "/app/"),
+        ],
+    )
+    def test_next_stays_inside_the_app(self, asked: str | None, lands: str) -> None:
+        assert google_signin.safe_next(asked) == lands
 
 
 @needs_postgres
-class TestSigningIn:
-    async def test_the_right_password_is_accepted(self, session: AsyncSession) -> None:
-        await auth.register(session, "d@example.com", PASSWORD)
-        user = await auth.authenticate(session, "d@example.com", PASSWORD)
-        assert user.email == "d@example.com"
+class TestOverHttp:
+    """The round trip a browser actually makes."""
 
-    async def test_a_wrong_password_and_an_unknown_address_look_the_same(
-        self, session: AsyncSession
+    @staticmethod
+    def sign_in(client: TestClient, email: str = "k@example.com") -> None:
+        code = asyncio.run(signin_code.issue(email))
+        assert code is not None
+        signed_in = client.post("/auth/code/verify", json={"email": email, "code": code})
+        assert signed_in.status_code == 200, signed_in.text
+
+    def test_a_code_signs_you_in(self, client: TestClient, redis: CodeRedis) -> None:
+        self.sign_in(client)
+
+        me = client.get("/auth/me")
+        assert me.status_code == 200
+        assert me.json()["email"] == "k@example.com"
+
+    def test_asking_for_a_code_mails_it(
+        self, client: TestClient, redis: CodeRedis, mailbox: list[tuple[str, str]]
     ) -> None:
-        """Different messages here turn the endpoint into a list of who has an account."""
-        await auth.register(session, "e@example.com", PASSWORD)
+        assert client.post("/auth/code", json={"email": "m@example.com"}).status_code == 202
 
-        with pytest.raises(auth.AuthError) as wrong:
-            await auth.authenticate(session, "e@example.com", "not the password")
-        with pytest.raises(auth.AuthError) as unknown:
-            await auth.authenticate(session, "nobody@example.com", PASSWORD)
+        assert [to for to, _ in mailbox] == ["m@example.com"]
 
-        assert str(wrong.value) == str(unknown.value)
+    def test_no_mail_server_is_503(self, client: TestClient) -> None:
+        response = client.post("/auth/code", json={"email": "m@example.com"})
 
-    async def test_hashing_runs_off_the_event_loop(
-        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+        assert response.status_code == 503
+
+    def test_a_wrong_code_is_400_not_500(self, client: TestClient, redis: CodeRedis) -> None:
+        asyncio.run(signin_code.issue("w@example.com"))
+
+        response = client.post(
+            "/auth/code/verify", json={"email": "w@example.com", "code": "x" * 6}
+        )
+
+        assert response.status_code == 400
+        assert response.json()["error"] == "auth_failed"
+
+    def test_the_cookie_is_not_readable_by_a_page(
+        self, client: TestClient, redis: CodeRedis
     ) -> None:
-        """Argon2 is ~50 ms of CPU; on the loop thread every other request waits for it."""
-        loop_thread = threading.get_ident()
-        seen: list[int] = []
-        real = auth._hasher
+        """A token a script can read is a token a cross-site script can steal."""
+        code = asyncio.run(signin_code.issue("c@example.com"))
+        response = client.post("/auth/code/verify", json={"email": "c@example.com", "code": code})
+        cookie = response.headers["set-cookie"].lower()
 
-        class Recording:
-            def hash(self, password: str) -> str:
-                seen.append(threading.get_ident())
-                return real.hash(password)
+        assert "httponly" in cookie
+        assert "samesite=lax" in cookie
 
-            def verify(self, stored: str, password: str) -> bool:
-                seen.append(threading.get_ident())
-                return real.verify(stored, password)
+    def test_without_a_cookie_me_is_401(self, client: TestClient) -> None:
+        assert client.get("/auth/me").status_code == 401
 
-            def check_needs_rehash(self, stored: str) -> bool:
-                return False
+    def test_logging_out_makes_the_same_cookie_401(
+        self, client: TestClient, redis: CodeRedis
+    ) -> None:
+        self.sign_in(client, "l@example.com")
+        assert client.get("/auth/me").status_code == 200
 
-        monkeypatch.setattr(auth, "_hasher", Recording())
-        await auth.register(session, "f@example.com", PASSWORD)
-        await auth.authenticate(session, "f@example.com", PASSWORD)
+        assert client.post("/auth/logout").status_code == 204
+        assert client.get("/auth/me").status_code == 401
 
-        assert len(seen) == 2
-        assert loop_thread not in seen
+    def test_logging_out_without_a_session_still_clears_the_cookie(
+        self, client: TestClient
+    ) -> None:
+        """A 401 here would leave a browser holding a token it can never get rid of."""
+        assert client.post("/auth/logout").status_code == 204
+
+    def test_a_forged_cookie_is_rejected(self, client: TestClient) -> None:
+        client.cookies.set(SESSION_COOKIE, "a" * 64)
+        assert client.get("/auth/me").status_code == 401
+
+    def test_the_page_learns_which_ways_in_there_are(self, client: TestClient) -> None:
+        assert client.get("/auth/methods").json() == {"google": False, "code": False}
+
+    def test_google_sign_in_end_to_end(
+        self, client: TestClient, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        started = client.get(
+            "/auth/google/signin", params={"next": "/app/knowledge"}, follow_redirects=False
+        )
+        assert started.status_code == 307
+        query = parse_qs(urlsplit(started.headers["location"]).query)
+        google["claims"] = {"nonce": query["nonce"][0], "sub": "g-e2e", "email": "e2e@example.com"}
+
+        back = client.get(
+            "/auth/google/signin/callback",
+            params={"code": "c", "state": query["state"][0]},
+            follow_redirects=False,
+        )
+
+        assert back.status_code == 307
+        assert back.headers["location"] == "https://mycel.example.com/app/knowledge"
+        assert client.get("/auth/me").json()["email"] == "e2e@example.com"
+
+    def test_a_cancelled_google_sign_in_comes_back_to_login(self, client: TestClient) -> None:
+        response = client.get(
+            "/auth/google/signin/callback",
+            params={"error": "access_denied"},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert response.headers["location"].endswith("/app/login?error=access_denied")
+
+    def test_a_callback_from_another_browser_signs_nobody_in(
+        self, client: TestClient, google: dict[str, Any], redis: CodeRedis
+    ) -> None:
+        started = client.get("/auth/google/signin", follow_redirects=False)
+        state = parse_qs(urlsplit(started.headers["location"]).query)["state"][0]
+        client.cookies.clear()
+
+        back = client.get(
+            "/auth/google/signin/callback",
+            params={"code": "c", "state": state},
+            follow_redirects=False,
+        )
+
+        assert back.headers["location"].endswith("/app/login?error=refused")
+        assert client.get("/auth/me").status_code == 401
+
+    def test_google_off_is_503(self, client: TestClient) -> None:
+        assert client.get("/auth/google/signin", follow_redirects=False).status_code == 503
 
 
 @needs_postgres
 class TestSessions:
     async def test_a_fresh_token_names_its_owner(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "f@example.com", PASSWORD)
+        user = await auth.account_for(session, "f@example.com")
         token = await auth.open_session(session, user.id)
 
         assert (await auth.session_user(session, token)) == user
@@ -174,7 +492,7 @@ class TestSessions:
         self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Every poll was an UPDATE; last_seen only needs minute precision."""
-        user = await auth.register(session, "busy@example.com", PASSWORD)
+        user = await auth.account_for(session, "busy@example.com")
         token = await auth.open_session(session, user.id)
         touched: list[str] = []
 
@@ -189,7 +507,7 @@ class TestSessions:
 
     async def test_an_expired_session_reads_as_gone(self, session: AsyncSession) -> None:
         """Expiry is enforced on read, not by the database."""
-        user = await auth.register(session, "g@example.com", PASSWORD)
+        user = await auth.account_for(session, "g@example.com")
         past = datetime.now(UTC) - timedelta(seconds=1)
         await IdentityRepository(session).create_session("expired-token", user.id, past)
 
@@ -197,7 +515,7 @@ class TestSessions:
 
     async def test_reading_an_expired_session_deletes_it(self, session: AsyncSession) -> None:
         """Otherwise a sweeper has to exist for the table not to grow forever."""
-        user = await auth.register(session, "h@example.com", PASSWORD)
+        user = await auth.account_for(session, "h@example.com")
         past = datetime.now(UTC) - timedelta(seconds=1)
         await IdentityRepository(session).create_session("dead-token", user.id, past)
 
@@ -205,7 +523,7 @@ class TestSessions:
         assert await IdentityRepository(session).session_by_id("dead-token") is None
 
     async def test_logging_out_kills_the_token(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "i@example.com", PASSWORD)
+        user = await auth.account_for(session, "i@example.com")
         token = await auth.open_session(session, user.id)
 
         await auth.close_session(session, token)
@@ -216,151 +534,9 @@ class TestSessions:
 
 
 @needs_postgres
-class TestOverHttp:
-    """The round trip a browser actually makes."""
-
-    def test_registering_does_not_sign_you_in(self, client: TestClient) -> None:
-        """Registering and signing in are separate decisions."""
-        created = client.post(
-            "/auth/register", json={"email": "j@example.com", "password": PASSWORD}
-        )
-        assert created.status_code == 201
-        assert created.json()["email"] == "j@example.com"
-
-        assert "set-cookie" not in created.headers
-        assert client.get("/auth/me").status_code == 401
-
-    def test_registering_twice_says_the_address_is_taken(self, client: TestClient) -> None:
-        """The second attempt is the common one."""
-        client.post("/auth/register", json={"email": "taken@example.com", "password": PASSWORD})
-
-        again = client.post(
-            "/auth/register", json={"email": "taken@example.com", "password": PASSWORD}
-        )
-        assert again.status_code == 400
-        assert again.json()["error"] == "auth_failed"
-        assert "already registered" in again.json()["detail"]
-
-    def test_registering_then_logging_in_returns_the_user(self, client: TestClient) -> None:
-        client.post("/auth/register", json={"email": "k@example.com", "password": PASSWORD})
-
-        signed_in = client.post(
-            "/auth/login", json={"email": "k@example.com", "password": PASSWORD}
-        )
-        assert signed_in.status_code == 200
-
-        me = client.get("/auth/me")
-        assert me.status_code == 200
-        assert me.json()["email"] == "k@example.com"
-
-    def test_the_cookie_is_not_readable_by_a_page(self, client: TestClient) -> None:
-        """A token a script can read is a token a cross-site script can steal."""
-        client.post("/auth/register", json={"email": "c@example.com", "password": PASSWORD})
-        response = client.post("/auth/login", json={"email": "c@example.com", "password": PASSWORD})
-        cookie = response.headers["set-cookie"].lower()
-
-        assert "httponly" in cookie
-        assert "samesite=lax" in cookie
-
-    def test_without_a_cookie_me_is_401(self, client: TestClient) -> None:
-        assert client.get("/auth/me").status_code == 401
-
-    def test_logging_out_makes_the_same_cookie_401(self, client: TestClient) -> None:
-        client.post("/auth/register", json={"email": "l@example.com", "password": PASSWORD})
-        client.post("/auth/login", json={"email": "l@example.com", "password": PASSWORD})
-        assert client.get("/auth/me").status_code == 200
-
-        assert client.post("/auth/logout").status_code == 204
-        assert client.get("/auth/me").status_code == 401
-
-    def test_logging_out_without_a_session_still_clears_the_cookie(
-        self, client: TestClient
-    ) -> None:
-        """A 401 here would leave a browser holding a token it can never get rid of."""
-        assert client.post("/auth/logout").status_code == 204
-
-    def test_a_wrong_password_is_400_not_500(self, client: TestClient) -> None:
-        client.post("/auth/register", json={"email": "m@example.com", "password": PASSWORD})
-
-        response = client.post(
-            "/auth/login", json={"email": "m@example.com", "password": "wrong password"}
-        )
-        assert response.status_code == 400
-        assert response.json()["error"] == "auth_failed"
-
-    def test_a_forged_cookie_is_rejected(self, client: TestClient) -> None:
-        client.cookies.set(SESSION_COOKIE, "a" * 64)
-        assert client.get("/auth/me").status_code == 401
-
-
-@needs_postgres
-class TestChangingPassword:
-    """The old password is required even though the caller already holds a live cookie."""
-
-    async def test_the_new_password_works_and_the_old_one_does_not(
-        self, session: AsyncSession
-    ) -> None:
-        user = await auth.register(session, "pw@example.com", PASSWORD)
-
-        await auth.change_password(session, user.id, PASSWORD, "a longer new one")
-
-        assert await auth.authenticate(session, "pw@example.com", "a longer new one") == user
-        with pytest.raises(auth.AuthError):
-            await auth.authenticate(session, "pw@example.com", PASSWORD)
-
-    async def test_a_wrong_current_password_changes_nothing(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "pw2@example.com", PASSWORD)
-
-        with pytest.raises(auth.AuthError):
-            await auth.change_password(session, user.id, "not it", "a longer new one")
-        assert await auth.authenticate(session, "pw2@example.com", PASSWORD) == user
-
-    async def test_a_short_new_password_is_refused(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "pw3@example.com", PASSWORD)
-
-        with pytest.raises(auth.AuthError):
-            await auth.change_password(session, user.id, PASSWORD, "short")
-
-    async def test_other_sessions_end_and_the_named_one_survives(
-        self, session: AsyncSession
-    ) -> None:
-        """The point of changing a password is that someone else may know the old one."""
-        user = await auth.register(session, "pw4@example.com", PASSWORD)
-        mine = await auth.open_session(session, user.id)
-        theirs = await auth.open_session(session, user.id)
-
-        ended = await auth.change_password(
-            session, user.id, PASSWORD, "a longer new one", keep_token=mine
-        )
-
-        assert ended == 1
-        assert await auth.session_user(session, mine) == user
-        assert await auth.session_user(session, theirs) is None
-
-    def test_over_http_the_tab_doing_it_stays_signed_in(self, client: TestClient) -> None:
-        client.post("/auth/register", json={"email": "pw5@example.com", "password": PASSWORD})
-        client.post("/auth/login", json={"email": "pw5@example.com", "password": PASSWORD})
-
-        changed = client.post(
-            "/auth/password",
-            json={"current_password": PASSWORD, "new_password": "a longer new one"},
-        )
-
-        assert changed.status_code == 204
-        assert client.get("/auth/me").status_code == 200
-
-    def test_over_http_without_a_cookie_it_is_401(self, client: TestClient) -> None:
-        response = client.post(
-            "/auth/password",
-            json={"current_password": PASSWORD, "new_password": "a longer new one"},
-        )
-        assert response.status_code == 401
-
-
-@needs_postgres
 class TestSweepingSessions:
     async def test_only_expired_rows_go(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "sw@example.com", PASSWORD)
+        user = await auth.account_for(session, "sw@example.com")
         live = await auth.open_session(session, user.id)
         past = datetime.now(UTC) - timedelta(seconds=1)
         await IdentityRepository(session).create_session("stale", user.id, past)
@@ -370,60 +546,18 @@ class TestSweepingSessions:
 
 
 @needs_postgres
-class TestWhoMayRegister:
-    """Open registration is right for one machine on localhost and wrong past it."""
-
-    async def test_an_invite_code_is_required_when_one_is_set(
-        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("REGISTRATION_INVITE_CODE", "let-me-in")
-        get_settings.cache_clear()
-
-        with pytest.raises(auth.AuthError):
-            await auth.register(session, "n@example.com", PASSWORD)
-
-        user = await auth.register(session, "n@example.com", PASSWORD, "let-me-in")
-        assert user.email == "n@example.com"
-
-    async def test_a_domain_outside_the_allowlist_is_refused(
-        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("REGISTRATION_ALLOWED_DOMAINS", "example.com")
-        get_settings.cache_clear()
-
-        with pytest.raises(auth.AuthError):
-            await auth.register(session, "o@elsewhere.org", PASSWORD)
-        assert (await auth.register(session, "o@example.com", PASSWORD)).id
-
-    async def test_both_refusals_read_the_same(
-        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Two messages would tell someone with neither which half to guess."""
-        monkeypatch.setenv("REGISTRATION_INVITE_CODE", "let-me-in")
-        monkeypatch.setenv("REGISTRATION_ALLOWED_DOMAINS", "example.com")
-        get_settings.cache_clear()
-
-        with pytest.raises(auth.AuthError) as bad_code:
-            await auth.register(session, "p@example.com", PASSWORD, "wrong")
-        with pytest.raises(auth.AuthError) as bad_domain:
-            await auth.register(session, "p@elsewhere.org", PASSWORD, "let-me-in")
-
-        assert str(bad_code.value) == str(bad_domain.value)
-
-
-@needs_postgres
 class TestMembership:
     """A row is access, and the rows are what Jira said. No row, no access."""
 
     async def test_a_new_account_may_read_nothing(self, session: AsyncSession) -> None:
         """Otherwise a person nobody has recorded anything about is an administrator."""
-        user = await auth.register(session, "mem@example.com", PASSWORD)
+        user = await auth.account_for(session, "mem@example.com")
 
         assert await permission.readable_projects(user) == frozenset()
         assert await permission.can_read_project(user, "MYC") is False
 
     async def test_jira_s_answer_becomes_the_access(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "mem2@example.com", PASSWORD)
+        user = await auth.account_for(session, "mem2@example.com")
 
         await AccountRepository(session).replace_projects(user.id, ["MYC", "OPS"])
 
@@ -431,7 +565,7 @@ class TestMembership:
 
     async def test_a_project_lost_in_jira_is_lost_here(self, session: AsyncSession) -> None:
         """Replaced, never merged: a merge would only ever add."""
-        user = await auth.register(session, "mem3@example.com", PASSWORD)
+        user = await auth.account_for(session, "mem3@example.com")
         repo = AccountRepository(session)
         await repo.replace_projects(user.id, ["MYC", "OPS"])
 
@@ -440,7 +574,7 @@ class TestMembership:
         assert await repo.projects_for(user.id) == frozenset({"OPS"})
 
     async def test_nothing_from_jira_means_nothing_here(self, session: AsyncSession) -> None:
-        user = await auth.register(session, "mem4@example.com", PASSWORD)
+        user = await auth.account_for(session, "mem4@example.com")
         repo = AccountRepository(session)
         await repo.replace_projects(user.id, ["MYC"])
 
@@ -449,136 +583,24 @@ class TestMembership:
         assert await repo.projects_for(user.id) == frozenset()
 
     async def test_one_person_s_access_is_not_another_s(self, session: AsyncSession) -> None:
-        one = await auth.register(session, "mem6@example.com", PASSWORD)
-        two = await auth.register(session, "mem7@example.com", PASSWORD)
+        one = await auth.account_for(session, "mem6@example.com")
+        two = await auth.account_for(session, "mem7@example.com")
         await AccountRepository(session).replace_projects(one.id, ["MYC"])
 
         assert await AccountRepository(session).projects_for(two.id) == frozenset()
-
-
-async def _reset(session: AsyncSession, email: str) -> None:
-    """Begin a reset and send its mail, as the route's background task would."""
-    mail = await auth.begin_password_reset(session, email)
-    if mail is not None:
-        await mail.send()
-
-
-@needs_postgres
-class TestForgottenPasswords:
-    """A one-shot token, mailed to the address on the account."""
-
-    @pytest.fixture
-    def outbox(self, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
-        """Every message the code tried to send, instead of an SMTP connection."""
-        sent: list[tuple[str, str, str]] = []
-
-        async def capture(to: str, subject: str, body: str) -> None:
-            sent.append((to, subject, body))
-
-        monkeypatch.setattr(smtp, "send", capture)
-        return sent
-
-    @staticmethod
-    def _token(body: str) -> str:
-        return body.split("token=", 1)[1].split()[0]
-
-    async def test_the_link_sets_a_new_password(
-        self, session: AsyncSession, outbox: list[tuple[str, str, str]]
-    ) -> None:
-        user = await auth.register(session, "forgot@example.com", PASSWORD)
-
-        await _reset(session, "forgot@example.com")
-        await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
-
-        assert await auth.authenticate(session, "forgot@example.com", "a longer new one") == user
-
-    async def test_an_unknown_address_sends_nothing_and_says_nothing(
-        self, session: AsyncSession, outbox: list[tuple[str, str, str]]
-    ) -> None:
-        """Answering differently would turn this into a list of who has an account."""
-        await _reset(session, "nobody@example.com")
-
-        assert outbox == []
-
-    async def test_a_mail_server_down_is_not_the_callers_problem(
-        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Its error would leak the server's address and say the account exists."""
-
-        async def down(to: str, subject: str, body: str) -> None:
-            raise smtp.MailError("mail: [Errno 111] connection refused to smtp:25")
-
-        monkeypatch.setattr(smtp, "send", down)
-        await auth.register(session, "down@example.com", PASSWORD)
-
-        await _reset(session, "down@example.com")
-
-    async def test_a_link_works_once(
-        self, session: AsyncSession, outbox: list[tuple[str, str, str]]
-    ) -> None:
-        await auth.register(session, "once@example.com", PASSWORD)
-        await _reset(session, "once@example.com")
-        token = self._token(outbox[0][2])
-
-        await auth.reset_password(session, token, "a longer new one")
-
-        with pytest.raises(auth.AuthError):
-            await auth.reset_password(session, token, "another one entirely")
-
-    async def test_an_expired_link_is_refused(
-        self,
-        session: AsyncSession,
-        outbox: list[tuple[str, str, str]],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setenv("PASSWORD_RESET_TTL_SECONDS", "-1")
-        get_settings.cache_clear()
-        await auth.register(session, "stale@example.com", PASSWORD)
-        await _reset(session, "stale@example.com")
-
-        with pytest.raises(auth.AuthError):
-            await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
-        get_settings.cache_clear()
-
-    async def test_a_made_up_token_is_refused(self, session: AsyncSession) -> None:
-        with pytest.raises(auth.AuthError):
-            await auth.reset_password(session, "not a real token", "a longer new one")
-
-    async def test_a_short_new_password_is_refused_before_the_link_is_spent(
-        self, session: AsyncSession, outbox: list[tuple[str, str, str]]
-    ) -> None:
-        """Refusing after spending it would cost the link for a typo."""
-        await auth.register(session, "shortpw@example.com", PASSWORD)
-        await _reset(session, "shortpw@example.com")
-        token = self._token(outbox[0][2])
-
-        with pytest.raises(auth.AuthError):
-            await auth.reset_password(session, token, "short")
-        await auth.reset_password(session, token, "a longer new one")
-
-    async def test_every_session_ends_including_the_one_asking(
-        self, session: AsyncSession, outbox: list[tuple[str, str, str]]
-    ) -> None:
-        """A person resetting does not know which browsers are still open."""
-        user = await auth.register(session, "sessions@example.com", PASSWORD)
-        await auth.open_session(session, user.id)
-        await auth.open_session(session, user.id)
-        await _reset(session, "sessions@example.com")
-
-        ended = await auth.reset_password(session, self._token(outbox[0][2]), "a longer new one")
-
-        assert ended == 2
 
 
 @needs_postgres
 class TestTheGoogleRoutesOverHttp:
     """Four routes, and what matters about them is where they send a browser."""
 
+    @pytest.fixture(autouse=True)
+    def _codes(self, redis: CodeRedis) -> None:
+        """Signing in here goes through the emailed code."""
+
     @staticmethod
     def _sign_in(client: TestClient, email: str = "cal@example.com") -> None:
-        client.post("/auth/register", json={"email": email, "password": PASSWORD})
-        entered = client.post("/auth/login", json={"email": email, "password": PASSWORD})
-        assert entered.status_code == 200, entered.text
+        TestOverHttp.sign_in(client, email)
 
     def test_an_unconfigured_deployment_says_so_rather_than_offering_a_button(
         self, client: TestClient
@@ -643,26 +665,3 @@ class TestTheGoogleRoutesOverHttp:
     def test_signed_out_learns_nothing(self, client: TestClient) -> None:
         assert client.get("/auth/google").status_code == 401
         assert client.delete("/auth/google").status_code == 401
-
-
-@needs_postgres
-class TestForgottenPasswordOverHttp:
-    def test_it_refuses_when_the_deployment_cannot_send_mail(self, client: TestClient) -> None:
-        """A link that is never sent is worse than a feature that says it is off."""
-        response = client.post("/auth/forgot", json={"email": "who@example.com"})
-
-        assert response.status_code == 503
-
-    def test_an_unknown_address_is_accepted_like_any_other(
-        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr("mycel.infra.smtp.configured", lambda: True)
-
-        assert client.post("/auth/forgot", json={"email": "nobody@example.com"}).status_code == 202
-
-    def test_a_bad_token_is_refused(self, client: TestClient) -> None:
-        response = client.post(
-            "/auth/reset", json={"token": "made up", "new_password": "a longer new one"}
-        )
-
-        assert response.status_code == 400

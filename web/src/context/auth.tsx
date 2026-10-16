@@ -14,7 +14,7 @@ interface AuthValue {
   /** The API could not say who is signed in (down, restarting); `retry` asks again. */
   failed: boolean;
   retry: () => void;
-  signIn: (email: string, password: string) => Promise<void>;
+  signInWithCode: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
   forget: () => void;
 }
@@ -38,9 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [client],
   );
 
-  const signIn = useCallback(
-    async (email: string, password: string) => {
-      setUser(await api.login(email, password));
+  const signInWithCode = useCallback(
+    async (email: string, code: string) => {
+      setUser(await api.verifyCode(email, code));
     },
     [setUser],
   );
@@ -56,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => whenUnauthorized(forget), [forget]);
 
   const value = useMemo(
-    () => ({ user, failed, retry, signIn, signOut, forget }),
-    [user, failed, retry, signIn, signOut, forget],
+    () => ({ user, failed, retry, signInWithCode, signOut, forget }),
+    [user, failed, retry, signInWithCode, signOut, forget],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

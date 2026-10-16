@@ -93,6 +93,8 @@ class Settings(BaseSettings):
     jira_write_enabled: bool = False
     #: Whether creating a project is offered; separate because it cannot be undone.
     jira_allow_create_project: bool = False
+    #: Whether the Jira grant can manage sprints; only the board maintenance scripts use it.
+    jira_manage_sprints: bool = False
 
     #: This deployment's own address, for outbound links.
     public_base_url: str = "http://localhost:8000"
@@ -112,13 +114,9 @@ class Settings(BaseSettings):
     smtp_username: str | None = None
     smtp_password: SecretStr | None = None
     smtp_starttls: bool = True
-    #: How long a reset link works.
-    password_reset_ttl_seconds: int = 3600
 
-    #: Comma-separated email domains that may register; empty allows any.
+    #: Comma-separated email domains that may have an account; empty allows any.
     registration_allowed_domains: str = ""
-    #: A shared code registration must carry, when set.
-    registration_invite_code: SecretStr | None = None
 
     @property
     def allowed_domains(self) -> frozenset[str]:

@@ -1,4 +1,4 @@
-"""People, sign-in sessions and password resets. Expiry is checked by the caller."""
+"""People and their sign-in sessions. Expiry is checked by the caller."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -6,22 +6,16 @@ from datetime import datetime
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres.models import (
-    PasswordReset,
-    Session,
-    User,
-)
+from mycel.infra.postgres.models import Session, User
 from mycel.infra.postgres.repositories._sql import rowcount, to_row
 
 
 @dataclass(frozen=True)
 class UserRow:
-    """A person; `password_hash` is only for `services/auth.py` and never reaches a response."""
-
     id: int
     email: str
-    password_hash: str
     created_at: datetime
+    google_sub: str | None = None
 
 
 @dataclass(frozen=True)
@@ -33,23 +27,15 @@ class SessionRow:
     last_seen_at: datetime
 
 
-@dataclass(frozen=True)
-class PasswordResetRow:
-    id: int
-    user_id: int
-    expires_at: datetime
-    used_at: datetime | None
-
-
 class IdentityRepository:
     """Reads and writes on a caller-owned session."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_user(self, email: str, password_hash: str) -> UserRow:
-        """Add a person. Raises `IntegrityError` if the email is taken."""
-        user = User(email=email, password_hash=password_hash)
+    async def create_user(self, email: str, google_sub: str | None = None) -> UserRow:
+        """Add a person. Raises `IntegrityError` if the email or Google id is taken."""
+        user = User(email=email, google_sub=google_sub)
         self._session.add(user)
         await self._session.flush()
         return _user(user)
@@ -62,10 +48,14 @@ class IdentityRepository:
         row = await self._session.scalar(select(User).where(User.id == user_id))
         return _user(row) if row else None
 
-    async def set_password_hash(self, user_id: int, password_hash: str) -> None:
-        """Replace a stored hash, e.g. to rehash with newer cost parameters."""
+    async def user_by_google_sub(self, google_sub: str) -> UserRow | None:
+        row = await self._session.scalar(select(User).where(User.google_sub == google_sub))
+        return _user(row) if row else None
+
+    async def link_google(self, user_id: int, google_sub: str) -> None:
+        """Remember which Google account this person signs in with."""
         await self._session.execute(
-            update(User).where(User.id == user_id).values(password_hash=password_hash)
+            update(User).where(User.id == user_id).values(google_sub=google_sub)
         )
 
     async def create_session(self, token: str, user_id: int, expires_at: datetime) -> SessionRow:
@@ -100,39 +90,6 @@ class IdentityRepository:
     async def delete_session(self, token: str) -> None:
         await self._session.execute(delete(Session).where(Session.id == token))
 
-    async def delete_sessions_for(self, user_id: int, keep: str | None = None) -> int:
-        """Drop one person's sessions, optionally sparing the current one."""
-        query = delete(Session).where(Session.user_id == user_id)
-        if keep is not None:
-            query = query.where(Session.id != keep)
-        result = await self._session.execute(query)
-        return rowcount(result)
-
-    async def create_password_reset(
-        self, user_id: int, token_hash: str, expires_at: datetime
-    ) -> None:
-        """Record an outstanding reset under a hash the caller made."""
-        self._session.add(
-            PasswordReset(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
-        )
-        await self._session.flush()
-
-    async def password_reset_by_hash(self, token_hash: str) -> PasswordResetRow | None:
-        """The reset a hash names, spent or expired or not."""
-        row = await self._session.scalar(
-            select(PasswordReset).where(PasswordReset.token_hash == token_hash)
-        )
-        return _reset(row) if row else None
-
-    async def spend_password_reset(self, reset_id: int, at: datetime) -> int:
-        """Mark a reset used if it is not yet; returns rows changed, so one racing click wins."""
-        result = await self._session.execute(
-            update(PasswordReset)
-            .where(PasswordReset.id == reset_id, PasswordReset.used_at.is_(None))
-            .values(used_at=at)
-        )
-        return rowcount(result)
-
     async def delete_expired_sessions(self, now: datetime) -> int:
         """Delete expired sessions. Optional: expiry is also checked on read."""
         result = await self._session.execute(delete(Session).where(Session.expires_at < now))
@@ -145,7 +102,3 @@ def _user(row: User) -> UserRow:
 
 def _session(row: Session) -> SessionRow:
     return to_row(SessionRow, row)
-
-
-def _reset(row: PasswordReset) -> PasswordResetRow:
-    return to_row(PasswordResetRow, row)

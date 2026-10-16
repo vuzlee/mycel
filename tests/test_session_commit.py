@@ -1,4 +1,4 @@
-"""A request sent the instant login returns is already signed in."""
+"""A request sent the instant sign-in returns is already signed in."""
 
 import asyncio
 import os
@@ -16,6 +16,8 @@ from mycel.api.app import create_app
 from mycel.core.config import Settings
 from mycel.infra.postgres.engine import async_dsn, get_engine
 from mycel.infra.postgres.models import Base
+from mycel.infra.redis.client import close_clients
+from mycel.services import signin_code
 from tests.conftest import _free_port
 
 DSN = os.environ.get("DATABASE_URL", "")
@@ -59,14 +61,24 @@ def server() -> Iterator[str]:
         asyncio.run(_schema(create=False))
 
 
-def test_the_next_request_after_login_is_signed_in(server: str) -> None:
-    email, password = "race@example.com", "correct horse battery"
-    httpx2.post(f"{server}/auth/register", json={"email": email, "password": password})
+def test_the_next_request_after_sign_in_is_signed_in(server: str) -> None:
+    email = "race@example.com"
 
     signed_in = 0
     for _ in range(20):
+        code = asyncio.run(_code(email))
         with httpx2.Client(base_url=server) as client:
-            client.post("/auth/login", json={"email": email, "password": password})
+            client.post("/auth/code/verify", json={"email": email, "code": code})
             signed_in += client.get("/auth/me").status_code == 200
 
     assert signed_in == 20
+
+
+async def _code(email: str) -> str:
+    """A code issued here, in its own loop, so its Redis client is not the server's."""
+    try:
+        code = await signin_code.issue(email)
+    finally:
+        await close_clients()
+    assert code is not None
+    return code

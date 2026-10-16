@@ -27,7 +27,6 @@ settings:
   event_stream_max_events: 1000
   # Expiry is checked on read; the sweep only keeps app.session small.
   session_sweep_interval_seconds: 86400
-  password_reset_ttl_seconds: 3600
 
   # Must match the OAuth callbacks registered with Google and Atlassian.
   public_base_url: http://localhost:8000
@@ -35,6 +34,8 @@ settings:
   jira_write_enabled: false
   # A project cannot be deleted over the API; off also drops the manage:jira-project scope.
   jira_allow_create_project: false
+  # Adds the board and sprint scopes; .local/jira/sprints.py needs it, the app does not.
+  jira_manage_sprints: false
 
   litellm_base_url: http://localhost:4000
   # What the model picker offers everyone. Each name must be a model_name in
@@ -79,7 +80,7 @@ settings:
   ask_top_k: 5
   ask_max_chars: 500
 
-  # Password-reset mail; host and login are in .env.
+  # Sign-in code mail; host and login are in .env.
   smtp_port: 587
   smtp_starttls: true
 

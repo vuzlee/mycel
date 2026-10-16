@@ -19,6 +19,7 @@ from mycel.infra.redis.client import close_clients
 from mycel.queue import topology
 from mycel.queue.connection import channel, close_connection
 from mycel.queue.consumer import run_worker
+from mycel.services import signin_code
 from mycel.worker import HANDLER
 
 pytestmark = pytest.mark.anyio
@@ -35,7 +36,6 @@ needs_everything = pytest.mark.skipif(
 SCHEMAS = ("bronze", "silver", "gold", "app")
 
 EMAIL = "e2e@example.com"
-PASSWORD = "correct horse battery"
 ANSWER = "Two stories shipped and one is overdue."
 
 #: Long enough to tell a worker that never picked the job up from a slow one.
@@ -78,8 +78,8 @@ async def stack(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
 
 
 async def _sign_in(client: AsyncClient) -> None:
-    await client.post("/auth/register", json={"email": EMAIL, "password": PASSWORD})
-    signed_in = await client.post("/auth/login", json={"email": EMAIL, "password": PASSWORD})
+    code = await signin_code.issue(EMAIL)
+    signed_in = await client.post("/auth/code/verify", json={"email": EMAIL, "code": code})
     assert signed_in.status_code == 200
 
 

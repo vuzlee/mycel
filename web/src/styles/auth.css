@@ -74,7 +74,7 @@
   color: var(--accent-hover);
 }
 
-/* The fields are their own component now, so the card's gap does not reach them. */
+/* The form keeps its own gap; the card's does not reach inside it. */
 .gate form {
   display: grid;
   gap: 14px;
@@ -83,16 +83,6 @@
 /* An outcome, not a failure: the account exists and the next step is this form. Stated
    in the accent rather than the flag color, which everywhere else means something went
    wrong. */
-.gate .notice {
-  margin: 0;
-  padding: 9px 12px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.5;
-}
 
 /* The gate's error sits between the fields and the button, where the card's own gap
    already spaces it — the conversation's 20px top margin would open a hole here. */
@@ -109,11 +99,6 @@ label {
 
 label .label {
   display: block;
-}
-
-label .hint {
-  font-size: 11.5px;
-  color: var(--faint);
 }
 
 input,

@@ -83,22 +83,15 @@ class TestWhatCountsAsConfigured:
 
 
 class TestTheOpenFrontDoor:
-    def test_open_registration_is_reported_broken(self) -> None:
-        """The default is that anyone who can reach the URL gets an account."""
-        checks = doctor.declared(_settings())
-        who = next(c for c in checks if c.name == "who may sign up")
+    def test_open_sign_in_is_reported_broken(self) -> None:
+        """The default is that any Google account or mailbox gets an account."""
+        who = next(c for c in doctor.declared(_settings()) if c.name == "who may sign in")
         assert who.state is State.BROKEN
-        assert "ANYONE" in who.detail
-
-    def test_an_invite_code_closes_it(self) -> None:
-        checks = doctor.declared(_settings(registration_invite_code="s3cret"))
-        who = next(c for c in checks if c.name == "who may sign up")
-        assert who.state is State.OK
-        assert "s3cret" not in who.detail, "the report must not print the code"
+        assert "ANY" in who.detail
 
     def test_a_domain_allowlist_closes_it(self) -> None:
         checks = doctor.declared(_settings(registration_allowed_domains="acme.com"))
-        who = next(c for c in checks if c.name == "who may sign up")
+        who = next(c for c in checks if c.name == "who may sign in")
         assert (who.state, "acme.com" in who.detail) == (State.OK, True)
 
 

@@ -188,7 +188,7 @@ class TestTheRequestNeverRewindsATurn:
     async def test_a_finished_turn_stays_finished(self, session: AsyncSession) -> None:
         """The worker can finish before the request writes its `queued` row."""
         repo = AppRepository(session)
-        user = await repo.create_user("race@example.com", "x")
+        user = await repo.create_user("race@example.com")
         thread = await repo.create_conversation(user.id, "chat", "q")
         await repo.upsert_turn(thread.id, "job-fast", "q", "done", answer="a")
 

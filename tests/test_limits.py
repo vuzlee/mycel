@@ -95,10 +95,8 @@ class TestTheRealApp:
     @pytest.mark.parametrize(
         ("path", "body", "allowed"),
         [
-            ("/auth/login", {"email": "a@example.com", "password": "x" * 8}, 10),
-            ("/auth/register", {"email": "a@example.com", "password": "x" * 8}, 5),
-            ("/auth/forgot", {"email": "a@example.com"}, 5),
-            ("/auth/reset", {"token": "t", "new_password": "x" * 8}, 5),
+            ("/auth/code", {"email": "a@example.com"}, 5),
+            ("/auth/code/verify", {"email": "a@example.com", "code": "123456"}, 10),
             ("/chat", {"question": "how?"}, 20),
         ],
     )

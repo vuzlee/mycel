@@ -42,7 +42,7 @@ def on_session(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
 class TestDailyAllowance:
     async def test_spend_already_made_counts(self, session: AsyncSession, on_session: None) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("spent@example.com", "x")
+        user = await repo.create_user("spent@example.com")
         thread = await repo.create_conversation(user.id, "chat", "q")
         await repo.upsert_turn(thread.id, "job-a", "q", "done", spent_usd=Decimal("0.60"))
 
@@ -55,7 +55,7 @@ class TestDailyAllowance:
         self, session: AsyncSession, on_session: None
     ) -> None:
         """Twenty questions queued in a second would each spend before any was counted."""
-        user = await AppRepository(session).create_user("burst@example.com", "x")
+        user = await AppRepository(session).create_user("burst@example.com")
 
         await chat.request_chat(user.id, "first")
         await chat.request_chat(user.id, "second")
@@ -67,8 +67,8 @@ class TestDailyAllowance:
         self, session: AsyncSession, on_session: None
     ) -> None:
         repo = AppRepository(session)
-        big = await repo.create_user("big@example.com", "x")
-        small = await repo.create_user("small@example.com", "x")
+        big = await repo.create_user("big@example.com")
+        small = await repo.create_user("small@example.com")
         thread = await repo.create_conversation(big.id, "chat", "q")
         await repo.upsert_turn(thread.id, "job-b", "q", "done", spent_usd=Decimal("5"))
 
@@ -80,7 +80,7 @@ class TestOneTurnAtATime:
     async def test_a_second_question_waits_for_the_first(
         self, session: AsyncSession, on_session: None
     ) -> None:
-        user = await AppRepository(session).create_user("twice@example.com", "x")
+        user = await AppRepository(session).create_user("twice@example.com")
         _, thread = await chat.request_chat(user.id, "first")
 
         with pytest.raises(chat.TurnInProgress):
@@ -90,7 +90,7 @@ class TestOneTurnAtATime:
         self, session: AsyncSession, on_session: None
     ) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("after@example.com", "x")
+        user = await repo.create_user("after@example.com")
         thread = await repo.create_conversation(user.id, "chat", "q")
         await repo.upsert_turn(thread.id, "job-c", "q", "done", spent_usd=Decimal("0.01"))
 
@@ -108,7 +108,7 @@ class TestPickedModel:
             sent.append(job)
 
         monkeypatch.setattr(enqueue, "send", keep)
-        user = await AppRepository(session).create_user("picks@example.com", "x")
+        user = await AppRepository(session).create_user("picks@example.com")
 
         _, thread = await chat.request_chat(user.id, "q?", model_ref="host:claude-sonnet-5")
 
@@ -126,7 +126,7 @@ class TestPickedModel:
             raise models.UnknownModel(ref)
 
         monkeypatch.setattr(models, "usable", refuse)
-        user = await AppRepository(session).create_user("off@example.com", "x")
+        user = await AppRepository(session).create_user("off@example.com")
 
         with pytest.raises(models.UnknownModel):
             await chat.request_chat(user.id, "q?", model_ref="host:off")
@@ -139,7 +139,7 @@ class TestOwnKeysAreNotTheDeployments:
         self, session: AsyncSession, on_session: None
     ) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("ownkey@example.com", "x")
+        user = await repo.create_user("ownkey@example.com")
         thread = await repo.create_conversation(user.id, "chat", "q")
         usage = TurnUsage("own:3", 1, 1, 1)
         await repo.upsert_turn(
@@ -153,7 +153,7 @@ class TestOwnKeysAreNotTheDeployments:
         self, session: AsyncSession, on_session: None
     ) -> None:
         repo = AppRepository(session)
-        user = await repo.create_user("over@example.com", "x")
+        user = await repo.create_user("over@example.com")
         thread = await repo.create_conversation(user.id, "chat", "q")
         await repo.upsert_turn(thread.id, "job-x", "q", "done", spent_usd=Decimal("5"))
 

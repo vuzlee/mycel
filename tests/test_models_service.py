@@ -34,7 +34,7 @@ async def user_id(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> int
         )
     )
     monkeypatch.setattr(models, "get_settings", lambda: settings)
-    return (await IdentityRepository(session).create_user("a@x.com", "x")).id
+    return (await IdentityRepository(session).create_user("a@x.com")).id
 
 
 class TestToggles:

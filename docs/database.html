@@ -1327,7 +1327,7 @@ pre .c { color: var(--ink-faint); }
     <div class="callout">
       <p><b>A separate schema, on purpose.</b> The medallion grant — agents get
       <code>SELECT</code> on <code>gold</code> and nothing else — should not accidentally hand
-      them session tokens and password hashes. Product data sitting in its own schema does not
+      them session tokens. Product data sitting in its own schema does not
       inherit a pipeline grant.</p>
     </div>
 
@@ -1345,11 +1345,11 @@ pre .c { color: var(--ink-faint); }
       </div>
 
       <div class="col">
-        <span class="col-n">password_hash</span>
-        <span class="col-t">text</span>
-        <span class="col-d">Argon2id. No plaintext exists anywhere, not even in transit
-        through the model class — <code>services/auth.py</code> hashes before constructing
-        one.</span>
+        <span class="col-n">google_sub</span>
+        <span class="col-t">varchar(255) · unique · nullable</span>
+        <span class="col-d">Google's stable id, set on the first Google sign-in. It wins over
+        the address, so a renamed Google address still lands in the same account. No
+        password is stored anywhere.</span>
       </div>
     </div>
 
