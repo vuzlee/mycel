@@ -3,14 +3,14 @@ import { useState } from "react";
 import type { KeyCheck, OwnModel, OwnModelInput } from "../../api";
 import {
   addOwnModel,
+  deleteOwnKey,
   deleteOwnModel,
   editOwnModel,
   fetchKeyCheck,
-  fetchOwnModels,
   fetchOwnPresets,
   startKeyCheck,
 } from "../../api";
-import { Plus, Spinner, Trash } from "../icons";
+import { Close, Plus, Spinner, Trash } from "../icons";
 
 export const OWN_KEY = ["models", "own"];
 
@@ -25,89 +25,8 @@ const KIND_TEXT: Record<NonNullable<KeyCheck["kind"]>, string> = {
   provider: "provider error",
 };
 
-/** Models a person adds with their own keys. Keys go in once and never come back: an edit
- *  shows their last four characters and keeps them unless new ones are typed. */
-export function OwnModels({ onChange }: { onChange: () => void }) {
-  const client = useQueryClient();
-  const list = useQuery({ queryKey: OWN_KEY, queryFn: fetchOwnModels });
-  const presets = useQuery({ queryKey: ["models", "presets"], queryFn: fetchOwnPresets });
-  const [editing, setEditing] = useState<OwnModel | "new" | null>(null);
-
-  const refresh = (): void => {
-    void client.invalidateQueries({ queryKey: OWN_KEY });
-    onChange();
-  };
-  const remove = useMutation({ mutationFn: deleteOwnModel, onSuccess: refresh });
-
-  if (list.isPending || presets.isPending) return <p className="muted">Loading…</p>;
-  if (list.error) return <p className="failure">{list.error.message}</p>;
-  const limits = presets.data;
-
-  return (
-    <section className="own-models">
-      <header>
-        <h4>Your own models</h4>
-        <p className="muted">
-          Any OpenAI-compatible endpoint, with your keys. Billed to you, not counted in the daily
-          allowance.
-        </p>
-      </header>
-
-      <ul className="model-list">
-        {list.data.map((m) => (
-          <li key={m.id} className="own">
-            <div className="own-head">
-              <b>{m.label}</b>
-              <span className="muted">
-                {m.model_id} · {m.key_hints.length} key{m.key_hints.length === 1 ? "" : "s"}
-              </span>
-              <span className="own-actions">
-                <button className="link" onClick={() => setEditing(m)}>
-                  Edit
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={`Delete ${m.label}`}
-                  title="Delete, with its keys"
-                  onClick={() => {
-                    if (window.confirm(`Delete ${m.label} and its keys?`)) remove.mutate(m.id);
-                  }}
-                >
-                  <Trash />
-                </button>
-              </span>
-            </div>
-            <KeyTest model={m} />
-          </li>
-        ))}
-      </ul>
-
-      {remove.error && <p className="failure">{remove.error.message}</p>}
-
-      {editing ? (
-        <OwnModelForm
-          model={editing === "new" ? null : editing}
-          presets={limits?.presets ?? {}}
-          maxKeys={limits?.max_keys ?? 5}
-          onDone={() => {
-            setEditing(null);
-            refresh();
-          }}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        list.data.length < (limits?.max_models ?? 10) && (
-          <button className="outline add-own" onClick={() => setEditing("new")}>
-            <Plus /> Add a model
-          </button>
-        )
-      )}
-    </section>
-  );
-}
-
-/** One request per key, run by the worker; the page polls until it is done. */
-function KeyTest({ model }: { model: OwnModel }) {
+/** One test per key, run by the worker; polled until done. Results are keyed by hint. */
+export function useKeyCheck(model: OwnModel) {
   const [job, setJob] = useState<string | null>(null);
   const start = useMutation({
     mutationFn: () => startKeyCheck(model.id),
@@ -119,43 +38,162 @@ function KeyTest({ model }: { model: OwnModel }) {
     enabled: job !== null,
     refetchInterval: (q) => (q.state.data?.status === "done" ? false : POLL_MS),
   });
-  const running = start.isPending || (job !== null && result.data?.status !== "done");
+  const done = result.data?.status === "done" ? result.data.checks : null;
+  return {
+    run: () => start.mutate(),
+    running: start.isPending || (job !== null && !done),
+    checks: new Map((done ?? []).map((c) => [c.hint, c])),
+    error: start.error ?? result.error,
+  };
+}
+export type KeyCheckRun = ReturnType<typeof useKeyCheck>;
+
+/** Test, edit and delete for one own model, in the head of its row. */
+export function OwnActions({
+  model,
+  check,
+  onEdit,
+  onChange,
+}: {
+  model: OwnModel;
+  check: KeyCheckRun;
+  onEdit: () => void;
+  onChange: () => void;
+}) {
+  const client = useQueryClient();
+  const remove = useMutation({
+    mutationFn: deleteOwnModel,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: OWN_KEY });
+      onChange();
+    },
+  });
+  return (
+    <>
+      <button className="link" disabled={check.running} onClick={check.run}>
+        {check.running && <Spinner className="spin" size={12} />}
+        {check.running ? "Testing" : "Test keys"}
+      </button>
+      <button className="link" onClick={onEdit}>
+        Edit
+      </button>
+      <button
+        className="icon-button danger"
+        aria-label={`Delete ${model.label}`}
+        title={remove.error?.message ?? "Delete, with its keys"}
+        onClick={() => {
+          if (window.confirm(`Delete ${model.label} and its keys?`)) remove.mutate(model.id);
+        }}
+      >
+        <Trash />
+      </button>
+    </>
+  );
+}
+
+/** The keys of one model as chips: what the last test found, and a way to drop a dead one
+ *  so runs stop spending time retrying it. The last key cannot go. */
+export function KeyChips({ model, check }: { model: OwnModel; check: KeyCheckRun }) {
+  const client = useQueryClient();
+  const drop = useMutation({
+    mutationFn: (index: number) => deleteOwnKey(model.id, index),
+    onSuccess: () => void client.invalidateQueries({ queryKey: OWN_KEY }),
+  });
+  const tested = model.key_hints.filter((h) => check.checks.has(h));
+  const working = tested.filter((h) => check.checks.get(h)?.ok).length;
+  const failure = drop.error ?? check.error;
 
   return (
-    <div className="key-test">
-      <button className="link" disabled={running} onClick={() => start.mutate()}>
-        {running && <Spinner className="spin" size={12} />}
-        Test keys
-      </button>
-      {result.data?.status === "done" && (
-        <ul>
-          {result.data.checks.map((c) => (
-            <li key={c.hint} data-ok={c.ok}>
-              {c.hint} · {c.ok ? "works" : c.kind ? KIND_TEXT[c.kind] : c.detail}
+    <div className="key-row">
+      <ul className="key-chips">
+        {model.key_hints.map((h, i) => {
+          const c = check.checks.get(h);
+          const state = c ? (c.ok ? "ok" : "bad") : check.running ? "busy" : "idle";
+          const note = c && !c.ok ? (c.kind ? KIND_TEXT[c.kind] : c.detail) : null;
+          return (
+            <li key={`${h}-${i}`} className="key-chip" data-state={state} title={c?.detail}>
+              <span className="dot" aria-hidden />
+              <code>{h}</code>
+              {note && <span className="note">{note}</span>}
+              {model.key_hints.length > 1 && (
+                <button
+                  className="chip-x"
+                  aria-label={`Remove key ${h}`}
+                  title="Remove this key"
+                  disabled={drop.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Remove key ${h}?`)) drop.mutate(i);
+                  }}
+                >
+                  <Close size={11} />
+                </button>
+              )}
             </li>
-          ))}
-        </ul>
+          );
+        })}
+      </ul>
+      {tested.length > 0 && !check.running && (
+        <span className="key-summary" data-all={working === tested.length}>
+          {working === tested.length
+            ? `All ${working} key${working === 1 ? "" : "s"} work`
+            : `${working} of ${tested.length} work`}
+        </span>
       )}
-      {(start.error ?? result.error) && (
-        <p className="failure">{(start.error ?? result.error)?.message}</p>
-      )}
+      {failure && <span className="failure">{failure.message}</span>}
     </div>
+  );
+}
+
+/** The add button, or the form while adding or editing. Keys go in once and never come back:
+ *  an edit shows their last four characters and keeps them unless new ones are typed. */
+export function OwnModelEditor({
+  editing,
+  count,
+  setEditing,
+  onChange,
+}: {
+  editing: OwnModel | "new" | null;
+  count: number;
+  setEditing: (m: OwnModel | "new" | null) => void;
+  onChange: () => void;
+}) {
+  const client = useQueryClient();
+  const presets = useQuery({ queryKey: ["models", "presets"], queryFn: fetchOwnPresets });
+  const limits = presets.data;
+  if (editing)
+    return (
+      <OwnModelForm
+        key={editing === "new" ? "new" : editing.id}
+        model={editing === "new" ? null : editing}
+        maxKeys={limits?.max_keys ?? 5}
+        onDone={() => {
+          setEditing(null);
+          void client.invalidateQueries({ queryKey: OWN_KEY });
+          onChange();
+        }}
+        onCancel={() => setEditing(null)}
+      />
+    );
+  if (count >= (limits?.max_models ?? 10)) return null;
+  return (
+    <button className="outline add-own" onClick={() => setEditing("new")}>
+      <Plus /> Add your own model
+    </button>
   );
 }
 
 interface FormProps {
   model: OwnModel | null;
-  presets: Record<string, string>;
   maxKeys: number;
   onDone: () => void;
   onCancel: () => void;
 }
 
-function OwnModelForm({ model, presets, maxKeys, onDone, onCancel }: FormProps) {
+function OwnModelForm({ model, maxKeys, onDone, onCancel }: FormProps) {
   const [label, setLabel] = useState(model?.label ?? "");
   const [modelId, setModelId] = useState(model?.model_id ?? "");
   const [base, setBase] = useState(model?.api_base ?? "");
-  // Empty on an edit: typing here replaces every stored key; leaving it keeps them.
+  // On an edit, typed keys are added after the stored ones.
   const [keys, setKeys] = useState<string[]>([""]);
 
   const save = useMutation({
@@ -182,7 +220,7 @@ function OwnModelForm({ model, presets, maxKeys, onDone, onCancel }: FormProps) 
           required
           maxLength={80}
           value={label}
-          placeholder="My Gemini"
+          placeholder="My model"
           onChange={(e) => setLabel(e.target.value)}
         />
       </label>
@@ -194,27 +232,18 @@ function OwnModelForm({ model, presets, maxKeys, onDone, onCancel }: FormProps) 
           placeholder="https://…/v1"
           onChange={(e) => setBase(e.target.value)}
         />
-        <span className="presets">
-          {Object.entries(presets).map(([name, url]) => (
-            <button type="button" className="link" key={name} onClick={() => setBase(url)}>
-              {name}
-            </button>
-          ))}
-        </span>
       </label>
       <label>
         <span className="label">Model id</span>
         <input
           required
           value={modelId}
-          placeholder="gemini-2.5-flash"
+          placeholder="the id your provider uses"
           onChange={(e) => setModelId(e.target.value)}
         />
       </label>
       <fieldset>
-        <legend className="label">
-          API keys{model ? ` · kept: ${model.key_hints.join(" ")} unless you type new ones` : ""}
-        </legend>
+        <legend className="label">{model ? "Add keys (optional)" : "API keys"}</legend>
         {keys.map((k, i) => (
           <input
             key={i}
@@ -226,7 +255,7 @@ function OwnModelForm({ model, presets, maxKeys, onDone, onCancel }: FormProps) 
             onChange={(e) => setKeys(keys.map((v, j) => (j === i ? e.target.value : v)))}
           />
         ))}
-        {keys.length < maxKeys && (
+        {keys.length < maxKeys - (model?.key_hints.length ?? 0) && (
           <button type="button" className="link" onClick={() => setKeys([...keys, ""])}>
             <Plus size={12} /> Add key
           </button>

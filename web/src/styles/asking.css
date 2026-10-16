@@ -192,6 +192,11 @@
     display: inline-flex;
   }
 
+  .fold,
+  .unfold {
+    display: none;
+  }
+
   .conversation,
   .composer,
   .blank {
@@ -300,4 +305,50 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--faint);
+}
+
+.ask-card {
+  max-width: 24rem;
+}
+
+.ask-card b {
+  color: var(--ink);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ask-field {
+  width: 100%;
+  margin: 4px 0 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.ask-field:focus {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.ask-card .choices button.primary.danger {
+  background: var(--flag);
+  color: #fff;
+}
+
+.ask-card .choices button.primary.danger:hover {
+  background: color-mix(in oklab, var(--flag) 85%, #000);
+}
+
+/* Sits in the upper part of the screen, where the eye already is, rather than dead centre. */
+.scrim.asking:has(> .ask-card) {
+  align-items: start;
+  padding-top: min(18vh, 160px);
 }

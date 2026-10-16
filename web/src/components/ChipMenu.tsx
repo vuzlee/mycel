@@ -1,16 +1,19 @@
 /** The sources a turn may use, picked as chips; with none picked the model gets no tools. */
 
+import type { ReactNode } from "react";
 import type { Chip } from "../api";
+import { Board, Calendar, Globe, Mail, Notebook } from "./icons";
 
-export const CHIPS: { id: Chip; label: string; hint: string }[] = [
-  { id: "knowledge", label: "Knowledge", hint: "Your uploaded documents" },
-  { id: "web", label: "Web", hint: "Search the web" },
-  { id: "jira", label: "Jira", hint: "Your team's work" },
-  { id: "calendar", label: "Calendar", hint: "Your events" },
-  { id: "mail", label: "Mail", hint: "Your inbox headers" },
+export const CHIPS: { id: Chip; label: string; hint: string; icon: ReactNode }[] = [
+  { id: "knowledge", label: "Knowledge", hint: "Your uploaded documents", icon: <Notebook /> },
+  { id: "web", label: "Web", hint: "Search the web", icon: <Globe /> },
+  { id: "jira", label: "Jira", hint: "Your team's work", icon: <Board /> },
+  { id: "calendar", label: "Calendar", hint: "Your events", icon: <Calendar /> },
+  { id: "mail", label: "Mail", hint: "Your inbox headers", icon: <Mail /> },
 ];
 
 export const labelOf = (id: Chip): string => CHIPS.find((c) => c.id === id)?.label ?? id;
+export const iconOf = (id: Chip): ReactNode => CHIPS.find((c) => c.id === id)?.icon;
 
 interface MenuProps {
   picked: Chip[];
@@ -39,7 +42,7 @@ export function ChipMenu({ picked, locked, filter = "", onToggle }: MenuProps) {
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onToggle(chip.id)}
             >
-              <span className="tick">{on ? "✓" : ""}</span>
+              <span className="tick">{on ? "✓" : chip.icon}</span>
               <b>{chip.label}</b>
               <small>{locked[chip.id] ?? chip.hint}</small>
             </button>

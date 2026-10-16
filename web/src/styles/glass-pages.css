@@ -1,0 +1,737 @@
+/* The glass look carried to the other pages: home, sign-in, dashboard, settings.
+   Same tokens as glass.css; only surfaces change, never layout. */
+
+/* ---------------------------------------------------------------- shared */
+
+.home,
+.gate,
+.waiting {
+  background: transparent;
+}
+
+.panel,
+.demo,
+.gate .card,
+.board .lede,
+.board .block,
+.board .epics li,
+.modal .body .settings-grid > section.connection,
+.model-list > li,
+.own-form {
+  border-color: var(--glass-line);
+  background: var(--glass);
+  box-shadow: var(--glass-edge);
+}
+
+.panel:hover,
+.board .epics li:hover,
+.model-list > li:hover {
+  border-color: var(--accent-line);
+  background: var(--glass-hover);
+}
+
+/* Inner wells and tracks: a faint tint on the glass, not an opaque block. */
+.demo .chrome,
+.windows,
+.note code,
+.panel .track,
+.demo .figures .track,
+.board .lede .track,
+.board .epics .track,
+.board .breakdown .track,
+.settings-nav button:hover,
+.home nav a:not(.primary):hover {
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+  border-color: var(--glass-line);
+}
+
+.windows button[aria-pressed="true"] {
+  background: var(--glass-hover);
+  box-shadow: var(--glass-edge);
+}
+
+.demo .chrome {
+  border-bottom-color: var(--glass-line);
+}
+
+/* ---------------------------------------------------------------- home */
+
+.home > header::before {
+  background: color-mix(in oklab, var(--ground) 60%, transparent);
+  border-bottom: 0;
+}
+
+.home > header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  right: calc(50% - 50vw);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-line), transparent);
+  pointer-events: none;
+}
+
+.home a.primary,
+.gate button.primary,
+.picker .primary {
+  background: linear-gradient(135deg, #8b6cff, #5a3be0);
+  color: #fff;
+  box-shadow: 0 8px 24px -10px rgb(139 108 255 / 0.8);
+}
+
+/* ---------------------------------------------------------------- sign-in */
+
+.gate .card {
+  background: var(--glass-strong);
+  box-shadow: var(--glass-edge), var(--glass-shadow), var(--shadow-lg);
+}
+
+.gate input {
+  border-color: var(--glass-line);
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+}
+
+.gate input:focus {
+  border-color: var(--accent-line);
+}
+
+/* ---------------------------------------------------------------- dashboard */
+
+.board .block,
+.board .lede {
+  border-radius: 18px;
+}
+
+.board .block h2.label {
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- settings */
+
+.settings-nav button[aria-current="page"] {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .demo,
+  .gate .card,
+  .board .lede,
+  .board .block,
+  .board .epics li,
+  .model-list > li,
+  .own-form {
+    background: var(--surface);
+  }
+}
+
+/* ---------------------------------------------------------------- sign-in page */
+
+.gate .card.signin {
+  max-width: 24rem;
+}
+
+.gate .lede b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.gate a.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.gate a.google:hover {
+  border-color: var(--accent-line);
+  background: color-mix(in oklab, var(--ink) 10%, transparent);
+}
+
+.gate .or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.gate .or::before,
+.gate .or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-line), transparent);
+}
+
+.gate button.link {
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+}
+
+.gate button.link:hover:not(:disabled) {
+  color: var(--accent-hover);
+}
+
+.gate button.link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gate input.code {
+  font-family: var(--mono);
+  font-size: 22px;
+  letter-spacing: 0.5em;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- home: surfaces */
+
+.home > footer {
+  background: color-mix(in oklab, var(--ground) 55%, transparent);
+  border-top: 0;
+  position: relative;
+}
+
+.home > footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-line), transparent);
+}
+
+/* ---------------------------------------------------------------- home: mycel motion */
+
+/* The hero's grid is gone; the mark grows behind the title instead, once, on load. */
+.home .lead::after {
+  display: none;
+}
+
+.home .hyphae {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  z-index: -1;
+  width: min(1000px, 100vw);
+  height: 340px;
+  translate: -50% 0;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.32;
+  mask-image: radial-gradient(ellipse at 50% 55%, #000 35%, transparent 75%);
+  pointer-events: none;
+}
+
+.home .hyphae path {
+  stroke-dasharray: 700;
+  stroke-dashoffset: 700;
+  animation: hypha-grow 2.4s cubic-bezier(0.3, 0.6, 0.2, 1) forwards;
+}
+
+.home .hyphae path:nth-of-type(2) {
+  animation-delay: 0.3s;
+}
+.home .hyphae path:nth-of-type(3) {
+  animation-delay: 0.45s;
+}
+.home .hyphae path:nth-of-type(4) {
+  animation-delay: 0.7s;
+}
+
+.home .hyphae circle {
+  fill: var(--accent);
+  stroke: none;
+  opacity: 0;
+  animation: hypha-node 0.6s ease 1.6s forwards;
+}
+
+.home .hyphae circle:first-of-type {
+  animation-delay: 0.2s;
+}
+
+@keyframes hypha-grow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hypha-node {
+  to {
+    opacity: 1;
+  }
+}
+
+/* The hero arrives in order: eyebrow, title, line, buttons, demo. */
+.home .lead > .eyebrow,
+.home .lead > h1,
+.home .lead > p,
+.home .lead > .acts,
+.home .lead > .demo {
+  animation: hero-rise 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+.home .lead > h1 {
+  animation-delay: 0.12s;
+}
+.home .lead > p {
+  animation-delay: 0.26s;
+}
+.home .lead > .acts {
+  animation-delay: 0.4s;
+}
+.home .lead > .demo {
+  animation-delay: 0.55s;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+.home .lead h1 em,
+.home section > h2 em {
+  background: linear-gradient(100deg, #b9a4ff, #8b6cff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-right: 0.06em;
+}
+
+/* Bands split by a soft rule that fades at both ends, not a hard line. */
+.home section + section {
+  border-top: 0;
+  position: relative;
+}
+
+.home section + section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-line), transparent);
+}
+
+.home .lead + section::before {
+  display: none;
+}
+
+.home .guarantees > div {
+  border-color: var(--glass-line);
+  background: var(--glass);
+  backdrop-filter: none;
+}
+
+.home .eyebrow {
+  border-color: var(--glass-line);
+  background: var(--glass);
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home .lead > * {
+    animation: none;
+  }
+
+  .home .hyphae path {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  .home .hyphae circle {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- home: use cases */
+
+.home .cases {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two wide on top, three below: the bento a row of five equal cards cannot be. */
+.home .cases > li {
+  grid-column: span 2;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  border: 1px solid var(--glass-line);
+  border-radius: 20px;
+  background: var(--glass);
+  box-shadow: var(--glass-edge);
+  transition:
+    border-color 0.25s ease,
+    translate 0.25s ease;
+}
+
+.home .cases > li:nth-child(-n + 2) {
+  grid-column: span 3;
+}
+
+.home .cases > li:hover {
+  border-color: var(--accent-line);
+  translate: 0 -3px;
+}
+
+.home .cases .scene {
+  height: 150px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    60% 80% at 50% 0%,
+    color-mix(in oklab, var(--accent) 14%, transparent),
+    transparent 70%
+  );
+}
+
+.home .cases .scene svg {
+  width: 100%;
+  max-width: 260px;
+  height: 120px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.home .cases .copy {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 18px 20px 20px;
+}
+
+.home .cases .glyph {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 4px;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.home .cases b {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.home .cases p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.home .cases .ask {
+  margin-top: 6px;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+/* Scene parts: drawn in the accent, played once when the band is revealed. */
+.home .cases .sheet,
+.home .cases .globe,
+.home .cases .env rect,
+.home .cases .env path {
+  stroke: var(--glass-line);
+  stroke-width: 1.5;
+  fill: color-mix(in oklab, var(--ink) 4%, transparent);
+}
+
+.home .cases .line,
+.home .cases .grid,
+.home .cases .axis {
+  stroke: color-mix(in oklab, var(--ink) 22%, transparent);
+  stroke-width: 2;
+}
+
+.home .cases .grid {
+  stroke-width: 1;
+}
+
+.home .cases .hypha {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+}
+
+.home .cases .node,
+.home .cases .tip,
+.home .cases .flag {
+  fill: var(--accent);
+}
+
+.home .cases .tip,
+.home .cases .flag,
+.home .cases .hit,
+.home .cases .tick,
+.home .cases .src {
+  opacity: 0;
+}
+
+.home .cases .hit {
+  fill: color-mix(in oklab, var(--accent) 30%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+
+.home .cases .bar {
+  fill: color-mix(in oklab, var(--accent) 55%, transparent);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+
+.home .cases .bar.late {
+  fill: color-mix(in oklab, #f18ab4 70%, transparent);
+}
+
+.home .cases .slot {
+  fill: color-mix(in oklab, var(--accent) 10%, transparent);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0;
+}
+
+.home .cases .tick {
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+}
+
+.home .cases .env {
+  opacity: 0;
+  translate: -12px 0;
+}
+
+.home .cases .src {
+  fill: color-mix(in oklab, var(--accent) 18%, transparent);
+  stroke: var(--accent-line);
+}
+
+/* --- playing, once the band is on screen */
+.home .uses[data-shown="true"] .hypha {
+  animation: case-draw 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) 0.4s forwards;
+}
+
+.home .uses[data-shown="true"] .tip,
+.home .uses[data-shown="true"] .hit {
+  animation: case-in 0.5s ease 1.5s forwards;
+}
+
+.home .uses[data-shown="true"] .bar {
+  animation: case-grow 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.home .uses[data-shown="true"] .b2 {
+  animation-delay: 0.1s;
+}
+.home .uses[data-shown="true"] .b3 {
+  animation-delay: 0.2s;
+}
+.home .uses[data-shown="true"] .b4 {
+  animation-delay: 0.3s;
+}
+
+.home .uses[data-shown="true"] .slot {
+  animation: case-in 0.5s ease 0.5s forwards;
+}
+
+.home .uses[data-shown="true"] .tick {
+  animation:
+    case-in 0.1s linear 1.3s forwards,
+    case-draw 0.5s ease 1.3s forwards;
+}
+
+.home .uses[data-shown="true"] .slot {
+  animation:
+    case-in 0.5s ease 0.5s forwards,
+    case-fill 0.4s ease 1.6s forwards;
+}
+
+.home .uses[data-shown="true"] .env {
+  animation: case-slide 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.home .uses[data-shown="true"] .e2 {
+  animation-delay: 0.15s;
+}
+.home .uses[data-shown="true"] .e3 {
+  animation-delay: 0.3s;
+}
+
+.home .uses[data-shown="true"] .env.dim {
+  animation:
+    case-slide 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) 0.3s forwards,
+    case-dim 0.6s ease 1.4s forwards;
+}
+
+.home .uses[data-shown="true"] .flag {
+  animation: case-in 0.4s ease 1.1s forwards;
+}
+
+.home .uses[data-shown="true"] .f2 {
+  animation-delay: 1.25s;
+}
+
+.home .uses[data-shown="true"] .h2 {
+  animation-delay: 0.55s;
+}
+.home .uses[data-shown="true"] .h3 {
+  animation-delay: 0.7s;
+}
+
+.home .uses[data-shown="true"] .src {
+  animation: case-in 0.4s ease 1.6s forwards;
+}
+
+.home .uses[data-shown="true"] .s2 {
+  animation-delay: 1.75s;
+}
+.home .uses[data-shown="true"] .s3 {
+  animation-delay: 1.9s;
+}
+
+@keyframes case-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes case-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes case-grow {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes case-fill {
+  to {
+    fill: color-mix(in oklab, var(--accent) 45%, transparent);
+    stroke-dasharray: none;
+  }
+}
+
+@keyframes case-slide {
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes case-dim {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 900px) {
+  .home .cases {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .home .cases > li,
+  .home .cases > li:nth-child(-n + 2) {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .home .cases {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home .cases * {
+    animation: none !important;
+  }
+
+  .home .cases .hypha,
+  .home .cases .tick {
+    stroke-dashoffset: 0;
+  }
+
+  .home .cases .tip,
+  .home .cases .flag,
+  .home .cases .hit,
+  .home .cases .tick,
+  .home .cases .src,
+  .home .cases .slot,
+  .home .cases .env {
+    opacity: 1;
+    translate: none;
+  }
+
+  .home .cases .bar {
+    transform: none;
+  }
+}
+
+/* The four promises sit on one line: short pills, no wrap on a desktop. */
+.home .guarantees {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.home .guarantees > div {
+  padding: 7px 13px;
+  white-space: nowrap;
+}
+
+.home .guarantees b {
+  font-size: 13px;
+}
+
+.home .guarantees span {
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .home .guarantees {
+    flex-wrap: wrap;
+  }
+
+  .home .guarantees span {
+    display: none;
+  }
+}

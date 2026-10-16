@@ -24,8 +24,8 @@ export default function Dashboard() {
 
         {projects?.length === 0 && (
           <p className="note">
-            Nothing has synced yet. Fill the Jira variables in <code>.env</code>, then run{" "}
-            <code>scripts/stack.sh sync</code>.
+            No Jira projects you can read yet. Connect Jira under <b>Settings → Accounts</b>; a sync
+            starts as soon as you do, and the board fills in a minute or so.
           </p>
         )}
 

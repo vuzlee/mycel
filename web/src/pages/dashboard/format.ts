@@ -53,8 +53,11 @@ export function ago(stamp: string | null): string {
   return `${Math.round(seconds / 86_400)}d ago`;
 }
 
-/** Heatmap step 0–4, against the grid's busiest day so any team's scale shows. */
-export function step(seconds: number, busiest: number): number {
-  if (seconds === 0) return 0;
-  return Math.min(4, 1 + Math.floor((3 * (seconds - 1)) / Math.max(1, busiest)));
+/** Hours that fill a heatmap cell: half a working day logged is already a full day. */
+export const FULL_DAY_HOURS = 4;
+
+/** Heatmap step 0–4 on a fixed scale: one step per hour, darkest from `FULL_DAY_HOURS`. */
+export function step(seconds: number): number {
+  if (seconds <= 0) return 0;
+  return Math.min(4, Math.ceil((seconds / 3600 / FULL_DAY_HOURS) * 4));
 }

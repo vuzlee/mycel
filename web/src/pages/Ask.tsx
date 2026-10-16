@@ -1,22 +1,24 @@
 /** Ask anything, and watch the run happen. */
 
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef } from "../api";
 import { askChat, fetchModels, fetchProjects } from "../api";
 import { Answer } from "../components/Answer";
+import { buildConversation } from "../lib/buildConversation";
 import type { ComposerHandle } from "../components/Composer";
 import { Composer } from "../components/Composer";
 import { MODELS_KEY } from "../components/panels/ModelsPage";
 import { PastTurns } from "../components/PastTurns";
 import { Shell } from "../components/Shell";
 import { Conversation } from "../components/Conversation";
-import { Documents, sendFiles } from "../components/knowledge/Documents";
+import { sendFiles } from "../components/knowledge/Documents";
 import { SourcePanel } from "../components/knowledge/SourcePanel";
 import type { Topic } from "../components/Topics";
 import { Topics, anchorFor } from "../components/Topics";
-import { ArrowRight, Notebook, Spinner } from "../components/icons";
+import { Bars, Globe, Mail, People } from "../components/icons";
 import { useRun } from "../hooks/useRun";
 import { useConversations } from "../context/ConversationsContext";
 import { useDocuments } from "../hooks/useDocuments";
@@ -37,16 +39,49 @@ const TOP_GAP = 24;
 //
 // The Jira seeds name the reader's own first project, and go when they can read none: a
 // seed for a project they cannot see is a button that answers "no access".
-const jiraSeeds = (project: string): string[] => [
-  `How is ${project} going this week?`, // summarizer — the progress summary
-  "What is late right now, and who is it with?", // analyst — the dashboard's own question
-  "Who logged the most hours this month, and on what?", // analyst, through run_sql
-  "Compare hours logged this month with last month.", // analyst — two windows, one query
-];
-const OTHER_SEEDS = [
-  "Anything important in my mail today?", // researcher — read_mail(24)
-  "What came in this week that I have not replied to?", // researcher — read_mail(168)
-  "What changed in the Jira API this year?", // researcher — the web
+interface SeedGroup {
+  name: string;
+  icon: ReactNode;
+  items: string[];
+}
+
+const seedGroups = (project: string | null): SeedGroup[] => [
+  ...(project
+    ? [
+        {
+          name: "Team",
+          icon: <People />,
+          items: [
+            `How is ${project} going this week?`, // summarizer — the progress summary
+            "What is late right now, and who is it with?", // analyst — the dashboard's own question
+          ],
+        },
+        {
+          name: "Hours",
+          icon: <Bars />,
+          items: [
+            "Who logged the most hours this month, and on what?", // analyst, through run_sql
+            "Compare hours logged this month with last month.", // analyst — two windows, one query
+          ],
+        },
+      ]
+    : []),
+  {
+    name: "Mail",
+    icon: <Mail />,
+    items: [
+      "Anything important in my mail today?", // researcher — read_mail(24)
+      "What came in this week that I have not replied to?", // researcher — read_mail(168)
+    ],
+  },
+  {
+    name: "Web",
+    icon: <Globe />,
+    items: [
+      "What changed in the Jira API this year?", // researcher — the web
+      "What are teams using for AI code review now?", // researcher — the web
+    ],
+  },
 ];
 
 export function Ask() {
@@ -56,22 +91,26 @@ export function Ask() {
 
   const [asked, setAsked] = useState<string | null>(null);
   // A fresh object per click, so the same seed picked twice still fills the box.
-  const [seed, setSeed] = useState<{ text: string } | null>(null);
+  // From the Knowledge page's Ask: the box opens naming that document.
+  const [seed, setSeed] = useState<{ text: string } | null>(() => {
+    const about = params.get("about");
+    return about ? { text: `In ${about}, ` } : null;
+  });
   const { data: projects } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const firstProject = projects?.[0] ?? null;
-  const seeds = useMemo(
-    () => [...(firstProject ? jiraSeeds(firstProject) : []), ...OTHER_SEEDS],
-    [firstProject],
-  );
+  const groups = useMemo(() => seedGroups(firstProject), [firstProject]);
   const [refused, setRefused] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
-  const [chips, setChips] = useState<Chip[]>([]);
+  // `?source=knowledge` from the Knowledge page: start with that source picked.
+  const [chips, setChips] = useState<Chip[]>(() =>
+    params.get("source") === "knowledge" ? ["knowledge"] : [],
+  );
+
   const { data: models } = useQuery({ queryKey: MODELS_KEY, queryFn: fetchModels });
   const usable = useMemo(() => models?.models.filter((m) => m.enabled) ?? [], [models]);
   // The reader's pick for this tab; the default until they choose, and again if it goes off.
   const [picked, setPicked] = useState<string | null>(null);
   const model = usable.some((m) => m.ref === picked) ? picked : (models?.default_ref ?? null);
-  const [panel, setPanel] = useState(false);
   const [source, setSource] = useState<SourceRef | null>(null);
   const docs = useDocuments();
   // The scrolling body, as the observer in `Topics` needs it: a root, not a ref, because
@@ -100,7 +139,13 @@ export function Ask() {
   const fromUrl = params.get("conversation");
   const conversationId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
 
-  const { past, setPast, pastFor } = usePastTurns(conversationId, jobId);
+  const { past, setPast, pastFor, savedSteps } = usePastTurns(conversationId, jobId);
+  // A reopened turn's stream has expired; its trail comes from what was saved instead.
+  const items = useMemo(
+    () =>
+      run.items.length > 0 || !savedSteps || run.busy ? run.items : buildConversation(savedSteps),
+    [run.items, run.busy, savedSteps],
+  );
 
   const startNew = useCallback(() => {
     setParams({}, { replace: false });
@@ -161,27 +206,6 @@ export function Ask() {
       current={jobId}
       scrollRef={scrollRef}
       aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
-      panel={
-        <Documents
-          open={panel}
-          documents={docs.documents}
-          loading={docs.loading}
-          failure={docs.error}
-          onClose={() => setPanel(false)}
-        />
-      }
-      panelToggle={
-        <button
-          className="kb-toggle"
-          aria-pressed={panel}
-          onClick={() => setPanel((open) => !open)}
-          title="Your documents"
-        >
-          <Notebook />
-          Knowledge
-          {docs.busy && <Spinner size={11} />}
-        </button>
-      }
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
       footer={
         <Composer
@@ -196,7 +220,6 @@ export function Ask() {
           onModel={setPicked}
           onAsk={(text) => void ask(text)}
           onDropFiles={(files) => {
-            setPanel(true);
             void sendFiles(files).then((errors) => {
               if (errors.length) setRefused(errors.join(" "));
             });
@@ -210,9 +233,7 @@ export function Ask() {
           before={past.length > 0 ? <PastTurns turns={past} /> : null}
           question={question}
           items={
-            cited
-              ? run.items.filter((i) => i.kind !== "text" || i.agent !== "orchestrator")
-              : run.items
+            cited ? items.filter((i) => i.kind !== "text" || i.agent !== "orchestrator") : items
           }
           gaps={run.gaps}
           failure={failure}
@@ -221,28 +242,29 @@ export function Ask() {
           {run.result?.status === "done" && (
             <Answer
               result={run.result}
-              streamed={!cited && run.items.some((i) => i.kind === "text")}
+              streamed={!cited && items.some((i) => i.kind === "text")}
               onSource={setSource}
             />
           )}
         </Conversation>
       ) : (
         <div className="blank">
-          <h1>
-            Ask Mycel <em>anything</em>.
-          </h1>
-          <p>
-            Your team's week, the numbers, your mail, or anything outside. Read-only &mdash; nothing
-            you ask can change the work data.
-          </p>
+          <h1>Ask Mycel anything</h1>
+          <p>Your team's week, the numbers, your mail, or anything on the web.</p>
           {refused && <p className="failure">{refused}</p>}
-          <span className="label">Try one</span>
-          <div className="seeds">
-            {seeds.map((text) => (
-              <button key={text} onClick={() => setSeed({ text })}>
-                {text}
-                <ArrowRight />
-              </button>
+          <div className="seed-groups">
+            {groups.map((group) => (
+              <section key={group.name}>
+                <h2>
+                  {group.icon}
+                  {group.name}
+                </h2>
+                {group.items.map((text) => (
+                  <button key={text} className="seed" onClick={() => setSeed({ text })}>
+                    {text}
+                  </button>
+                ))}
+              </section>
             ))}
           </div>
         </div>

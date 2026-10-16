@@ -260,6 +260,111 @@ export function Chip({ size = 14 }: IconProps) {
   );
 }
 
+export function Mail({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2" y="3.5" width="12" height="9" rx="1.6" />
+      <path d="m2.5 4.5 5.5 4 5.5-4" />
+    </svg>
+  );
+}
+
+export function Globe({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M2 8h12M8 2c1.7 1.8 2.5 3.8 2.5 6S9.7 12.2 8 14C6.3 12.2 5.5 10.2 5.5 8S6.3 3.8 8 2Z" />
+    </svg>
+  );
+}
+
+export function People({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="6" cy="5.4" r="2.3" />
+      <path d="M1.8 13.4a4.2 4.2 0 0 1 8.4 0M10.6 3.3a2.3 2.3 0 0 1 0 4.3M12 9.6a4.2 4.2 0 0 1 2.2 3.8" />
+    </svg>
+  );
+}
+
+/** Send: a hypha growing upward, the tip split like the mark's branches. */
+export function Sprout({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)} strokeWidth={1.7}>
+      <path d="M8 14V4.2" />
+      <path d="M8 4.2 4.6 7.4M8 4.2l3.4 3.2" />
+      <path d="M8 10.2 5.6 8.6" opacity={0.55} />
+      <circle cx="8" cy="3.4" r="1.25" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Sources: a node with hyphae reaching out to three others. */
+export function Hub({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 8.4 3.6 4.4M8 8.4l4.4-4M8 8.4v4.4" />
+      <circle cx="8" cy="8.4" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="3.2" cy="4" r="1.1" />
+      <circle cx="12.8" cy="4" r="1.1" />
+      <circle cx="8" cy="13.4" r="1.1" />
+    </svg>
+  );
+}
+
+export function Bubble({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3.5 3h9A1.5 1.5 0 0 1 14 4.5v5.5a1.5 1.5 0 0 1-1.5 1.5H7.2L4.4 13.6v-2.1h-.9A1.5 1.5 0 0 1 2 10V4.5A1.5 1.5 0 0 1 3.5 3Z" />
+    </svg>
+  );
+}
+
+export function Search({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="7" cy="7" r="4.6" />
+      <path d="m10.4 10.4 3.4 3.4" />
+    </svg>
+  );
+}
+
+export function PanelLeft({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2" y="2.5" width="12" height="11" rx="2.4" />
+      <path d="M6.2 2.5v11" />
+    </svg>
+  );
+}
+
+export function Dots({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="3.5" cy="8" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12.5" cy="8" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function Pencil({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M10.8 2.8a1.6 1.6 0 0 1 2.3 2.3L5.6 12.6 2.5 13.5l.9-3.1 7.4-7.6Z" />
+    </svg>
+  );
+}
+
+export function Archive({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="2" y="2.8" width="12" height="3.2" rx="1" />
+      <path d="M3.2 6v6.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V6M6.5 8.8h3" />
+    </svg>
+  );
+}
+
 export function Copy({ size = 13 }: IconProps) {
   return (
     <svg {...base(size)}>

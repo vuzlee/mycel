@@ -258,6 +258,12 @@ details[open] > summary .chevron {
   border-top: 1px solid var(--rule);
 }
 
+/* With the trail line right above it, the answer's rule sits close under that line so
+   the two read as one header. */
+.turn.items:has(.trail) + .answer {
+  margin-top: 12px;
+}
+
 /* Offered only while the bottom is off screen. Nothing scrolls the conversation on its own
    any more, so new work below the fold would otherwise be invisible. */
 .jump {
@@ -352,22 +358,99 @@ details[open] > summary .chevron {
 }
 
 .model-pick {
+  position: relative;
   flex: none;
-  max-width: 11rem;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--rule-2);
-  border-radius: 9px;
-  background: transparent;
-  color: var(--muted);
+}
+.model-pick-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 12rem;
+  height: 32px;
+  padding: 0 10px 0 11px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
   font: inherit;
   font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
-
-.model-pick:hover,
-.model-pick:focus-visible {
-  color: var(--ink);
+.model-pick-button:hover,
+.model-pick-button[aria-expanded="true"] {
   border-color: var(--accent-line);
+}
+.model-pick-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.model-pick-chevron {
+  flex: none;
+  color: var(--muted);
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.model-pick-button[aria-expanded="true"] .model-pick-chevron {
+  transform: rotate(90deg);
+}
+.model-pick-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  min-width: 240px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  background: var(--glass-strong);
+  box-shadow: var(--glass-edge), var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  animation: model-pick-in 0.12s ease-out;
+}
+@keyframes model-pick-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.model-pick-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.model-pick-menu button:hover,
+.model-pick-menu button[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+.model-pick-menu .model-pick-label {
+  flex: 1;
+}
+.model-pick-tag {
+  font-size: 11px;
+  color: var(--faint);
+}
+.model-pick-check {
+  display: inline-grid;
+  width: 14px;
+  color: var(--accent);
 }
 
 .send {

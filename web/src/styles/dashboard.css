@@ -154,6 +154,7 @@
    the gap between "done" and "everything else" is the number, and splitting the rest
    into to-do and in-progress costs nothing and says where the rest actually is. */
 .board .lede .track {
+  contain: layout paint;
   display: flex;
   height: 10px;
   margin: 18px 0 12px;

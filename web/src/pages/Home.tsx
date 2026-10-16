@@ -6,6 +6,7 @@ import { useAuth } from "../context/auth";
 import { Account } from "../components/Account";
 import { Demo } from "../components/Demo";
 import { Flow } from "../components/Flow";
+import { UseCases } from "../components/UseCases";
 import { ArrowRight, Mycelium } from "../components/icons";
 import { useReveal } from "../hooks/useReveal";
 
@@ -13,31 +14,12 @@ import { useReveal } from "../hooks/useReveal";
  *  so a link to `docs/` has to leave for the repository rather than pretend to be a
  *  route here. */
 
-/** Three moments, not three features: one line of prose, one line someone would type. */
-const USES = [
-  {
-    when: "Monday",
-    what: "The week, already written up",
-    ask: "How is the project going this week?",
-  },
-  {
-    when: "Stand-up",
-    what: "What is past its due date",
-    ask: "What is late right now, and who is it with?",
-  },
-  {
-    when: "Month end",
-    what: "The numbers, no writing",
-    ask: "Compare hours logged with last month.",
-  },
-];
-
 /** Four promises the code keeps, not the prompt: a claim and the words that make it checkable. */
 const GUARANTEES = [
-  { big: "Read-only", small: "enforced by Postgres" },
-  { big: "Self-hosted", small: "your database, your keys" },
-  { big: "No new habits", small: "the board you already keep" },
-  { big: "One command", small: "the whole stack, up" },
+  { big: "Asks first", small: "you confirm every write" },
+  { big: "Cites sources", small: "page and passage" },
+  { big: "Self-hosted", small: "your data, your keys" },
+  { big: "Your model", small: "or your own keys" },
 ];
 
 export function Home() {
@@ -48,7 +30,6 @@ export function Home() {
   const guarantees = useReveal<HTMLElement>();
   const flow = useReveal<HTMLElement>();
   const uses = useReveal<HTMLElement>();
-  const cost = useReveal<HTMLElement>();
   const call = useReveal<HTMLElement>();
 
   return (
@@ -63,7 +44,7 @@ export function Home() {
 
         <nav className="sections">
           <a href="#what">What you get</a>
-          <a href="#ask">What it asks</a>
+          <a href="#ask">Use cases</a>
           <a href={`${REPO}#readme`} target="_blank" rel="noreferrer">
             Docs
           </a>
@@ -83,9 +64,8 @@ export function Home() {
             </>
           ) : (
             <>
-              <Link to="/login">Sign in</Link>
-              <Link className="primary" to="/register">
-                Create an account
+              <Link className="primary" to="/login">
+                Sign in
                 <ArrowRight />
               </Link>
             </>
@@ -97,20 +77,21 @@ export function Home() {
           wash of the accent behind the fold, which is what makes the rest read as paper
           — a second colored band further down would make this one ordinary. */}
       <section className="lead">
+        <Hyphae />
         <span className="eyebrow">
           <span className="ping" aria-hidden />
-          Reads your board. Never writes to it.
+          Jira · Gmail · Calendar · your documents
         </span>
         <h1>
-          Your tracker already knows what happened. <em>Mycel writes it down.</em>
+          Your work already knows what happened. <em>Mycel tells you.</em>
         </h1>
         <p>
-          Nobody fills in a form and nobody chases anybody. Your team works the Jira board they
-          already keep, and you ask Mycel about it in your own words.
+          Ask in your own words. Mycel reads the board, your mail and your calendar, answers with
+          sources, and books the meeting or moves the issue once you say yes.
         </p>
 
         <div className="acts">
-          <Link className="primary big" to={user ? "/" : "/register"}>
+          <Link className="primary big" to={user ? "/" : "/login"}>
             {user ? "Open Mycel" : "Start with this week"}
             <ArrowRight />
           </Link>
@@ -141,46 +122,11 @@ export function Home() {
         <Flow />
       </section>
 
-      <section className="uses" ref={uses}>
+      <section className="uses" id="ask" ref={uses}>
         <h2>
-          Three moments <em>it earns its keep</em>
+          One question, <em>five places it can look</em>
         </h2>
-        <ol className="use-list">
-          {USES.map((use) => (
-            <li key={use.when}>
-              <span className="when">{use.when}</span>
-              <b>{use.what}</b>
-              {/* The words someone would actually type. A feature list says what a
-                  product does; this says what you do. */}
-              <span className="ask">{use.ask}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* What it costs, as three things a team already has. Prose here was two blocks of
-          grey text saying "nothing changes", which is a claim a list makes faster. */}
-      <section className="cost" id="ask" ref={cost}>
-        <h2>
-          It asks your team <em>for nothing</em>
-        </h2>
-        <ul className="already">
-          <li>
-            <b>A status</b>
-            <span>To do, in progress, done</span>
-          </li>
-          <li>
-            <b>An estimate</b>
-            <span>However rough</span>
-          </li>
-          <li>
-            <b>A due date</b>
-            <span>When it is meant to land</span>
-          </li>
-        </ul>
-        <p className="note">
-          That is the whole contract. Mycel reads the board and never writes to it.
-        </p>
+        <UseCases />
       </section>
 
       {/* The call to action, which is a different one for someone who is already here. */}
@@ -201,17 +147,14 @@ export function Home() {
           <>
             <h2>Start with this week.</h2>
             <p>
-              An account takes an email and a password. Your conversations are kept under it, so
-              they are still there on another machine tomorrow.
+              Sign in with Google, or with a code sent to your mail. The first sign-in makes your
+              account, and your conversations stay under it on every machine.
             </p>
             <div className="both">
-              <Link className="primary" to="/register">
-                Create an account
+              <Link className="primary" to="/login">
+                Sign in
                 <ArrowRight />
               </Link>
-              <span>
-                Already have one? <Link to="/login">Sign in</Link>
-              </span>
             </div>
           </>
         )}
@@ -237,8 +180,8 @@ export function Home() {
           <div>
             <span className="label">Product</span>
             <a href="#what">What you get</a>
-            <a href="#ask">What it asks</a>
-            {user ? <Link to="/">Ask</Link> : <Link to="/register">Create an account</Link>}
+            <a href="#ask">Use cases</a>
+            {user ? <Link to="/">Ask</Link> : <Link to="/login">Sign in</Link>}
           </div>
 
           <div>
@@ -264,5 +207,22 @@ export function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+/** The mark, grown to page size, drawing itself in behind the title once. */
+function Hyphae() {
+  return (
+    <svg className="hyphae" viewBox="0 0 800 260" aria-hidden preserveAspectRatio="none">
+      <path d="M400 250V150" />
+      <path d="M400 150 250 70 180 20M250 70 120 90" />
+      <path d="M400 150 560 80 640 30M560 80 690 110" />
+      <path d="M400 150 330 120M400 150 470 115" />
+      <circle cx="400" cy="150" r="5" />
+      <circle cx="180" cy="20" r="3" />
+      <circle cx="640" cy="30" r="3" />
+      <circle cx="120" cy="90" r="3" />
+      <circle cx="690" cy="110" r="3" />
+    </svg>
   );
 }

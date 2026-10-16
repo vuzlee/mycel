@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Dashboard as Board } from "../../api";
 import { Head } from "./Parts";
-import { DAYS_IN_WEEK, WEEKDAYS, WEEKS, hours, step } from "./format";
+import { DAYS_IN_WEEK, FULL_DAY_HOURS, WEEKDAYS, WEEKS, hours, step } from "./format";
 
 type Cell = { day: string; seconds: number; future: boolean };
 
@@ -52,7 +52,6 @@ function useMonths(weeks: Cell[][]): string[] {
 function Heatmap({ board }: { board: Board }) {
   const weeks = useWeeks(board.calendar);
   const months = useMonths(weeks);
-  const busiest = Math.max(1, ...board.calendar.map((d) => d.seconds));
   return (
     <div>
       <h3 className="sub">Hours logged · twelve weeks</h3>
@@ -74,7 +73,7 @@ function Heatmap({ board }: { board: Board }) {
                 {week.map((cell) => (
                   <li
                     key={cell.day}
-                    data-step={cell.future ? undefined : step(cell.seconds, busiest)}
+                    data-step={cell.future ? undefined : step(cell.seconds)}
                     data-future={cell.future}
                     title={
                       cell.future
@@ -88,16 +87,16 @@ function Heatmap({ board }: { board: Board }) {
           ))}
         </ol>
         <div className="scale">
-          <span>less</span>
+          <span>0h</span>
           {[0, 1, 2, 3, 4].map((n) => (
             <i key={n} data-step={n} />
           ))}
-          <span>more</span>
+          <span>{FULL_DAY_HOURS}h+</span>
         </div>
       </div>
       <p className="caption">
         One cell per day, by the day the work was logged <b>for</b> — so a project filled in
-        retroactively still lands on the right days. Shaded against this grid's busiest day.
+        retroactively still lands on the right days. {FULL_DAY_HOURS} hours or more is the darkest.
       </p>
     </div>
   );
@@ -115,8 +114,10 @@ function WindowEffort({ board, win }: { board: Board; win: string }) {
           {board.effort_by_day.map((day) => (
             <li key={day.day}>
               <span className="when">{day.day.slice(5)}</span>
-              <span className="bar" style={{ width: `${(day.seconds / peak) * 100}%` }} />
-              <span className="n">{hours(day.seconds)}</span>
+              <span className="track">
+                <span className="bar" style={{ width: `${(day.seconds / peak) * 100}%` }} />
+                <span className="n">{hours(day.seconds)}</span>
+              </span>
             </li>
           ))}
         </ol>

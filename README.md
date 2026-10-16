@@ -15,237 +15,38 @@
 
 </div>
 
-Named after *mycelium* — the underground fungal network that quietly connects a whole
-forest, moving nutrients between trees that never touch. Mycel works the same way: it runs
-in the background, pulls what moved in Jira, digests it through layer after layer, and only
-surfaces when you ask it something. The interesting part was never the fruiting body.
-
-## What it looks like
-
-You ask in a sentence. Mycel picks the agents and tools it needs, runs them, and answers
-with the figures it used — so every number can be traced back to the query that produced it.
+Ask your work a question in plain language. Mycel reads Jira, Gmail, Calendar and your
+documents, answers with the sources it used, and books or updates things only after you say yes.
 
 https://github.com/user-attachments/assets/c8546f73-e6a8-4aca-abb1-08c07a849eb0
 
-<sup>A real session, 95 seconds, nothing staged.</sup>
-
-## How it is put together
-
-Five columns, left to right:
-
-| Column | What lives there |
-|---|---|
-| **External** | users in a browser; Jira, Gmail and Calendar, each on its own OAuth per user; MCP servers and Tavily as agent tools |
-| **Ingestion** | the scheduler ticks connectors, which land Jira and Gmail in bronze; ETL refines bronze into silver and gold; Ingest turns uploaded files into chunks and embeddings |
-| **Serving** | the API puts a question on RabbitMQ; a worker runs the orchestrator, which delegates to agents; Notify sends mail and books calendar events |
-| **LLM** | every model call goes through LiteLLM, to a cloud model or a local vLLM |
-| **Observability** | Langfuse traces each agent run; Promtail ships logs to Loki, Prometheus scrapes metrics, Grafana shows both |
-
-Underneath sit the stores: Postgres (app data and the lakehouse), Redis (cache, budgets and
-the event stream a page watches while a run is going), Qdrant (vectors) and MinIO (uploaded
-files).
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-  <img src="assets/flow-light.svg" alt="High-level design: users, Jira, Gmail, Calendar and MCP servers outside; scheduler, connectors, ETL and ingest feed Postgres, Redis, Qdrant and MinIO; the API puts a question on RabbitMQ, a worker runs agents that call models through LiteLLM (cloud or vLLM), and search the web through Tavily; Langfuse traces every agent run; Prometheus, Promtail, Loki and Grafana watch every service" width="100%">
+  <img src="assets/flow-light.svg" alt="High-level design: users, Jira, Gmail, Calendar and MCP servers outside; scheduler, connectors, ETL and ingest feed Postgres, Redis, Qdrant and MinIO; the API puts a question on RabbitMQ, a worker runs agents that call models through LiteLLM (cloud or vLLM), and search the web through Tavily; Langfuse traces every agent run; Prometheus, Loki and Grafana watch every service" width="100%">
 </picture>
 
-Today the sources are Jira and Gmail; the source layer is pluggable. Reading and writing both run on
-consent you give per account and can revoke — your Jira, your Google Calendar — and nothing
-is ever written until it has been read back to you for a yes. There is no shared token to
-write with: Jira records an author and cannot correct one afterwards, so a comment carries
-the name of whoever typed it or it does not get written.
-
-## What it is, and what it is not
-
-**An internal tool you host yourself.** One team, one Jira board, one machine — a laptop, a
-spare box, a VM nobody else reaches.
-
-| | |
-|---|---|
-| One person, alone? | yes |
-| A team? | yes — `app.membership` scopes every read by project |
-| Facing the internet? | **no** |
-
-The third answer is the one worth reading twice, because several deliberate choices only
-make sense behind a wall: registration is open until you set an invite code, Grafana has no
-login. That is right for a team that already trusts each other and wrong in front of a
-public URL.
-
-**It is not a SaaS and is not becoming one.** There is no tenant id, no isolation between
-organisations, no per-customer accounting — adding them is not a feature, it is a different
-data layer. Said here because the alternative is somebody finding out by deploying it.
+A self-hosted tool for one team. It is not built to face the internet.
 
 ## Quickstart
 
 ```bash
-cp .env.example .env      # fill in the keys you have; scripts/stack.sh doctor says what is missing
-scripts/stack.sh doctor   # says what is missing and what each absence costs
-scripts/stack.sh dev up   # containers, migrations, api, worker, ingest, scheduler
+cp .env.example .env
+scripts/stack.sh doctor   # what is missing, and what each absence costs
+scripts/stack.sh dev up   # stores, migrations, api, worker, ingest, scheduler
 ```
 
-`doctor` runs before anything is configured, which is the point of it: it tells a **broken**
-thing apart from one that is **off on purpose**, and from outside those look identical.
-
-```
-STORES
-  ok    postgres       connected, 13 tables
-SOURCES
-  FAIL  jira           nobody has connected Jira — no sync can run
-SEARCH
-  off   qdrant         not configured — rag_search is not offered to the model
-REGISTRATION
-  FAIL  who may sign up  ANYONE who can reach the URL — set REGISTRATION_INVITE_CODE
-```
-
-**Configuration is split by one rule**: what must never reach git lives in `.env`, and
-everything else lives in `config/environments/`, which *is* committed. Changing an interval
-becomes a commit with a history rather than a silent edit on one machine. An environment
-variable always wins over both.
-
-One command, idempotent: starts what is down, leaves what is up, applies migrations, and
-waits until each service answers a real query rather than merely accepting TCP.
-
-| | |
-|---|---|
-| UI | http://localhost:8000/app — sign in at `/app/login` |
-| API | http://localhost:8000 |
-| Postgres | **5433**, so it cannot collide with a system install |
-
-```bash
-scripts/stack.sh dev status      # what is running, where
-scripts/stack.sh dev logs api    # follow api · worker · ingest · scheduler
-scripts/stack.sh dev down        # stop; named volumes keep the data
-scripts/stack.sh sync            # one Jira sync now, don't wait for the tick
-```
-
-### Three ways to run it
-
-The application is the same in all three; what differs is where it runs.
-
-| | Where the app runs | Use it for |
-|---|---|---|
-| `dev` | on the host under `uv run`, stores in compose | writing code — an edit needs no rebuild |
-| `compose` | in containers, running the image | checking the image CI builds |
-| `k8s` | the chart on minikube, stores still in compose | checking the chart deploys |
-
-```bash
-scripts/stack.sh compose up monitoring   # image in containers, + Prometheus/Loki/Grafana
-scripts/stack.sh k8s build               # build both images and load them into minikube
-scripts/stack.sh k8s up monitoring       # the chart, eight pods
-scripts/stack.sh k8s down --all          # uninstall, stop minikube, stop the stores
-```
-
-**The stores never move.** Postgres, RabbitMQ, Redis, Qdrant, MinIO and LiteLLM run in
-compose in every mode,
-including `k8s` — a StatefulSet with a volume claim is the painful part of Kubernetes and
-proves nothing the chart is meant to prove. The pods reach them at
-`host.minikube.internal`, because inside a pod `localhost` is that pod.
-
-All four host processes matter: no worker means a question gets a job id nobody picks up;
-no ingest worker means uploaded files stay queued; no scheduler means nothing syncs until
-you run `sync` by hand.
-
-The ingest worker is capped, because docling will take every core and several GB for one
-PDF: 2 threads (`ingest_threads`), 2 cores and 4 GB (`INGEST_CPUS`, `INGEST_MEM`), and a
-lower CPU priority than everything else.
-
-**Setup is once, by an admin; use is one click per person.** The admin gives the sync its
-own Jira identity and registers the two OAuth apps — [docs/setup.md](docs/setup.md). Each
-person then opens Settings and connects Jira and Google: Mycel shows them exactly the
-projects Jira lets them browse, and their own calendar and mail.
-
-## Config
-
-Secrets and per-machine settings live in `.env` (see `.env.example`). Everything versioned —
-environments, agents, sources — is YAML under `config/`.
-
-| | |
-|---|---|
-| `DATABASE_URL` · `RABBITMQ_URL` · `REDIS_URL` · `S3_*` | the stores |
-| `CLAUDE_API_KEYS` | model keys, comma-separated; which models exist is `config/litellm/models.yaml` |
-| `LITELLM_API_KEY` | the app's key to the gateway |
-| `JIRA_SERVICE_TOKEN` · `JIRA_CLOUD_ID` | the sync's own read-only identity |
-| `JIRA_CLIENT_ID` · `JIRA_CLIENT_SECRET` | "Connect Jira", read and written as whoever is asking |
-| `GOOGLE_CLIENT_ID` · `GOOGLE_CLIENT_SECRET` | "Connect Google": calendar and mail; blank and both are off |
-| `TOKEN_ENCRYPTION_KEY` | encrypts every stored refresh token, Jira's and Google's alike |
-| `REGISTRATION_INVITE_CODE` | blank means anyone who reaches the URL can sign up |
-| `SMTP_*` | password-reset mail |
-| `TAVILY_API_KEY` | web search for `researcher`; blank and the tool is off |
-| `LANGFUSE_PUBLIC_KEY` · `LANGFUSE_SECRET_KEY` | traces; blank and nothing is sent |
-
-Who reads which project is **Jira's answer, not a list kept here.** Each person connects
-Jira in Settings, and Mycel asks Jira which projects they may browse — on connect and after
-every sync. Someone removed from a project in Jira loses it here within one sync, and a
-person who never connected sees no Jira data at all. Setup is in
+Open http://localhost:8000/app. First-time setup (Jira identity, OAuth apps) is in
 [docs/setup.md](docs/setup.md).
-
-That rule reaches the model too. `analyst` writes its own SQL, and gold is behind a
-row-level security policy scoped to whoever asked — a query that names a project they were
-not granted returns no rows rather than an error, which is also the refusal that gives away
-nothing about what exists.
-
-The running app does not connect as the database owner. Set `MYCEL_APP_PASSWORD` and
-`MIGRATION_DATABASE_URL` (the owner), point `DATABASE_URL` at `mycel_app`, and migration
-0018 creates that role: it reads and writes rows and cannot create, alter or drop anything.
-Migrations alone run as the owner. Both steps happen inside `up`.
-
-## What you can ask it
-
-- **"How is PROJ doing this sprint?"** — `summarizer` returns a verdict (on track · at risk ·
-  off track), a headline, then the tables behind them: at risk, in flight, shipped, and
-  estimated against spent per person.
-- **"Who logged the most hours on bugs last month?"** — `analyst` writes its own SQL against
-  gold and returns each figure with the query that produced it.
-- **"Any release notes from our vendor about this?"** — `researcher` searches the web and
-  reads your own Gmail through the account you connected, headers only.
-- **"What have I got this afternoon?"** — `researcher` reads your own calendar and answers
-  with each event's link.
-- **"Book the review, 3pm tomorrow, half an hour"** — it reads the time back in words and
-  books nothing until you agree.
-- **"What does the spec say about retries?"** — upload PDFs, Word or Markdown under
-  Knowledge; the answer uses those passages only and cites each one.
-
-Two things are true by construction, not by prompt: `run_sql` runs inside
-`SET TRANSACTION READ ONLY`, so a question that would change work data is refused by
-Postgres itself; and effort curves come from worklogs, never resolution dates, because Jira
-stamps a resolution with the moment of the API call and a back-filled project would draw a
-confident, false line.
 
 ## Developing
 
 ```bash
-uv run ruff check .          # lint
-uv run mypy                  # strict, src/ only
-uv run alembic upgrade head  # migrations apply
-uv run pytest --cov          # with a coverage floor
+uv run ruff check . && uv run mypy && uv run pytest
+cd web && npm run build
 ```
 
-The four steps CI runs, in that order — cheapest first. Tests that need Postgres, RabbitMQ
-or Redis skip without them; the rest run straight after `uv sync`. Two guards in
-`tests/conftest.py` make the suite safe anywhere: the DSN must end in `_test`, and
-`ALLOW_MODEL_REQUESTS = False` turns any real provider call into an error.
+Answer quality is scored separately in [evals/](evals/README.md).
 
-Evals are not tests — tests catch broken code, evals catch an answer that has no error and is
-simply worse than last time. See [evals/](evals/README.md).
+## Licence
 
-## Where things are
-
-```
-src/mycel/     Source — one folder per layer
-web/           React + TypeScript, built into the image, served at /app
-config/        Per-environment, per-agent and per-source YAML
-migrations/    Alembic migrations
-deploy/        Prometheus/Loki/Promtail, Grafana, Helm, vLLM, deploy environments
-evals/         Golden set for scoring answer quality
-docs/          Design documentation
-assets/        Banner and diagram, hand-written SVG
-scripts/       stack.sh and one folder per run mode
-```
-
-| | |
-|---|---|
-| **[docs/architecture.html](docs/architecture.html)** | How the system is put together — read this first |
-| **[docs/using-mycel.html](docs/using-mycel.html)** | Sign up, connect Jira, ask in chat |
-| [docs/database.html](docs/database.html) | Schemas, tables, every column, with diagrams |
-| [deploy/](deploy/README.md) | minikube, the chart, monitoring, local inference |
+MIT

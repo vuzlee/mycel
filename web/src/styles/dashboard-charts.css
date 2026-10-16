@@ -315,13 +315,26 @@
 }
 
 .board .effort .when {
+  flex: none;
   width: 3.4rem;
   font-family: var(--mono);
   font-size: 11.5px;
   color: var(--faint);
 }
 
+/* The bar's percentage is of this track, which leaves room for the number after it,
+   so the longest day fills the track without squeezing the date column. */
+.board .effort .track {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 3.5rem;
+}
+
 .board .effort .bar {
+  flex: none;
   height: 10px;
   min-width: 2px;
   border-radius: 3px;
@@ -329,6 +342,8 @@
 }
 
 .board .effort .n {
+  flex: none;
+  margin-right: -3.5rem;
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-size: 12px;

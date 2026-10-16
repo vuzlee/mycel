@@ -53,6 +53,7 @@
 }
 
 .board .epics .track {
+  contain: layout paint;
   height: 6px;
   margin: 10px 0 7px;
   border-radius: 999px;
@@ -187,6 +188,7 @@ td[data-status="late"] {
 }
 
 .board .breakdown .track {
+  contain: layout paint;
   height: 9px;
   border-radius: 3px;
   overflow: hidden;

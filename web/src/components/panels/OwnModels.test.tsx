@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeQueryClient } from "../../lib/queryClient";
-import { OwnModels } from "./OwnModels";
+import { ModelsPage } from "./ModelsPage";
 
 afterEach(() => {
   cleanup();
@@ -12,10 +12,14 @@ afterEach(() => {
 const MODEL = {
   id: 3,
   ref: "own:3",
-  label: "My Gemini",
+  label: "My model",
   model_id: "gemini-2.5-flash",
   api_base: "https://generativelanguage.googleapis.com/v1beta/openai",
   key_hints: ["…0001"],
+};
+const LISTED = {
+  models: [{ ref: "own:3", label: "My model", source: "own", enabled: true }],
+  default_ref: "own:3",
 };
 const PRESETS = { presets: { Gemini: MODEL.api_base }, max_models: 10, max_keys: 5 };
 
@@ -39,23 +43,28 @@ function show() {
   client.setDefaultOptions({ queries: { retry: false } });
   render(
     <QueryClientProvider client={client}>
-      <OwnModels onChange={() => undefined} />
+      <ModelsPage />
     </QueryClientProvider>,
   );
 }
 
-describe("OwnModels", () => {
-  it("lists a model with its key count, never a key", async () => {
-    serve({ "GET /models/own": [MODEL], "GET /models/own/presets": PRESETS });
+describe("ModelsPage with own models", () => {
+  it("lists a model with its key hints, never a key", async () => {
+    serve({
+      "GET /models/own": [MODEL],
+      "GET /models/own/presets": PRESETS,
+      "GET /models": LISTED,
+    });
     show();
-    expect(await screen.findByText("My Gemini")).toBeTruthy();
-    expect(screen.getByText(/1 key$/)).toBeTruthy();
+    expect(await screen.findByText("My model")).toBeTruthy();
+    expect(screen.getByText("…0001")).toBeTruthy();
   });
 
   it("an edit without new keys sends no keys, so the stored ones are kept", async () => {
     const sent = serve({
       "GET /models/own": [MODEL],
       "GET /models/own/presets": PRESETS,
+      "GET /models": LISTED,
       "PATCH /models/own/3": MODEL,
     });
     show();
@@ -66,20 +75,11 @@ describe("OwnModels", () => {
     expect(patch?.body).not.toHaveProperty("keys");
   });
 
-  it("a preset fills the base URL", async () => {
-    serve({ "GET /models/own": [], "GET /models/own/presets": PRESETS });
-    show();
-    fireEvent.click(await screen.findByText("Add a model"));
-    fireEvent.click(screen.getByText("Gemini"));
-    expect((screen.getByPlaceholderText("https://…/v1") as HTMLInputElement).value).toBe(
-      MODEL.api_base,
-    );
-  });
-
   it("shows what each key's test found", async () => {
     serve({
       "GET /models/own": [MODEL],
       "GET /models/own/presets": PRESETS,
+      "GET /models": LISTED,
       "POST /models/own/3/test": { job_id: "j", status: "running", checks: [] },
       "GET /models/own/tests/j": {
         job_id: "j",
@@ -89,6 +89,6 @@ describe("OwnModels", () => {
     });
     show();
     fireEvent.click(await screen.findByText("Test keys"));
-    expect(await screen.findByText("…0001 · out of quota")).toBeTruthy();
+    expect(await screen.findByText("out of quota")).toBeTruthy();
   });
 });

@@ -50,6 +50,8 @@ export interface ConversationSummary {
   created_at: string;
   /** Kept at the top of the sidebar, above Recent. */
   pinned: boolean;
+  /** Moved under Archived, out of Recent. */
+  archived: boolean;
   job_id: string | null;
   status: string | null;
 }
@@ -281,11 +283,26 @@ const del = (path: string): Promise<void> => request<void>("DELETE", path);
 
 // -- auth -------------------------------------------------------------------
 
-export const register = (email: string, password: string): Promise<User> =>
-  post<unknown>("/auth/register", { email, password }).then((v) => shaped<User>(v, USER, "user"));
+/** Which ways in this deployment offers. */
+export interface SignInMethods {
+  google: boolean;
+  code: boolean;
+}
 
-export const login = (email: string, password: string): Promise<User> =>
-  post<unknown>("/auth/login", { email, password }).then((v) => shaped<User>(v, USER, "user"));
+export const fetchSignInMethods = (): Promise<SignInMethods> => get<SignInMethods>("/auth/methods");
+
+/** A full-page navigation, not a fetch: Google's screens cannot live in an XHR. */
+export const googleSignInUrl = (hint: string | null, next: string): string => {
+  const query = new URLSearchParams({ next });
+  if (hint) query.set("hint", hint);
+  return `/auth/google/signin?${query}`;
+};
+
+/** 202 whether or not the address may sign in; 503 when the deployment cannot send mail. */
+export const requestCode = (email: string): Promise<void> => post<void>("/auth/code", { email });
+
+export const verifyCode = (email: string, code: string): Promise<User> =>
+  post<unknown>("/auth/code/verify", { email, code }).then((v) => shaped<User>(v, USER, "user"));
 
 export async function logout(): Promise<void> {
   await fetch("/auth/logout", { method: "POST" });
@@ -298,19 +315,6 @@ export async function me(): Promise<User | null> {
   if (res.status === 401) return null;
   return shaped<User>(await json<unknown>(res), USER, "user");
 }
-
-/** 202 whether or not the address has an account, so this call cannot be used to find
- *  out who is registered. 503 means the deployment has no way to send mail. */
-export const forgotPassword = (email: string): Promise<void> =>
-  post<void>("/auth/forgot", { email });
-
-/** Spend a reset link. Every session of that account ends, this browser included. */
-export const resetPassword = (token: string, newPassword: string): Promise<void> =>
-  post<void>("/auth/reset", { token, new_password: newPassword });
-
-/** Change it while signed in. Every other session ends; this one survives. */
-export const changePassword = (current: string, next: string): Promise<void> =>
-  post<void>("/auth/password", { current_password: current, new_password: next });
 
 // -- google -----------------------------------------------------------------
 
@@ -486,6 +490,11 @@ export const editOwnModel = (id: number, input: OwnModelInput): Promise<OwnModel
 
 export const deleteOwnModel = (id: number): Promise<void> => del(`/models/own/${id}`);
 
+export const deleteOwnKey = (id: number, index: number): Promise<OwnModel> =>
+  request<unknown>("DELETE", `/models/own/${id}/keys/${index}`).then((v) =>
+    shaped<OwnModel>(v, OWN_MODEL, "own model"),
+  );
+
 export const startKeyCheck = (id: number): Promise<KeyCheckState> =>
   post<unknown>(`/models/own/${id}/test`).then((v) =>
     shaped<KeyCheckState>(v, KEY_CHECK_STATE, "key check"),
@@ -511,6 +520,11 @@ export const fetchTurns = (id: number): Promise<Turn[]> =>
 
 /** Its runs go with it. */
 export const deleteConversation = (id: number): Promise<void> => del(`/conversations/${id}`);
+
+export const editConversation = (
+  id: number,
+  change: { title?: string; archived?: boolean },
+): Promise<void> => request<void>("PATCH", `/conversations/${id}`, change);
 
 export const pinConversation = (id: number, pinned: boolean): Promise<void> =>
   request<void>("PUT", `/conversations/${id}/pin`, { pinned });

@@ -1,131 +1,8 @@
-/* -------------------------------------------------- three moments */
+/* -------------------------------------------------- use cases and the close */
 
 .home .uses > h2 {
-  margin-bottom: 36px;
+  margin-bottom: 4px;
 }
-
-.home .use-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: moment;
-}
-
-.home .use-list li {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  padding: 24px 22px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
-  transition:
-    border-color 0.18s ease,
-    translate 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.home .use-list li:hover {
-  border-color: var(--accent-line);
-  translate: 0 -3px;
-  box-shadow: var(--shadow-md);
-}
-
-.home .use-list .when {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.home .use-list b {
-  font-family: var(--display);
-  font-size: 1.45rem;
-  font-weight: 400;
-  line-height: 1.15;
-  color: var(--ink);
-  text-wrap: balance;
-}
-
-/* Set as something typed, because it is: these are the words that go in the box. */
-.home .use-list .ask {
-  justify-self: start;
-  margin-top: 2px;
-  padding: 7px 13px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--ground);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: var(--muted);
-  transition:
-    border-color 0.18s ease,
-    color 0.18s ease;
-}
-
-.home .use-list li:hover .ask {
-  border-color: var(--accent-line);
-  color: var(--accent);
-}
-
-/* -------------------------------------------------- the ask, and the name */
-
-.home .already {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 36px 0 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: contract;
-}
-
-.home .already li {
-  display: grid;
-  gap: 4px;
-  padding: 22px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-/* Numbered, because three things a team must already have is a checklist, and a
-   checklist that is not counted reads as three unrelated cards. */
-.home .already li::before {
-  counter-increment: contract;
-  content: counter(contract, decimal-leading-zero);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-
-.home .already b {
-  font-family: var(--display);
-  font-size: 1.45rem;
-  font-weight: 400;
-  color: var(--ink);
-}
-
-.home .already span {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.home .note {
-  margin: 26px 0 0;
-  font-size: 15.5px;
-  line-height: 1.7;
-  color: var(--ink-2);
-  text-wrap: pretty;
-}
-
-/* -------------------------------------------------- the call */
 
 .home .call {
   position: relative;
@@ -287,24 +164,29 @@
 /* Inside a revealed band the cards arrive one after another, which reads as a hand
    dealing them rather than a block appearing. */
 .home [data-shown="true"] .panel,
-.home [data-shown="true"] .use-list li,
-.home [data-shown="true"] .already li,
+.home [data-shown="true"] .cases > li,
 .home [data-shown="true"] > div {
   animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
 }
 
 .home [data-shown="true"] .panel:nth-child(2),
-.home [data-shown="true"] .use-list li:nth-child(2),
-.home [data-shown="true"] .already li:nth-child(2),
+.home [data-shown="true"] .cases > li:nth-child(2),
 .home [data-shown="true"] > div:nth-child(2) {
   animation-delay: 0.08s;
 }
 
 .home [data-shown="true"] .panel:nth-child(3),
-.home [data-shown="true"] .use-list li:nth-child(3),
-.home [data-shown="true"] .already li:nth-child(3),
+.home [data-shown="true"] .cases > li:nth-child(3),
 .home [data-shown="true"] > div:nth-child(3) {
   animation-delay: 0.16s;
+}
+
+.home [data-shown="true"] .cases > li:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+.home [data-shown="true"] .cases > li:nth-child(5) {
+  animation-delay: 0.32s;
 }
 
 .home [data-shown="true"] > div:nth-child(4) {
@@ -335,9 +217,7 @@
 /* -------------------------------------------------- narrow */
 
 @media (max-width: 960px) {
-  .panels,
-  .home .use-list,
-  .home .already {
+  .panels {
     grid-template-columns: 1fr;
   }
 }

@@ -2,8 +2,9 @@
 
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Chip, ModelChoice } from "../api";
-import { ChipMenu, labelOf } from "./ChipMenu";
-import { ArrowRight, Sliders, Spinner } from "./icons";
+import { ChipMenu, iconOf, labelOf } from "./ChipMenu";
+import { ModelPicker } from "./ModelPicker";
+import { Hub, Spinner, Sprout } from "./icons";
 
 export interface ComposerHandle {
   focus: () => void;
@@ -97,6 +98,23 @@ export function Composer({
 
   return (
     <div className="composer">
+      {chips.length > 0 && (
+        <div className="source-chips" role="group" aria-label="Sources">
+          {chips.map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              className="source-chip"
+              aria-pressed
+              title={`Remove ${labelOf(chip)}`}
+              onClick={() => toggle(chip)}
+            >
+              {iconOf(chip)}
+              {labelOf(chip)}
+            </button>
+          ))}
+        </div>
+      )}
       <form
         data-over={over}
         onSubmit={(event) => {
@@ -126,7 +144,7 @@ export function Composer({
               data-on={chips.length > 0}
               onClick={() => setMenu((open) => !open)}
             >
-              <Sliders />
+              <Hub />
               {chips.length > 0 && <span className="source-count">{chips.length}</span>}
             </button>
             {(menu || mention) && (
@@ -145,7 +163,7 @@ export function Composer({
               value={value}
               placeholder={
                 chips.length === 0
-                  ? "Ask anything — pick sources on the left or with @"
+                  ? "Ask anything, or type @ to pick a source"
                   : `Ask with ${chips.map(labelOf).join(", ")}…`
               }
               aria-label="Your question"
@@ -160,18 +178,7 @@ export function Composer({
             />
           </div>
           {models.length > 1 && model !== null && (
-            <select
-              className="model-pick"
-              aria-label="Model"
-              value={model}
-              onChange={(event) => onModel(event.target.value)}
-            >
-              {models.map((m) => (
-                <option key={m.ref} value={m.ref}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+            <ModelPicker models={models} value={model} onChange={onModel} />
           )}
           <button
             className="send"
@@ -180,7 +187,7 @@ export function Composer({
             aria-label={busy ? "Running" : "Ask"}
             title={busy ? "Running" : "Ask"}
           >
-            {busy ? <Spinner className="spin" size={15} /> : <ArrowRight size={15} />}
+            {busy ? <Spinner className="spin" size={15} /> : <Sprout size={16} />}
           </button>
         </div>
       </form>
@@ -188,8 +195,8 @@ export function Composer({
         <p className="hint note">{PROCESSING_NOTE}</p>
       ) : (
         <p className="hint">
-          <kbd>Enter</kbd> to send · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line · <kbd>@</kbd>{" "}
-          for a source
+          <kbd>Enter</kbd> to send <kbd>Shift</kbd>+<kbd>Enter</kbd> new line <kbd>@</kbd> pick a
+          source
         </p>
       )}
     </div>

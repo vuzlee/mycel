@@ -37,6 +37,7 @@
   background-clip: text;
   color: transparent;
   animation: shimmer 2.2s linear infinite;
+  contain: paint;
 }
 
 @keyframes shimmer {
