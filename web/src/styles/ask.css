@@ -540,7 +540,8 @@ details[open] > summary .chevron {
   cursor: not-allowed;
 }
 
-.send .spin {
+/* Every spinner turns: the send button's and each step still running in the trail. */
+.spin {
   animation: spin 0.9s linear infinite;
 }
 
