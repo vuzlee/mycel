@@ -39,7 +39,7 @@ export function Trail({ items, live, gaps, always = false, durationMs }: Props) 
         </span>
         {items.length > 0 && <Chevron className="chevron" />}
       </summary>
-      {items.length > 0 && <ol className="trail-steps">{rows(items, gaps)}</ol>}
+      {items.length > 0 && <ol className="trail-steps">{rows(items, live, gaps)}</ol>}
     </details>
   );
 }
@@ -70,19 +70,19 @@ function Wave({ text }: { text: string }) {
   );
 }
 
-function rows(items: Item[], gaps?: Map<number, number>): React.ReactNode {
+function rows(items: Item[], live: boolean, gaps?: Map<number, number>): React.ReactNode {
   return items.map((item) => {
     const lost = gaps?.get(item.seq);
     return (
       <li key={`${item.kind}-${item.seq}`}>
         {lost && <p className="gap">— {lost} event(s) lost —</p>}
-        <Row item={item} gaps={gaps} />
+        <Row item={item} live={live} gaps={gaps} />
       </li>
     );
   });
 }
 
-function Row({ item, gaps }: { item: Item; gaps?: Map<number, number> }) {
+function Row({ item, live, gaps }: { item: Item; live: boolean; gaps?: Map<number, number> }) {
   switch (item.kind) {
     case "mark":
       return <p className="gap">{item.label}</p>;
@@ -111,12 +111,21 @@ function Row({ item, gaps }: { item: Item; gaps?: Map<number, number> }) {
         </details>
       );
     case "tool":
-      return <ToolRow item={item} gaps={gaps} />;
+      return <ToolRow item={item} live={live} gaps={gaps} />;
   }
 }
 
-function ToolRow({ item, gaps }: { item: ToolItem; gaps?: Map<number, number> }) {
-  const pending = item.result === null;
+function ToolRow({
+  item,
+  live,
+  gaps,
+}: {
+  item: ToolItem;
+  live: boolean;
+  gaps?: Map<number, number>;
+}) {
+  // An agent's final answer is never echoed back as a result, so a finished run settles it.
+  const pending = live && item.result === null;
   return (
     <>
       <details className="step">
@@ -142,7 +151,7 @@ function ToolRow({ item, gaps }: { item: ToolItem; gaps?: Map<number, number> })
         </div>
       </details>
       {item.children.length > 0 && (
-        <ol className="trail-steps nested">{rows(item.children, gaps)}</ol>
+        <ol className="trail-steps nested">{rows(item.children, live, gaps)}</ol>
       )}
     </>
   );
