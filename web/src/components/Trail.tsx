@@ -19,10 +19,10 @@ interface Props {
 }
 
 export function Trail({ items, live, gaps, always = false, durationMs }: Props) {
+  const elapsed = useElapsed(live);
   if (items.length === 0 && !live && !always) return null;
   const steps = countTools(items);
   const now = live ? deepestPending(items) : null;
-  const elapsed = useElapsed(live);
   const took = durationMs ? ` · ${duration(durationMs)}` : "";
 
   return (
