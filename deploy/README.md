@@ -3,7 +3,7 @@
 ```
 helm/mycel/     the chart: api, worker, scheduler, ingest, migrate hook, monitoring
 helm/mycel/files/   Grafana and Loki config, also mounted by compose
-monitoring/     Prometheus and Promtail config for compose
+monitoring/     Prometheus, Alertmanager and Alloy config for compose
 inference/      local vLLM (planned, off)
 ```
 
@@ -50,5 +50,5 @@ Pods reach the stores at `externalStores.host` (`host.minikube.internal`).
 ## Monitoring
 
 `--set monitoring.enabled=true` (compose: `--profile monitoring`) adds Prometheus, Loki,
-Promtail and Grafana. In the cluster Prometheus discovers pods and Promtail is a DaemonSet
+Alloy and Grafana. In the cluster Prometheus discovers pods and Alloy is a DaemonSet
 reading `/var/log/pods`. Data is not persisted.
