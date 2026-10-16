@@ -6,7 +6,17 @@ import type { ConversationSummary } from "../api";
 import { useConversations } from "../context/ConversationsContext";
 import { Account } from "./Account";
 import { ConversationRow as Row } from "./ConversationRow";
-import { Archive, Bars, Close, Mycelium, Notebook, PanelLeft, Plus, Search } from "./icons";
+import {
+  Archive,
+  Bars,
+  Chevron,
+  Close,
+  Mycelium,
+  Notebook,
+  PanelLeft,
+  Plus,
+  Search,
+} from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
@@ -29,8 +39,8 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
   const conversations = needle ? all.filter((t) => t.title.toLowerCase().includes(needle)) : all;
   const live = conversations.filter((t) => !t.archived);
   const archived = conversations.filter((t) => t.archived);
-  const pinned = showArchived ? [] : live.filter((t) => t.pinned);
-  const recent = showArchived ? archived : live.filter((t) => !t.pinned);
+  const pinned = live.filter((t) => t.pinned);
+  const recent = live.filter((t) => !t.pinned);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -68,7 +78,7 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
             <span className="mark">
               <Mycelium size={15} />
             </span>
-            Mycel
+            <span className="wordmark">Mycel</span>
           </Link>
           <div className="rail-tools">
             <button
@@ -147,15 +157,6 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
           <Notebook />
           Knowledge
         </button>
-        <button
-          className="board-link"
-          aria-pressed={showArchived}
-          onClick={() => setShowArchived((on) => !on)}
-        >
-          <Archive />
-          Archived
-          {archived.length > 0 && <span className="count">{archived.length}</span>}
-        </button>
 
         <div className="conversations">
           {pinned.length > 0 && (
@@ -176,14 +177,39 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
               </ol>
             </>
           )}
-          <h2 className="label">{showArchived ? "Archived" : "Recent"}</h2>
+          <section className="archived" data-open={showArchived}>
+            <button
+              type="button"
+              className="archived-toggle"
+              aria-expanded={showArchived}
+              onClick={() => setShowArchived((on) => !on)}
+            >
+              <Archive />
+              Archived
+              {archived.length > 0 && <span className="count">{archived.length}</span>}
+              <Chevron className="archived-chevron" />
+            </button>
+            {showArchived && archived.length === 0 && <p className="empty">Nothing archived.</p>}
+            {showArchived && archived.length > 0 && (
+              <ol>
+                {archived.map((conversation) => (
+                  <Row
+                    key={conversation.id}
+                    conversation={conversation}
+                    current={current}
+                    onOpen={open_}
+                    onPin={pin}
+                    onEdit={edit}
+                    onDrop={drop}
+                  />
+                ))}
+              </ol>
+            )}
+          </section>
+          <h2 className="label">Recent</h2>
           {recent.length === 0 && pinned.length === 0 ? (
             <p className="empty">
-              {needle
-                ? "No conversation matches."
-                : showArchived
-                  ? "Nothing archived."
-                  : "Runs you start appear here, ready to reopen."}
+              {needle ? "No conversation matches." : "Runs you start appear here, ready to reopen."}
             </p>
           ) : (
             <ol>

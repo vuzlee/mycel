@@ -109,6 +109,16 @@ a.brand {
   color: inherit;
 }
 
+/* Hairline italic with pointed terminals, like threads tapering off. */
+.brand .wordmark {
+  font-family: "Cormorant Garamond", var(--display);
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
 a.brand:hover .mark {
   filter: brightness(1.12);
 }
@@ -204,7 +214,7 @@ a.brand:hover .mark {
   color: var(--accent);
 }
 
-/* Dashboard, Knowledge and Archived sit as one group; the gap after it is the group's. */
+/* Dashboard and Knowledge sit as one group; the gap after it is the group's. */
 .board-link + .board-link {
   margin-top: -18px;
 }
@@ -442,4 +452,52 @@ a.brand:hover .mark {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+
+/* Archived folds above Recent: out of the way until asked for, never a mode switch. */
+.archived {
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.archived-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 0 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.archived-toggle:hover {
+  background: color-mix(in oklab, var(--accent) 5%, var(--sunk));
+  color: var(--ink);
+}
+
+.archived-toggle .count {
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.archived-chevron {
+  margin-left: auto;
+  color: var(--faint);
+  transition: transform 0.15s;
+}
+
+.archived[data-open="true"] .archived-chevron {
+  transform: rotate(90deg);
+}
+
+.archived ol {
+  margin-top: 4px;
+  opacity: 0.75;
 }

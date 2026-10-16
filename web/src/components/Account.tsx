@@ -16,12 +16,31 @@ interface Props {
  *  the same menu, so stacking them would only hide one behind another. */
 type Panel = "profile" | "settings" | "help" | "leaving";
 
+/** Fired on `window` with a section id as `detail` to open Settings there. */
+export const OPEN_SETTINGS = "mycel:open-settings";
+
+export const openSettings = (section: string): void => {
+  window.dispatchEvent(new CustomEvent(OPEN_SETTINGS, { detail: section }));
+};
+
 export function Account({ where }: Props) {
   const { user, signOut } = useAuth();
   const { conversations } = useConversations();
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [section, setSection] = useState<string | undefined>(undefined);
   const box = useRef<HTMLDivElement>(null);
+
+  // Anywhere in the app can open Settings at a section, e.g. the model picker's "Add".
+  useEffect(() => {
+    if (where !== "rail") return;
+    const open = (event: Event): void => {
+      setSection((event as CustomEvent<string>).detail);
+      setPanel("settings");
+    };
+    window.addEventListener(OPEN_SETTINGS, open);
+    return () => window.removeEventListener(OPEN_SETTINGS, open);
+  }, [where]);
 
   // Click away or press Escape. A menu that only closes by its own button is a menu that
   // stays open behind whatever you clicked next.
@@ -45,6 +64,7 @@ export function Account({ where }: Props) {
 
   const show = (which: Panel): void => {
     setOpen(false);
+    setSection(undefined);
     setPanel(which);
   };
 
@@ -114,7 +134,7 @@ export function Account({ where }: Props) {
           onClose={shut}
           wide
         >
-          <SettingsPanel />
+          <SettingsPanel start={section} />
         </Modal>
       )}
 

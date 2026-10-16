@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ModelChoice } from "../api";
-import { Check, Chevron } from "./icons";
+import { openSettings } from "./Account";
+import { Check, Chevron, Plus } from "./icons";
 
 /** The model for the next question: a small button that opens a list above the composer. */
 export function ModelPicker({
@@ -68,6 +69,18 @@ export function ModelPicker({
               </button>
             </li>
           ))}
+          <li className="model-pick-add">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                openSettings("models");
+              }}
+            >
+              <Plus size={12} />
+              <span className="model-pick-label">Add a model</span>
+            </button>
+          </li>
         </ul>
       )}
     </div>

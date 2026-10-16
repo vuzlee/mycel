@@ -4,7 +4,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { Chip, ModelChoice } from "../api";
 import { ChipMenu, iconOf, labelOf } from "./ChipMenu";
 import { ModelPicker } from "./ModelPicker";
-import { Hub, Spinner, Sprout } from "./icons";
+import { MycelPlus, Spinner, Sprout } from "./icons";
 
 export interface ComposerHandle {
   focus: () => void;
@@ -134,28 +134,6 @@ export function Composer({
           onDropFiles(Array.from(event.dataTransfer.files));
         }}
       >
-        <div className="composer-row">
-          <div className="chip-anchor" ref={anchor}>
-            <button
-              type="button"
-              className="icon-button add-source"
-              aria-label="Sources"
-              title={chips.length ? chips.map(labelOf).join(", ") : "Add a source"}
-              data-on={chips.length > 0}
-              onClick={() => setMenu((open) => !open)}
-            >
-              <Hub />
-              {chips.length > 0 && <span className="source-count">{chips.length}</span>}
-            </button>
-            {(menu || mention) && (
-              <ChipMenu
-                picked={chips}
-                locked={locked}
-                filter={mention?.[1] ?? ""}
-                onToggle={toggle}
-              />
-            )}
-          </div>
           <div className="composer-field">
             <textarea
               ref={box}
@@ -177,9 +155,30 @@ export function Composer({
               }}
             />
           </div>
-          {models.length > 1 && model !== null && (
-            <ModelPicker models={models} value={model} onChange={onModel} />
-          )}
+          <div className="composer-row">
+          <div className="chip-anchor" ref={anchor}>
+            <button
+              type="button"
+              className="icon-button add-source"
+              aria-label="Sources"
+              title={chips.length ? chips.map(labelOf).join(", ") : "Add a source"}
+              data-on={chips.length > 0}
+              onClick={() => setMenu((open) => !open)}
+            >
+              <MycelPlus size={12} />
+              {chips.length > 0 && <span className="source-count">{chips.length}</span>}
+            </button>
+            {(menu || mention) && (
+              <ChipMenu
+                picked={chips}
+                locked={locked}
+                filter={mention?.[1] ?? ""}
+                onToggle={toggle}
+              />
+            )}
+          </div>
+            <span className="composer-gap" />
+          {model !== null && <ModelPicker models={models} value={model} onChange={onModel} />}
           <button
             className="send"
             type="submit"
@@ -189,7 +188,7 @@ export function Composer({
           >
             {busy ? <Spinner className="spin" size={15} /> : <Sprout size={16} />}
           </button>
-        </div>
+          </div>
       </form>
       {blocked ? (
         <p className="hint note">{PROCESSING_NOTE}</p>

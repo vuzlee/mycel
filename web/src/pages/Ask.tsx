@@ -201,31 +201,33 @@ export function Ask() {
     [jobId, past, question],
   );
 
+  const composerBox = (
+    <Composer
+      busy={run.busy}
+      seed={seed}
+      handle={composer}
+      chips={chips}
+      onChips={setChips}
+      knowledgeLocked={docs.busy || docs.loading || docs.error !== null}
+      models={usable}
+      model={model}
+      onModel={setPicked}
+      onAsk={(text) => void ask(text)}
+      onDropFiles={(files) => {
+        void sendFiles(files).then((errors) => {
+          if (errors.length) setRefused(errors.join(" "));
+        });
+      }}
+    />
+  );
+
   return (
     <Shell
       current={jobId}
       scrollRef={scrollRef}
       aside={topics.length > 1 ? <Topics topics={topics} root={body} /> : undefined}
       jump={jobId !== null && run.follow.adrift ? run.follow.toBottom : undefined}
-      footer={
-        <Composer
-          busy={run.busy}
-          seed={seed}
-          handle={composer}
-          chips={chips}
-          onChips={setChips}
-          knowledgeLocked={docs.busy || docs.loading || docs.error !== null}
-          models={usable}
-          model={model}
-          onModel={setPicked}
-          onAsk={(text) => void ask(text)}
-          onDropFiles={(files) => {
-            void sendFiles(files).then((errors) => {
-              if (errors.length) setRefused(errors.join(" "));
-            });
-          }}
-        />
-      }
+      footer={jobId ? composerBox : undefined}
     >
       {jobId ? (
         <Conversation
@@ -249,9 +251,15 @@ export function Ask() {
         </Conversation>
       ) : (
         <div className="blank">
-          <h1>Ask Mycel anything</h1>
-          <p>Your team's week, the numbers, your mail, or anything on the web.</p>
+          <h1>
+            Ask <span className="wordmark">Mycel</span> anything
+          </h1>
+          <p>
+            Ask about your team's week, your numbers, your inbox, or anything on the web. Type @ to
+            choose where Mycel looks.
+          </p>
           {refused && <p className="failure">{refused}</p>}
+          <div className="blank-composer">{composerBox}</div>
           <div className="seed-groups">
             {groups.map((group) => (
               <section key={group.name}>

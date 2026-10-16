@@ -323,11 +323,11 @@ details[open] > summary .chevron {
   max-width: var(--conversation);
   margin: 0 auto;
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  padding: 9px 9px 9px 16px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 10px 7px;
   border: 1px solid var(--rule-2);
-  border-radius: 18px;
+  border-radius: 22px;
   background: var(--raised);
   box-shadow: var(--shadow-md);
   transition:
@@ -336,8 +336,10 @@ details[open] > summary .chevron {
 }
 
 .composer form:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-line);
+  box-shadow:
+    0 0 0 4px var(--accent-soft),
+    var(--shadow-lg);
 }
 
 .composer textarea {
@@ -350,7 +352,54 @@ details[open] > summary .chevron {
   font: inherit;
   letter-spacing: inherit;
   max-height: 180px;
-  padding: 5px 0;
+  min-height: 26px;
+  padding: 2px 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.composer-field {
+  display: flex;
+  padding: 0 6px;
+}
+.composer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.composer-row .add-source {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--rule-2);
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.composer-row .add-source:hover,
+.composer-row .add-source[data-on="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--ink);
+}
+.composer-row .model-pick-button {
+  background: transparent;
+  color: var(--muted);
+}
+.composer-row .model-pick-button:hover,
+.composer-row .model-pick-button[aria-expanded="true"] {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--ink);
+}
+.composer-gap {
+  flex: 1;
 }
 
 .composer textarea::placeholder {
@@ -452,6 +501,14 @@ details[open] > summary .chevron {
   width: 14px;
   color: var(--accent);
 }
+.model-pick-add {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--rule);
+}
+.model-pick-menu .model-pick-add button {
+  color: var(--accent);
+}
 
 .send {
   flex: none;
@@ -459,7 +516,8 @@ details[open] > summary .chevron {
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 11px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
   background: var(--accent);
   color: var(--accent-ink);
   transition:
@@ -477,7 +535,8 @@ details[open] > summary .chevron {
 }
 
 .send:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -493,7 +552,8 @@ details[open] > summary .chevron {
 
 .composer .hint {
   max-width: var(--conversation);
-  margin: 9px auto 0;
+  margin: 6px auto 0;
+  text-align: center;
   font-family: var(--mono);
   font-size: 10.5px;
   color: var(--faint);
@@ -505,6 +565,21 @@ details[open] > summary .chevron {
 }
 
 /* ---------------------------------------------------------------- empty state */
+
+/* The name in the greeting: a slim script whose long strokes trail off
+   like hyphae, much larger than the words around it, in deep violet. */
+.blank h1 .wordmark {
+  display: inline-block;
+  margin: 0 0.12em 0 0.08em;
+  font-family: "Italianno", var(--display);
+  font-style: normal;
+  font-weight: 400;
+  font-size: 1.95em;
+  line-height: 0.9;
+  letter-spacing: 0;
+  vertical-align: -0.04em;
+  color: var(--wordmark);
+}
 
 /* Centred rather than top-aligned: with nothing below it, a block pinned to the top
    leaves a dead half-screen under the seeds. */
@@ -518,13 +593,15 @@ details[open] > summary .chevron {
   padding: 40px 24px 64px;
 }
 
+/* A light italic serif, so "Ask" and "anything" lean the same way as the script name. */
 .blank h1 {
-  margin: 0 0 14px;
-  font-family: var(--display);
-  font-size: 2.9rem;
+  margin: 0 0 30px;
+  font-family: "Cormorant Garamond", var(--display);
+  font-style: italic;
+  font-size: 3.1rem;
   font-weight: 400;
   line-height: 1.08;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.005em;
   text-wrap: balance;
 }
 
@@ -533,9 +610,21 @@ details[open] > summary .chevron {
   color: var(--accent);
 }
 
+.blank-composer {
+  margin: 0 0 36px;
+}
+.blank-composer .composer {
+  padding: 0;
+  background: none;
+}
+.blank-composer .composer form,
+.blank-composer .composer .hint {
+  max-width: none;
+}
+
 .blank > p {
-  margin: 0 0 32px;
-  max-width: 46ch;
+  margin: 0 0 24px;
+  max-width: 60ch;
   font-size: 15.5px;
   color: var(--muted);
 }

@@ -50,8 +50,8 @@ const SECTIONS: SettingsSection[] = [
   },
 ];
 
-export function SettingsPanel() {
-  const [active, setActive] = useState(SECTIONS[0]!.id);
+export function SettingsPanel({ start }: { start?: string }) {
+  const [active, setActive] = useState(start ?? SECTIONS[0]!.id);
   const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0]!;
 
   return (

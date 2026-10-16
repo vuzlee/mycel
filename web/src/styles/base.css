@@ -7,6 +7,7 @@
 
 :root {
   --mark-ink: #6e56cf;
+  --wordmark: #4b2aa8;
   --ground: #faf9fc;
   --surface: #ffffff;
   --sunk: #f3f1f8;
@@ -108,6 +109,8 @@
     --rule-2: #3a3d52;
 
     --mark-ink: #d4c8ff;
+
+    --wordmark: #c4b1ff;
     --accent: #baa7ff;
     --accent-hover: #e2ddfe;
     --accent-ink: #14101d;
@@ -153,6 +156,8 @@
   --rule-2: #3a3d52;
 
   --mark-ink: #d4c8ff;
+
+  --wordmark: #c4b1ff;
   --accent: #baa7ff;
   --accent-hover: #e2ddfe;
   --accent-ink: #14101d;

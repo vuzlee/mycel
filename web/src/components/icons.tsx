@@ -312,6 +312,20 @@ export function Hub({ size = 15 }: IconProps) {
   );
 }
 
+/** A plus drawn as hyphae: four threads out from a node, each ending in a spore. */
+export function MycelPlus({ size = 15 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 3.6v8.8M3.6 8h8.8" />
+      <circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="2.6" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="13.4" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="2.6" cy="8" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="13.4" cy="8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function Bubble({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>
