@@ -147,7 +147,7 @@
 /* The page is paper in either theme, so its mark is the light one, multiplied into the ink. */
 .pdf-mark {
   position: absolute;
-  background: rgb(82 76 159 / 30%);
+  background: rgb(70 77 146 / 30%);
   mix-blend-mode: multiply;
   border-radius: 2px;
 }

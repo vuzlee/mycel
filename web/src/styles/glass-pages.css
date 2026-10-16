@@ -74,9 +74,9 @@
 
 .gate button.primary,
 .picker .primary {
-  background: linear-gradient(135deg, #594fd3, #433ea5);
+  background: linear-gradient(135deg, #3c4ace, #394498);
   color: #fff;
-  box-shadow: 0 8px 24px -10px rgb(89 79 211 / 0.8);
+  box-shadow: 0 8px 24px -10px rgb(60 74 206 / 0.8);
 }
 
 /* ---------------------------------------------------------------- sign-in */
@@ -309,7 +309,7 @@
 
 .home .lead h1 em,
 .home section > h2 em {
-  background: linear-gradient(100deg, #7d73dc, #594fd3);
+  background: linear-gradient(100deg, #5e66d7, #3c4ace);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
