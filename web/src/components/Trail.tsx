@@ -1,7 +1,7 @@
 /** Everything a run did on its way to the answer, folded into one line. */
 
 import type { Item, ToolItem } from "../lib/buildConversation";
-import { labelFor } from "../lib/toolLabel";
+import { labelFor, resultSummary } from "../lib/toolLabel";
 import { Chevron, Mycelium, Spinner } from "./icons";
 import { Json } from "./Json";
 import { Markdown } from "./Markdown";
@@ -27,7 +27,7 @@ export function Trail({ items, live, gaps, always = false }: Props) {
         <span className="trail-meta">
           {live
             ? now
-              ? labelFor(now.tool)
+              ? labelFor(now.tool, now.args)
               : null
             : steps > 0
               ? `${steps} step${steps === 1 ? "" : "s"}`
@@ -92,19 +92,23 @@ function ToolRow({ item, gaps }: { item: ToolItem; gaps?: Map<number, number> })
       <details className="step">
         <summary>
           <span className="dot tool" />
-          <span className="what">{labelFor(item.tool)}</span>
-          <span className="peek">{item.args && item.args !== "{}" ? item.args : ""}</span>
+          <span className="what">{labelFor(item.tool, item.args)}</span>
+          <span className="peek">{pending ? "" : resultSummary(item.result ?? "")}</span>
           {pending ? <Spinner className="spin" size={11} /> : <span className="done">✓</span>}
         </summary>
         <div className="step-body">
-          <span className="label">{item.tool} · arguments</span>
-          <Json text={item.args || "{}"} />
-          {!pending && (
-            <>
-              <span className="label">Result</span>
-              <Json text={item.result ?? ""} />
-            </>
-          )}
+          {/* What went in and came out, as sent: for whoever is debugging, folded away. */}
+          <details className="raw-io">
+            <summary>Raw</summary>
+            <span className="label">{item.tool} · arguments</span>
+            <Json text={item.args || "{}"} />
+            {!pending && (
+              <>
+                <span className="label">Result</span>
+                <Json text={item.result ?? ""} />
+              </>
+            )}
+          </details>
         </div>
       </details>
       {item.children.length > 0 && (
