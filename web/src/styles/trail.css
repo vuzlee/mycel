@@ -116,7 +116,11 @@
 }
 
 .step .what {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--ink-2);
   font-weight: 500;
 }
@@ -148,6 +152,11 @@
   line-height: 1.7;
   color: var(--muted);
   max-width: 84ch;
+}
+
+/* A closed step shows nothing below its line; a details body is not hidden by itself here. */
+.step:not([open]) > .step-body {
+  display: none;
 }
 
 .raw-io > summary {

@@ -243,7 +243,8 @@ body::before {
   opacity: 0.5;
 }
 
-.main > :not(.jump, .source-panel) {
+/* Not the turn map: it floats beside the conversation and keeps its own `absolute`. */
+.main > :not(.jump, .source-panel, .topics) {
   position: relative;
   z-index: 1;
 }
