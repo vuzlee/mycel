@@ -249,6 +249,7 @@ export function Ask() {
           gaps={run.gaps}
           failure={failure}
           pending={run.pending}
+          durationMs={run.result?.duration_ms}
         >
           {run.result?.status === "done" && (
             <Answer

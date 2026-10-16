@@ -31,22 +31,26 @@
   color: var(--ink-2);
 }
 
-.trail[data-live="true"] > summary b {
-  background: linear-gradient(90deg, var(--ink-2) 30%, var(--accent) 50%, var(--ink-2) 70%);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shimmer 2.2s linear infinite;
-  contain: paint;
+/* Opacity only, so the compositor runs it and the letters never repaint or move. */
+.trail .wave span {
+  color: var(--accent);
+  animation: glow 1.6s ease-in-out infinite;
 }
 
-@keyframes shimmer {
-  from {
-    background-position: 100% 0;
+@keyframes glow {
+  0%,
+  60%,
+  100% {
+    opacity: 0.4;
   }
-  to {
-    background-position: 0 0;
+  30% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trail .wave span {
+    animation: none;
   }
 }
 

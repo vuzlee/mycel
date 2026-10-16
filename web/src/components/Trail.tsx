@@ -1,7 +1,9 @@
 /** Everything a run did on its way to the answer, folded into one line. */
 
 import type { Item, ToolItem } from "../lib/buildConversation";
+import { useEffect, useState } from "react";
 import { labelFor, resultSummary } from "../lib/toolLabel";
+import { duration } from "../lib/usage";
 import { Chevron, Mycelium, Spinner } from "./icons";
 import { Json } from "./Json";
 import { Markdown } from "./Markdown";
@@ -12,31 +14,59 @@ interface Props {
   gaps?: Map<number, number>;
   /** Show the line even with no steps, so every finished turn has one. */
   always?: boolean;
+  /** How long the finished run took; while it runs, the line counts up on its own. */
+  durationMs?: number | null;
 }
 
-export function Trail({ items, live, gaps, always = false }: Props) {
+export function Trail({ items, live, gaps, always = false, durationMs }: Props) {
   if (items.length === 0 && !live && !always) return null;
   const steps = countTools(items);
   const now = live ? deepestPending(items) : null;
+  const elapsed = useElapsed(live);
+  const took = durationMs ? ` · ${duration(durationMs)}` : "";
 
   return (
     <details className="trail" data-live={live}>
       <summary>
         <Mycelium className={live ? "grow" : "rest"} size={15} />
-        <b>{live ? "Myceling" : "Mycelled"}</b>
+        {live ? <Wave text="Myceling..." /> : <b>Mycelled</b>}
         <span className="trail-meta">
           {live
-            ? now
-              ? labelFor(now.tool, now.args)
-              : null
-            : steps > 0
-              ? `${steps} step${steps === 1 ? "" : "s"}`
-              : "no tools"}
+            ? [now ? labelFor(now.tool, now.args) : null, elapsed >= 1 ? `${elapsed}s` : null]
+                .filter(Boolean)
+                .join(" · ")
+            : `${steps > 0 ? `${steps} step${steps === 1 ? "" : "s"}` : "no tools"}${took}`}
         </span>
         {items.length > 0 && <Chevron className="chevron" />}
       </summary>
       {items.length > 0 && <ol className="trail-steps">{rows(items, gaps)}</ol>}
     </details>
+  );
+}
+
+/** Whole seconds since `live` turned on; 0 when it is off. */
+function useElapsed(live: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    setSeconds(0);
+    if (!live) return;
+    const start = Date.now();
+    const tick = setInterval(() => setSeconds(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => clearInterval(tick);
+  }, [live]);
+  return seconds;
+}
+
+/** Each letter brightens in turn; nothing moves, so the line never shifts while it waits. */
+function Wave({ text }: { text: string }) {
+  return (
+    <b className="wave" aria-label={text}>
+      {[...text].map((char, i) => (
+        <span key={i} aria-hidden style={{ animationDelay: `${i * 0.09}s` }}>
+          {char}
+        </span>
+      ))}
+    </b>
   );
 }
 

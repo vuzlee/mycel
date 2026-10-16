@@ -18,6 +18,7 @@ interface Props {
   /** Earlier turns of the same conversation, already finished. Above the question on screen
    *  because that is the order they were asked in. */
   before?: React.ReactNode;
+  durationMs?: number | null;
 }
 
 export function Conversation({
@@ -29,6 +30,7 @@ export function Conversation({
   pending,
   children,
   before,
+  durationMs,
 }: Props) {
   return (
     <div className="conversation">
@@ -45,7 +47,13 @@ export function Conversation({
           </div>
         )}
         <div className="turn items">
-          <Steps items={items} gaps={gaps} live={pending} settled={!pending && !failure} />
+          <Steps
+            items={items}
+            gaps={gaps}
+            live={pending}
+            settled={!pending && !failure}
+            durationMs={durationMs}
+          />
         </div>
         {children}
         {failure && <p className="failure">{failure}</p>}
