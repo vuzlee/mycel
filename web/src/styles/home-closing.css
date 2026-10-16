@@ -89,7 +89,7 @@
 }
 
 .home > footer .sig em {
-  font-style: italic;
+  font-style: normal;
   color: var(--muted);
 }
 

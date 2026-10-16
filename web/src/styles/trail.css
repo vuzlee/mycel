@@ -2,7 +2,8 @@
 
 .trail > summary {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
+  line-height: 1.4;
   gap: 8px;
   padding: 5px 10px 5px 8px;
   border-radius: 999px;
@@ -47,6 +48,10 @@
   to {
     background-position: 0 0;
   }
+}
+
+.trail > summary > svg {
+  align-self: center;
 }
 
 .trail .rest {

@@ -6,34 +6,34 @@
  */
 
 :root {
-  --mark-ink: #6e56cf;
-  --wordmark: #4b2aa8;
-  --ground: #faf9fc;
+  --mark-ink: #524c9f;
+  --wordmark: #3d3474;
+  --ground: #fafafb;
   --surface: #ffffff;
-  --sunk: #f3f1f8;
+  --sunk: #f3f2f7;
   --raised: #ffffff;
 
-  --ink: #17141f;
-  --ink-2: #3d3d4a;
-  --muted: #6f6782;
-  --faint: #9d96ae;
+  --ink: #17161d;
+  --ink-2: #404147;
+  --muted: #595764;
+  --faint: #7b788c;
 
-  --rule: #e7e3f0;
-  --rule-2: #c8c6d8;
+  --rule: #e7e6ed;
+  --rule-2: #9b9cb0;
 
-  --accent: #6e56cf;
-  --accent-hover: #654dc4;
+  --accent: #524c9f;
+  --accent-hover: #4f4b90;
   --accent-ink: #ffffff;
-  --accent-soft: #f4f0fe;
-  --accent-line: #d4cafe;
+  --accent-soft: #f4f3fb;
+  --accent-line: #908be2;
   /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
      a selection lands on are already tinted — the question bubble is `--accent-soft` —
      and a tint over a tint is not a mark. The pair is the one combination that reads on
      every background the app has. */
-  --select: #6e56cf;
+  --select: #524c9f;
   --select-ink: #ffffff;
   /* A cited quote, marked over text: the accent, thin enough to read through. */
-  --quote-mark: rgb(110 86 207 / 20%);
+  --quote-mark: rgb(82 76 159 / 20%);
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -55,27 +55,27 @@
      the three still separate, because they separate by POSITION ALONG ONE ARC rather than
      by being unrelated colors. Done gets the accent's own hue on purpose: it is the one
      the page is asking you to want. */
-  --todo: #8b84a3;
-  --doing: #4f5bc7;
-  --done: #8340cf;
+  --todo: #6d6b81;
+  --doing: #676eaf;
+  --done: #5f4396;
   --late: #c03c78;
 
   /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
      accent: a translucent cell picks up whatever is behind it, and these sit on two
      different surfaces. */
-  --heat-0: #f4f0fe;
-  --heat-1: #e1d9ff;
-  --heat-2: #c2b5f5;
-  --heat-3: #aa99ec;
-  --heat-4: #6e56cf;
+  --heat-0: #f4f3fb;
+  --heat-1: #e2e1f7;
+  --heat-2: #8782d3;
+  --heat-3: #7771c6;
+  --heat-4: #524c9f;
 
-  --shadow-sm: 0 1px 2px rgb(23 20 31 / 0.05);
-  --shadow-md: 0 4px 16px -4px rgb(23 20 31 / 0.1), 0 1px 3px rgb(23 20 31 / 0.05);
-  --shadow-lg: 0 16px 40px -12px rgb(45 27 85 / 0.18);
+  --shadow-sm: 0 1px 2px rgb(23 22 29 / 0.05);
+  --shadow-md: 0 4px 16px -4px rgb(23 22 29 / 0.1), 0 1px 3px rgb(23 22 29 / 0.05);
+  --shadow-lg: 0 16px 40px -12px rgb(45 39 73 / 0.18);
 
-  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --display: "Instrument Serif", Georgia, serif;
+  --display: "Source Serif 4", Georgia, serif;
 
   --rail: 272px;
   /* Two content widths, because there are two kinds of content. `--conversation` is prose and
@@ -95,44 +95,44 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground: #0b0910;
-    --surface: #131019;
-    --sunk: #0f0d15;
-    --raised: #1a1622;
+    --ground: #0b0a0f;
+    --surface: #131217;
+    --sunk: #0f0f13;
+    --raised: #1a1820;
 
-    --ink: #f0edf7;
-    --ink-2: #c9cad8;
-    --muted: #8f87a3;
-    --faint: #6b6380;
+    --ink: #f0eff5;
+    --ink-2: #cccdd5;
+    --muted: #716e81;
+    --faint: #565462;
 
-    --rule: #241f30;
-    --rule-2: #3a3d52;
+    --rule: #24222d;
+    --rule-2: #3f414d;
 
-    --mark-ink: #d4c8ff;
+    --mark-ink: #918ae2;
 
-    --wordmark: #c4b1ff;
-    --accent: #baa7ff;
-    --accent-hover: #e2ddfe;
-    --accent-ink: #14101d;
-    --accent-soft: #291f43;
-    --accent-line: #473876;
-    --select: #baa7ff;
-    --select-ink: #14101d;
-    --quote-mark: rgb(186 167 255 / 30%);
+    --wordmark: #877cde;
+    --accent: #7e75dd;
+    --accent-hover: #e4e4f7;
+    --accent-ink: #14131a;
+    --accent-soft: #29263c;
+    --accent-line: #49446a;
+    --select: #7e75dd;
+    --select-ink: #14131a;
+    --quote-mark: rgb(126 117 221 / 30%);
 
     --flag: #f090b4;
-    --flag-soft: #2a1520;
+    --flag-soft: #261922;
 
-    --todo: #9992b0;
-    --doing: #8b95f0;
-    --done: #b87cf0;
+    --todo: #77748e;
+    --doing: #9fa5dc;
+    --done: #855bc8;
     --late: #f18ab4;
 
-    --heat-0: #1b1525;
-    --heat-1: #33255b;
-    --heat-2: #473876;
-    --heat-3: #6958ad;
-    --heat-4: #baa7ff;
+    --heat-0: #1b1822;
+    --heat-1: #343050;
+    --heat-2: #49446a;
+    --heat-3: #55527f;
+    --heat-4: #7e75dd;
 
     --shadow-sm: none;
     --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -142,44 +142,44 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #0b0910;
-  --surface: #131019;
-  --sunk: #0f0d15;
-  --raised: #1a1622;
+  --ground: #0b0a0f;
+  --surface: #131217;
+  --sunk: #0f0f13;
+  --raised: #1a1820;
 
-  --ink: #f0edf7;
-  --ink-2: #c9cad8;
-  --muted: #8f87a3;
-  --faint: #6b6380;
+  --ink: #f0eff5;
+  --ink-2: #cccdd5;
+  --muted: #716e81;
+  --faint: #565462;
 
-  --rule: #241f30;
-  --rule-2: #3a3d52;
+  --rule: #24222d;
+  --rule-2: #3f414d;
 
-  --mark-ink: #d4c8ff;
+  --mark-ink: #918ae2;
 
-  --wordmark: #c4b1ff;
-  --accent: #baa7ff;
-  --accent-hover: #e2ddfe;
-  --accent-ink: #14101d;
-  --accent-soft: #291f43;
-  --accent-line: #473876;
-  --select: #baa7ff;
-  --select-ink: #14101d;
-  --quote-mark: rgb(186 167 255 / 30%);
+  --wordmark: #877cde;
+  --accent: #7e75dd;
+  --accent-hover: #e4e4f7;
+  --accent-ink: #14131a;
+  --accent-soft: #29263c;
+  --accent-line: #49446a;
+  --select: #7e75dd;
+  --select-ink: #14131a;
+  --quote-mark: rgb(126 117 221 / 30%);
 
   --flag: #f090b4;
-  --flag-soft: #2a1520;
+  --flag-soft: #261922;
 
-  --todo: #9992b0;
-  --doing: #8b95f0;
-  --done: #b87cf0;
+  --todo: #77748e;
+  --doing: #9fa5dc;
+  --done: #855bc8;
   --late: #f18ab4;
 
-  --heat-0: #1b1525;
-  --heat-1: #33255b;
-  --heat-2: #473876;
-  --heat-3: #6958ad;
-  --heat-4: #baa7ff;
+  --heat-0: #1b1822;
+  --heat-1: #343050;
+  --heat-2: #49446a;
+  --heat-3: #55527f;
+  --heat-4: #7e75dd;
 
   --shadow-sm: none;
   --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);

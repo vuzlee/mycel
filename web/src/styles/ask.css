@@ -571,7 +571,7 @@ details[open] > summary .chevron {
 .blank h1 .wordmark {
   display: inline-block;
   margin: 0 0.12em 0 0.08em;
-  font-family: "Italianno", var(--display);
+  font-family: var(--display);
   font-style: normal;
   font-weight: 400;
   font-size: 1.95em;
@@ -596,8 +596,8 @@ details[open] > summary .chevron {
 /* A light italic serif, so "Ask" and "anything" lean the same way as the script name. */
 .blank h1 {
   margin: 0 0 30px;
-  font-family: "Cormorant Garamond", var(--display);
-  font-style: italic;
+  font-family: var(--display);
+  font-style: normal;
   font-size: 3.1rem;
   font-weight: 400;
   line-height: 1.08;
@@ -606,7 +606,7 @@ details[open] > summary .chevron {
 }
 
 .blank h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 

@@ -108,9 +108,9 @@ export function Ask() {
 
   const { data: models } = useQuery({ queryKey: MODELS_KEY, queryFn: fetchModels });
   const usable = useMemo(() => models?.models.filter((m) => m.enabled) ?? [], [models]);
-  // The reader's pick for this tab; the default until they choose, and again if it goes off.
-  const [picked, setPicked] = useState<string | null>(null);
-  const model = usable.some((m) => m.ref === picked) ? picked : (models?.default_ref ?? null);
+  // The reader's pick, kept per conversation; until they choose, the model the open
+  // conversation last used, then the default. A pick in one tab never leaks into another.
+  const [picks, setPicks] = useState<Record<string, string>>({});
   const [source, setSource] = useState<SourceRef | null>(null);
   const docs = useDocuments();
   // The scrolling body, as the observer in `Topics` needs it: a root, not a ref, because
@@ -138,6 +138,12 @@ export function Ask() {
   // sidebar, that knows the conversation of a link naming a turn other than the latest.
   const fromUrl = params.get("conversation");
   const conversationId = fromUrl ? Number(fromUrl) : (run.result?.conversation_id ?? null);
+  const pickKey = String(conversationId ?? "new");
+  const model =
+    [picks[pickKey], run.result?.model_ref].find((ref) => usable.some((m) => m.ref === ref)) ??
+    models?.default_ref ??
+    null;
+  const setPicked = (ref: string): void => setPicks((all) => ({ ...all, [pickKey]: ref }));
 
   const { past, setPast, pastFor, savedSteps } = usePastTurns(conversationId, jobId);
   // A reopened turn's stream has expired; its trail comes from what was saved instead.
@@ -212,7 +218,10 @@ export function Ask() {
       models={usable}
       model={model}
       onModel={setPicked}
-      onAsk={(text) => void ask(text)}
+      onAsk={(text) => {
+        setSeed(null);
+        void ask(text);
+      }}
       onDropFiles={(files) => {
         void sendFiles(files).then((errors) => {
           if (errors.length) setRefused(errors.join(" "));

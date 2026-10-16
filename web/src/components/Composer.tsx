@@ -134,28 +134,28 @@ export function Composer({
           onDropFiles(Array.from(event.dataTransfer.files));
         }}
       >
-          <div className="composer-field">
-            <textarea
-              ref={box}
-              rows={1}
-              value={value}
-              placeholder={
-                chips.length === 0
-                  ? "Ask anything, or type @ to pick a source"
-                  : `Ask with ${chips.map(labelOf).join(", ")}…`
+        <div className="composer-field">
+          <textarea
+            ref={box}
+            rows={1}
+            value={value}
+            placeholder={
+              chips.length === 0
+                ? "Ask anything, or type @ to pick a source"
+                : `Ask with ${chips.map(labelOf).join(", ")}…`
+            }
+            aria-label="Your question"
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setMenu(false);
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                submit();
               }
-              aria-label="Your question"
-              onChange={(event) => setValue(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setMenu(false);
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  submit();
-                }
-              }}
-            />
-          </div>
-          <div className="composer-row">
+            }}
+          />
+        </div>
+        <div className="composer-row">
           <div className="chip-anchor" ref={anchor}>
             <button
               type="button"
@@ -177,7 +177,7 @@ export function Composer({
               />
             )}
           </div>
-            <span className="composer-gap" />
+          <span className="composer-gap" />
           {model !== null && <ModelPicker models={models} value={model} onChange={onModel} />}
           <button
             className="send"
@@ -188,7 +188,7 @@ export function Composer({
           >
             {busy ? <Spinner className="spin" size={15} /> : <Sprout size={16} />}
           </button>
-          </div>
+        </div>
       </form>
       {blocked ? (
         <p className="hint note">{PROCESSING_NOTE}</p>

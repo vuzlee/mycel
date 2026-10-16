@@ -3,70 +3,70 @@
    those blur through a ::before backing layer instead. */
 
 :root {
-  --ground: #f2effa;
-  --ink: #1c1630;
-  --accent: #7a5cf0;
-  --accent-hover: #6a4be8;
-  --mark-ink: #7a5cf0;
-  --select: #7a5cf0;
+  --ground: #f2f1f8;
+  --ink: #1d1b2b;
+  --accent: #4e45c4;
+  --accent-hover: #473fb7;
+  --mark-ink: #4e45c4;
+  --select: #4e45c4;
   --glass: rgb(255 255 255 / 0.55);
   --glass-hover: rgb(255 255 255 / 0.7);
   --glass-strong: rgb(255 255 255 / 0.68);
   --glass-line: rgb(255 255 255 / 0.8);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --glass-shadow: 0 8px 32px rgb(60 30 140 / 0.12);
-  --glass-blur: blur(14px) saturate(140%);
-  --blob-a: rgb(124 92 255 / 0.28);
-  --blob-b: rgb(170 90 255 / 0.18);
-  --blob-c: rgb(70 90 255 / 0.16);
+  --glass-shadow: 0 8px 32px rgb(61 52 118 / 0.12);
+  --glass-blur: blur(6px);
+  --blob-a: rgb(78 69 209 / 0);
+  --blob-b: rgb(117 68 208 / 0);
+  --blob-c: rgb(107 119 218 / 0);
   --radius: 18px;
   --radius-sm: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #0d0a16;
-    --sunk: #130f20;
-    --ink: #eeeaf8;
-    --muted: #a49cbb;
-    --faint: #6e6787;
-    --accent: #b9a4ff;
-    --mark-ink: #b9a4ff;
-    --select: #8b6cff;
+    --ground: #0d0c14;
+    --sunk: #14121d;
+    --ink: #eeedf5;
+    --muted: #7f7b97;
+    --faint: #595768;
+    --accent: #7d73dc;
+    --mark-ink: #7d73dc;
+    --select: #594fd3;
     --select-ink: #ffffff;
     --glass: rgb(255 255 255 / 0.08);
     --glass-hover: rgb(255 255 255 / 0.12);
-    --glass-strong: rgb(30 22 50 / 0.6);
+    --glass-strong: rgb(30 28 44 / 0.6);
     --glass-line: rgb(255 255 255 / 0.18);
     --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.08);
-    --glass-shadow: 0 8px 32px rgb(20 8 60 / 0.35);
-    --glass-blur: blur(14px) saturate(140%);
-    --blob-a: rgb(124 92 255 / 0.38);
-    --blob-b: rgb(170 90 255 / 0.22);
-    --blob-c: rgb(70 90 255 / 0.2);
+    --glass-shadow: 0 8px 32px rgb(21 18 50 / 0.35);
+    --glass-blur: blur(6px);
+    --blob-a: rgb(78 69 209 / 0);
+    --blob-b: rgb(117 68 208 / 0);
+    --blob-c: rgb(107 119 218 / 0);
   }
 }
 
 :root[data-theme="dark"] {
-  --ground: #0d0a16;
-  --sunk: #130f20;
-  --ink: #eeeaf8;
-  --muted: #a49cbb;
-  --faint: #6e6787;
-  --accent: #b9a4ff;
-  --mark-ink: #b9a4ff;
-  --select: #8b6cff;
+  --ground: #0d0c14;
+  --sunk: #14121d;
+  --ink: #eeedf5;
+  --muted: #7f7b97;
+  --faint: #595768;
+  --accent: #7d73dc;
+  --mark-ink: #7d73dc;
+  --select: #594fd3;
   --select-ink: #ffffff;
   --glass: rgb(255 255 255 / 0.08);
   --glass-hover: rgb(255 255 255 / 0.12);
-  --glass-strong: rgb(30 22 50 / 0.6);
+  --glass-strong: rgb(30 28 44 / 0.6);
   --glass-line: rgb(255 255 255 / 0.18);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.08);
-  --glass-shadow: 0 8px 32px rgb(20 8 60 / 0.35);
-  --glass-blur: blur(14px) saturate(140%);
-  --blob-a: rgb(124 92 255 / 0.38);
-  --blob-b: rgb(170 90 255 / 0.22);
-  --blob-c: rgb(70 90 255 / 0.2);
+  --glass-shadow: 0 8px 32px rgb(21 18 50 / 0.35);
+  --glass-blur: blur(6px);
+  --blob-a: rgb(78 69 209 / 0);
+  --blob-b: rgb(117 68 208 / 0);
+  --blob-c: rgb(107 119 218 / 0);
 }
 
 /* ---------------------------------------------------------------- aura */
@@ -191,7 +191,7 @@ body::before {
 /* ---------------------------------------------------------------- title */
 
 .blank h1 em {
-  background: linear-gradient(100deg, #7a5cf0, #5a3be0);
+  background: linear-gradient(100deg, #4e45c4, #433ea5);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -200,12 +200,12 @@ body::before {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .blank h1 em {
-    background-image: linear-gradient(100deg, #b9a4ff, #8b6cff);
+    background-image: linear-gradient(100deg, #7d73dc, #594fd3);
   }
 }
 
 :root[data-theme="dark"] .blank h1 em {
-  background-image: linear-gradient(100deg, #b9a4ff, #8b6cff);
+  background-image: linear-gradient(100deg, #7d73dc, #594fd3);
 }
 
 /* ---------------------------------------------------------------- fallbacks */
@@ -339,9 +339,9 @@ body::before {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #8b6cff, #5a3be0);
+  background: linear-gradient(135deg, #594fd3, #433ea5);
   color: #fff;
-  box-shadow: 0 6px 20px -6px rgb(139 108 255 / 0.7);
+  box-shadow: 0 6px 20px -6px rgb(89 79 211 / 0.7);
 }
 
 .source-chips {
@@ -482,7 +482,7 @@ body::before {
   border-color: var(--glass-line);
   box-shadow:
     var(--glass-edge),
-    0 6px 18px -10px rgb(20 8 60 / 0.5);
+    0 6px 18px -10px rgb(21 18 50 / 0.5);
 }
 
 .account-menu .me:hover {
@@ -504,7 +504,7 @@ body::before {
 }
 
 .scrim.asking {
-  background: rgb(8 5 18 / 0.55);
+  background: rgb(8 8 15 / 0.55);
 }
 
 /* ---------------------------------------------------------------- knowledge */
@@ -552,11 +552,11 @@ body::before {
   gap: 8px;
   padding: 10px 18px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #8b6cff, #5a3be0);
+  background: linear-gradient(135deg, #594fd3, #433ea5);
   color: #fff;
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 8px 24px -10px rgb(139 108 255 / 0.8);
+  box-shadow: 0 8px 24px -10px rgb(89 79 211 / 0.8);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -564,7 +564,7 @@ body::before {
 
 .kb-upload:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px -10px rgb(139 108 255 / 0.9);
+  box-shadow: 0 12px 28px -10px rgb(89 79 211 / 0.9);
 }
 
 /* One glass strip, four figures split by soft rules. */
@@ -634,7 +634,7 @@ body::before {
   gap: 10px;
   border: 2px dashed var(--accent);
   border-radius: 20px;
-  background: color-mix(in oklab, var(--accent) 14%, rgb(13 10 22 / 0.7));
+  background: color-mix(in oklab, var(--accent) 14%, rgb(13 12 20 / 0.7));
   color: var(--accent);
   pointer-events: none;
 }
@@ -794,8 +794,8 @@ body::before {
 }
 
 .kb-kind[data-kind="docx"] {
-  background: color-mix(in oklab, #6c8cff 16%, transparent);
-  color: #9db1ff;
+  background: color-mix(in oklab, #899de2 16%, transparent);
+  color: #b1bdeb;
 }
 
 .kb-open {

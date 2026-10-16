@@ -72,12 +72,11 @@
   pointer-events: none;
 }
 
-.home a.primary,
 .gate button.primary,
 .picker .primary {
-  background: linear-gradient(135deg, #8b6cff, #5a3be0);
+  background: linear-gradient(135deg, #594fd3, #433ea5);
   color: #fff;
-  box-shadow: 0 8px 24px -10px rgb(139 108 255 / 0.8);
+  box-shadow: 0 8px 24px -10px rgb(89 79 211 / 0.8);
 }
 
 /* ---------------------------------------------------------------- sign-in */
@@ -310,7 +309,7 @@
 
 .home .lead h1 em,
 .home section > h2 em {
-  background: linear-gradient(100deg, #b9a4ff, #8b6cff);
+  background: linear-gradient(100deg, #7d73dc, #594fd3);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -454,7 +453,7 @@
 .home .cases .ask {
   margin-top: 6px;
   font-family: var(--display);
-  font-style: italic;
+  font-style: normal;
   font-size: 15px;
   color: var(--ink-2);
 }

@@ -354,7 +354,7 @@
   margin: 0;
   font-size: 13px;
   color: var(--faint);
-  font-style: italic;
+  font-style: normal;
 }
 
 @media (max-width: 720px) {

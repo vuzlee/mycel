@@ -48,7 +48,7 @@
   inset: 0 calc(50% - 50vw);
   z-index: -1;
   background: color-mix(in oklab, var(--ground) 82%, transparent);
-  backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -90,7 +90,7 @@
   padding: 9px 16px;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: var(--accent-ink);
+  color: #fff;
   font-weight: 500;
   white-space: nowrap;
   transition:
@@ -135,7 +135,7 @@
 }
 
 .home section > h2 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 
@@ -241,7 +241,7 @@
 }
 
 .home .lead h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 

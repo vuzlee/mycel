@@ -7,7 +7,7 @@
   z-index: 40;
   inset: 0;
   padding: 24px;
-  background: rgb(12 9 18 / 0.44);
+  background: rgb(12 11 16 / 0.44);
   /* Stated, not inherited: the drawer's media query hides and fades `.scrim`, and a
      confirmation that fades out under it would be a dialog nobody can answer. */
   opacity: 1;
@@ -121,7 +121,8 @@
   }
 }
 
-/* Three dots typed out one at a time {
+/* Three dots typed out one at a time, so a long wait still looks alive. */
+.ellipsis::after {
   content: "";
   animation: dots 1.6s steps(4, jump-none) infinite;
 }
@@ -139,15 +140,6 @@
   75%,
   100% {
     content: "...";
-  }
-}
-
-/* The rail is 272px and the conversation is 58rem, so below roughly this the gutter left over
-   is a few dozen pixels — too narrow for a label to be anything but an ellipsis. The map
-   floats beside the prose or it does not appear; it has no second place to go. */
-@media (max-width: 1500px) {
-  .topics {
-    display: none;
   }
 }
 
@@ -176,7 +168,7 @@
     position: fixed;
     z-index: 19;
     inset: 0;
-    background: rgb(12 9 18 / 0.44);
+    background: rgb(12 11 16 / 0.44);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.22s ease;
@@ -351,4 +343,56 @@
 .scrim.asking:has(> .ask-card) {
   align-items: start;
   padding-top: min(18vh, 160px);
+}
+
+@media (max-width: 1500px) {
+  /* Too narrow for labels: one tick per turn at the edge, the labels open on hover. */
+  .topics {
+    right: 8px;
+    width: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .topics li {
+    display: flex;
+    justify-content: flex-end;
+    border-left: 0;
+  }
+
+  .topics li::after {
+    content: "";
+    flex: none;
+    align-self: center;
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--rule-2);
+  }
+
+  .topics li:has(button[aria-current="true"])::after {
+    width: 18px;
+    background: var(--accent);
+  }
+
+  .topics button {
+    display: none;
+    width: 200px;
+  }
+
+  .topics:hover {
+    padding: 6px;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--raised);
+    box-shadow: var(--shadow-md);
+  }
+
+  .topics:hover li::after {
+    display: none;
+  }
+
+  .topics:hover button {
+    display: block;
+  }
 }

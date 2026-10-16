@@ -111,9 +111,9 @@ a.brand {
 
 /* Hairline italic with pointed terminals, like threads tapering off. */
 .brand .wordmark {
-  font-family: "Cormorant Garamond", var(--display);
+  font-family: var(--display);
   font-size: 24px;
-  font-style: italic;
+  font-style: normal;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1;
@@ -497,7 +497,11 @@ a.brand:hover .mark {
   transform: rotate(90deg);
 }
 
+/* Dim the rows, not the list: opacity on the list traps the row menu under Recent. */
 .archived ol {
   margin-top: 4px;
+}
+
+.archived li > button:not(.more) {
   opacity: 0.75;
 }
