@@ -94,16 +94,24 @@ def build_own_model(
     Returns the clients too, so the caller closes them when the run ends. Redirects are not
     followed: a checked base URL must not hand the request on to an address it was not.
     """
+    import httpx2
     from openai import AsyncOpenAI, DefaultAsyncHttpxClient
     from pydantic_ai.models.openai import OpenAIChatModel
     from pydantic_ai.providers.openai import OpenAIProvider
 
+    from mycel.agents.core.signatures import SignatureTransport
+
+    # One run's signatures, shared by every key: a key handing over mid-run keeps them.
+    kept: dict[str, Any] = {}
     clients = [
         AsyncOpenAI(
             base_url=own.api_base,
             api_key=key.get_secret_value(),
             max_retries=OWN_RETRIES if rotate else 0,
-            http_client=DefaultAsyncHttpxClient(follow_redirects=False, transport=_transport),
+            http_client=DefaultAsyncHttpxClient(
+                follow_redirects=False,
+                transport=SignatureTransport(_transport or httpx2.AsyncHTTPTransport(), kept),
+            ),
         )
         for _, key in own.keys
     ]
