@@ -7,7 +7,7 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import compute, jira, query
+from mycel.agents.tools import compute, jira, query, work
 
 
 class Figure(BaseModel):
@@ -30,7 +30,9 @@ class Analysis(BaseModel):
     """What the analyst hands back."""
 
     figures: list[Figure] = Field(description="Every number referenced in the findings.")
-    findings: list[str] = Field(description="What the figures show, one statement each.")
+    findings: list[str] = Field(
+        description="What the figures show, one short statement each; only what was asked."
+    )
     caveats: list[str] = Field(
         default_factory=list,
         description="Anything that limits the reading: missing data, undefined results.",
@@ -44,7 +46,11 @@ class Analyst(BaseAgent[Analysis]):
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
-        sets: list[AbstractToolset[MycelDeps]] = [compute.build_toolset(), query.build_toolset()]
+        sets: list[AbstractToolset[MycelDeps]] = [
+            work.build_toolset(),
+            compute.build_toolset(),
+            query.build_toolset(),
+        ]
         if jira.offered():
             sets.append(jira.build_toolset())
         return sets

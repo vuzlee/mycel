@@ -63,6 +63,31 @@ async def _scope(deps: MycelDeps) -> str:
     return ",".join(sorted(await readable_projects(deps.principal)))
 
 
+class _Failed(Exception):
+    """The query ran and Postgres refused it."""
+
+
+async def read(deps: MycelDeps, query: str, params: dict[str, Any] | None = None) -> str:
+    """One query as the asker: read-only, timed out, scoped to their projects, as a table."""
+    scope = await _scope(deps)
+    async with session_scope() as session:
+        # Must be the query's own transaction to protect anything.
+        await session.execute(text("SET TRANSACTION READ ONLY"))
+        await session.execute(text(f"SET LOCAL statement_timeout = {TIMEOUT_MS}"))
+        # Scope before role: after `SET ROLE` the scope can no longer be set.
+        # `set_config` rather than `SET LOCAL` so the scope is a bind parameter.
+        await session.execute(
+            text("SELECT set_config(:name, :scope, true)"),
+            {"name": SCOPE_SETTING, "scope": scope},
+        )
+        await session.execute(text(f"SET LOCAL ROLE {READER_ROLE}"))
+        try:
+            result = await session.execute(text(query), params or {})
+        except Exception as exc:
+            raise _Failed(str(exc.__cause__ or exc)) from exc
+        return _table(list(result.keys()), result.fetchall())
+
+
 def build_toolset() -> FunctionToolset[MycelDeps]:
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
@@ -78,24 +103,10 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         guard_repeat(ctx, "run_sql", query=query)
         if refusal := _reject(query):
             raise ModelRetry(refusal)
-        scope = await _scope(ctx.deps)
-        async with session_scope() as session:
-            # Must be the query's own transaction to protect anything.
-            await session.execute(text("SET TRANSACTION READ ONLY"))
-            await session.execute(text(f"SET LOCAL statement_timeout = {TIMEOUT_MS}"))
-            # Scope before role: after `SET ROLE` the scope can no longer be set.
-            # `set_config` rather than `SET LOCAL` so the scope is a bind parameter.
-            await session.execute(
-                text("SELECT set_config(:name, :scope, true)"),
-                {"name": SCOPE_SETTING, "scope": scope},
-            )
-            await session.execute(text(f"SET LOCAL ROLE {READER_ROLE}"))
-            try:
-                result = await session.execute(text(_limited(query)))
-            except Exception as exc:
-                # Bad SQL is a draft to fix; send the driver's underlying cause.
-                cause = exc.__cause__ or exc
-                raise ModelRetry(f"That query failed: {cause}. Fix it and retry.") from exc
-            return _table(list(result.keys()), result.fetchall())
+        try:
+            return await read(ctx.deps, _limited(query))
+        except _Failed as exc:
+            # Bad SQL is a draft to fix; send the driver's underlying cause.
+            raise ModelRetry(f"That query failed: {exc}. Fix it and retry.") from exc
 
     return toolset

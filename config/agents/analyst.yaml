@@ -6,3 +6,5 @@
 # decides, and dev's 8 requests would stop the run long before the thirtieth query.
 tool_calls_limit: 12
 request_limit: 13
+# The report is a handful of figures and findings; a cap keeps the last turn short.
+max_tokens: 1200

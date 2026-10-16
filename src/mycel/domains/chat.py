@@ -18,6 +18,7 @@ from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
+from mycel.domains import chat_cache
 from mycel.domains.chat_knowledge import (
     answer_without_model,
     cache_writer,
@@ -95,7 +96,7 @@ async def run(job: Job) -> None:
                 await turn.recorder.publish(
                     AgentEvent(agent=Orchestrator.name, type=NOTICE, payload={"text": turn.notice})
                 )
-            if await _ground(turn):
+            if await _ground(turn) or await _replay(turn):
                 trace.output(turn.answer)
                 return
             answer = await _ask(turn)
@@ -158,6 +159,21 @@ async def _ground(turn: _Turn) -> bool:
     return True
 
 
+async def _replay(turn: _Turn) -> bool:
+    """A first question on work data asked before, on data not synced since: no model."""
+    if turn.history or (version := await chat_cache.version(turn.chips)) is None:
+        return False
+    cached = await answers.get(
+        turn.principal.id, version, chat_cache.writer(turn.model_ref), turn.question
+    )
+    if cached is None:
+        return False
+    turn.answer = cached["answer"]
+    await _finish(turn.job, turn.answer, turn.question, Decimal("0"), [], [], turn.usage())
+    log.info("chat answered from cache", extra={"job_id": turn.job.job_id})
+    return True
+
+
 async def _ask(turn: _Turn) -> str:
     """The orchestrator's answer; what it spent is saved even when it raises."""
     prompt = (
@@ -190,6 +206,15 @@ async def _settle(turn: _Turn, answer: str) -> None:
                 cache_writer(turn.model_ref),
                 found.query,
                 {"answer": answer, "sources": sources},
+            )
+    elif not turn.history and chat_cache.keepable(turn.recorder.steps):
+        if (version := await chat_cache.version(turn.chips)) is not None:
+            await answers.put(
+                turn.principal.id,
+                version,
+                chat_cache.writer(turn.model_ref),
+                turn.question,
+                {"answer": answer},
             )
     spent = turn.deps.budget.spent_usd
     await citations.store(job.job_id, turn.principal.id, sources)
