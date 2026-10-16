@@ -88,7 +88,7 @@ def endpoint(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 def _deps(*keys: str) -> Any:
     own = OwnEndpoint(
         model_id=3,
-        label="My Gemini",
+        label="My model",
         api_base=GEMINI,
         endpoint_model="gemini-2.5-flash",
         keys=tuple((i, SecretStr(k)) for i, k in enumerate(keys)),
@@ -116,7 +116,7 @@ async def test_the_price_is_the_providers(endpoint: dict[str, Any]) -> None:
 
 async def test_every_key_spent_is_a_quota_error(endpoint: dict[str, Any]) -> None:
     deps = _deps(SPENT)
-    with pytest.raises(ModelQuota, match="My Gemini"):
+    with pytest.raises(ModelQuota, match="My model"):
         await runner.run(Rewriter.build(deps.settings), "q", deps)
 
 

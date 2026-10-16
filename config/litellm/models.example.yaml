@@ -1,9 +1,8 @@
 # Copy to models.yaml (gitignored) and keep the providers you have.
 model_list:
-  # Anthropic directly. Several entries under one name, one key each, spread load and
-  # cool down a key that is out of quota.
+  # One provider, one key: LLM_API_KEY in .env.
   - model_name: claude-sonnet-5
-    litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/CLAUDE_API_KEY_1}
+    litellm_params: {model: anthropic/claude-sonnet-5, api_key: os.environ/LLM_API_KEY}
 
   # Any OpenAI-compatible endpoint: a proxy, vLLM, Ollama, a hosted gateway.
   # - model_name: my-model

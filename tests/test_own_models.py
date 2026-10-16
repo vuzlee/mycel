@@ -45,13 +45,13 @@ async def people(session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> tupl
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
     get_settings.cache_clear()
     identity = IdentityRepository(session)
-    a = (await identity.create_user("a@x.com", "x")).id
-    b = (await identity.create_user("b@x.com", "x")).id
+    a = (await identity.create_user("a@x.com")).id
+    b = (await identity.create_user("b@x.com")).id
     return a, b
 
 
 async def _add(owner: int, keys: list[str] | None = None) -> own_models.OwnModelView:
-    return await own_models.add_own(owner, "My Gemini", "gemini-3.6-flash", BASE, keys or [KEY])
+    return await own_models.add_own(owner, "My model", "gemini-3.6-flash", BASE, keys or [KEY])
 
 
 class TestKeys:
@@ -79,6 +79,28 @@ class TestKeys:
     async def test_too_many_keys_are_refused(self, people: tuple[int, int]) -> None:
         with pytest.raises(OwnModelRefused, match="5 keys"):
             await _add(people[0], [f"key-number-{i:04d}" for i in range(6)])
+
+    async def test_one_dead_key_can_go_but_not_the_last(self, people: tuple[int, int]) -> None:
+        mine, theirs = people
+        view = await _add(mine, [KEY, "AIzaSy-second-key-0002"])
+
+        with pytest.raises(OwnModelNotFound):
+            await own_models.remove_key(theirs, view.id, 0)
+        left = await own_models.remove_key(mine, view.id, 0)
+        assert left.key_hints == ["…0002"]
+        with pytest.raises(OwnModelRefused, match="at least one"):
+            await own_models.remove_key(mine, view.id, 0)
+
+    async def test_an_edit_adds_keys_after_the_stored_ones(self, people: tuple[int, int]) -> None:
+        view = await _add(people[0])
+        edited = await own_models.edit_own(
+            people[0], view.id, "My model", "m", BASE, ["AIzaSy-second-key-0002"]
+        )
+        assert edited.key_hints == ["…0001", "…0002"]
+        with pytest.raises(OwnModelRefused, match="5 keys"):
+            await own_models.edit_own(
+                people[0], view.id, "x", "m", BASE, [f"key-number-{i:04d}" for i in range(4)]
+            )
 
 
 class TestOwnership:

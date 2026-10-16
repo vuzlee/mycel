@@ -121,11 +121,15 @@ async def edit_own(
     api_base: str,
     keys: list[str] | None,
 ) -> OwnModelView:
-    """`keys=None` keeps the stored keys: they are never sent back to be resent."""
+    """Typed keys are added after the stored ones; a key goes only through `remove_key`."""
     base = await _checked_base(api_base)
-    sealed = _sealed(keys) if keys is not None else None
+    typed = [k for k in keys or [] if k.strip()]
+    sealed = _sealed(typed) if typed else []
     async with session_scope() as session:
         repo = OwnModelRepository(session)
+        stored = await repo.one(owner_id, model_id)
+        if stored is not None and len(stored.keys) + len(sealed) > MAX_KEYS:
+            raise OwnModelRefused(f"at most {MAX_KEYS} keys per model")
         if not await repo.update(
             owner_id, model_id, label.strip(), endpoint_model.strip(), base, sealed
         ):
@@ -140,6 +144,22 @@ async def remove_own(owner_id: int, model_id: int) -> None:
         if not await OwnModelRepository(session).remove(owner_id, model_id):
             raise OwnModelNotFound(model_id)
         await ModelPrefRepository(session).forget(own_ref(model_id))
+
+
+async def remove_key(owner_id: int, model_id: int, index: int) -> OwnModelView:
+    """Drop one key, say a dead one, so runs stop retrying it. The last key stays."""
+    async with session_scope() as session:
+        repo = OwnModelRepository(session)
+        found = await repo.one(owner_id, model_id)
+        if found is None:
+            raise OwnModelNotFound(model_id)
+        if len(found.keys) <= 1:
+            raise OwnModelRefused("a model keeps at least one key")
+        if not await repo.remove_key(owner_id, model_id, index):
+            raise OwnModelNotFound(index)
+        found = await repo.one(owner_id, model_id)
+    assert found is not None
+    return _view(found)
 
 
 async def start_key_check(owner_id: int, model_id: int) -> str:

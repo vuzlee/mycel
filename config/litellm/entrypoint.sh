@@ -1,6 +1,6 @@
 #!/bin/sh
-# Split each comma list in the environment (CLAUDE_API_KEYS=a,b) into numbered variables
-# (CLAUDE_API_KEY_1, _2) that models.yaml names, then start the gateway. Any *_API_KEYS
+# Split each comma list in the environment (FOO_API_KEYS=a,b) into numbered variables
+# (FOO_API_KEY_1, _2) that models.yaml names, then start the gateway. Any *_API_KEYS
 # works, so a new provider needs no change here. models.yaml is pulled in by `include`.
 set -eu
 for list in $(env | sed -n 's/^\([A-Z0-9_]*_API_KEYS\)=.*/\1/p'); do

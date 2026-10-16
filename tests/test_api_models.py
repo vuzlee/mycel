@@ -70,7 +70,7 @@ class TestModelsApi:
 VIEW = own_models.OwnModelView(
     id=3,
     ref="own:3",
-    label="My Gemini",
+    label="My model",
     model_id="gemini-3.6-flash",
     api_base="https://generativelanguage.googleapis.com/v1beta/openai",
     key_hints=["…0001"],
@@ -88,7 +88,7 @@ def _own(monkeypatch: pytest.MonkeyPatch, name: str, result: object) -> None:
 
 class TestOwnModelsApi:
     BODY = {
-        "label": "My Gemini",
+        "label": "My model",
         "model_id": "gemini-3.6-flash",
         "api_base": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "keys": ["AIzaSy-a-real-looking-key-0001"],

@@ -77,7 +77,7 @@ class OwnModelRequest(BaseModel):
     label: str = Field(min_length=1, max_length=80)
     model_id: str = Field(min_length=1, max_length=200, description="What the endpoint calls it.")
     api_base: str = Field(min_length=8, max_length=500)
-    #: Omitted on an edit: the stored keys are kept, since they are never sent back.
+    #: On an edit, keys to add after the stored ones; stored keys are never sent back.
     keys: list[str] | None = Field(default=None, max_length=own.MAX_KEYS)
 
 
@@ -144,6 +144,17 @@ async def remove_own_model(model_id: int, user: CurrentUser) -> None:
         await own.remove_own(user.id, model_id)
     except own.OwnModelNotFound:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None
+
+
+@router.delete("/own/{model_id}/keys/{index}", response_model=OwnModelResponse)
+async def remove_own_key(model_id: int, index: int, user: CurrentUser) -> OwnModelResponse:
+    """Drop the key at this place in `key_hints`; the last key cannot go."""
+    try:
+        return _own(await own.remove_key(user.id, model_id, index))
+    except own.OwnModelNotFound:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such key") from None
+    except own.OwnModelRefused as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
 
 
 class KeyCheckResponse(BaseModel):

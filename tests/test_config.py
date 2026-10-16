@@ -48,9 +48,9 @@ def test_get_settings_is_cached() -> None:
 
 
 def test_provider_keys_never_reach_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
-    """GEMINI_API_KEYS and CLAUDE_API_KEYS are read by the gateway, not by Settings."""
-    monkeypatch.setenv("GEMINI_API_KEYS", "one,two")
-    assert not hasattr(Settings(), "gemini_api_keys")
+    """LLM_API_KEY is read by the gateway, not by Settings."""
+    monkeypatch.setenv("LLM_API_KEY", "one")
+    assert not hasattr(Settings(), "llm_api_key")
 
 
 class TestWhereSettingsComeFrom:

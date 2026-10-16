@@ -151,7 +151,7 @@ services:
     entrypoint: ["/app/entrypoint.sh"]
     # Provider keys only: DATABASE_URL would make LiteLLM use the app's Postgres.
     environment:
-      CLAUDE_API_KEYS: ${CLAUDE_API_KEYS:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
       LITELLM_MASTER_KEY: ${LITELLM_API_KEY:?set it in .env}
     volumes:
       - ./config/litellm/config.yaml:/app/config.yaml:ro

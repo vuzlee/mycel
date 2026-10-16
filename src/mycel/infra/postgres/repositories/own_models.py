@@ -72,17 +72,28 @@ class OwnModelRepository:
         label: str,
         endpoint_model: str,
         api_base: str,
-        keys: list[OwnKey] | None,
+        new_keys: list[OwnKey],
     ) -> bool:
-        """`keys=None` keeps the stored ones."""
+        """New keys go after the stored ones; nothing stored is replaced."""
         found = await self._session.scalar(
             select(OwnModel).where(OwnModel.id == model_id, OwnModel.owner_id == owner_id)
         )
         if found is None:
             return False
         found.label, found.model_id, found.api_base = label, endpoint_model, api_base
-        if keys is not None:
-            await self._set_keys(model_id, keys)
+        if new_keys:
+            stored = await self._keys([model_id])
+            start = max((k.position for k in stored.get(model_id, ())), default=-1) + 1
+            self._session.add_all(
+                OwnModelKey(
+                    own_model_id=model_id,
+                    position=start + i,
+                    key_sealed=k.key_sealed,
+                    hint=k.hint,
+                )
+                for i, k in enumerate(new_keys)
+            )
+            await self._session.flush()
         return True
 
     async def remove(self, owner_id: int, model_id: int) -> bool:
@@ -91,6 +102,19 @@ class OwnModelRepository:
             delete(OwnModel).where(OwnModel.id == model_id, OwnModel.owner_id == owner_id)
         )
         return bool(getattr(result, "rowcount", 0))
+
+    async def remove_key(self, owner_id: int, model_id: int, index: int) -> bool:
+        """Drop the key at this place in the list; False if there is no such key."""
+        found = await self.one(owner_id, model_id)
+        if found is None or not 0 <= index < len(found.keys):
+            return False
+        await self._session.execute(
+            delete(OwnModelKey).where(
+                OwnModelKey.own_model_id == model_id,
+                OwnModelKey.position == found.keys[index].position,
+            )
+        )
+        return True
 
     async def _set_keys(self, model_id: int, keys: list[OwnKey]) -> None:
         await self._session.execute(delete(OwnModelKey).where(OwnModelKey.own_model_id == model_id))
