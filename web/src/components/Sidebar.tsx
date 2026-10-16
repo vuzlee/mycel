@@ -1,22 +1,36 @@
 /** Where you are, and everything you have run. */
 
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { ConversationSummary } from "../api";
 import { useConversations } from "../context/ConversationsContext";
 import { Account } from "./Account";
-import { Bars, Close, Mycelium, Pin, Plus, Trash } from "./icons";
+import { ConversationRow as Row } from "./ConversationRow";
+import { Archive, Bars, Close, Mycelium, Notebook, PanelLeft, Plus, Search } from "./icons";
 
 interface Props {
   /** Job id of the run on screen, so its row reads as current. */
   current: string | null;
   open: boolean;
   onClose: () => void;
+  /** Desktop only: fold the rail away. */
+  onCollapse: () => void;
 }
 
-export function Sidebar({ current, open, onClose }: Props) {
-  const { conversations, forget, pin } = useConversations();
-  const pinned = conversations.filter((t) => t.pinned);
-  const recent = conversations.filter((t) => !t.pinned);
+export function Sidebar({ current, open, onClose, onCollapse }: Props) {
+  const { conversations: all, forget, pin, edit } = useConversations();
+  const [showArchived, setShowArchived] = useState(false);
+  const [query, setQuery] = useState<string | null>(null);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (query !== null) field.current?.focus();
+  }, [query !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const needle = query?.trim().toLowerCase() ?? "";
+  const conversations = needle ? all.filter((t) => t.title.toLowerCase().includes(needle)) : all;
+  const live = conversations.filter((t) => !t.archived);
+  const archived = conversations.filter((t) => t.archived);
+  const pinned = showArchived ? [] : live.filter((t) => t.pinned);
+  const recent = showArchived ? archived : live.filter((t) => !t.pinned);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -56,10 +70,44 @@ export function Sidebar({ current, open, onClose }: Props) {
             </span>
             Mycel
           </Link>
-          <button className="icon-button shut" onClick={onClose} aria-label="Close menu">
-            <Close />
-          </button>
+          <div className="rail-tools">
+            <button
+              className="icon-button"
+              aria-label="Search conversations"
+              aria-pressed={query !== null}
+              title="Search"
+              onClick={() => setQuery((q) => (q === null ? "" : null))}
+            >
+              <Search />
+            </button>
+            <button
+              className="icon-button fold"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              onClick={onCollapse}
+            >
+              <PanelLeft />
+            </button>
+            <button className="icon-button shut" onClick={onClose} aria-label="Close menu">
+              <Close />
+            </button>
+          </div>
         </header>
+
+        {query !== null && (
+          <input
+            ref={field}
+            className="rail-search"
+            type="search"
+            placeholder="Search conversations"
+            aria-label="Search conversations"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setQuery(null);
+            }}
+          />
+        )}
 
         <button
           className="new-run"
@@ -88,6 +136,26 @@ export function Sidebar({ current, open, onClose }: Props) {
           <Bars />
           Dashboard
         </button>
+        <button
+          className="board-link"
+          aria-current={pathname === "/knowledge"}
+          onClick={() => {
+            navigate("/knowledge");
+            onClose();
+          }}
+        >
+          <Notebook />
+          Knowledge
+        </button>
+        <button
+          className="board-link"
+          aria-pressed={showArchived}
+          onClick={() => setShowArchived((on) => !on)}
+        >
+          <Archive />
+          Archived
+          {archived.length > 0 && <span className="count">{archived.length}</span>}
+        </button>
 
         <div className="conversations">
           {pinned.length > 0 && (
@@ -101,15 +169,22 @@ export function Sidebar({ current, open, onClose }: Props) {
                     current={current}
                     onOpen={open_}
                     onPin={pin}
+                    onEdit={edit}
                     onDrop={drop}
                   />
                 ))}
               </ol>
             </>
           )}
-          <h2 className="label">Recent</h2>
-          {conversations.length === 0 ? (
-            <p className="empty">Runs you start appear here, ready to reopen.</p>
+          <h2 className="label">{showArchived ? "Archived" : "Recent"}</h2>
+          {recent.length === 0 && pinned.length === 0 ? (
+            <p className="empty">
+              {needle
+                ? "No conversation matches."
+                : showArchived
+                  ? "Nothing archived."
+                  : "Runs you start appear here, ready to reopen."}
+            </p>
           ) : (
             <ol>
               {recent.map((conversation) => (
@@ -119,6 +194,7 @@ export function Sidebar({ current, open, onClose }: Props) {
                   current={current}
                   onOpen={open_}
                   onPin={pin}
+                  onEdit={edit}
                   onDrop={drop}
                 />
               ))}
@@ -131,53 +207,5 @@ export function Sidebar({ current, open, onClose }: Props) {
         <Account where="rail" />
       </aside>
     </>
-  );
-}
-
-interface RowProps {
-  conversation: ConversationSummary;
-  current: string | null;
-  onOpen: (conversation: ConversationSummary) => void;
-  onPin: (id: number, pinned: boolean) => Promise<void>;
-  onDrop: (conversation: ConversationSummary) => void;
-}
-
-function Row({ conversation, current, onOpen, onPin, onDrop }: RowProps) {
-  return (
-    <li>
-      <button
-        aria-current={conversation.job_id !== null && conversation.job_id === current}
-        title={conversation.title}
-        onClick={() => onOpen(conversation)}
-      >
-        {conversation.title}
-        {/* A conversation the worker never picked up is shown, not hidden: a queued run nobody
-            is working on is exactly what someone needs to see. */}
-        {conversation.status !== null && conversation.status !== "done" && (
-          <span className="state">{conversation.status}</span>
-        )}
-      </button>
-      {/* Hidden until the row is hovered or tabbed to: a delete sitting under every
-          title, always lit, is a delete someone hits. */}
-      <span className="row-actions">
-        <button
-          className="pin"
-          data-on={conversation.pinned}
-          title={conversation.pinned ? "Unpin" : "Pin to the top"}
-          aria-label={`${conversation.pinned ? "Unpin" : "Pin"} ${conversation.title}`}
-          onClick={() => void onPin(conversation.id, !conversation.pinned)}
-        >
-          <Pin />
-        </button>
-        <button
-          className="drop"
-          title="Forget this conversation"
-          aria-label={`Forget ${conversation.title}`}
-          onClick={() => onDrop(conversation)}
-        >
-          <Trash />
-        </button>
-      </span>
-    </li>
   );
 }

@@ -1,24 +1,20 @@
-/** The user's documents in a side panel: upload, watch, toggle, rename, delete. */
+/** The user's documents: upload, watch, toggle, rename, delete. */
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MAX_UPLOAD_BYTES,
   deleteDocument,
+  fetchSourceUrl,
   updateDocument,
   uploadDocument,
   type DocumentRow,
 } from "../../api";
-import { Close, Mycelium, Spinner, Trash, Upload } from "../icons";
+import { Confirm, Rename } from "../Dialogs";
+import { Spinner, Upload } from "../icons";
+import { DocumentItem } from "./DocumentRow";
 
 const ACCEPT = ".pdf,.docx,.md,.markdown";
-
-const REASONS: Record<string, string> = {
-  no_text: "no text found — scanned PDFs are not supported yet",
-  too_many_pages: "more than 100 pages",
-  unreadable: "the file could not be read",
-  timeout: "processing took too long",
-  error: "processing failed",
-};
 
 /** Upload files, refusing anything over 2 MB before it is sent. Returns the errors. */
 export async function sendFiles(files: FileList | File[]): Promise<string[]> {
@@ -38,64 +34,37 @@ export async function sendFiles(files: FileList | File[]): Promise<string[]> {
 }
 
 interface Props {
-  open: boolean;
   documents: DocumentRow[];
   loading: boolean;
   failure: string | null;
-  onClose: () => void;
+  /** Title and lede, laid out beside the upload button. */
+  intro: React.ReactNode;
+  /** Figures under the header, when there is anything to count. */
+  summary?: React.ReactNode;
 }
 
-const WIDTH_KEY = "mycel.kb-width";
-const MIN_WIDTH = 280;
-const MAX_WIDTH = 640;
+type Sort = "new" | "name" | "size";
 
-/** The panel's width lives in `--kb-w` on the root, so the shell's grid column follows it. */
-function setWidth(px: number): void {
-  const width = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, px));
-  document.documentElement.style.setProperty("--kb-w", `${width}px`);
-  try {
-    localStorage.setItem(WIDTH_KEY, String(width));
-  } catch {
-    /* a remembered width is a convenience */
-  }
-}
-
-/** Drag the left edge to resize; the slide transition is off while dragging. */
-function useResize(panel: React.RefObject<HTMLElement>) {
-  useEffect(() => {
-    try {
-      const saved = Number(localStorage.getItem(WIDTH_KEY));
-      if (saved) setWidth(saved);
-    } catch {
-      /* default width */
-    }
-  }, []);
-
-  return (event: React.PointerEvent): void => {
-    event.preventDefault();
-    const root = document.documentElement;
-    root.dataset.kbDrag = "true";
-    const move = (e: PointerEvent): void => setWidth(window.innerWidth - e.clientX);
-    const stop = (): void => {
-      delete root.dataset.kbDrag;
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-    panel.current?.focus();
-  };
-}
-
-export function Documents({ open, documents, loading, failure, onClose }: Props) {
+export function Documents({ documents, loading, failure, intro, summary }: Props) {
   const input = useRef<HTMLInputElement>(null);
-  const panel = useRef<HTMLElement>(null);
-  const resize = useResize(panel);
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("new");
+  const needle = query.trim().toLowerCase();
+  const shown = documents
+    .filter((d) => !needle || d.filename.toLowerCase().includes(needle))
+    .sort((a, b) =>
+      sort === "name"
+        ? a.filename.localeCompare(b.filename)
+        : sort === "size"
+          ? b.size - a.size
+          : b.id - a.id,
+    );
 
-  // Closed, it stays mounted so it can slide out; inert keeps it out of the tab order.
-  useEffect(() => {
-    panel.current?.toggleAttribute("inert", !open);
-  }, [open]);
+  // Opens a new chat with the Knowledge source already picked.
+  const ask = (doc: DocumentRow): void => {
+    navigate(`/?source=knowledge&about=${encodeURIComponent(doc.filename)}`);
+  };
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(0);
@@ -111,14 +80,30 @@ export function Documents({ open, documents, loading, failure, onClose }: Props)
     }
   };
 
-  const rename = async (doc: DocumentRow): Promise<void> => {
-    const next = window.prompt("Rename document", doc.filename)?.trim();
-    if (!next || next === doc.filename) return;
+  const [renaming, setRenaming] = useState<DocumentRow | null>(null);
+  const [dropping, setDropping] = useState<DocumentRow | null>(null);
+
+  const rename = async (doc: DocumentRow, next: string): Promise<void> => {
+    setRenaming(null);
     try {
       await updateDocument(doc.id, { filename: next });
     } catch (failure) {
       setError((failure as Error).message);
     }
+  };
+
+  // The tab opens inside the click; an await first would get it blocked as a popup.
+  const view = (doc: DocumentRow): void => {
+    const tab = window.open("", "_blank");
+    if (!tab) return;
+    tab.opener = null;
+    void fetchSourceUrl(doc.id).then(
+      (url) => tab.location.replace(url),
+      (failure: Error) => {
+        tab.close();
+        setError(failure.message);
+      },
+    );
   };
 
   const toggle = async (doc: DocumentRow): Promise<void> => {
@@ -130,7 +115,7 @@ export function Documents({ open, documents, loading, failure, onClose }: Props)
   };
 
   const drop = async (doc: DocumentRow): Promise<void> => {
-    if (!window.confirm(`Delete ${doc.filename}? This cannot be undone.`)) return;
+    setDropping(null);
     try {
       await deleteDocument(doc.id);
     } catch (failure) {
@@ -139,47 +124,47 @@ export function Documents({ open, documents, loading, failure, onClose }: Props)
   };
 
   return (
-    <aside
-      ref={panel}
-      className="kb-panel"
-      data-open={open}
+    <section
+      className="kb-page"
       aria-label="Your documents"
-      tabIndex={-1}
+      data-over={over}
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes("Files")) return;
+        event.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) setOver(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setOver(false);
+        void send(event.dataTransfer.files);
+      }}
     >
-      <div
-        className="kb-resize"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize documents"
-        onPointerDown={resize}
-      />
-      <header>
-        <h2>Knowledge</h2>
-        <button className="icon-button" onClick={onClose} aria-label="Close documents">
-          <Close />
+      <header className="kb-head">
+        <div>{intro}</div>
+        <button className="kb-upload" onClick={() => input.current?.click()}>
+          {sending > 0 ? <Spinner size={14} /> : <Upload size={15} />}
+          Upload
         </button>
       </header>
-      <button
-        className="kb-drop"
-        data-over={over}
-        onClick={() => input.current?.click()}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setOver(false);
-          void send(event.dataTransfer.files);
-        }}
-      >
-        {sending > 0 ? <Spinner size={14} /> : <Upload size={16} />}
-        <span>
-          <b>Drop PDF, DOCX or Markdown</b>
-          <small>or click to choose · 2 MB each · English</small>
-        </span>
-      </button>
+      {summary}
+      {!loading && documents.length === 0 && !failure && (
+        <button className="kb-drop" data-empty onClick={() => input.current?.click()}>
+          <Upload size={22} />
+          <span>
+            <b>Drop PDF, DOCX or Markdown</b>
+            <small>or click to choose · 2 MB each · English</small>
+          </span>
+        </button>
+      )}
+      {over && (
+        <div className="kb-overlay" aria-hidden>
+          <Upload size={26} />
+          <b>Drop to add to Knowledge</b>
+        </div>
+      )}
       <input
         ref={input}
         type="file"
@@ -207,61 +192,77 @@ export function Documents({ open, documents, loading, failure, onClose }: Props)
       {loading ? (
         <p className="empty">Loading…</p>
       ) : documents.length === 0 ? (
-        <p className="empty">{failure ? "" : "No documents yet."}</p>
+        !failure && (
+          <div className="kb-empty">
+            <p>
+              Upload a handbook, a spec or meeting notes. Pick <b>Knowledge</b> when you ask, and
+              answers will quote the passages they used, with a link back to the page.
+            </p>
+          </div>
+        )
       ) : (
-        <ul className="kb-list">
-          {documents.map((doc) => (
-            <li key={doc.id} data-enabled={doc.enabled}>
-              <div className="kb-name">
-                <button className="kb-rename" title="Rename" onClick={() => void rename(doc)}>
-                  {doc.filename}
-                </button>
-                <small>
-                  <Status doc={doc} />
-                  {doc.pages ? ` · ${doc.pages} pages` : ""}
-                </small>
-              </div>
-              {doc.status === "ready" && (
-                <label
-                  className="kb-switch"
-                  title={doc.enabled ? "Searched" : "Hidden from answers"}
-                >
-                  <input
-                    type="checkbox"
-                    checked={doc.enabled}
-                    onChange={() => void toggle(doc)}
-                    aria-label={`Use ${doc.filename} in answers`}
-                  />
-                  <span />
-                </label>
-              )}
-              <button
-                className="drop"
-                aria-label={`Delete ${doc.filename}`}
-                title="Delete"
-                onClick={() => void drop(doc)}
+        <>
+          {documents.length > 10 && (
+            <div className="kb-tools">
+              <input
+                type="search"
+                className="kb-search"
+                placeholder="Filter documents"
+                aria-label="Filter documents"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <select
+                className="kb-sort"
+                aria-label="Sort"
+                value={sort}
+                onChange={(event) => setSort(event.target.value as Sort)}
               >
-                <Trash />
-              </button>
-            </li>
-          ))}
-        </ul>
+                <option value="new">Newest</option>
+                <option value="name">Name</option>
+                <option value="size">Largest</option>
+              </select>
+            </div>
+          )}
+          <ul className="kb-list">
+            {shown.map((doc) => (
+              <DocumentItem
+                key={doc.id}
+                doc={doc}
+                onView={view}
+                onToggle={(d) => void toggle(d)}
+                onAsk={ask}
+                onRename={setRenaming}
+                onDelete={setDropping}
+              />
+            ))}
+            {shown.length === 0 && <li className="kb-none">No document matches.</li>}
+          </ul>
+        </>
       )}
-    </aside>
-  );
-}
-
-function Status({ doc }: { doc: DocumentRow }) {
-  if (doc.status === "ready") return <>{doc.enabled ? "ready" : "hidden"}</>;
-  if (doc.status === "failed") {
-    return (
-      <span className="kb-failed">failed: {REASONS[doc.fail_reason ?? ""] ?? doc.fail_reason}</span>
-    );
-  }
-  return (
-    <span className="kb-working">
-      <Mycelium size={13} className="grow" />{" "}
-      <span className="breathe">{doc.status === "uploaded" ? "queued" : "processing"}</span>
-    </span>
+      {renaming && (
+        <Rename
+          title="Rename document"
+          value={renaming.filename}
+          onSave={(next) => void rename(renaming, next)}
+          onCancel={() => setRenaming(null)}
+        />
+      )}
+      {dropping && (
+        <Confirm
+          title="Delete document?"
+          body={
+            <>
+              <b>{dropping.filename}</b> and everything indexed from it will be removed. This cannot
+              be undone.
+            </>
+          }
+          action="Delete"
+          danger
+          onConfirm={() => void drop(dropping)}
+          onCancel={() => setDropping(null)}
+        />
+      )}
+    </section>
   );
 }

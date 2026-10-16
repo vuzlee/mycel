@@ -161,6 +161,26 @@ class TestTheSidebarFollowsTheLastThingSaid:
 
         assert await repo.pin_conversation(thread.id, mine.id, True) is False
 
+    async def test_a_thread_is_renamed_and_archived(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        user = await repo.create_user("edit@example.com")
+        thread = await repo.create_conversation(user.id, "chat", "old")
+        await repo.pin_conversation(thread.id, user.id, True)
+
+        assert await repo.edit_conversation(thread.id, user.id, title="new", archived=True)
+        [row] = await repo.conversations_for(user.id)
+        assert row.title == "new"
+        assert row.archived_at is not None
+        assert row.pinned_at is None
+
+    async def test_someone_elses_thread_cannot_be_edited(self, session: AsyncSession) -> None:
+        repo = AppRepository(session)
+        mine = await repo.create_user("edit-mine@example.com")
+        theirs = await repo.create_user("edit-theirs@example.com")
+        thread = await repo.create_conversation(theirs.id, "chat", "not yours")
+
+        assert await repo.edit_conversation(thread.id, mine.id, title="mine") is False
+
     async def test_a_thread_with_no_turns_still_sorts(self, session: AsyncSession) -> None:
         """`COALESCE` back to its own `created_at`."""
         repo = AppRepository(session)

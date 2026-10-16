@@ -5,22 +5,6 @@
   margin-top: -16px;
 }
 
-.kb-list .drop {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  color: var(--faint);
-  transition:
-    color 0.14s ease,
-    opacity 0.14s ease;
-}
-
-.kb-list .drop:hover {
-  color: var(--flag);
-}
-
 .kb-drop {
   display: flex;
   align-items: center;
@@ -81,23 +65,8 @@
   border-top: 1px solid var(--rule);
 }
 
-.kb-rename {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  text-align: left;
-  font-size: 13.5px;
-  color: var(--ink);
-}
-
-.kb-rename:hover {
-  text-decoration: underline dotted;
-}
-
-.kb-list li[data-enabled="false"] .kb-rename,
 .kb-list li[data-enabled="false"] .kb-name > span {
   color: var(--faint);
-  text-decoration: line-through;
 }
 
 .kb-name {

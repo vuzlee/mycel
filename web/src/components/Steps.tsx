@@ -11,15 +11,17 @@ interface Props {
   gaps?: Map<number, number>;
   /** True while the run is still out. */
   live?: boolean;
+  /** A finished turn: show the trail line even when it used no tools. */
+  settled?: boolean;
 }
 
 const isAnswer = (item: Item): boolean => item.kind === "text" && item.agent === "orchestrator";
 
-export function Steps({ items, gaps, live = false }: Props) {
+export function Steps({ items, gaps, live = false, settled = false }: Props) {
   const answer = items.filter(isAnswer);
   return (
     <>
-      <Trail items={items.filter((i) => !isAnswer(i))} live={live} gaps={gaps} />
+      <Trail items={items.filter((i) => !isAnswer(i))} live={live} gaps={gaps} always={settled} />
       {answer.map((item) =>
         item.kind === "text" ? <Markdown key={item.seq} body={hideMarkers(item.body)} /> : null,
       )}

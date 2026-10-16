@@ -18,11 +18,9 @@ export function PastTurns({ turns }: Props) {
           <div className="turn user">
             <div className="bubble">{turn.question}</div>
           </div>
-          {turn.steps && turn.steps.length > 0 && (
-            <div className="turn items">
-              <Steps items={buildConversation(turn.steps)} />
-            </div>
-          )}
+          <div className="turn items">
+            <Steps items={buildConversation(turn.steps ?? [])} settled={turn.status === "done"} />
+          </div>
           {turn.status === "done" && turn.answer ? (
             <Answer
               result={{

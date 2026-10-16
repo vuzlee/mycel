@@ -10,10 +10,12 @@ interface Props {
   items: Item[];
   live: boolean;
   gaps?: Map<number, number>;
+  /** Show the line even with no steps, so every finished turn has one. */
+  always?: boolean;
 }
 
-export function Trail({ items, live, gaps }: Props) {
-  if (items.length === 0 && !live) return null;
+export function Trail({ items, live, gaps, always = false }: Props) {
+  if (items.length === 0 && !live && !always) return null;
   const steps = countTools(items);
   const now = live ? deepestPending(items) : null;
 

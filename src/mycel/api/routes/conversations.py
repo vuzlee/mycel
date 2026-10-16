@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
 from mycel.services import conversations as domain
@@ -22,6 +22,7 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
     pinned: bool = False
+    archived: bool = False
     job_id: str | None = None
     status: str | None = None
 
@@ -58,6 +59,7 @@ async def list_conversations(
             title=t.conversation.title,
             created_at=t.conversation.created_at,
             pinned=t.conversation.pinned_at is not None,
+            archived=t.conversation.archived_at is not None,
             job_id=t.job_id,
             status=t.status,
         )
@@ -97,6 +99,24 @@ class PinRequest(BaseModel):
 async def pin_conversation(conversation_id: int, body: PinRequest, user: CurrentUser) -> Response:
     """Pin or unpin a conversation. 404 for "not yours" as well, same as the delete."""
     if not await domain.pin_conversation(user.id, conversation_id, body.pinned):
+        raise HTTPException(status_code=404, detail="no such conversation")
+    return Response(status_code=204)
+
+
+class EditRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    archived: bool | None = None
+
+
+@router.patch("/conversations/{conversation_id}", status_code=204)
+async def edit_conversation(conversation_id: int, body: EditRequest, user: CurrentUser) -> Response:
+    """Rename or archive a conversation. 404 for "not yours" as well."""
+    title = body.title.strip() if body.title is not None else None
+    if title == "" or (title is None and body.archived is None):
+        raise HTTPException(status_code=422, detail="nothing to change")
+    if not await domain.edit_conversation(
+        user.id, conversation_id, title=title, archived=body.archived
+    ):
         raise HTTPException(status_code=404, detail="no such conversation")
     return Response(status_code=204)
 

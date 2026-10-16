@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext } from "react";
 import type { ReactNode } from "react";
 import type { ConversationSummary } from "../api";
-import { fetchConversations, deleteConversation, pinConversation } from "../api";
+import { deleteConversation, editConversation, fetchConversations, pinConversation } from "../api";
 import { useAuth } from "./auth";
 
 const KEY = ["conversations"] as const;
@@ -17,6 +17,8 @@ interface ConversationsValue {
   forget: (id: number) => Promise<void>;
   /** Keep one conversation above Recent, or let it go back. */
   pin: (id: number, pinned: boolean) => Promise<void>;
+  /** Rename, or move to Archived and back. */
+  edit: (id: number, change: { title?: string; archived?: boolean }) => Promise<void>;
 }
 
 const Ctx = createContext<ConversationsValue>({
@@ -24,6 +26,7 @@ const Ctx = createContext<ConversationsValue>({
   reload: () => {},
   forget: async () => {},
   pin: async () => {},
+  edit: async () => {},
 });
 
 export function ConversationsProvider({ children }: { children: ReactNode }) {
@@ -65,9 +68,25 @@ export function ConversationsProvider({ children }: { children: ReactNode }) {
     [reload, setConversations],
   );
 
+  // Applied at once too; archiving drops the pin the same way the server does.
+  const edit = useCallback(
+    async (id: number, change: { title?: string; archived?: boolean }): Promise<void> => {
+      setConversations((current) =>
+        current.map((t) =>
+          t.id === id ? { ...t, ...change, pinned: change.archived ? false : t.pinned } : t,
+        ),
+      );
+      await editConversation(id, change).catch(() => {});
+      reload();
+    },
+    [reload, setConversations],
+  );
+
   const shown = user ? conversations : NONE;
   return (
-    <Ctx.Provider value={{ conversations: shown, reload, forget, pin }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ conversations: shown, reload, forget, pin, edit }}>
+      {children}
+    </Ctx.Provider>
   );
 }
 

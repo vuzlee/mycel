@@ -23,6 +23,7 @@ class ConversationRow:
     title: str
     created_at: datetime
     pinned_at: datetime | None = None
+    archived_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,31 @@ class ConversationRepository:
             update(Conversation)
             .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
             .values(pinned_at=func.now() if pinned else None)
+        )
+        return bool(rowcount(result))
+
+    async def edit_conversation(
+        self,
+        conversation_id: int,
+        user_id: int,
+        *,
+        title: str | None = None,
+        archived: bool | None = None,
+    ) -> bool:
+        """Rename and/or archive a conversation, scoped by `user_id`. Archiving unpins."""
+        values: dict[str, Any] = {}
+        if title is not None:
+            values["title"] = title
+        if archived is not None:
+            values["archived_at"] = func.now() if archived else None
+            if archived:
+                values["pinned_at"] = None
+        if not values:
+            return False
+        result = await self._session.execute(
+            update(Conversation)
+            .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
+            .values(**values)
         )
         return bool(rowcount(result))
 

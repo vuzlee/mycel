@@ -61,3 +61,13 @@ async def pin_conversation(user_id: int, conversation_id: int, pinned: bool) -> 
         return await ConversationRepository(session).pin_conversation(
             conversation_id, user_id, pinned
         )
+
+
+async def edit_conversation(
+    user_id: int, conversation_id: int, *, title: str | None, archived: bool | None
+) -> bool:
+    """Rename or archive one conversation. False if it is not this person's, or not there."""
+    async with session_scope() as session:
+        return await ConversationRepository(session).edit_conversation(
+            conversation_id, user_id, title=title, archived=archived
+        )

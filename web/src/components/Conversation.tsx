@@ -45,7 +45,7 @@ export function Conversation({
           </div>
         )}
         <div className="turn items">
-          <Steps items={items} gaps={gaps} live={pending} />
+          <Steps items={items} gaps={gaps} live={pending} settled={!pending && !failure} />
         </div>
         {children}
         {failure && <p className="failure">{failure}</p>}

@@ -1,7 +1,7 @@
 /** The frame every signed-in page sits in: rail, header strip, scrolling body. */
 
-import { useState } from "react";
-import { ArrowDown, Menu } from "./icons";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown, Menu, PanelLeft } from "./icons";
 import { Sidebar } from "./Sidebar";
 
 interface Props {
@@ -19,26 +19,50 @@ interface Props {
    *  rather than beside it: it is positioned against the body it maps, and it takes no
    *  column — a column would shove the conversation off centre at the second question. */
   aside?: React.ReactNode;
-  /** A collapsible panel on the right, and the header button that opens it. */
-  panel?: React.ReactNode;
-  panelToggle?: React.ReactNode;
 }
 
-export function Shell({
-  current = null,
-  scrollRef,
-  jump,
-  children,
-  footer,
-  aside,
-  panel,
-  panelToggle,
-}: Props) {
+const FOLD_KEY = "mycel.rail-folded";
+
+export function Shell({ current = null, scrollRef, jump, children, footer, aside }: Props) {
   const [menu, setMenu] = useState(false);
+  const [folded, setFolded] = useState(() => {
+    try {
+      return localStorage.getItem(FOLD_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(FOLD_KEY, folded ? "1" : "0");
+    } catch {
+      /* a remembered fold is a convenience */
+    }
+  }, [folded]);
+
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const root = document.documentElement;
+    root.setAttribute("data-rail-moving", "");
+    const done = window.setTimeout(() => root.removeAttribute("data-rail-moving"), 320);
+    return () => {
+      window.clearTimeout(done);
+      root.removeAttribute("data-rail-moving");
+    };
+  }, [folded]);
 
   return (
-    <div className="shell">
-      <Sidebar current={current} open={menu} onClose={() => setMenu(false)} />
+    <div className="shell" data-folded={folded}>
+      <Sidebar
+        current={current}
+        open={menu}
+        onClose={() => setMenu(false)}
+        onCollapse={() => setFolded(true)}
+      />
       <main className="main">
         <header>
           <button
@@ -48,7 +72,16 @@ export function Shell({
           >
             <Menu />
           </button>
-          {panelToggle && <div className="header-actions">{panelToggle}</div>}
+          {folded && (
+            <button
+              className="icon-button unfold"
+              onClick={() => setFolded(false)}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+            >
+              <PanelLeft />
+            </button>
+          )}
         </header>
         <div className="scroll" ref={scrollRef}>
           {children}
@@ -61,7 +94,6 @@ export function Shell({
         {aside}
         {footer}
       </main>
-      {panel}
     </div>
   );
 }

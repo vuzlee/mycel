@@ -125,6 +125,7 @@ class TestWhatNeedsALogin:
             ("get", "/conversations", None),
             ("delete", "/conversations/1", None),
             ("put", "/conversations/1/pin", {"pinned": True}),
+            ("patch", "/conversations/1", {"title": "x"}),
         ],
     )
     def test_a_stranger_gets_401(

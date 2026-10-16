@@ -19,15 +19,15 @@ export function usePastTurns(conversationId: number | null, jobId: string | null
   });
 
   const loaded = conversationId === null || query.isFetched || query.isError;
-  const past =
-    cleared && conversationId === null
-      ? NONE
-      : (query.data ?? NONE).filter((turn) => turn.job_id !== jobId);
+  const all = cleared && conversationId === null ? NONE : (query.data ?? NONE);
+  const past = all.filter((turn) => turn.job_id !== jobId);
+  // The watched turn's saved steps: what its trail falls back to once the stream has expired.
+  const savedSteps = all.find((turn) => turn.job_id === jobId)?.steps ?? null;
   // Failed loads settle too, so the scroll does not wait forever.
   const pastFor = loaded && !query.isPlaceholderData ? jobId : null;
 
   const setPast = useCallback((next: Turn[]) => setCleared(next.length === 0), []);
   if (cleared && conversationId !== null) setCleared(false);
 
-  return { past, setPast, pastFor };
+  return { past, setPast, pastFor, savedSteps };
 }
