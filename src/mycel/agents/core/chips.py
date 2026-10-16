@@ -25,10 +25,18 @@ def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
     """Instructions telling the orchestrator which sources are off and how to reply."""
     if chips is None:
         return ""
+    on = [label for key, label in REACHES.items() if key in chips]
     off = [label for key, label in REACHES.items() if key not in chips]
+    # An earlier turn may have said a source was off; this turn's chips are what count.
+    note = (
+        f"Switched on for this turn: {', '.join(on)}. Use them even if an earlier answer "
+        "in this conversation said they were off. "
+        if on
+        else ""
+    )
     if not off:
-        return ""
-    return (
+        return note.strip()
+    return note + (
         f"Switched off for this turn: {', '.join(off)}. If the question needs one of them, "
         "call nothing and write no heading. Reply in one or two sentences: name the source "
         "it needs, say it is switched off, and that it can be turned on from the sources "

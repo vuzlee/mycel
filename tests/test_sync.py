@@ -654,3 +654,11 @@ class TestTheChecks:
 
     def test_the_service_passes_a_clean_batch(self) -> None:
         check_work([_item(), _item(kind="epic")], [_worklog()])
+
+
+class TestTheFetchQuery:
+    def test_a_refetch_still_restricts_the_query(self) -> None:
+        """Jira answers an unrestricted JQL with 'Unbounded JQL queries are not allowed'."""
+        from mycel.services.fetch import _jql
+
+        assert _jql(None).split(" ORDER BY")[0].strip() != ""

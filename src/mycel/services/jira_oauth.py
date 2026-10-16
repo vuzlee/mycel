@@ -29,6 +29,13 @@ SCOPES = (
     "offline_access",
 )
 
+#: Reading boards and managing sprints: Jira Software takes only granular scopes.
+SPRINT_SCOPES = (
+    "read:board-scope:jira-software",
+    "read:sprint:jira-software",
+    "write:sprint:jira-software",
+)
+
 #: Creating a project needs site admin, and a mistaken project cannot be undone.
 PROJECT_SCOPE = "manage:jira-project"
 
@@ -72,10 +79,11 @@ class Grant:
 
 
 def scopes() -> tuple[str, ...]:
-    """What this deployment asks for, which depends on one switch."""
-    if get_settings().jira_allow_create_project:
-        return (*SCOPES, PROJECT_SCOPE)
-    return SCOPES
+    """What this deployment asks for, which depends on two switches."""
+    settings = get_settings()
+    extra = (PROJECT_SCOPE,) if settings.jira_allow_create_project else ()
+    sprints = SPRINT_SCOPES if settings.jira_manage_sprints else ()
+    return (*SCOPES, *extra, *sprints)
 
 
 def configured(settings: Settings | None = None) -> bool:

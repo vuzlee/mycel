@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
+from mycel.domains import sync
 from mycel.domains.ingest import watchdog
 from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
@@ -58,7 +59,7 @@ async def run_forever() -> None:
     """Run each timer until stopped; an advisory lock per timer keeps replicas from doubling."""
     settings = get_settings()
     timers: list[tuple[str, Callable[[], Awaitable[None]], int]] = [
-        ("sync:jira", _sync, settings.sync_interval_seconds),
+        (sync.LOCK, _sync, settings.sync_interval_seconds),
         ("sweep:sessions", _sweep, settings.session_sweep_interval_seconds),
         ("watchdog:documents", watchdog, WATCHDOG_INTERVAL_SECONDS),
         ("relay:outbox", relay, RELAY_INTERVAL_SECONDS),

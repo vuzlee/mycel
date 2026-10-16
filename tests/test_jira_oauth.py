@@ -94,9 +94,11 @@ class TestWhetherThisDeploymentCanConnectAnything:
 
 class TestWhatTheConsentScreenAsksFor:
     async def test_the_four_everyday_scopes_are_always_asked_for(
-        self, configured: None, redis: FakeRedis
+        self, configured: None, redis: FakeRedis, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """`offline_access` is the one without which there is no background sync at all."""
+        monkeypatch.setenv("JIRA_MANAGE_SPRINTS", "false")
+        get_settings.cache_clear()
         query = parse_qs(urlsplit(await oauth.consent_url(7)).query)
 
         assert query["scope"][0].split() == [

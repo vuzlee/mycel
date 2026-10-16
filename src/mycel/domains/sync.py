@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
+from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.observability.metrics import records_written, sync_duration_seconds
@@ -95,6 +96,19 @@ async def sync_jira() -> SyncResult:
         items=result.items,
         worklogs=result.worklogs,
     )
+
+
+#: One sync at a time, whether the scheduler or a fresh connection asked for it.
+LOCK = "sync:jira"
+
+
+async def run(job: Job) -> None:
+    """A sync asked for out of turn, by a person who just connected Jira."""
+    async with try_lock(LOCK) as acquired:
+        if not acquired:
+            log.info("sync already running, this request is covered", extra={"job_id": job.job_id})
+            return
+        await sync_jira()
 
 
 def service_auth() -> Auth:

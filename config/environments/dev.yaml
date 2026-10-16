@@ -7,6 +7,8 @@ agents:
 
 settings:
   log_level: DEBUG
+  # The board maintenance scripts run from this machine.
+  jira_manage_sprints: true
   # Three host processes share this machine's Postgres, and a dev box runs the test suite
   db_pool_size: 10
   # Traces on, because the whole point of a dev machine is being able to see what happened.

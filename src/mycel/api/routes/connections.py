@@ -11,7 +11,7 @@ from mycel.api.dependencies import CurrentUser, MaybeUser
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
-from mycel.services import access, google_oauth, jira_oauth
+from mycel.services import access, enqueue, google_oauth, jira_oauth
 from mycel.services.permission import readable_projects
 
 router = APIRouter(prefix="/auth", tags=["connections"])
@@ -120,10 +120,15 @@ async def finish_jira_connection(
     error: Annotated[str | None, Query()] = None,
 ) -> RedirectResponse:
     """Where Atlassian sends the browser back. Connects the account, then returns to the app."""
-    # Refresh access now rather than at the next sync.
     return await _finish_connect(
-        "jira", jira_oauth.connect, user, code, state, error, then=access.refresh
+        "jira", jira_oauth.connect, user, code, state, error, then=_first_look
     )
+
+
+async def _first_look(user_id: int) -> None:
+    """Access now, and a sync queued, so the board fills without waiting for the timer."""
+    await access.refresh(user_id)
+    await enqueue.queue(enqueue.sync_job())
 
 
 @router.delete("/jira", status_code=status.HTTP_204_NO_CONTENT)

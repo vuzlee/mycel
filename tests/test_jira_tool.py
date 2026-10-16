@@ -408,6 +408,19 @@ class TestTheTwoSwitches:
 
         assert PROJECT_SCOPE in scopes()
 
+    def test_the_sprint_scopes_follow_their_own_switch(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mycel.services.jira_oauth import SPRINT_SCOPES, scopes
+
+        monkeypatch.setenv("JIRA_MANAGE_SPRINTS", "false")
+        get_settings.cache_clear()
+        assert not set(SPRINT_SCOPES) & set(scopes())
+
+        monkeypatch.setenv("JIRA_MANAGE_SPRINTS", "true")
+        get_settings.cache_clear()
+        assert set(SPRINT_SCOPES) <= set(scopes())
+
 
 def _id_in(drafted: str) -> str:
     """The draft id out of the sentence the tool returned, as the model would read it."""

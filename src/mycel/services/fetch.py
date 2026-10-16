@@ -71,7 +71,8 @@ async def _worklogs(auth: jira.Auth, keys: list[str]) -> list[list[dict[str, Any
 def _jql(since: datetime | None) -> str:
     """Which issues to ask for: everything the service account may browse, since a time."""
     if since is None:
-        return "ORDER BY updated ASC"
+        # Jira refuses a query with no restriction; this one matches every issue.
+        return 'created >= "1970-01-01" ORDER BY updated ASC'
     return f'updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'
 
 
