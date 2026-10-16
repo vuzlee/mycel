@@ -92,9 +92,10 @@ export function Ask() {
   const [asked, setAsked] = useState<string | null>(null);
   // A fresh object per click, so the same seed picked twice still fills the box.
   // From the Knowledge page's Ask: the box opens naming that document.
-  const [seed, setSeed] = useState<{ text: string } | null>(() => {
+  // Tagged with the conversation it was picked in, so opening another one does not carry it.
+  const [seed, setSeed] = useState<{ text: string; key: string } | null>(() => {
     const about = params.get("about");
-    return about ? { text: `In ${about}, ` } : null;
+    return about ? { text: `In ${about}, `, key: "new" } : null;
   });
   const { data: projects } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
   const firstProject = projects?.[0] ?? null;
@@ -209,8 +210,10 @@ export function Ask() {
 
   const composerBox = (
     <Composer
+      // One box per conversation: what was typed in one does not follow into another.
+      key={pickKey}
       busy={run.busy}
-      seed={seed}
+      seed={seed?.key === pickKey ? seed : null}
       handle={composer}
       chips={chips}
       onChips={setChips}
@@ -278,7 +281,11 @@ export function Ask() {
                   {group.name}
                 </h2>
                 {group.items.map((text) => (
-                  <button key={text} className="seed" onClick={() => setSeed({ text })}>
+                  <button
+                    key={text}
+                    className="seed"
+                    onClick={() => setSeed({ text, key: pickKey })}
+                  >
                     {text}
                   </button>
                 ))}
