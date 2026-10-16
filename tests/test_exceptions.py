@@ -15,6 +15,7 @@ from mycel.agents.core.exceptions import (
     ModelNotFound,
     ModelProviderError,
     ModelQuota,
+    ModelRejected,
     ModelTimeout,
     ModelUnreachable,
     OutputValidationFailed,
@@ -88,9 +89,16 @@ class TestErrorKinds:
         with pytest.raises(ModelUnreachable):
             _raise(wrapped)
 
+    def test_a_400_is_rejected_and_keeps_the_reason(self) -> None:
+        """Gemini 3 refusing a call with no thought signature: retrying sends the same body."""
+        body = {"error": {"code": 400, "message": "Function call is missing a thought_signature"}}
+        with pytest.raises(ModelRejected) as exc:
+            _raise(ModelHTTPError(status_code=400, model_name="gemini", body=body))
+        assert "thought_signature" in str(exc.value)
+
     def test_an_unknown_failure_stays_the_parent(self) -> None:
         with pytest.raises(ModelCallFailed) as exc:
-            _raise(ModelHTTPError(status_code=400, model_name="qwen"))
+            _raise(ModelHTTPError(status_code=418, model_name="qwen"))
         assert type(exc.value) is ModelCallFailed
 
 

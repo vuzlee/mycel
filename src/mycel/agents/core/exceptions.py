@@ -70,6 +70,10 @@ class ModelUnreachable(ModelCallFailed):
     """No answer at the network level: connection refused, DNS or TLS failure."""
 
 
+class ModelRejected(ModelCallFailed):
+    """400: the provider refused the request as malformed; sending it again cannot help."""
+
+
 class ModelBlocked(ModelCallFailed):
     """An own model's base URL now points somewhere a call must not go."""
 
@@ -108,6 +112,9 @@ def _by_kind(model_spec: str, exc: BaseException) -> ModelCallFailed:
         if status in _BY_STATUS:
             cls, said = _BY_STATUS[status]
             return cls(f"{model_spec}: {said} (HTTP {status})")
+        if status == 400:
+            # The provider's own words are the only clue to what it refused.
+            return ModelRejected(f"{model_spec}: request rejected (HTTP 400): {exc}")
         if status >= 500:
             return ModelProviderError(f"{model_spec}: provider error (HTTP {status}): {exc}")
     if _caused_by_connection(exc):

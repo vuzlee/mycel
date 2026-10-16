@@ -19,6 +19,7 @@ from mycel.agents.core.exceptions import (
     ModelAuth,
     ModelBlocked,
     ModelNotFound,
+    ModelRejected,
     OutputValidationFailed,
     RunawayStopped,
     ToolFailed,
@@ -47,6 +48,7 @@ FINAL: tuple[type[Exception], ...] = (
     ToolFailed,
     ModelAuth,
     ModelNotFound,
+    ModelRejected,
     ModelBlocked,
 )
 

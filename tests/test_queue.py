@@ -18,6 +18,7 @@ from mycel import worker
 from mycel.agents.core.exceptions import (
     DegenerateLoop,
     ModelCallFailed,
+    ModelRejected,
     OutputValidationFailed,
 )
 from mycel.core.principal import Principal
@@ -277,7 +278,11 @@ class TestFailures:
 
     @pytest.mark.parametrize(
         "error",
-        [DegenerateLoop("rag_search", 3), OutputValidationFailed("no valid answer")],
+        [
+            DegenerateLoop("rag_search", 3),
+            OutputValidationFailed("no valid answer"),
+            ModelRejected("missing a thought_signature (HTTP 400)"),
+        ],
     )
     async def test_a_run_that_will_fail_again_skips_the_retries(
         self, monkeypatch: pytest.MonkeyPatch, store: dict[str, Any], error: Exception
