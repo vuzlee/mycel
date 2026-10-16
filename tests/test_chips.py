@@ -8,7 +8,7 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import parse, tools_for
+from mycel.agents.core.chips import CHIPS_KEY, parse
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.specialists.analyst import Analyst
@@ -60,6 +60,24 @@ class TestWhatTheModelIsShown:
     async def test_the_analyst_sees_nothing_with_only_the_web_chip(self) -> None:
         assert await offered(Analyst, frozenset({Chip.WEB})) == set()
 
+    async def test_the_jira_chip_opens_the_ready_made_reads(self) -> None:
+        tools = await offered(Analyst, frozenset({Chip.JIRA}))
+        assert {"hours_by_person", "late_items", "open_epics", "run_sql"} <= tools
+
+
+class TestEveryToolNamesItsChips:
+    """A tool with no chips is filtered out of every turn that picked any: silently."""
+
+    @pytest.mark.parametrize("agent_cls", [Orchestrator, Analyst, Researcher])
+    def test_every_tool_names_at_least_one_chip(self, agent_cls: type[BaseAgent[Any]]) -> None:
+        unnamed = [
+            name
+            for toolset in agent_cls.toolsets()
+            for name, tool in getattr(toolset, "tools", {}).items()
+            if not (tool.metadata or {}).get(CHIPS_KEY)
+        ]
+        assert unnamed == []
+
 
 class TestParsing:
     def test_unknown_names_are_dropped(self) -> None:
@@ -68,8 +86,8 @@ class TestParsing:
     def test_absent_means_undecided(self) -> None:
         assert parse(None) is None
 
-    def test_knowledge_opens_no_orchestrator_tool(self) -> None:
-        assert tools_for(frozenset({Chip.KNOWLEDGE})) == frozenset()
+    async def test_knowledge_opens_no_orchestrator_tool(self) -> None:
+        assert await offered(Orchestrator, frozenset({Chip.KNOWLEDGE})) == set()
 
 
 class TestKnowledgeGoesThroughTheOrchestrator:

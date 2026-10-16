@@ -45,28 +45,13 @@ def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
     )
 
 
-#: Agents and tools each chip opens. Knowledge opens no tool; its passages go in the prompt.
-TOOLS: dict[Chip, frozenset[str]] = {
-    Chip.WEB: frozenset({"researcher", "web_search"}),
-    Chip.MAIL: frozenset({"researcher", "read_mail"}),
-    Chip.CALENDAR: frozenset({"researcher", "read_events", "draft_event", "confirm_event"}),
-    Chip.JIRA: frozenset(
-        {
-            "analyst",
-            "summarizer",
-            "run_sql",
-            "find_jira_user",
-            "draft_jira_write",
-            "confirm_jira_write",
-            "percent_change",
-            "absolute_change",
-            "percentage",
-            "cagr",
-            "share_of_total",
-            "summary_stats",
-        }
-    ),
-}
+#: Where a tool says which chips open it: `metadata=opens(Chip.JIRA)` on its toolset.
+CHIPS_KEY = "chips"
+
+
+def opens(*chips: Chip) -> dict[str, Any]:
+    """Tool metadata naming the chips that open it. Knowledge opens no tool."""
+    return {CHIPS_KEY: frozenset(chips)}
 
 
 def parse(raw: Any) -> frozenset[Chip] | None:
@@ -76,11 +61,9 @@ def parse(raw: Any) -> frozenset[Chip] | None:
     return frozenset(Chip(c) for c in raw if c in Chip._value2member_map_)
 
 
-def tools_for(chips: frozenset[Chip]) -> frozenset[str]:
-    return frozenset().union(*(TOOLS.get(c, frozenset()) for c in chips))
-
-
 def allowed(ctx: "RunContext[Any]", tool: "ToolDefinition") -> bool:
-    """The filter every toolset passes through."""
+    """The filter every toolset passes through. A tool that names no chip is never offered."""
     chips = getattr(ctx.deps, "chips", None)
-    return chips is None or tool.name in tools_for(chips)
+    if chips is None:
+        return True
+    return bool(chips & (tool.metadata or {}).get(CHIPS_KEY, frozenset()))

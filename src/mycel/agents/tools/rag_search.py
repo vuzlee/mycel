@@ -2,9 +2,11 @@
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
+from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.infra.vectors import search as vectors
 from mycel.infra.vectors.client import VectorsUnavailable
@@ -17,7 +19,7 @@ MAX_RESULTS = 20
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.JIRA))
 
     @toolset.tool(name="rag_search")
     async def _rag_search(

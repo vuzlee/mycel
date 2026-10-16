@@ -7,8 +7,10 @@ from typing import Any, TypeVar
 from pydantic import BaseModel, Field
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.guards import guard_repeat
+from mycel.core.chips import Chip
 
 T = TypeVar("T")
 
@@ -99,7 +101,7 @@ def summary_stats(values: Sequence[float]) -> SummaryStats:
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
     """The compute functions as tools, guarded and with model-readable errors."""
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.JIRA))
 
     @toolset.tool(name="percent_change")
     def _percent_change(ctx: RunContext[MycelDeps], previous: float, current: float) -> float:

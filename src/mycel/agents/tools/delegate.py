@@ -13,12 +13,14 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
+from mycel.agents.core.chips import opens
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import AgentError, ToolFailed, TransportError
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.researcher import Researcher
 from mycel.agents.specialists.summarizer import Summarizer
+from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.session import session_scope
 from mycel.services.analyze import render
@@ -34,7 +36,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
     """The specialists as tools. Each reads its own config/agents/<name>.yaml."""
     toolset: FunctionToolset[MycelDeps] = FunctionToolset()
 
-    @toolset.tool(name="researcher")
+    @toolset.tool(name="researcher", metadata=opens(Chip.WEB, Chip.MAIL, Chip.CALENDAR))
     async def _researcher(ctx: RunContext[MycelDeps], question: str) -> str:
         """Find out what is currently true about a topic, with urls.
 
@@ -44,7 +46,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         """
         return await _delegate(ctx, Researcher, question)
 
-    @toolset.tool(name="analyst")
+    @toolset.tool(name="analyst", metadata=opens(Chip.JIRA))
     async def _analyst(ctx: RunContext[MycelDeps], question: str) -> str:
         """Read the work data and report what the numbers show, each with its source.
 
@@ -54,7 +56,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         """
         return await _delegate(ctx, Analyst, question)
 
-    @toolset.tool(name="summarizer")
+    @toolset.tool(name="summarizer", metadata=opens(Chip.JIRA))
     async def _summarizer(
         ctx: RunContext[MycelDeps], project: str, days: int = DEFAULT_WINDOW_DAYS
     ) -> str:

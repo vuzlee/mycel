@@ -6,10 +6,12 @@ restores the draft; a timeout does not, since it may have landed.
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.jira_writes import JiraWriteRequest, apply, resolve
+from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
@@ -29,7 +31,7 @@ KINDS = ("comment", "move", "issue", "project")
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.JIRA))
     toolset.add_function(_find_jira_user, name="find_jira_user")
     toolset.add_function(_draft_jira_write, name="draft_jira_write")
     toolset.add_function(_confirm_jira_write, name="confirm_jira_write")

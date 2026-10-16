@@ -2,10 +2,12 @@
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.limits import MAX_HOURS
+from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.services.google_oauth import NotConnected, token_for
 from mycel.sources import SourceError, gmail
@@ -24,7 +26,7 @@ CONNECT = (
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.MAIL))
 
     @toolset.tool(name="read_mail")
     async def _read_mail(ctx: RunContext[MycelDeps], hours: int = 24) -> str:

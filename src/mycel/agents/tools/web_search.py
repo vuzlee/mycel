@@ -6,9 +6,11 @@ import httpx2
 from pydantic import BaseModel, Field
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
+from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.infra.http import shared
 
@@ -44,7 +46,7 @@ class SearchResult(BaseModel):
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.WEB))
 
     @toolset.tool(name="web_search")
     async def _web_search(ctx: RunContext[MycelDeps], query: str) -> SearchResult:

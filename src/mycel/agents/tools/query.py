@@ -12,8 +12,10 @@ from typing import Any
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 from sqlalchemy import text
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.guards import guard_repeat
+from mycel.core.chips import Chip
 from mycel.infra.postgres.acl import READER_ROLE, SCOPE_SETTING
 from mycel.infra.postgres.session import session_scope
 from mycel.services.permission import readable_projects
@@ -89,7 +91,7 @@ async def read(deps: MycelDeps, query: str, params: dict[str, Any] | None = None
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.JIRA))
 
     @toolset.tool(name="run_sql")
     async def _run_sql(ctx: RunContext[MycelDeps], query: str) -> str:

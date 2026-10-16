@@ -7,10 +7,12 @@ from datetime import datetime, timedelta
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.limits import MAX_HOURS
+from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
 from mycel.services.google_oauth import GoogleError, NotConnected, token_for
@@ -29,7 +31,7 @@ CONNECT = (
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.CALENDAR))
     toolset.add_function(_read_events, name="read_events")
     toolset.add_function(_draft_event, name="draft_event")
     toolset.add_function(_confirm_event, name="confirm_event")

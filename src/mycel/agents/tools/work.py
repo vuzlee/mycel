@@ -8,8 +8,10 @@ from typing import Literal
 
 from pydantic_ai import FunctionToolset, RunContext
 
+from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools.query import read
+from mycel.core.chips import Chip
 
 Period = Literal["this_week", "last_week", "this_month", "last_month"]
 
@@ -72,7 +74,7 @@ LIMIT 100
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:
-    toolset: FunctionToolset[MycelDeps] = FunctionToolset()
+    toolset: FunctionToolset[MycelDeps] = FunctionToolset(metadata=opens(Chip.JIRA))
 
     @toolset.tool(name="hours_by_person")
     async def _hours_by_person(
