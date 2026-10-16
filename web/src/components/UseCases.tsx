@@ -44,7 +44,7 @@ const CASES: Case[] = [
     icon: <Globe size={16} />,
     title: "Look it up",
     body: "Searches the web and tells you where each line came from.",
-    ask: "What changed in the Jira API this year?",
+    ask: "What changed in our tracker's API this year?",
     scene: <WebScene />,
   },
 ];

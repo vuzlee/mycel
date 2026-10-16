@@ -80,14 +80,14 @@ export function Home() {
         <Hyphae />
         <span className="eyebrow">
           <span className="ping" aria-hidden />
-          Jira · Gmail · Calendar · your documents
+          One assistant for everything your team works in
         </span>
         <h1>
           Your work already knows what happened. <em>Mycel tells you.</em>
         </h1>
         <p>
-          Ask in your own words. Mycel reads the board, your mail and your calendar, answers with
-          sources, and books the meeting or moves the issue once you say yes.
+          Ask in your own words. Mycel reads the tools your team already uses, answers with sources,
+          and makes a change only once you say yes.
         </p>
 
         <div className="acts">
@@ -147,8 +147,8 @@ export function Home() {
           <>
             <h2>Start with this week.</h2>
             <p>
-              Sign in with Google, or with a code sent to your mail. The first sign-in makes your
-              account, and your conversations stay under it on every machine.
+              Sign in with your account, or with a code sent to your mail. The first sign-in makes
+              your account, and your conversations stay under it on every machine.
             </p>
             <div className="both">
               <Link className="primary" to="/login">

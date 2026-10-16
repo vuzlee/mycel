@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { labelFor, resultSummary } from "../lib/toolLabel";
 import { duration } from "../lib/usage";
 import { Chevron, Mycelium, Spinner } from "./icons";
-import { Json } from "./Json";
 import { Markdown } from "./Markdown";
 
 interface Props {
@@ -128,28 +127,17 @@ function ToolRow({
   const pending = live && item.result === null;
   return (
     <>
-      <details className="step">
-        <summary>
+      {/* One line, nothing to open: the input and output are for debugging, in the trace. */}
+      <div className="step">
+        <div className="step-line">
           <span className="dot tool" />
-          <span className="what">{labelFor(item.tool, item.args)}</span>
+          <span className="what" title={labelFor(item.tool, item.args)}>
+            {labelFor(item.tool, item.args)}
+          </span>
           <span className="peek">{pending ? "" : resultSummary(item.result ?? "")}</span>
           {pending ? <Spinner className="spin" size={11} /> : <span className="done">✓</span>}
-        </summary>
-        <div className="step-body">
-          {/* What went in and came out, as sent: for whoever is debugging, folded away. */}
-          <details className="raw-io">
-            <summary>Raw</summary>
-            <span className="label">{item.tool} · arguments</span>
-            <Json text={item.args || "{}"} />
-            {!pending && (
-              <>
-                <span className="label">Result</span>
-                <Json text={item.result ?? ""} />
-              </>
-            )}
-          </details>
         </div>
-      </details>
+      </div>
       {item.children.length > 0 && (
         <ol className="trail-steps nested">{rows(item.children, live, gaps)}</ol>
       )}

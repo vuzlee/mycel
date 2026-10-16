@@ -1,9 +1,11 @@
 /* ------------------------------------------------- trail: what a run did, folded */
 
 .trail > summary {
+  /* One row height for every piece of the line, so mixed sizes still share a centre. */
+  --row: 18px;
   display: inline-flex;
-  align-items: baseline;
-  line-height: 1.4;
+  align-items: flex-start;
+  line-height: var(--row);
   gap: 8px;
   padding: 5px 10px 5px 8px;
   border-radius: 999px;
@@ -55,7 +57,16 @@
 }
 
 .trail > summary > svg {
-  align-self: center;
+  flex: none;
+  /* A box one row tall: the drawing keeps its size and sits centred on the first line,
+     whatever wraps below it. Covers the mark and the chevron alike. */
+  height: var(--row);
+  /* Lowercase text centres on its x-height, a pixel below the box: meet it there. */
+  translate: 0 1px;
+}
+
+.trail > summary > b {
+  flex: none;
 }
 
 .trail .rest {
@@ -63,8 +74,12 @@
 }
 
 .trail-meta {
+  min-width: 0;
   color: var(--faint);
   font-size: 12.5px;
+  line-height: var(--row);
+  /* Smaller than "Mycelled": half a pixel down puts both on one baseline. */
+  translate: 0 0.5px;
 }
 
 .trail-meta:empty {
@@ -82,7 +97,8 @@
   margin: 2px 0 4px 6px;
 }
 
-.step > summary {
+.step > summary,
+.step-line {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -94,7 +110,11 @@
   cursor: pointer;
 }
 
-.step > summary:hover {
+.step-line {
+  cursor: default;
+}
+
+details.step > summary:hover {
   background: var(--sunk);
 }
 
@@ -152,25 +172,6 @@
   line-height: 1.7;
   color: var(--muted);
   max-width: 84ch;
-}
-
-/* A closed step shows nothing below its line; a details body is not hidden by itself here. */
-.step:not([open]) > .step-body {
-  display: none;
-}
-
-.raw-io > summary {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--faint);
-  cursor: pointer;
-}
-
-.raw-io > summary:hover {
-  color: var(--muted);
 }
 
 .step-body .label {

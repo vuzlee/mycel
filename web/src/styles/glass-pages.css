@@ -309,7 +309,7 @@
 
 .home .lead h1 em,
 .home section > h2 em {
-  background: linear-gradient(100deg, #5e66d7, #3c4ace);
+  background: var(--fade-violet);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -514,7 +514,8 @@
 }
 
 .home .cases .bar.late {
-  fill: color-mix(in oklab, #f18ab4 70%, transparent);
+  /* The one that slipped: the deep end of the violet, not a second hue. */
+  fill: color-mix(in oklab, var(--accent) 35%, #9a5cf0);
 }
 
 .home .cases .slot {

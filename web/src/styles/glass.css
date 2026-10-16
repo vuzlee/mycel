@@ -249,18 +249,29 @@ body::before {
   z-index: 1;
 }
 
-.blank h1 {
-  font-size: clamp(2.8rem, 6vw, 4.2rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  background: linear-gradient(
-    180deg,
-    var(--ink) 30%,
-    color-mix(in oklab, var(--accent) 70%, var(--ink))
-  );
+/* Every display heading fades from ink to violet, top to bottom, the way "Ask" does.
+   Room below the baseline, so a descender (the y and g of "anything") is not clipped by
+   the box the gradient is painted into. */
+.blank h1,
+.home .lead h1,
+.home section > h2,
+.home .call h2,
+.kb-head h1,
+.gate h1,
+.modal h2 {
+  padding-bottom: 0.12em;
+  background: var(--fade);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.blank h1 {
+  font-family: var(--greeting);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 5.4vw, 3.4rem);
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .blank > p {
@@ -535,8 +546,8 @@ body::before {
 
 .kb-head h1 {
   margin: 0 0 8px;
-  font: 400 clamp(2.4rem, 5vw, 3.2rem) / 1 var(--display);
-  letter-spacing: -0.015em;
+  font: 300 clamp(2.4rem, 5vw, 3.2rem) / 1.12 var(--display);
+  letter-spacing: 0;
 }
 
 .kb-head p {

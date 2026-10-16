@@ -116,7 +116,12 @@ a.brand {
   font-style: normal;
   font-weight: 700;
   letter-spacing: -0.01em;
-  line-height: 1;
+  line-height: 1.1;
+  padding-bottom: 0.08em;
+  background: var(--fade);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 a.brand:hover .mark {
@@ -129,9 +134,16 @@ a.brand:hover .mark {
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  border: 1.5px solid var(--mark-ink);
-  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
-  color: var(--mark-ink);
+  /* A faded ring: the fill sits on the padding box, the fade shows through the border. */
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(
+        color-mix(in oklab, var(--accent) 16%, var(--surface)),
+        color-mix(in oklab, var(--accent) 16%, var(--surface))
+      )
+      padding-box,
+    var(--fade) border-box;
+  color: color-mix(in oklab, var(--accent) 55%, var(--ink));
   box-shadow: 0 0 10px -2px color-mix(in oklab, var(--accent) 45%, transparent);
 }
 

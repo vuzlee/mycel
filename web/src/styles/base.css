@@ -75,7 +75,21 @@
 
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --display: "Source Serif 4", Georgia, serif;
+  --display: "Fraunces", Georgia, serif;
+  /* High contrast, hairline serifs: the greeting only, where the name should stand out. */
+  /* The fade every display heading uses, ink at the top to violet at the foot. */
+  --fade: linear-gradient(
+    180deg,
+    var(--ink) 30%,
+    color-mix(in oklab, var(--accent) 70%, var(--ink))
+  );
+  /* The violet fade the name carries: light at the top, the accent at the foot. */
+  --fade-violet: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--accent) 45%, var(--ink)) 20%,
+    var(--accent)
+  );
+  --greeting: "Playfair Display", "Fraunces", Georgia, serif;
 
   --rail: 272px;
   /* Two content widths, because there are two kinds of content. `--conversation` is prose and

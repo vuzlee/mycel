@@ -260,6 +260,19 @@ export function Chip({ size = 14 }: IconProps) {
   );
 }
 
+/** A model: three nodes joined at a core, the way hyphae meet; the core is filled. */
+export function Model({ size = 14 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8 8 3.6 4M8 8l4.4-4M8 8v5.2" />
+      <circle cx="3.2" cy="3.6" r="1.4" />
+      <circle cx="12.8" cy="3.6" r="1.4" />
+      <circle cx="8" cy="13.6" r="1.4" />
+      <circle cx="8" cy="8" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function Mail({ size = 14 }: IconProps) {
   return (
     <svg {...base(size)}>

@@ -78,7 +78,7 @@ const seedGroups = (project: string | null): SeedGroup[] => [
     name: "Web",
     icon: <Globe />,
     items: [
-      "What changed in the Jira API this year?", // researcher — the web
+      "What changed in our tracker's API this year?", // researcher — the web
       "What are teams using for AI code review now?", // researcher — the web
     ],
   },

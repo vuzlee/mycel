@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { TurnUsage } from "../api";
 import { clock, compact, duration, money } from "../lib/usage";
-import { Check, Chip, Clock, Coin, Copy, Tokens } from "./icons";
+import { Check, Clock, Coin, Copy, Model, Tokens } from "./icons";
 
 interface Props {
   answer: string;
@@ -44,7 +44,7 @@ export function AnswerMeta({ answer, usage }: Props) {
       </button>
       {usage.model_label && (
         <span title={usage.model_ref ?? undefined}>
-          <Chip size={13} />
+          <Model size={13} />
           {usage.model_label}
         </span>
       )}

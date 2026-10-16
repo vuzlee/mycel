@@ -89,7 +89,8 @@
   gap: 8px;
   padding: 9px 16px;
   border-radius: var(--radius-sm);
-  background: var(--accent);
+  /* The accent at the top, a deep violet at the foot. */
+  background: linear-gradient(180deg, var(--accent), color-mix(in oklab, var(--accent) 60%, #000));
   color: #fff;
   font-weight: 500;
   white-space: nowrap;
@@ -100,7 +101,7 @@
 }
 
 .home a.primary:hover {
-  background: var(--accent-hover);
+  filter: brightness(1.08);
   translate: 0 -1px;
   box-shadow: var(--shadow-md);
 }
@@ -129,9 +130,9 @@
   margin: 0 0 8px;
   font-family: var(--display);
   font-size: clamp(1.9rem, 3.4vw, 2.6rem);
-  font-weight: 400;
+  font-weight: 300;
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .home section > h2 em {
@@ -234,9 +235,9 @@
   max-width: 17ch;
   font-family: var(--display);
   font-size: clamp(2.7rem, 6.4vw, 4.6rem);
-  font-weight: 400;
+  font-weight: 300;
   line-height: 1.02;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -270,12 +271,19 @@
 }
 
 .home .ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 14px 22px;
-  border: 1px solid var(--rule-2);
+  /* The violet fade as a ring, the fill left dark: it sits beside the primary, quieter. */
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: color-mix(in oklab, var(--surface) 80%, transparent);
+  background:
+    linear-gradient(var(--ground), var(--ground)) padding-box,
+    var(--fade-violet) border-box;
   font-size: 15.5px;
-  color: var(--ink-2);
+  font-weight: 500;
+  color: var(--ink);
   transition:
     border-color 0.14s ease,
     color 0.14s ease,
@@ -283,7 +291,6 @@
 }
 
 .home .ghost:hover {
-  border-color: var(--accent-line);
-  color: var(--accent);
+  color: color-mix(in oklab, var(--accent) 50%, var(--ink));
   translate: 0 -1px;
 }
