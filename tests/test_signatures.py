@@ -58,7 +58,8 @@ async def _round_trip(provider: Provider) -> dict[str, Any]:
         first = await client.post(URL, json={"messages": [{"role": "user", "content": "q"}]})
         await first.aread()
         await client.post(URL, json=_followup())
-    return provider.bodies[1]["messages"][1]["tool_calls"][0]
+    call: dict[str, Any] = provider.bodies[1]["messages"][1]["tool_calls"][0]
+    return call
 
 
 async def test_a_signature_comes_back_on_the_next_request() -> None:
