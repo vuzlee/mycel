@@ -7,7 +7,7 @@
   z-index: 40;
   inset: 0;
   padding: 24px;
-  background: rgb(10 10 15 / 0.44);
+  background: rgb(11 9 16 / 0.44);
   /* Stated, not inherited: the drawer's media query hides and fades `.scrim`, and a
      confirmation that fades out under it would be a dialog nobody can answer. */
   opacity: 1;
@@ -168,7 +168,7 @@
     position: fixed;
     z-index: 19;
     inset: 0;
-    background: rgb(10 10 15 / 0.44);
+    background: rgb(11 9 16 / 0.44);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.22s ease;

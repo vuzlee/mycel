@@ -3,70 +3,70 @@
    those blur through a ::before backing layer instead. */
 
 :root {
-  --ground: #d7d7eb;
-  --ink: #191928;
-  --accent: #3b47b9;
-  --accent-hover: #3a45a8;
-  --mark-ink: #3b47b9;
-  --select: #3b47b9;
+  --ground: #c7bce6;
+  --ink: #1b162b;
+  --accent: #482eda;
+  --accent-hover: #3d27bb;
+  --mark-ink: #482eda;
+  --select: #482eda;
   --glass: rgb(255 255 255 / 0.55);
   --glass-hover: rgb(255 255 255 / 0.7);
   --glass-strong: rgb(255 255 255 / 0.68);
   --glass-line: rgb(255 255 255 / 0.8);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --glass-shadow: 0 8px 32px rgb(48 50 109 / 0.12);
+  --glass-shadow: 0 8px 32px rgb(55 37 120 / 0.12);
   --glass-blur: blur(6px);
-  --blob-a: rgb(51 67 205 / 0);
-  --blob-b: rgb(79 51 203 / 0);
-  --blob-c: rgb(86 121 213 / 0);
+  --blob-a: rgb(71 43 234 / 0);
+  --blob-b: rgb(125 42 232 / 0);
+  --blob-c: rgb(85 89 237 / 0);
   --radius: 18px;
   --radius-sm: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ground: #0b0b12;
-    --sunk: #11111b;
-    --ink: #d4d5e7;
-    --muted: #6f708d;
-    --faint: #505160;
-    --accent: #5e66d7;
-    --mark-ink: #5e66d7;
-    --select: #3c4ace;
+    --ground: #0c0a13;
+    --sunk: #130f1d;
+    --ink: #c6c0e3;
+    --muted: #7d759b;
+    --faint: #514d63;
+    --accent: #7a5fee;
+    --mark-ink: #7a5fee;
+    --select: #5136ea;
     --select-ink: #ffffff;
     --glass: rgb(255 255 255 / 0.08);
     --glass-hover: rgb(255 255 255 / 0.12);
-    --glass-strong: rgb(26 26 40 / 0.6);
+    --glass-strong: rgb(28 24 42 / 0.6);
     --glass-line: rgb(255 255 255 / 0.18);
     --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.08);
-    --glass-shadow: 0 8px 32px rgb(17 19 46 / 0.35);
+    --glass-shadow: 0 8px 32px rgb(19 12 51 / 0.35);
     --glass-blur: blur(6px);
-    --blob-a: rgb(51 67 205 / 0);
-    --blob-b: rgb(79 51 203 / 0);
-    --blob-c: rgb(86 121 213 / 0);
+    --blob-a: rgb(71 43 234 / 0);
+    --blob-b: rgb(125 42 232 / 0);
+    --blob-c: rgb(85 89 237 / 0);
   }
 }
 
 :root[data-theme="dark"] {
-  --ground: #0b0b12;
-  --sunk: #11111b;
-  --ink: #d4d5e7;
-  --muted: #6f708d;
-  --faint: #505160;
-  --accent: #5e66d7;
-  --mark-ink: #5e66d7;
-  --select: #3c4ace;
+  --ground: #0c0a13;
+  --sunk: #130f1d;
+  --ink: #c6c0e3;
+  --muted: #7d759b;
+  --faint: #514d63;
+  --accent: #7a5fee;
+  --mark-ink: #7a5fee;
+  --select: #5136ea;
   --select-ink: #ffffff;
   --glass: rgb(255 255 255 / 0.08);
   --glass-hover: rgb(255 255 255 / 0.12);
-  --glass-strong: rgb(26 26 40 / 0.6);
+  --glass-strong: rgb(28 24 42 / 0.6);
   --glass-line: rgb(255 255 255 / 0.18);
   --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.08);
-  --glass-shadow: 0 8px 32px rgb(17 19 46 / 0.35);
+  --glass-shadow: 0 8px 32px rgb(19 12 51 / 0.35);
   --glass-blur: blur(6px);
-  --blob-a: rgb(51 67 205 / 0);
-  --blob-b: rgb(79 51 203 / 0);
-  --blob-c: rgb(86 121 213 / 0);
+  --blob-a: rgb(71 43 234 / 0);
+  --blob-b: rgb(125 42 232 / 0);
+  --blob-c: rgb(85 89 237 / 0);
 }
 
 /* ---------------------------------------------------------------- aura */
@@ -191,7 +191,7 @@ body::before {
 /* ---------------------------------------------------------------- title */
 
 .blank h1 em {
-  background: linear-gradient(100deg, #3b47b9, #394498);
+  background: linear-gradient(100deg, #482eda, #3a28a9);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -200,12 +200,12 @@ body::before {
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .blank h1 em {
-    background-image: linear-gradient(100deg, #5e66d7, #3c4ace);
+    background-image: linear-gradient(100deg, #7a5fee, #5136ea);
   }
 }
 
 :root[data-theme="dark"] .blank h1 em {
-  background-image: linear-gradient(100deg, #5e66d7, #3c4ace);
+  background-image: linear-gradient(100deg, #7a5fee, #5136ea);
 }
 
 /* ---------------------------------------------------------------- fallbacks */
@@ -351,9 +351,9 @@ body::before {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #3c4ace, #394498);
+  background: linear-gradient(135deg, #5136ea, #3a28a9);
   color: #fff;
-  box-shadow: 0 6px 20px -6px rgb(60 74 206 / 0.7);
+  box-shadow: 0 6px 20px -6px rgb(81 54 234 / 0.7);
 }
 
 .source-chips {
@@ -494,7 +494,7 @@ body::before {
   border-color: var(--glass-line);
   box-shadow:
     var(--glass-edge),
-    0 6px 18px -10px rgb(17 19 46 / 0.5);
+    0 6px 18px -10px rgb(19 12 51 / 0.5);
 }
 
 .account-menu .me:hover {
@@ -516,7 +516,7 @@ body::before {
 }
 
 .scrim.asking {
-  background: rgb(7 8 14 / 0.55);
+  background: rgb(7 6 15 / 0.55);
 }
 
 /* ---------------------------------------------------------------- knowledge */
@@ -564,11 +564,11 @@ body::before {
   gap: 8px;
   padding: 10px 18px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #3c4ace, #394498);
+  background: linear-gradient(135deg, #5136ea, #3a28a9);
   color: #fff;
   font-size: 14px;
   font-weight: 500;
-  box-shadow: 0 8px 24px -10px rgb(60 74 206 / 0.8);
+  box-shadow: 0 8px 24px -10px rgb(81 54 234 / 0.8);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -576,7 +576,7 @@ body::before {
 
 .kb-upload:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px -10px rgb(60 74 206 / 0.9);
+  box-shadow: 0 12px 28px -10px rgb(81 54 234 / 0.9);
 }
 
 /* One glass strip, four figures split by soft rules. */
@@ -646,7 +646,7 @@ body::before {
   gap: 10px;
   border: 2px dashed var(--accent);
   border-radius: 20px;
-  background: color-mix(in oklab, var(--accent) 14%, rgb(11 11 18 / 0.7));
+  background: color-mix(in oklab, var(--accent) 14%, rgb(12 10 19 / 0.7));
   color: var(--accent);
   pointer-events: none;
 }
@@ -806,8 +806,8 @@ body::before {
 }
 
 .kb-kind[data-kind="docx"] {
-  background: color-mix(in oklab, #729bdc 16%, transparent);
-  color: #97b4e4;
+  background: color-mix(in oklab, #7888f1 16%, transparent);
+  color: #a5aff5;
 }
 
 .kb-open {

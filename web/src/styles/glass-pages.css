@@ -74,9 +74,9 @@
 
 .gate button.primary,
 .picker .primary {
-  background: linear-gradient(135deg, #3c4ace, #394498);
+  background: linear-gradient(135deg, #5136ea, #3a28a9);
   color: #fff;
-  box-shadow: 0 8px 24px -10px rgb(60 74 206 / 0.8);
+  box-shadow: 0 8px 24px -10px rgb(81 54 234 / 0.8);
 }
 
 /* ---------------------------------------------------------------- sign-in */
@@ -515,7 +515,7 @@
 
 .home .cases .bar.late {
   /* The one that slipped: the deep end of the violet, not a second hue. */
-  fill: color-mix(in oklab, var(--accent) 35%, #9a5cf0);
+  fill: color-mix(in oklab, var(--accent) 35%, #cd68ff);
 }
 
 .home .cases .slot {

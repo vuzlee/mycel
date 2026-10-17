@@ -6,34 +6,34 @@
  */
 
 :root {
-  --mark-ink: #464d92;
-  --wordmark: #30316b;
-  --ground: #e4e5e9;
+  --mark-ink: #49399f;
+  --wordmark: #382675;
+  --ground: #cbcbd7;
   --surface: #ffffff;
-  --sunk: #dadae8;
+  --sunk: #cac3e0;
   --raised: #ffffff;
 
-  --ink: #14141b;
+  --ink: #15131c;
   --ink-2: #404147;
   --muted: #595764;
   --faint: #6e6e81;
 
-  --rule: #d0d1dd;
-  --rule-2: #8c91a4;
+  --rule: #cbc7db;
+  --rule-2: #9796b2;
 
-  --accent: #464d92;
-  --accent-hover: #454c84;
+  --accent: #49399f;
+  --accent-hover: #463a8f;
   --accent-ink: #ffffff;
-  --accent-soft: #d5d7f1;
-  --accent-line: #747fdc;
+  --accent-soft: #bdb2f0;
+  --accent-line: #8b7af1;
   /* The accent itself, with the accent's own ink on top. Not a tint of it: the surfaces
      a selection lands on are already tinted — the question bubble is `--accent-soft` —
      and a tint over a tint is not a mark. The pair is the one combination that reads on
      every background the app has. */
-  --select: #464d92;
+  --select: #49399f;
   --select-ink: #ffffff;
   /* A cited quote, marked over text: the accent, thin enough to read through. */
-  --quote-mark: rgb(70 77 146 / 20%);
+  --quote-mark: rgb(73 57 159 / 20%);
 
   --flag: #a63d6b;
   --flag-soft: #fdeef4;
@@ -55,23 +55,23 @@
      the three still separate, because they separate by POSITION ALONG ONE ARC rather than
      by being unrelated colors. Done gets the accent's own hue on purpose: it is the one
      the page is asking you to want. */
-  --todo: #626477;
-  --doing: #586da7;
-  --done: #4b3e8a;
+  --todo: #635e7b;
+  --doing: #595abb;
+  --done: #5c3197;
   --late: #c03c78;
 
   /* The heatmap's five steps, palest to full. Its own ramp rather than opacity over the
      accent: a translucent cell picks up whatever is behind it, and these sit on two
      different surfaces. */
-  --heat-0: #d5d7f1;
-  --heat-1: #c3c9ef;
-  --heat-2: #6e78cc;
-  --heat-3: #5f68bf;
-  --heat-4: #464d92;
+  --heat-0: #bdb2f0;
+  --heat-1: #b5adf5;
+  --heat-2: #8272e1;
+  --heat-3: #7260d5;
+  --heat-4: #49399f;
 
-  --shadow-sm: 0 1px 2px rgb(20 20 27 / 0.05);
-  --shadow-md: 0 4px 16px -4px rgb(20 20 27 / 0.1), 0 1px 3px rgb(20 20 27 / 0.05);
-  --shadow-lg: 0 16px 40px -12px rgb(36 36 67 / 0.18);
+  --shadow-sm: 0 1px 2px rgb(21 19 28 / 0.05);
+  --shadow-md: 0 4px 16px -4px rgb(21 19 28 / 0.1), 0 1px 3px rgb(21 19 28 / 0.05);
+  --shadow-lg: 0 16px 40px -12px rgb(41 31 72 / 0.18);
 
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -109,44 +109,44 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground: #09090e;
-    --surface: #111115;
-    --sunk: #0e0e11;
-    --raised: #17161d;
+    --ground: #0a080f;
+    --surface: #121016;
+    --sunk: #0e0d12;
+    --raised: #18151e;
 
-    --ink: #d7d7e6;
-    --ink-2: #babdc6;
+    --ink: #cac3df;
+    --ink-2: #c9c9d5;
     --muted: #716e81;
     --faint: #565462;
 
-    --rule: #1f1f29;
-    --rule-2: #3a3e47;
+    --rule: #211d2b;
+    --rule-2: #383949;
 
-    --mark-ink: #737cdc;
+    --mark-ink: #8d79f1;
 
-    --wordmark: #666cd8;
-    --accent: #5f69d8;
-    --accent-hover: #c7cdee;
-    --accent-ink: #111218;
-    --accent-soft: #232437;
-    --accent-line: #3f4062;
-    --select: #5f69d8;
-    --select-ink: #111218;
-    --quote-mark: rgb(95 105 216 / 30%);
+    --wordmark: #8369ee;
+    --accent: #7860ef;
+    --accent-hover: #b6b0f2;
+    --accent-ink: #111019;
+    --accent-soft: #25203b;
+    --accent-line: #433968;
+    --select: #7860ef;
+    --select-ink: #111019;
+    --quote-mark: rgb(120 96 239 / 30%);
 
     --flag: #f090b4;
     --flag-soft: #231721;
 
-    --todo: #6a6c83;
-    --doing: #899dd4;
-    --done: #644ac2;
+    --todo: #746e92;
+    --doing: #9394e6;
+    --done: #8c47db;
     --late: #f18ab4;
 
-    --heat-0: #17161f;
-    --heat-1: #2c2d4a;
-    --heat-2: #3f4062;
-    --heat-3: #4b5075;
-    --heat-4: #5f69d8;
+    --heat-0: #191421;
+    --heat-1: #30274f;
+    --heat-2: #433968;
+    --heat-3: #4b447c;
+    --heat-4: #7860ef;
 
     --shadow-sm: none;
     --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);
@@ -156,44 +156,44 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground: #09090e;
-  --surface: #111115;
-  --sunk: #0e0e11;
-  --raised: #17161d;
+  --ground: #0a080f;
+  --surface: #121016;
+  --sunk: #0e0d12;
+  --raised: #18151e;
 
-  --ink: #d7d7e6;
-  --ink-2: #babdc6;
+  --ink: #cac3df;
+  --ink-2: #c9c9d5;
   --muted: #716e81;
   --faint: #565462;
 
-  --rule: #1f1f29;
-  --rule-2: #3a3e47;
+  --rule: #211d2b;
+  --rule-2: #383949;
 
-  --mark-ink: #737cdc;
+  --mark-ink: #8d79f1;
 
-  --wordmark: #666cd8;
-  --accent: #5f69d8;
-  --accent-hover: #c7cdee;
-  --accent-ink: #111218;
-  --accent-soft: #232437;
-  --accent-line: #3f4062;
-  --select: #5f69d8;
-  --select-ink: #111218;
-  --quote-mark: rgb(95 105 216 / 30%);
+  --wordmark: #8369ee;
+  --accent: #7860ef;
+  --accent-hover: #b6b0f2;
+  --accent-ink: #111019;
+  --accent-soft: #25203b;
+  --accent-line: #433968;
+  --select: #7860ef;
+  --select-ink: #111019;
+  --quote-mark: rgb(120 96 239 / 30%);
 
   --flag: #f090b4;
   --flag-soft: #231721;
 
-  --todo: #6a6c83;
-  --doing: #899dd4;
-  --done: #644ac2;
+  --todo: #746e92;
+  --doing: #9394e6;
+  --done: #8c47db;
   --late: #f18ab4;
 
-  --heat-0: #17161f;
-  --heat-1: #2c2d4a;
-  --heat-2: #3f4062;
-  --heat-3: #4b5075;
-  --heat-4: #5f69d8;
+  --heat-0: #191421;
+  --heat-1: #30274f;
+  --heat-2: #433968;
+  --heat-3: #4b447c;
+  --heat-4: #7860ef;
 
   --shadow-sm: none;
   --shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.5);

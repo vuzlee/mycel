@@ -721,3 +721,95 @@ details[open] > summary .chevron {
 .answer-meta .icon-button:hover {
   color: var(--ink);
 }
+
+/* ---------------------------------------------------------------- answer charts */
+
+.answer-chart {
+  margin: 14px 0 6px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md, 12px);
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  max-width: 44rem;
+}
+
+.answer-chart figcaption {
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.chart-bars {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.chart-bars .name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.chart-bars .track {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  overflow: hidden;
+}
+
+.chart-bars .fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--accent) 70%, var(--ink)),
+    var(--accent)
+  );
+}
+
+.chart-bars .value {
+  min-width: 3.5em;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-line svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-line polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.chart-line circle {
+  fill: var(--accent);
+}
+
+.chart-line .axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--faint);
+}

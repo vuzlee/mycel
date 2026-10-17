@@ -514,6 +514,12 @@ a.brand:hover .mark {
   margin-top: 4px;
 }
 
+/* Under the word "Archived", not under its icon: toggle inset, padding, icon and gap. */
+.archived .empty {
+  margin: 4px 18px 2px 40px;
+  font-size: 12.5px;
+}
+
 .archived li > button:not(.more) {
   opacity: 0.75;
 }
