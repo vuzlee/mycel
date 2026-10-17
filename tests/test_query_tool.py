@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools import query as query_tool
-from mycel.agents.tools.query import MAX_ROWS, _limited, _reject, _table, build_toolset
+from mycel.agents.tools.query import MAX_ROWS, _limited, _reject, build_toolset, table
 from mycel.core.principal import Principal
 from mycel.infra.postgres import acl
 from mycel.infra.postgres.engine import async_dsn, dispose_engine, get_engine
@@ -85,15 +85,15 @@ class TestTheRowCap:
 
 class TestTheTable:
     def test_rows_render_as_columns(self) -> None:
-        assert _table(["a", "b"], [(1, 2)]) == "a | b\n1 | 2"
+        assert table(["a", "b"], [(1, 2)]) == "a | b\n1 | 2"
 
     def test_no_rows_says_so(self) -> None:
         """An empty string reads as a failed call, and a model retries what did not fail."""
-        assert _table(["a"], []) == "a\n(no rows)"
+        assert table(["a"], []) == "a\n(no rows)"
 
     def test_null_is_blank_not_the_word_none(self) -> None:
         """Python's `None` in a table would be read back as a value."""
-        assert _table(["a"], [(None,)]) == "a\n"
+        assert table(["a"], [(None,)]) == "a\n"
 
 
 class _AgainstTheDatabase:
@@ -141,12 +141,20 @@ class _AgainstTheDatabase:
     def ctx(self, granted: list[str]) -> Any:
         """Enough of a `RunContext` for `guard_repeat`: deps, and an empty history."""
 
+        class _Kept:
+            def __init__(self) -> None:
+                self.events: list[Any] = []
+
+            async def publish(self, event: Any) -> None:
+                self.events.append(event)
+
         class _Ctx:
             deps = MycelDeps(
                 job_id="job-1",
                 budget=JobBudget("job-1", Decimal("1.00")),
                 settings=AgentSettings(model_spec="local:qwen3-4b"),
                 principal=Principal(id=1, email="someone@example.com"),
+                events=_Kept(),
             )
             messages: list[Any] = []
 

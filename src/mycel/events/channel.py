@@ -2,10 +2,10 @@
 
 from typing import Any, Protocol
 
-from mycel.events.event import TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
+from mycel.events.event import CHART, TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
 
-#: Only tool calls and results are kept; they make an answer checkable.
-_KEPT = frozenset({TOOL_CALLED, TOOL_RETURNED})
+#: Tool calls, results and the charts drawn from them: what makes an answer checkable.
+_KEPT = frozenset({TOOL_CALLED, TOOL_RETURNED, CHART})
 
 
 class EventChannel(Protocol):

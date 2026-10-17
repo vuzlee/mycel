@@ -1,8 +1,11 @@
 /** Turns a flat event list into the tree the conversation renders. */
 
 import type { SequencedEvent } from "./types";
+import type { ChartSpec } from "../components/Chart";
+import { parseChart } from "../components/Chart";
 import {
   ATTEMPT_STARTED,
+  CHART,
   NOTICE,
   TEXT,
   TEXT_DELTA,
@@ -40,7 +43,14 @@ export interface RunMarkItem {
   label: string;
 }
 
-export type Item = ProseItem | ToolItem | RunMarkItem;
+export interface ChartItem {
+  kind: "chart";
+  seq: number;
+  agent: string;
+  spec: ChartSpec;
+}
+
+export type Item = ProseItem | ToolItem | RunMarkItem | ChartItem;
 
 export function buildConversation(events: SequencedEvent[]): Item[] {
   let root: Item[] = [];
@@ -58,6 +68,13 @@ export function buildConversation(events: SequencedEvent[]): Item[] {
       // A retry: the partial answer before it was abandoned, not the start of this one.
       root = [];
       byToolCall.clear();
+      continue;
+    }
+
+    if (event.type === CHART) {
+      // Always at the top level: it belongs to the answer, not to the step that drew it.
+      const spec = parseChart(event.payload.chart);
+      if (spec) root.push({ kind: "chart", seq: event.seq, agent: event.agent, spec });
       continue;
     }
 

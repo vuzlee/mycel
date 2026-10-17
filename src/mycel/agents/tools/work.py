@@ -8,10 +8,12 @@ from typing import Literal
 
 from pydantic_ai import FunctionToolset, RunContext
 
+from mycel.agents.core import charts
 from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.tools.query import read
+from mycel.agents.tools.query import read_rows, table
 from mycel.core.chips import Chip
+from mycel.events.event import CHART, AgentEvent
 
 Period = Literal["this_week", "last_week", "this_month", "last_month"]
 
@@ -90,7 +92,21 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         """
         start, end = _PERIODS[period]
         query = _HOURS_BY_PERSON.format(start=start, end=end)
-        return await read(ctx.deps, query, {"top_issues": max(1, min(top_issues, 20))})
+        columns, rows = await read_rows(
+            ctx.deps, query, {"top_issues": max(1, min(top_issues, 20))}
+        )
+        people: dict[str, float] = {}
+        for row in rows:
+            people.setdefault(str(row[0]), float(row[1]))
+        when = period.replace("_", " ")
+        if len(people) > 1:
+            chart = charts.build("bar", f"Hours per person, {when}", "h", list(people.items()))
+        else:
+            # One person: the split worth seeing is across their issues.
+            issues = [(f"{row[3]} {row[4] or ''}".strip(), float(row[5])) for row in rows]
+            chart = charts.build("bar", f"Hours per issue, {when}", "h", issues)
+        await _draw(ctx, chart)
+        return table(columns, rows)
 
     @toolset.tool(name="late_items")
     async def _late_items(ctx: RunContext[MycelDeps]) -> str:
@@ -98,7 +114,10 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
         Use for "what is late", "what is overdue", "who is behind".
         """
-        return await read(ctx.deps, _LATE)
+        columns, rows = await read_rows(ctx.deps, _LATE)
+        points = [(f"{row[0]} {row[1]}", float(row[6])) for row in rows]
+        await _draw(ctx, charts.build("bar", "Days late", "d", points))
+        return table(columns, rows)
 
     @toolset.tool(name="open_epics")
     async def _open_epics(ctx: RunContext[MycelDeps]) -> str:
@@ -106,6 +125,18 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
 
         Use for "which epics are open", "how much work is left".
         """
-        return await read(ctx.deps, _OPEN_EPICS)
+        columns, rows = await read_rows(ctx.deps, _OPEN_EPICS)
+        points = [(f"{row[0]} {row[1]}", float(row[7])) for row in rows]
+        await _draw(ctx, charts.build("bar", "Open estimate per epic", "h", points))
+        return table(columns, rows)
 
     return toolset
+
+
+async def _draw(ctx: RunContext[MycelDeps], chart: dict[str, object] | None) -> None:
+    """Send the chart straight to the page: drawn from rows, it never passes a model."""
+    if chart is None:
+        return
+    await ctx.deps.events.publish(
+        AgentEvent(agent="chart", type=CHART, payload={"chart": chart}, parent_tool_call_id=None)
+    )

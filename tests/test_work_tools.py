@@ -44,6 +44,9 @@ class TestWorkTools(_AgainstTheDatabase):
 
         out = await _tool("hours_by_person")(ctx, "this_month", 5)
 
+        drawn = [e for e in ctx.deps.events.events if e.type == "chart"]
+        assert drawn and drawn[0].payload["chart"]["labels"] == ["ann", "bob"]
+        assert drawn[0].payload["chart"]["values"] == [7.0, 3.0]
         rows = out.splitlines()
         assert rows[0].startswith("author_name | total_hours | issues | issue_key | title")
         assert rows[1].startswith("ann | 7.00 | 2 | MYC-1 | dashboard | 5.00")

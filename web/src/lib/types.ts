@@ -19,6 +19,8 @@ export const TOOL_CALLED = "tool_called";
 export const TOOL_RETURNED = "tool_returned";
 /** Something about the run itself, e.g. another model answered than the one picked. */
 export const NOTICE = "notice";
+/** A chart drawn from a tool's own rows. */
+export const CHART = "chart";
 
 /** Connection state of a job's stream, as the composer and the header read it. */
 export type StreamState = "idle" | "running" | "done" | "error";

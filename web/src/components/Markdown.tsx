@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Chart, parseChart } from "./Chart";
 
 /** A table is wider than the prose it sits in, so it gets its own scroller rather than
  *  widening the conversation or wrapping every cell to reading width. */
@@ -11,6 +12,21 @@ const COMPONENTS = {
       <table>{children}</table>
     </div>
   ),
+  // A ```chart block the server kept: drawn, not printed. Anything else stays code.
+  pre: ({ children }: { children?: React.ReactNode }) => {
+    const code = Array.isArray(children) ? children[0] : children;
+    const props = (code as { props?: { className?: string; children?: unknown } })?.props;
+    if (props?.className === "language-chart") {
+      try {
+        const spec = parseChart(JSON.parse(String(props.children)));
+        if (spec) return <Chart spec={spec} />;
+      } catch {
+        return null;
+      }
+      return null;
+    }
+    return <pre>{children}</pre>;
+  },
 };
 
 const CITE = /\s?\[c(\d+)\]/g;

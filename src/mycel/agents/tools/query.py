@@ -50,7 +50,7 @@ def _limited(query: str) -> str:
     return f"{stripped}\nLIMIT {MAX_ROWS}"
 
 
-def _table(columns: list[str], rows: Sequence[Sequence[Any]]) -> str:
+def table(columns: list[str], rows: Sequence[Sequence[Any]]) -> str:
     """Rows as a pipe-separated table. Empty says so rather than returning nothing."""
     if not rows:
         return f"{' | '.join(columns)}\n(no rows)"
@@ -71,6 +71,14 @@ class _Failed(Exception):
 
 async def read(deps: MycelDeps, query: str, params: dict[str, Any] | None = None) -> str:
     """One query as the asker: read-only, timed out, scoped to their projects, as a table."""
+    columns, rows = await read_rows(deps, query, params)
+    return table(columns, rows)
+
+
+async def read_rows(
+    deps: MycelDeps, query: str, params: dict[str, Any] | None = None
+) -> tuple[list[str], Sequence[Sequence[Any]]]:
+    """`read`, as columns and rows, for a caller that draws from them too."""
     scope = await _scope(deps)
     async with session_scope() as session:
         # Must be the query's own transaction to protect anything.
@@ -87,7 +95,7 @@ async def read(deps: MycelDeps, query: str, params: dict[str, Any] | None = None
             result = await session.execute(text(query), params or {})
         except Exception as exc:
             raise _Failed(str(exc.__cause__ or exc)) from exc
-        return _table(list(result.keys()), result.fetchall())
+        return list(result.keys()), result.fetchall()
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:

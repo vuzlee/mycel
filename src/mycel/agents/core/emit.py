@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from pydantic_ai import messages
 
+from mycel.agents.core import charts
 from mycel.events.event import (
     TEXT,
     TEXT_DELTA,
@@ -83,6 +84,7 @@ class RunEmitter:
     async def _request(self, request: messages.ModelRequest) -> None:
         for part in request.parts:
             if isinstance(part, messages.ToolReturnPart):
+                self._deps.seen.update(charts.numbers(str(part.content)))
                 await self.emit(
                     TOOL_RETURNED,
                     tool=part.tool_name,

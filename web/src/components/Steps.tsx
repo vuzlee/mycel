@@ -2,6 +2,7 @@
 
 import { hideMarkers } from "../lib/citations";
 import type { Item } from "../lib/buildConversation";
+import { Chart } from "./Chart";
 import { Markdown } from "./Markdown";
 import { Trail } from "./Trail";
 
@@ -18,13 +19,14 @@ interface Props {
 }
 
 const isAnswer = (item: Item): boolean => item.kind === "text" && item.agent === "orchestrator";
+const isChart = (item: Item): boolean => item.kind === "chart";
 
 export function Steps({ items, gaps, live = false, settled = false, durationMs }: Props) {
   const answer = items.filter(isAnswer);
   return (
     <>
       <Trail
-        items={items.filter((i) => !isAnswer(i))}
+        items={items.filter((i) => !isAnswer(i) && !isChart(i))}
         live={live}
         gaps={gaps}
         always={settled}
@@ -32,6 +34,10 @@ export function Steps({ items, gaps, live = false, settled = false, durationMs }
       />
       {answer.map((item) =>
         item.kind === "text" ? <Markdown key={item.seq} body={hideMarkers(item.body)} /> : null,
+      )}
+      {/* Drawn from a tool's rows, under the words that say what they show. */}
+      {items.map((item) =>
+        item.kind === "chart" ? <Chart key={item.seq} spec={item.spec} /> : null,
       )}
     </>
   );
