@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { fetchDashboard, fetchProjects } from "../../api";
+import { fetchDashboard } from "../../api";
+import { useProjects } from "../../lib/useProjects";
 import { WINDOWS } from "./format";
 
 const EVERY_MS = 30_000;
@@ -14,7 +15,7 @@ export function useDashboard() {
   const asked = Number(params.get("days"));
   const window_ = WINDOWS.includes(asked) ? asked : 7;
 
-  const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
+  const projectsQuery = useProjects();
   const projects = projectsQuery.data ?? (projectsQuery.isError ? [] : null);
 
   // The project lives in the URL so a board is a link someone can keep.

@@ -1,6 +1,5 @@
 """`run_sql`, against a real Postgres — never a fake."""
 
-import os
 from collections.abc import AsyncIterator
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -21,14 +20,9 @@ from mycel.infra.postgres import acl
 from mycel.infra.postgres.engine import async_dsn, dispose_engine, get_engine
 from mycel.infra.postgres.models import Base
 from mycel.llm.budget import JobBudget
+from tests.fakes import DSN, SCHEMAS, needs_postgres
 
 pytestmark = pytest.mark.anyio
-
-DSN = os.environ.get("DATABASE_URL", "")
-needs_postgres = pytest.mark.skipif(not DSN, reason="no test database is reachable")
-
-
-SCHEMAS = ("bronze", "silver", "gold", "app")
 
 
 class TestWhatIsRefusedBeforeTheDatabase:

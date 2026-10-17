@@ -7,9 +7,9 @@ from pydantic import BaseModel
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.core.usage import TurnUsage
 from mycel.infra.redis import _kv
 from mycel.infra.redis.client import get_client
-from mycel.llm.usage import TurnUsage
 
 log = get_logger(__name__)
 

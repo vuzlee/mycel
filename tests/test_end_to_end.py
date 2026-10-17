@@ -21,10 +21,10 @@ from mycel.queue.connection import channel, close_connection
 from mycel.queue.consumer import run_worker
 from mycel.services import signin_code
 from mycel.worker import HANDLER
+from tests.fakes import DSN, SCHEMAS
 
 pytestmark = pytest.mark.anyio
 
-DSN = os.environ.get("DATABASE_URL", "")
 BROKER = os.environ.get("RABBITMQ_URL", "")
 CACHE = os.environ.get("REDIS_URL", "")
 
@@ -32,8 +32,6 @@ needs_everything = pytest.mark.skipif(
     not (DSN and BROKER and CACHE), reason="needs postgres, rabbitmq and redis together"
 )
 
-
-SCHEMAS = ("bronze", "silver", "gold", "app")
 
 EMAIL = "e2e@example.com"
 ANSWER = "Two stories shipped and one is overdue."

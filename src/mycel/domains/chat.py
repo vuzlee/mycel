@@ -18,6 +18,7 @@ from mycel.core.chips import Chip
 from mycel.core.config import get_settings, zone_of
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
+from mycel.core.usage import TurnUsage
 from mycel.domains import chat_cache
 from mycel.domains.chat_knowledge import (
     answer_without_model,
@@ -35,7 +36,6 @@ from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import answers, budgets, citations, claims, results
 from mycel.infra.redis.streams import RedisEventChannel
-from mycel.llm.usage import TurnUsage
 from mycel.observability.metrics import jobs_total
 from mycel.observability.turns import chat_turn, observe
 from mycel.queue.job import Job

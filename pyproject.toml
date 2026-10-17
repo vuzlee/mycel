@@ -105,6 +105,8 @@ disable_error_code = ["attr-defined"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Name every skip: a run without the stores skips the database tests, and should say so.
+addopts = "-rs"
 
 [tool.coverage.run]
 source = ["src/mycel"]

@@ -5,7 +5,8 @@ import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Chip, SourceRef } from "../api";
-import { askChat, fetchModels, fetchProjects } from "../api";
+import { askChat, fetchModels } from "../api";
+import { useProjects } from "../lib/useProjects";
 import { Answer } from "../components/Answer";
 import { buildConversation } from "../lib/buildConversation";
 import type { ComposerHandle } from "../components/Composer";
@@ -97,7 +98,7 @@ export function Ask() {
     const about = params.get("about");
     return about ? { text: `In ${about}, `, key: "new" } : null;
   });
-  const { data: projects } = useQuery({ queryKey: ["projects"], queryFn: fetchProjects });
+  const { data: projects } = useProjects();
   const firstProject = projects?.[0] ?? null;
   const groups = useMemo(() => seedGroups(firstProject), [firstProject]);
   const [refused, setRefused] = useState<string | null>(null);

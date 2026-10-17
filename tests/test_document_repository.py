@@ -1,6 +1,5 @@
 """Document SQL against a real Postgres: ownership, busy, chunk reads, the watchdog."""
 
-import os
 from datetime import timedelta
 
 import pytest
@@ -11,10 +10,11 @@ from mycel.infra.postgres import documents as tables
 from mycel.infra.postgres.models import Document
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.repositories.identity import IdentityRepository
+from tests.fakes import needs_postgres
 
 pytestmark = [
     pytest.mark.anyio,
-    pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="no test database"),
+    needs_postgres,
 ]
 
 

@@ -7,12 +7,12 @@ from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mycel.core.usage import TurnUsage
 from mycel.infra.postgres.models import (
     Conversation,
     Turn,
 )
 from mycel.infra.postgres.repositories._sql import rowcount, to_row
-from mycel.llm.usage import TurnUsage
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,8 @@ from decimal import Decimal
 from mycel.core.config import get_settings
 from mycel.infra.redis._kv import key
 from mycel.infra.redis.client import get_client
+
+# JobBudget stays in llm (it builds pydantic-ai limits); storing it is allowed.
 from mycel.llm.budget import JobBudget
 
 #: Atomically keep the larger total and refresh the TTL; compared as float, stored as given.

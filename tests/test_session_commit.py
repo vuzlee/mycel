@@ -1,7 +1,6 @@
 """A request sent the instant sign-in returns is already signed in."""
 
 import asyncio
-import os
 import threading
 import time
 from collections.abc import Iterator
@@ -19,10 +18,9 @@ from mycel.infra.postgres.models import Base
 from mycel.infra.redis.client import close_clients
 from mycel.services import signin_code
 from tests.conftest import _free_port
+from tests.fakes import DSN, SCHEMAS, needs_postgres
 
-DSN = os.environ.get("DATABASE_URL", "")
-pytestmark = pytest.mark.skipif(not DSN, reason="no test database")
-SCHEMAS = ("bronze", "silver", "gold", "app")
+pytestmark = needs_postgres
 
 
 async def _schema(create: bool) -> None:

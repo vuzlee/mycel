@@ -8,7 +8,8 @@ from sqlalchemy import text
 
 from mycel.agents.tools.work import build_toolset
 from mycel.infra.postgres.engine import get_engine
-from tests.test_query_tool import _AgainstTheDatabase, needs_postgres
+from tests.fakes import needs_postgres
+from tests.test_query_tool import _AgainstTheDatabase
 
 pytestmark = pytest.mark.anyio
 
