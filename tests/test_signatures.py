@@ -91,3 +91,17 @@ async def test_a_provider_without_signatures_is_left_alone() -> None:
         await (await client.post(URL, json={"messages": []})).aread()
         await client.post(URL, json=_followup())
     assert b"extra_content" not in seen[1]
+
+
+async def test_a_list_shaped_error_reaches_the_caller_unchanged() -> None:
+    error = [{"error": {"code": 400, "message": "bad request"}}]
+
+    def failing(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(400, json=error)
+
+    transport = SignatureTransport(httpx2.MockTransport(failing), {})
+    async with httpx2.AsyncClient(transport=transport) as client:
+        response = await client.post(URL, json={"messages": []})
+        body = await response.aread()
+    assert response.status_code == 400
+    assert json.loads(body) == error
