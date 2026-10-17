@@ -15,6 +15,9 @@ from mycel.agents.tools.query import read_rows, table
 from mycel.core.chips import Chip
 from mycel.events.event import CHART, AgentEvent
 
+#: Tools whose rows are already the answer; the analyst stops querying after one.
+READY_READS = frozenset({"hours_by_person", "late_items", "open_epics"})
+
 Period = Literal["this_week", "last_week", "this_month", "last_month"]
 
 #: Start and end of each period, in the database's clock.

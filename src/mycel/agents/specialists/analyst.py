@@ -41,14 +41,10 @@ class Analysis(BaseModel):
     )
 
 
-#: Reads whose rows are already the answer.
-READY_READS = frozenset({"hours_by_person", "late_items", "open_epics"})
-
-
 def unanswered(ctx: RunContext[MycelDeps], _: ToolDefinition) -> bool:
     """False once a ready read returned: weaker models re-check it call by call otherwise."""
     return not any(
-        isinstance(part, ToolReturnPart) and part.tool_name in READY_READS
+        isinstance(part, ToolReturnPart) and part.tool_name in work.READY_READS
         for message in ctx.messages
         for part in message.parts
     )

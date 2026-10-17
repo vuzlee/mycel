@@ -105,7 +105,7 @@ def _record_usage(
         "run finished",
         extra={
             "job_id": deps.job_id,
-            "model_spec": name,
+            "model": name,
             "spent_usd": str(deps.budget.spent_usd),
         },
     )
