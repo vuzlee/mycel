@@ -35,6 +35,11 @@ class ChatRequest(BaseModel):
         default=None,
         description="Sources for this turn; empty means no tools, absent means every tool.",
     )
+    timezone: str | None = Field(
+        default=None,
+        max_length=64,
+        description="The asker's IANA zone, e.g. Asia/Ho_Chi_Minh, from their browser.",
+    )
     model_ref: str | None = Field(
         default=None, max_length=200, description="Which model answers; absent is the default."
     )
@@ -85,6 +90,7 @@ async def create_chat(
         body.conversation_id,
         chips=[str(c) for c in body.chips] if body.chips is not None else None,
         model_ref=body.model_ref,
+        timezone=body.timezone,
     )
     log.info("chat queued", extra={"job_id": job_id, "conversation_id": conversation_id})
     return AcceptedResponse(job_id=job_id, conversation_id=conversation_id)

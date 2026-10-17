@@ -204,6 +204,16 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def zone_of(name: object) -> ZoneInfo:
+    """A browser's IANA zone name, or UTC when it is missing or not one the system knows."""
+    if isinstance(name, str) and name:
+        try:
+            return ZoneInfo(name)
+        except (ZoneInfoNotFoundError, ValueError):
+            pass
+    return ZoneInfo("UTC")
+
+
 def team_zone() -> ZoneInfo:
     """The team's zone, falling back to UTC if the name is not one the system knows."""
     try:

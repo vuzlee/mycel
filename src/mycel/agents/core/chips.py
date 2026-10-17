@@ -29,8 +29,10 @@ def missing_sources_note(chips: "frozenset[Chip] | None") -> str:
     off = [label for key, label in REACHES.items() if key not in chips]
     # An earlier turn may have said a source was off; this turn's chips are what count.
     note = (
-        f"Switched on for this turn: {', '.join(on)}. Use them even if an earlier answer "
-        "in this conversation said they were off. "
+        f"Switched on for this turn: {', '.join(on)}. A question that needs one of these "
+        "goes to the agent that covers it; call it. Never say a switched-on source is off "
+        "or not connected unless that agent has just said so in this turn, whatever "
+        "earlier answers in this conversation said. "
         if on
         else ""
     )

@@ -292,7 +292,7 @@ class TestTheGoogleRound:
         assert query["login_hint"] == ["ann@example.com"]
         assert query["scope"] == ["openid email"]
         assert "prompt" not in query
-        assert query["redirect_uri"] == ["https://mycel.example.com/auth/google/signin/callback"]
+        assert query["redirect_uri"] == ["https://mycel.example.com/auth/google/callback"]
 
     async def test_no_hint_shows_the_chooser(
         self, google: dict[str, Any], redis: CodeRedis
@@ -441,7 +441,7 @@ class TestOverHttp:
         google["claims"] = {"nonce": query["nonce"][0], "sub": "g-e2e", "email": "e2e@example.com"}
 
         back = client.get(
-            "/auth/google/signin/callback",
+            "/auth/google/callback",
             params={"code": "c", "state": query["state"][0]},
             follow_redirects=False,
         )
@@ -452,8 +452,9 @@ class TestOverHttp:
 
     def test_a_cancelled_google_sign_in_comes_back_to_login(self, client: TestClient) -> None:
         response = client.get(
-            "/auth/google/signin/callback",
-            params={"error": "access_denied"},
+            "/auth/google/callback",
+            # Google sends the state back with the error, so the round is still a sign-in.
+            params={"error": "access_denied", "state": "signin.abc"},
             follow_redirects=False,
         )
 
@@ -468,7 +469,7 @@ class TestOverHttp:
         client.cookies.clear()
 
         back = client.get(
-            "/auth/google/signin/callback",
+            "/auth/google/callback",
             params={"code": "c", "state": state},
             follow_redirects=False,
         )
@@ -665,3 +666,12 @@ class TestTheGoogleRoutesOverHttp:
     def test_signed_out_learns_nothing(self, client: TestClient) -> None:
         assert client.get("/auth/google").status_code == 401
         assert client.delete("/auth/google").status_code == 401
+
+
+def test_one_callback_tells_a_sign_in_from_a_connection() -> None:
+    """One redirect uri in the Google console: the state says which round came back."""
+    from mycel.services import google_signin
+
+    assert google_signin.is_signin("signin.abc")
+    assert not google_signin.is_signin("abc")
+    assert not google_signin.is_signin(None)

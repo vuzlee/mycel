@@ -1,10 +1,13 @@
 """Agent that reads the web, mail, calendar and documents, and cites every claim."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
-from pydantic_ai import ModelRetry, RunContext
+from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.toolsets import AbstractToolset
 
 from mycel.agents.core.base import BaseAgent
+from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
 from mycel.agents.tools import calendar, mail, rag_search, web_search
@@ -40,12 +43,40 @@ class Research(BaseModel):
         default_factory=list,
         description="What was asked but could not be found. An empty search is a finding.",
     )
+    proposed: str | None = Field(
+        default=None,
+        description=(
+            "A drafted change waiting for a yes, e.g. a calendar event: the read-back "
+            "sentence `draft_event` returned, word for word, draft_id included. Null when "
+            "nothing was drafted."
+        ),
+    )
+    booked: str | None = Field(
+        default=None,
+        description=(
+            "What `confirm_event` returned when a booking went through, word for word, "
+            "link included. Null when nothing was booked this turn."
+        ),
+    )
 
 
 class Researcher(BaseAgent[Research]):
     name = "researcher"
     instructions = load("researcher")
     output_type = Research
+
+    @classmethod
+    def build(cls, settings: AgentSettings | None = None) -> Agent[MycelDeps, Research]:
+        agent = super().build(settings)
+
+        @agent.instructions
+        def now(ctx: RunContext[MycelDeps]) -> str:
+            # "Now" and "tonight" need a clock, in the asker's zone; without one the model
+            # guesses a date.
+            at = datetime.now(ctx.deps.tz)
+            return f"It is {at:%A %d %B %Y, %H:%M} in {ctx.deps.tz.key}, the asker's time zone."
+
+        return agent
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:

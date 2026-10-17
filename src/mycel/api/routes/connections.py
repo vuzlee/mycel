@@ -3,15 +3,16 @@
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Protocol
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Cookie, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from mycel.api.dependencies import CurrentUser, MaybeUser
+from mycel.api.dependencies import CurrentUser, Db, MaybeUser
+from mycel.api.routes.auth import OIDC_COOKIE, finish_google_signin
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
-from mycel.services import access, enqueue, google_oauth, jira_oauth
+from mycel.services import access, enqueue, google_oauth, google_signin, jira_oauth
 from mycel.services.permission import readable_projects
 
 router = APIRouter(prefix="/auth", tags=["connections"])
@@ -60,13 +61,17 @@ async def start_google_connection(
 
 
 @router.get("/google/callback")
-async def finish_google_connection(
+async def finish_google(
     user: MaybeUser,
+    session: Db,
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
+    mycel_oidc: Annotated[str | None, Cookie(alias=OIDC_COOKIE)] = None,
 ) -> RedirectResponse:
-    """Where Google sends the browser back. Connects the account, then returns to the app."""
+    """The one Google redirect uri: a sign-in or a connection, told apart by the state."""
+    if google_signin.is_signin(state):
+        return await finish_google_signin(session, code, state, error, mycel_oidc)
     return await _finish_connect("google", google_oauth.connect, user, code, state, error)
 
 

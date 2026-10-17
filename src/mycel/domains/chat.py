@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
-from mycel.agents.core import runner
+from mycel.agents.core import charts, runner
 from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
@@ -15,7 +15,7 @@ from mycel.agents.core.own_endpoint import OwnEndpoint
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.core.chips import Chip
-from mycel.core.config import get_settings
+from mycel.core.config import get_settings, zone_of
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
 from mycel.domains import chat_cache
@@ -27,7 +27,7 @@ from mycel.domains.chat_knowledge import (
 )
 from mycel.domains.chat_model import model_settings, own_endpoint
 from mycel.events.channel import EventChannel, RecordingChannel
-from mycel.events.event import ATTEMPT_STARTED, NOTICE, AgentEvent
+from mycel.events.event import ATTEMPT_STARTED, CHART, NOTICE, AgentEvent
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
 )
@@ -169,7 +169,12 @@ async def _replay(turn: _Turn) -> bool:
     if cached is None:
         return False
     turn.answer = cached["answer"]
-    await _finish(turn.job, turn.answer, turn.question, Decimal("0"), [], [], turn.usage())
+    shown = list(cached.get("charts", []))
+    for step in shown:
+        await turn.recorder.publish(
+            AgentEvent(agent=step["agent"], type=CHART, payload=step["payload"])
+        )
+    await _finish(turn.job, turn.answer, turn.question, Decimal("0"), shown, [], turn.usage())
     log.info("chat answered from cache", extra={"job_id": turn.job.job_id})
     return True
 
@@ -196,6 +201,9 @@ async def _settle(turn: _Turn, answer: str) -> None:
             "tool calls past the ceiling were not kept",
             extra={"job_id": job.job_id, "dropped": turn.recorder.dropped},
         )
+    # A chart the model wrote stays only if every value it plots came back from a tool.
+    drawn = any(s.get("type") == CHART for s in turn.recorder.steps)
+    answer = charts.settle(answer, getattr(turn.deps, "seen", set()), drawn)
     sources: list[dict[str, Any]] = []
     if found is not None:
         answer, sources = cite(job, answer, found)
@@ -214,7 +222,10 @@ async def _settle(turn: _Turn, answer: str) -> None:
                 version,
                 chat_cache.writer(turn.model_ref),
                 turn.question,
-                {"answer": answer},
+                {
+                    "answer": answer,
+                    "charts": [s for s in turn.recorder.steps if s.get("type") == CHART],
+                },
             )
     spent = turn.deps.budget.spent_usd
     await citations.store(job.job_id, turn.principal.id, sources)
@@ -263,6 +274,7 @@ async def _deps(
         principal=principal,
         chips=chips,
         own=own,
+        tz=zone_of(job.payload.get("timezone")),
     )
 
 

@@ -7,7 +7,6 @@ from zoneinfo import ZoneInfo
 
 import httpx2
 
-from mycel.core.config import get_settings, team_zone
 from mycel.core.logging import get_logger
 from mycel.infra.http import shared
 from mycel.sources import GOOGLE_TIMEOUT_SECONDS, SourceError
@@ -34,8 +33,8 @@ class Event:
     all_day: bool = False
 
 
-async def list_events(token: str, hours: int) -> list[Event]:
-    """Events from now to `hours` ahead, repeating events expanded."""
+async def list_events(token: str, hours: int, tz: ZoneInfo) -> list[Event]:
+    """Events from now to `hours` ahead, repeating events expanded, read in `tz`."""
     now = datetime.now(UTC)
     params = {
         "timeMin": now.isoformat(),
@@ -43,32 +42,25 @@ async def list_events(token: str, hours: int) -> list[Event]:
         "singleEvents": "true",
         "orderBy": "startTime",
         "maxResults": str(MAX_EVENTS),
-        "timeZone": get_settings().timezone,
+        "timeZone": tz.key,
     }
     payload = await _call(token, "GET", f"/calendars/{CALENDAR}/events", params=params)
     items = payload.get("items", [])
-    return [_event(item) for item in items if isinstance(item, dict)]
+    return [_event(item, tz) for item in items if isinstance(item, dict)]
 
 
-async def create_event(token: str, summary: str, starts_at: datetime, ends_at: datetime) -> Event:
-    """Put one event on this person's calendar and return it, with its link."""
-    zone = zone_name()
+async def create_event(
+    token: str, summary: str, starts_at: datetime, ends_at: datetime, tz: ZoneInfo
+) -> Event:
+    """Put one event on this person's calendar, in their zone, and return it with its link."""
+    zone = tz.key
     body = {
         "summary": summary,
         "start": {"dateTime": starts_at.isoformat(), "timeZone": zone},
         "end": {"dateTime": ends_at.isoformat(), "timeZone": zone},
     }
     payload = await _call(token, "POST", f"/calendars/{CALENDAR}/events", json=body)
-    return _event(payload)
-
-
-def zone() -> ZoneInfo:
-    return team_zone()
-
-
-def zone_name() -> str:
-    """The team's zone as an IANA name, which is what Google wants in `timeZone`."""
-    return get_settings().timezone
+    return _event(payload, tz)
 
 
 async def _call(
@@ -97,24 +89,24 @@ async def _call(
     return payload
 
 
-def _event(item: dict[str, Any]) -> Event:
+def _event(item: dict[str, Any], tz: ZoneInfo) -> Event:
     """One Google event object as an `Event`; a `date` means all-day."""
     start = item.get("start", {}) or {}
     end = item.get("end", {}) or {}
     all_day = "date" in start
     return Event(
         summary=str(item.get("summary") or "(no title)"),
-        starts_at=_when(start),
-        ends_at=_when(end),
+        starts_at=_when(start, tz),
+        ends_at=_when(end, tz),
         link=str(item.get("htmlLink") or ""),
         all_day=all_day,
     )
 
 
-def _when(edge: dict[str, Any]) -> datetime:
-    """Google's start or end, in the team's zone.
+def _when(edge: dict[str, Any], tz: ZoneInfo) -> datetime:
+    """Google's start or end, in the asker's zone.
 
-    Read into the team's zone rather than the host's: a server in UTC would otherwise print
+    Read into the asker's zone rather than the host's: a server in UTC would otherwise print
     a three o'clock meeting as eight in the morning, which is exactly the class of mistake
     this module carries `timeZone` everywhere to avoid.
     """
@@ -123,6 +115,6 @@ def _when(edge: dict[str, Any]) -> datetime:
         raise SourceError("the calendar returned an event with no start")
     moment = datetime.fromisoformat(raw)
     if moment.tzinfo is None:
-        # An all-day entry is a bare date: midnight in the team's zone.
-        return moment.replace(tzinfo=zone())
-    return moment.astimezone(zone())
+        # An all-day entry is a bare date: midnight in the asker's zone.
+        return moment.replace(tzinfo=tz)
+    return moment.astimezone(tz)

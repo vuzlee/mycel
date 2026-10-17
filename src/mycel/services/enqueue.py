@@ -79,6 +79,7 @@ def chat_job(
     previous: str,
     context: str,
     model_ref: str,
+    timezone: str | None = None,
 ) -> Job:
     """History rides in the payload, read once here. A model rides as its ref, never a key."""
     return Job(
@@ -92,6 +93,7 @@ def chat_job(
             "previous": previous,
             "context": context,
             "model_ref": model_ref,
+            "timezone": timezone,
         },
     )
 

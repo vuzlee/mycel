@@ -382,6 +382,8 @@ export const askChat = (
     conversation_id: conversationId ?? null,
     chips,
     model_ref: modelRef ?? null,
+    // The reader's own zone: "now" and a booking mean their clock, not the server's.
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }).then((v) => shaped<Accepted>(v, ACCEPTED, "accepted run"));
 
 /** 404 now means genuinely no such run: past its TTL the server reads the kept row. */

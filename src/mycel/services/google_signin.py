@@ -1,7 +1,8 @@
 """Sign in with Google (OpenID Connect): only `openid email`, nothing kept from Google.
 
 Separate from `google_oauth`, which connects Gmail and Calendar for someone already in.
-Same OAuth client; its own callback, so the two rounds never take each other's state.
+Same client and one callback: a sign-in's state starts with `STATE_PREFIX`, which is how the
+callback tells the two rounds apart, so the console holds one redirect uri, not two.
 """
 
 import secrets
@@ -17,11 +18,12 @@ from mycel.core.logging import get_logger
 from mycel.infra.redis._kv import key, put, take
 from mycel.infra.redis.client import get_client
 from mycel.services import oauth
-from mycel.services.google_oauth import AUTH_URL, TOKEN_URL
+from mycel.services.google_oauth import AUTH_URL, CALLBACK_PATH, TOKEN_URL
 
 log = get_logger(__name__)
 
-CALLBACK_PATH = "/auth/google/signin/callback"
+#: Marks a sign-in round's state, so the shared callback can tell it from a connection.
+STATE_PREFIX = "signin."
 JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 ISSUERS = ("https://accounts.google.com", "accounts.google.com")
 
@@ -51,7 +53,7 @@ async def start(hint: str | None, next_path: str | None) -> tuple[str, str]:
     client_id = get_settings().google_client_id
     if not configured() or client_id is None:
         raise SignInError("this deployment has no Google client")
-    state = secrets.token_urlsafe(32)
+    state = STATE_PREFIX + secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     await put(
         await get_client(),
@@ -128,6 +130,11 @@ def verify(id_token: str, client_id: str) -> dict[str, object]:
 def signing_key(id_token: str) -> Any:
     """Google's public key for this token, from its JWKS (cached an hour)."""
     return _jwks.get_signing_key_from_jwt(id_token).key
+
+
+def is_signin(state: str | None) -> bool:
+    """Whether a round coming back to the shared callback is a sign-in."""
+    return bool(state and state.startswith(STATE_PREFIX))
 
 
 def safe_next(next_path: str | None) -> str:

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from zoneinfo import ZoneInfo
 
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.own_endpoint import OwnEndpoint
@@ -25,6 +26,13 @@ class MycelDeps:
 
     #: Set when the turn runs on a person's own model; every agent of the run uses it.
     own: OwnEndpoint | None = None
+
+    #: The asker's zone, from their browser; what "now", "tonight" and a booking mean.
+    tz: ZoneInfo = field(default_factory=lambda: ZoneInfo("UTC"))
+
+    #: Every number a tool returned this turn, whole results not previews: what a chart
+    #: the model writes is checked against.
+    seen: set[float] = field(default_factory=set)
 
     @property
     def user_id(self) -> int | None:

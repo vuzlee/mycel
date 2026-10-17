@@ -11,7 +11,8 @@ def test_no_chips_means_no_note() -> None:
 def test_a_source_on_now_overrules_an_earlier_off() -> None:
     note = missing_sources_note(frozenset({Chip.JIRA}))
     assert note.startswith("Switched on for this turn: your team's Jira.")
-    assert "even if an earlier answer" in note
+    assert "whatever earlier answers in this conversation said" in note
+    assert "Never say a switched-on source is off" in note
     assert "Switched off for this turn: your mail, your calendar, the web." in note
 
 

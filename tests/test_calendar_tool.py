@@ -1,8 +1,9 @@
 """The three calendar tools, and the draft store under two of them."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx2
 import pytest
@@ -18,10 +19,9 @@ from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
 from mycel.services.google_oauth import NotConnected
-from mycel.sources import google_calendar
 from tests.fakes import FakeRedis
 
-pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("bangkok", "google_token")]
+pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("google_token")]
 
 _REAL_CLIENT = httpx2.AsyncClient
 
@@ -54,7 +54,7 @@ def _event(hour: int, summary: str = "review") -> dict[str, Any]:
 
 def _soon() -> str:
     """A start that is tomorrow whenever the suite runs, since `_parse` refuses the past."""
-    return (datetime.now(google_calendar.zone()) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    return (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
 
 
 @pytest.fixture(autouse=True)
@@ -79,6 +79,8 @@ def _ctx(principal: Principal | None = ASKER) -> Any:
             budget=JobBudget("job-1", Decimal("1.00")),
             settings=AgentSettings(model_spec="local:qwen3-4b"),
             principal=principal,
+            # The asker's zone, as their browser sent it.
+            tz=ZoneInfo("Asia/Bangkok"),
         )
         messages: list[Any] = []
 
@@ -114,7 +116,7 @@ class TestDraftingWritesNothing:
         self, tools: dict[str, Any], ctx: Any
     ) -> None:
         """A weekday name is what makes a wrong day catchable; two ISO dates look alike."""
-        starts = datetime.now(google_calendar.zone()) + timedelta(days=1)
+        starts = datetime.now(UTC) + timedelta(days=1)
         out = await tools["draft_event"](
             ctx, summary="review", starts_at=starts.strftime("%Y-%m-%dT%H:%M"), minutes=45
         )
@@ -297,3 +299,23 @@ class TestWithNoAccountConnected:
         monkeypatch.setattr(calendar_tool, "token_for", _refuse)
 
         assert await tools["read_events"](ctx, hours=24) == CONNECT
+
+
+def test_a_zone_the_browser_sends_is_used_and_a_bad_one_is_utc() -> None:
+    """Each asker's own clock: no zone lives in config for them."""
+    from mycel.core.config import zone_of
+
+    assert zone_of("Asia/Ho_Chi_Minh").key == "Asia/Ho_Chi_Minh"
+    assert zone_of("Not/AZone").key == "UTC"
+    assert zone_of(None).key == "UTC"
+
+
+async def test_a_draft_for_now_agreed_to_a_minute_later_still_books(
+    tools: dict[str, Any], ctx: Any
+) -> None:
+    """ "Now" drafted, "yes" a minute on: still now, not a time in the past."""
+    a_minute_ago = (datetime.now(ZoneInfo("Asia/Bangkok")) - timedelta(minutes=1)).strftime(
+        "%Y-%m-%dT%H:%M"
+    )
+    out = await tools["draft_event"](ctx, summary="sync", starts_at=a_minute_ago)
+    assert out.startswith("Not booked yet.")

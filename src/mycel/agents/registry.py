@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo
 
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
@@ -52,6 +53,7 @@ def build_deps(
     principal: Principal | None = None,
     chips: "frozenset[Chip] | None" = None,
     own: OwnEndpoint | None = None,
+    tz: ZoneInfo | None = None,
 ) -> MycelDeps:
     """Make the deps shared by every run in one job; call once per job so the budget is shared.
 
@@ -65,4 +67,5 @@ def build_deps(
         principal=principal,
         chips=chips,
         own=own,
+        tz=tz or ZoneInfo("UTC"),
     )

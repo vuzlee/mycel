@@ -57,6 +57,7 @@ async def request_chat(
     conversation_id: int | None = None,
     chips: list[str] | None = None,
     model_ref: str | None = None,
+    timezone: str | None = None,
 ) -> tuple[str, int]:
     """Queue a question; returns the job id and its conversation (new if none is given)."""
     model_ref = await models.usable(user_id, model_ref)
@@ -87,6 +88,7 @@ async def request_chat(
             previous=previous,
             context=context,
             model_ref=model_ref,
+            timezone=timezone,
         )
         await repo.add_turn(
             conversation.id, job.job_id, question, status="queued", model_ref=model_ref

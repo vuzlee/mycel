@@ -2,12 +2,16 @@
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx2
 import pytest
 
 import mycel.sources.google_calendar as google_calendar
 from mycel.sources import SourceError
+
+#: The asker's zone, from their browser.
+TZ = ZoneInfo("Asia/Bangkok")
 
 TOKEN = "access-token"
 
@@ -55,7 +59,7 @@ class TestReadingAWeek:
         sink: list[httpx2.Request] = []
         monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
 
-        await google_calendar.list_events(TOKEN, hours=12)
+        await google_calendar.list_events(TOKEN, hours=12, tz=TZ)
         asked = datetime.fromisoformat(sink[0].url.params["timeMax"])
         assert timedelta(hours=11) < asked - datetime.now(UTC) <= timedelta(hours=12)
 
@@ -64,7 +68,7 @@ class TestReadingAWeek:
         sink: list[httpx2.Request] = []
         monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
 
-        await google_calendar.list_events(TOKEN, hours=24)
+        await google_calendar.list_events(TOKEN, hours=24, tz=TZ)
         assert sink[0].url.params["singleEvents"] == "true"
         assert sink[0].url.params["orderBy"] == "startTime"
 
@@ -72,16 +76,16 @@ class TestReadingAWeek:
         sink: list[httpx2.Request] = []
         monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, {"items": []}))
 
-        await google_calendar.list_events(TOKEN, hours=24)
+        await google_calendar.list_events(TOKEN, hours=24, tz=TZ)
         assert sink[0].url.params["timeZone"] == "Asia/Bangkok"
 
-    async def test_an_event_is_read_in_the_teams_zone(
+    async def test_an_event_is_read_in_the_askers_zone(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Nine in Bangkok must read as nine, not as two in the morning on a UTC host."""
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [_item(hour=9)]}))
 
-        events = await google_calendar.list_events(TOKEN, hours=24)
+        events = await google_calendar.list_events(TOKEN, hours=24, tz=TZ)
         assert events[0].starts_at.hour == 9
         assert events[0].summary == "standup"
         assert events[0].link.startswith("https://calendar.google.com/")
@@ -92,7 +96,7 @@ class TestReadingAWeek:
         """
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [_item(all_day=True)]}))
 
-        events = await google_calendar.list_events(TOKEN, hours=48)
+        events = await google_calendar.list_events(TOKEN, hours=48, tz=TZ)
         assert events[0].all_day is True
         assert events[0].starts_at.day == 2
 
@@ -104,14 +108,16 @@ class TestReadingAWeek:
         del item["summary"]
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [item]}))
 
-        assert (await google_calendar.list_events(TOKEN, hours=24))[0].summary == "(no title)"
+        assert (await google_calendar.list_events(TOKEN, hours=24, tz=TZ))[
+            0
+        ].summary == "(no title)"
 
     async def test_an_empty_calendar_is_an_empty_list(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {}))
 
-        assert await google_calendar.list_events(TOKEN, hours=24) == []
+        assert await google_calendar.list_events(TOKEN, hours=24, tz=TZ) == []
 
 
 class TestWritingOne:
@@ -121,7 +127,9 @@ class TestWritingOne:
         monkeypatch.setattr(httpx2, "AsyncClient", _sent(sink, _item(hour=15)))
         starts = datetime.fromisoformat("2026-10-02T15:00:00+07:00")
 
-        await google_calendar.create_event(TOKEN, "review", starts, starts + timedelta(minutes=30))
+        await google_calendar.create_event(
+            TOKEN, "review", starts, starts + timedelta(minutes=30), TZ
+        )
         body = str(sink[0].read(), "utf-8")
 
         assert sink[0].method == "POST"
@@ -136,7 +144,7 @@ class TestWritingOne:
         starts = datetime.fromisoformat("2026-10-02T15:00:00+07:00")
 
         event = await google_calendar.create_event(
-            TOKEN, "review", starts, starts + timedelta(minutes=30)
+            TOKEN, "review", starts, starts + timedelta(minutes=30), TZ
         )
         assert event.link == "https://calendar.google.com/event?eid=abc"
         assert event.starts_at.hour == 15
@@ -150,10 +158,10 @@ class TestWhenGoogleWillNotAnswer:
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {}, status=500))
 
         with pytest.raises(SourceError):
-            await google_calendar.list_events(TOKEN, hours=24)
+            await google_calendar.list_events(TOKEN, hours=24, tz=TZ)
 
     async def test_an_event_with_no_start_is_refused(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(httpx2, "AsyncClient", _sent([], {"items": [{"summary": "odd"}]}))
 
         with pytest.raises(SourceError):
-            await google_calendar.list_events(TOKEN, hours=24)
+            await google_calendar.list_events(TOKEN, hours=24, tz=TZ)

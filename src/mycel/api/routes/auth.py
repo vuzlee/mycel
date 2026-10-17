@@ -74,12 +74,12 @@ async def start_google_signin(
         # Lax: the cookie rides the top-level GET back from Google.
         samesite="lax",
         secure=_secure(),
-        path="/auth/google/signin",
+        # Both the start and the shared callback live under it.
+        path="/auth/google",
     )
     return response
 
 
-@router.get("/google/signin/callback")
 async def finish_google_signin(
     session: Db,
     code: Annotated[str | None, Query()] = None,
@@ -87,7 +87,7 @@ async def finish_google_signin(
     error: Annotated[str | None, Query()] = None,
     mycel_oidc: Annotated[str | None, Cookie(alias=OIDC_COOKIE)] = None,
 ) -> RedirectResponse:
-    """Where Google sends the browser back. Always a redirect, never a bare error page."""
+    """A sign-in coming back through the shared callback. Always a redirect, never an error page."""
     if error or not code or not state:
         return _to_login(error or "cancelled")
     try:
@@ -102,7 +102,7 @@ async def finish_google_signin(
 
     response = RedirectResponse(f"{_base()}{who.next}")
     await _issue_cookie(session, response, user.id)
-    response.delete_cookie(OIDC_COOKIE, path="/auth/google/signin")
+    response.delete_cookie(OIDC_COOKIE, path="/auth/google")
     log.info("signed in with google", extra={"user_id": user.id})
     return response
 

@@ -4,6 +4,7 @@ No principal reads nothing; an unconnected account gets a "connect" sentence, no
 """
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
@@ -17,6 +18,9 @@ from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
 from mycel.services.google_oauth import GoogleError, NotConnected, token_for
 from mycel.sources import SourceError, google_calendar
+
+#: How far behind the clock a start may be: a draft for now, agreed to a moment later.
+LATE_START = timedelta(minutes=15)
 
 log = get_logger(__name__)
 
@@ -59,12 +63,12 @@ async def _read_events(ctx: RunContext[MycelDeps], hours: int = 12) -> str:
 
     capped = min(hours, MAX_HOURS)
     try:
-        events = await google_calendar.list_events(await token_for(user_id), capped)
+        events = await google_calendar.list_events(await token_for(user_id), capped, ctx.deps.tz)
     except NotConnected:
         return CONNECT
     except (GoogleError, SourceError) as exc:
         raise ToolFailed("read_events", str(exc)) from exc
-    return _render(events, asked=hours, capped=capped)
+    return _render(events, asked=hours, capped=capped, tz=ctx.deps.tz)
 
 
 async def _draft_event(
@@ -77,7 +81,7 @@ async def _draft_event(
 
     Args:
         summary: What the event is called, in the words they used.
-        starts_at: When it starts, as `YYYY-MM-DDTHH:MM` in the team's own timezone.
+        starts_at: When it starts, as `YYYY-MM-DDTHH:MM` in the asker's own timezone.
             No offset and no `Z` — the timezone is added here.
         minutes: How long it lasts. Thirty unless they said otherwise.
     """
@@ -93,7 +97,7 @@ async def _draft_event(
 
     if not 1 <= minutes <= MAX_MINUTES:
         raise ModelRetry(f"minutes must be between 1 and {MAX_MINUTES}.")
-    starts = _parse(starts_at)
+    starts = _parse(starts_at, ctx.deps.tz)
     ends = starts + timedelta(minutes=minutes)
 
     draft = await drafts.put(user_id, summary.strip(), starts, ends)
@@ -125,7 +129,7 @@ async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
 
     try:
         event = await google_calendar.create_event(
-            await token_for(user_id), draft.summary, draft.starts_at, draft.ends_at
+            await token_for(user_id), draft.summary, draft.starts_at, draft.ends_at, ctx.deps.tz
         )
     except NotConnected:
         return CONNECT
@@ -136,22 +140,22 @@ async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
     return f"Booked: {_format_when(event.starts_at)} — {event.summary}. {event.link}"
 
 
-def _parse(starts_at: str) -> datetime:
-    """Parse the model's time in the team's zone; refuse the past (naming today) or >1 year out."""
+def _parse(starts_at: str, zone: ZoneInfo) -> datetime:
+    """Parse the model's time in the asker's zone; refuse the past (naming now) or >1 year out."""
     try:
         moment = datetime.fromisoformat(starts_at)
     except ValueError:
         raise ModelRetry(
-            "starts_at must look like 2026-09-26T15:00, in the team's own timezone."
+            "starts_at must look like 2026-09-26T15:00, in the asker's own timezone."
         ) from None
 
-    zone = google_calendar.zone()
     moment = moment.replace(tzinfo=zone) if moment.tzinfo is None else moment.astimezone(zone)
     now = datetime.now(zone)
-    if moment < now:
+    # "Now" drafted a minute ago is still now when they say yes.
+    if moment < now - LATE_START:
         raise ModelRetry(
             f"{starts_at} is in the past. It is {now.strftime('%A %d %B %Y, %H:%M')} "
-            f"in {google_calendar.zone_name()} — work the date out from that and draft again."
+            f"in {zone.key} — work the date out from that and draft again."
         )
     if moment > now + timedelta(days=365):
         raise ModelRetry(f"{starts_at} is more than a year away; check the year.")
@@ -163,11 +167,9 @@ def _format_when(moment: datetime) -> str:
     return moment.strftime("%A %d %B %Y, %H:%M")
 
 
-def _render(events: list[google_calendar.Event], asked: int, capped: int) -> str:
+def _render(events: list[google_calendar.Event], asked: int, capped: int, tz: ZoneInfo) -> str:
     """The calendar as quotable text, count first so the model does not invent it."""
-    lines = [
-        f"{len(events)} events in the next {capped} hours, times in {google_calendar.zone_name()}."
-    ]
+    lines = [f"{len(events)} events in the next {capped} hours, times in {tz.key}."]
     if capped < asked:
         lines.append(f"({asked} hours was asked for; {MAX_HOURS} is the most that can be read.)")
     if not events:
