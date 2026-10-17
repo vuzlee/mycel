@@ -343,7 +343,9 @@ details[open] > summary .chevron {
 }
 
 .composer textarea {
-  flex: 1;
+  /* Its own height, not the column's: a 0 basis would pin it to one line in the column. */
+  flex: none;
+  width: 100%;
   border: none;
   outline: none;
   resize: none;
@@ -351,7 +353,9 @@ details[open] > summary .chevron {
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
-  max-height: 180px;
+  /* Grows to four lines, then scrolls inside: line height × 4 plus its own padding. */
+  max-height: calc(1.55em * 4 + 4px);
+  overflow-y: auto;
   min-height: 26px;
   padding: 2px 0;
   font-size: 15px;
@@ -812,4 +816,42 @@ details[open] > summary .chevron {
   margin-top: 4px;
   font-size: 11.5px;
   color: var(--faint);
+}
+
+/* ---------------------------------------------------------------- link chips */
+
+.prose a.link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin: 0 1px;
+  padding: 1px 9px 1px 7px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  color: var(--ink);
+  font-size: 0.88em;
+  line-height: 1.6;
+  text-decoration: none;
+  vertical-align: 0.06em;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.prose a.link-chip span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.prose a.link-chip svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.prose a.link-chip:hover {
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-color: var(--accent);
 }

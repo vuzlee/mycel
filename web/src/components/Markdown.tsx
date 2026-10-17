@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Chart, parseChart } from "./Chart";
+import { LinkChip } from "./LinkChip";
 
 /** A table is wider than the prose it sits in, so it gets its own scroller rather than
  *  widening the conversation or wrapping every cell to reading width. */
@@ -27,6 +28,10 @@ const COMPONENTS = {
     }
     return <pre>{children}</pre>;
   },
+  // Every outward link is a chip: its host's mark and a short name, never a raw url.
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
+    <LinkChip href={href}>{children}</LinkChip>
+  ),
 };
 
 const CITE = /\s?\[c(\d+)\]/g;
@@ -47,9 +52,7 @@ export function Markdown({ body, onCite }: Props) {
               [{children}]
             </button>
           ) : (
-            <a href={href} target="_blank" rel="noreferrer">
-              {children}
-            </a>
+            <LinkChip href={href}>{children}</LinkChip>
           ),
       }
     : COMPONENTS;

@@ -47,8 +47,8 @@ class Research(BaseModel):
         default=None,
         description=(
             "A drafted change waiting for a yes, e.g. a calendar event: the read-back "
-            "sentence `draft_event` returned, word for word, draft_id included. Null when "
-            "nothing was drafted."
+            "sentence `draft_event` returned, without its draft_id. Null when nothing was "
+            "drafted."
         ),
     )
     booked: str | None = Field(

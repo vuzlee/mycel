@@ -131,7 +131,8 @@ class TestDraftingWritesNothing:
         """An abandoned draft must disappear on its own — there is nothing to clean up."""
         await tools["draft_event"](ctx, summary="review", starts_at=_soon())
 
-        assert list(redis.ttls.values()) == [drafts.DRAFT_TTL_SECONDS]
+        # The draft and the pointer to the newest one both expire.
+        assert set(redis.ttls.values()) == {drafts.DRAFT_TTL_SECONDS}
 
 
 class TestWhatDraftingRefuses:
@@ -166,10 +167,10 @@ class TestConfirming:
     ) -> None:
         calls = Calls(_event(15))
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
-        drafted = await tools["draft_event"](ctx, summary="review", starts_at=_soon())
-        draft_id = drafted.rsplit("draft_id=", 1)[1].rstrip(".")
+        await tools["draft_event"](ctx, summary="review", starts_at=_soon())
 
-        out = await tools["confirm_event"](ctx, draft_id=draft_id)
+        # The yes carries no id: the newest draft is the one booked.
+        out = await tools["confirm_event"](ctx)
 
         assert [request.method for request in calls.requests] == ["POST"]
         assert out.startswith("Booked:")
@@ -181,30 +182,34 @@ class TestConfirming:
         """ "Yes, do it" twice over is one meeting. The draft is spent as it is read."""
         calls = Calls(_event(15))
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
-        drafted = await tools["draft_event"](ctx, summary="review", starts_at=_soon())
-        draft_id = drafted.rsplit("draft_id=", 1)[1].rstrip(".")
+        await tools["draft_event"](ctx, summary="review", starts_at=_soon())
 
-        await tools["confirm_event"](ctx, draft_id=draft_id)
-        again = await tools["confirm_event"](ctx, draft_id=draft_id)
+        await tools["confirm_event"](ctx)
+        again = await tools["confirm_event"](ctx)
 
         assert len(calls.requests) == 1
         assert "Nothing was written" in again
 
-    async def test_a_draft_id_from_a_prompt_cannot_book_on_another_calendar(
+    async def test_someone_elses_draft_cannot_be_booked_on_another_calendar(
         self, tools: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The id travels through a model's context."""
+        """Neither a guessed id nor "the newest draft" reaches past the asker."""
         calls = Calls(_event(15))
         monkeypatch.setattr(httpx2, "AsyncClient", calls.client)
         mine = _ctx(ASKER)
         theirs = _ctx(Principal(id=8, email="other@example.com"))
-        drafted = await tools["draft_event"](mine, summary="review", starts_at=_soon())
-        draft_id = drafted.rsplit("draft_id=", 1)[1].rstrip(".")
+        await tools["draft_event"](mine, summary="review", starts_at=_soon())
+        from mycel.infra.redis import drafts as store
+
+        draft_id = (await store.take(None, ASKER.id)).draft_id  # type: ignore[union-attr]
+        await tools["draft_event"](mine, summary="review", starts_at=_soon())
 
         out = await tools["confirm_event"](theirs, draft_id=draft_id)
+        newest = await tools["confirm_event"](theirs)
 
         assert calls.requests == []
         assert "Nothing was written" in out
+        assert "Nothing was written" in newest
 
     async def test_an_unknown_draft_is_a_sentence_not_a_retry(
         self, tools: dict[str, Any], ctx: Any

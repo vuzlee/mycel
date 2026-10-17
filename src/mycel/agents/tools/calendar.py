@@ -104,16 +104,17 @@ async def _draft_event(
     return (
         f"Not booked yet. {_format_when(starts)} to {ends.strftime('%H:%M')}, "
         f"{minutes} minutes — {draft.summary}.\n"
-        f"Read that back and ask whether it is right. To book it, call confirm_event "
-        f"with draft_id={draft.draft_id}."
+        f"Read that back and ask whether it is right. When they say yes, call "
+        f"confirm_event with no draft_id: this draft is their newest."
     )
 
 
-async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str) -> str:
+async def _confirm_event(ctx: RunContext[MycelDeps], draft_id: str = "") -> str:
     """Book a drafted event. Call this only after the person has agreed to it.
 
     Args:
-        draft_id: The id `draft_event` returned for the event they agreed to.
+        draft_id: The id `draft_event` returned, when you have it. Leave it empty on the
+            turn they say yes: their newest draft is booked.
     """
     user_id = ctx.deps.user_id
     if user_id is None:

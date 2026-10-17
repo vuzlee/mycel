@@ -34,17 +34,28 @@ async def put(user_id: int, summary: str, starts_at: datetime, ends_at: datetime
         starts_at=starts_at,
         ends_at=ends_at,
     )
-    await _kv.put(
-        await get_client(), _key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_SECONDS
-    )
+    client = await get_client()
+    await _kv.put(client, _key(draft.draft_id), draft.model_dump_json(), DRAFT_TTL_SECONDS)
+    # The newest draft per person, so a "yes" next turn finds it with no id in the answer.
+    await client.set(_latest_key(user_id), draft.draft_id, ex=DRAFT_TTL_SECONDS)
     return draft
 
 
-async def take(draft_id: str, user_id: int) -> Draft | None:
-    """Spend a draft, or `None` if this person has no such draft. Deleted on read."""
-    found = await _kv.take(await get_client(), _key(draft_id))
+async def take(draft_id: str | None, user_id: int) -> Draft | None:
+    """Spend a draft, the newest one when no id is given, or `None`. Deleted on read."""
+    client = await get_client()
+    if not draft_id:
+        latest = await client.getdel(_latest_key(user_id))
+        draft_id = latest.decode() if isinstance(latest, bytes) else latest
+        if not draft_id:
+            return None
+    found = await _kv.take(client, _key(draft_id))
     draft = None if found is None else Draft.model_validate(found)
     return draft if draft is not None and draft.user_id == user_id else None
+
+
+def _latest_key(user_id: int) -> str:
+    return _kv.key("draft", "event", "latest", user_id)
 
 
 def _key(draft_id: str) -> str:
