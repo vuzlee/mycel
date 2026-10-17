@@ -1,10 +1,5 @@
 # Development. Only what differs from base.yaml: a mistake should cost seconds and cents.
 
-agents:
-  defaults:
-    request_limit: 8
-    tool_calls_limit: 12
-
 settings:
   log_level: DEBUG
   # The board maintenance scripts run from this machine.

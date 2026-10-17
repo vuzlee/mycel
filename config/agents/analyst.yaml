@@ -1,9 +1,7 @@
 # Anything left out here falls back to `agents.defaults` in base.yaml.
 
 # Twelve queries answer any question this schema holds; 41 was fishing, not analysis.
-# `request_limit` is declared with it and one higher, because a limit that
-# binds has to be the one this file chose: without it the environment's `agents.defaults`
-# decides, and dev's 8 requests would stop the run long before the thirtieth query.
+# One request more than tool calls: the last one writes the report.
 tool_calls_limit: 12
 request_limit: 13
 # The report is a handful of figures and findings; a cap keeps the last turn short.

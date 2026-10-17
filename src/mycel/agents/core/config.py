@@ -36,7 +36,8 @@ class AgentSettings:
     # 0 behind the gateway, which already retries (`num_retries` in config/litellm/config.yaml).
     transient_retries: int = 0
 
-    # Passed to pydantic-ai as `UsageLimits`.
+    # Passed to pydantic-ai as `UsageLimits`. Set per agent in `config/agents/<name>.yaml`;
+    # these are the fallback for an agent with no file.
     request_limit: int = 12
     tool_calls_limit: int = 20
     total_tokens_limit: int | None = None

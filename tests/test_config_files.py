@@ -124,3 +124,29 @@ class TestTheRealConfigDir:
     def test_get_config_is_cached(self) -> None:
         get_config.cache_clear()
         assert get_config("dev") is get_config("dev")
+
+
+#: The limits each agent runs under, in every environment. Changing a number means changing
+#: this table on purpose: the limit that binds is the one in the agent's own file.
+LIMITS = {
+    "orchestrator": (40, 8),
+    "analyst": (13, 12),
+    "researcher": (13, 12),
+    "summarizer": (12, 0),
+    "rewriter": (2, 0),
+}
+
+
+class TestEffectiveLimits:
+    def test_the_orchestrator_caps_a_turns_tokens(self) -> None:
+        assert AgentSettings.from_config("orchestrator", env="prod").total_tokens_limit == 250_000
+
+    @pytest.mark.parametrize("env", ["dev", "prod"])
+    @pytest.mark.parametrize("agent", sorted(LIMITS))
+    def test_one_source_per_agent(self, agent: str, env: str) -> None:
+        cfg = AgentSettings.from_config(agent, env=env)
+        assert (cfg.request_limit, cfg.tool_calls_limit) == LIMITS[agent]
+
+    def test_every_agent_is_in_the_table(self) -> None:
+        files = {p.stem for p in (CONFIG_DIR / AGENTS_SUBDIR).glob("*.yaml")}
+        assert files == set(LIMITS)

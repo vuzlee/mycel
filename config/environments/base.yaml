@@ -11,8 +11,7 @@ agents:
     # Retries by the app's client; 0 because the gateway retries (num_retries in
     # config/litellm/config.yaml), and two layers multiply into up to 9 calls.
     transient_retries: 0
-    request_limit: 12
-    tool_calls_limit: 20
+    # Run limits are not set here: each agent's file says its own, so one file decides.
     repeat_threshold: 2
 
 # `Settings` fields, lower case. An environment variable of the same name overrides each.

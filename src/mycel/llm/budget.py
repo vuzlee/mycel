@@ -65,7 +65,8 @@ class JobBudget:
     def limits(self, cfg: RunLimits, spent: "RunUsage | None" = None) -> "UsageLimits":
         """The agent's limits, capped by the job's remaining money.
 
-        `spent` is a delegated run's inherited counters; limits are added on top of them.
+        `spent` is a delegated run's inherited counters. Limits are added on top of them, so
+        a delegate's own file bounds the delegate and the caller's file bounds the turn.
         """
         from pydantic_ai.usage import UsageLimits
 

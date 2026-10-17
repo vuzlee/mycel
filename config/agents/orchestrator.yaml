@@ -4,7 +4,11 @@
 tool_calls_limit: 8
 
 # Counts this agent's own model requests *and* every specialist's, because
-# `runner.delegate` merges a delegate's usage into the caller's — which is what keeps
-# the budget honest and is also why this number cannot be the shared default. Two
-# specialists doing two model calls each already exceed `dev.yaml`'s 8.
+# `runner.delegate` merges a delegate's usage into the caller's, which keeps the budget
+# honest. A delegate's own limits are counted from where the caller stood, so they bind
+# the delegate; this one binds the whole turn.
 request_limit: 40
+
+# Input and output tokens of the whole turn, delegates included. Measured 2026-10-18 on 26
+# host turns: p95 96k, worst 168k (a research question). Above this a turn is looping.
+total_tokens_limit: 250000
