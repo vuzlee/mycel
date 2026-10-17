@@ -1,6 +1,8 @@
 """Run the analyst golden set against gold and report what it scored.
 
-    EVAL_USER=you@example.com uv run python -m evals.analyst.run [--model SPEC] [--save-baseline]
+    EVAL_USER=you@example.com uv run python -m evals.analyst.run [--model REF] [--save-baseline]
+
+`--model` takes a picker ref: `host:<name>`, or `own:<id>` for one of EVAL_USER's own models.
 
 Spends real model calls (about 2-4 per case): run by hand, never in CI.
 """
@@ -10,7 +12,6 @@ import asyncio
 import json
 import os
 import sys
-from dataclasses import replace
 from pathlib import Path
 
 from pydantic_ai import capture_run_messages
@@ -21,9 +22,11 @@ from evals.common import CEILING_USD
 from evals.summarizer.run import Result, report
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.own_endpoint import OwnEndpoint
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.analyst import Analysis, Analyst
 from mycel.core.principal import Principal
+from mycel.domains.chat_model import model_settings, own_endpoint
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
 
@@ -41,8 +44,10 @@ async def principal() -> Principal | None:
     return Principal(id=user.id, email=user.email) if user else None
 
 
-async def run_case(case: Case, cfg: AgentSettings, who: Principal | None) -> Result:
-    deps = build_deps(f"eval:{case.name}", CEILING_USD, settings=cfg, principal=who)
+async def run_case(
+    case: Case, cfg: AgentSettings, who: Principal | None, own: OwnEndpoint | None
+) -> Result:
+    deps = build_deps(f"eval:{case.name}", CEILING_USD, settings=cfg, principal=who, own=own)
     with capture_run_messages() as messages:
         try:
             analysis = await runner.run(Analyst.build(cfg), case.question, deps)
@@ -55,18 +60,19 @@ async def run_case(case: Case, cfg: AgentSettings, who: Principal | None) -> Res
 
 
 async def run_all(cases: list[Case], model: str | None) -> list[Result]:
-    cfg = AgentSettings.from_config("analyst")
-    if model:
-        cfg = replace(cfg, model_spec=model)
     who = await principal()
     if who is None:
         print("EVAL_USER unset or unknown: gold reads as empty\n")
-    return [await run_case(case, cfg, who) for case in cases]
+    cfg = model_settings("analyst", model) if model else AgentSettings.from_config("analyst")
+    own = await own_endpoint(who.id, model) if model and who else None
+    return [await run_case(case, cfg, who, own) for case in cases]
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", help="model spec instead of the analyst's own")
+    parser.add_argument(
+        "--model", help="picker ref (host:<name> or own:<id>) instead of the default"
+    )
     parser.add_argument("--save-baseline", action="store_true")
     parser.add_argument("--compare-baseline", action="store_true")
     args = parser.parse_args(argv)
