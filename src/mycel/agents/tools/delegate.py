@@ -4,7 +4,6 @@ A failed delegation returns text the caller can narrate, except `TransportError`
 `BudgetExceeded`, which propagate so the job fails (and can be retried).
 """
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
@@ -91,8 +90,8 @@ async def _delegate(
 ) -> str:
     """Run one delegated agent on the caller's budget; output goes back as JSON."""
     name = agent_cls.name
-    # The turn's model, not the specialist's own: one turn answers on the model picked.
-    cfg = replace(AgentSettings.from_config(name), model_spec=ctx.deps.settings.model_spec)
+    # The model comes from `ctx.deps.model`: one turn answers on the model picked.
+    cfg = AgentSettings.from_config(name)
     try:
         output = await runner.delegate(agent_cls.build(cfg), prompt, ctx, cfg)
     except TransportError:

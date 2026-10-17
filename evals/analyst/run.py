@@ -22,11 +22,11 @@ from evals.common import CEILING_USD
 from evals.summarizer.run import Result, report
 from mycel.agents.core import runner
 from mycel.agents.core.config import AgentSettings
-from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.model_source import ModelSource
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.analyst import Analysis, Analyst
 from mycel.core.principal import Principal
-from mycel.domains.chat_model import model_settings, own_endpoint
+from mycel.domains.chat_model import model_source
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.session import session_scope
 
@@ -45,9 +45,9 @@ async def principal() -> Principal | None:
 
 
 async def run_case(
-    case: Case, cfg: AgentSettings, who: Principal | None, own: OwnEndpoint | None
+    case: Case, cfg: AgentSettings, who: Principal | None, model: ModelSource | None
 ) -> Result:
-    deps = build_deps(f"eval:{case.name}", CEILING_USD, settings=cfg, principal=who, own=own)
+    deps = build_deps(f"eval:{case.name}", CEILING_USD, settings=cfg, principal=who, model=model)
     with capture_run_messages() as messages:
         try:
             analysis = await runner.run(Analyst.build(cfg), case.question, deps)
@@ -63,9 +63,9 @@ async def run_all(cases: list[Case], model: str | None) -> list[Result]:
     who = await principal()
     if who is None:
         print("EVAL_USER unset or unknown: gold reads as empty\n")
-    cfg = model_settings("analyst", model) if model else AgentSettings.from_config("analyst")
-    own = await own_endpoint(who.id, model) if model and who else None
-    return [await run_case(case, cfg, who, own) for case in cases]
+    cfg = AgentSettings.from_config("analyst")
+    source = await model_source(who.id, model) if model and who else None
+    return [await run_case(case, cfg, who, source) for case in cases]
 
 
 def main(argv: list[str] | None = None) -> int:

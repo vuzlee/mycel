@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.model_source import ModelSource
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.researcher import Researcher
@@ -52,7 +52,7 @@ def build_deps(
     events: EventChannel | None = None,
     principal: Principal | None = None,
     chips: "frozenset[Chip] | None" = None,
-    own: OwnEndpoint | None = None,
+    model: ModelSource | None = None,
     tz: ZoneInfo | None = None,
 ) -> MycelDeps:
     """Make the deps shared by every run in one job; call once per job so the budget is shared.
@@ -66,6 +66,6 @@ def build_deps(
         events=events or NullChannel(),
         principal=principal,
         chips=chips,
-        own=own,
+        model=model,
         tz=tz or ZoneInfo("UTC"),
     )

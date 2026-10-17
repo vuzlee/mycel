@@ -13,6 +13,7 @@ from pydantic_ai import models
 from mycel.agents.core import model_builder, runner
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.exceptions import ModelQuota
+from mycel.agents.core.model_source import OwnModel
 from mycel.agents.core.own_endpoint import OwnEndpoint
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.rewriter import Rewriter
@@ -93,7 +94,7 @@ def _deps(*keys: str) -> Any:
         endpoint_model="gemini-2.5-flash",
         keys=tuple((i, SecretStr(k)) for i, k in enumerate(keys)),
     )
-    return build_deps("job-own", ceiling_usd="0.50", settings=AgentSettings(), own=own)
+    return build_deps("job-own", ceiling_usd="0.50", settings=AgentSettings(), model=OwnModel(own))
 
 
 async def test_a_spent_key_hands_over_and_cools_until_the_reset(
@@ -152,7 +153,7 @@ class TestTheTestButton:
         self, endpoint: dict[str, Any], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A spent key and a good one: two results, no rotation, nothing set aside."""
-        own: OwnEndpoint = _deps(SPENT, GOOD).own
+        own: OwnEndpoint = _deps(SPENT, GOOD).model.endpoint
 
         async def found(owner_id: int, model_ref: str) -> OwnEndpoint:
             return own

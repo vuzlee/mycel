@@ -27,9 +27,7 @@ async def search_query(job: Job, question: str, deps: MycelDeps) -> str:
     stitched = knowledge.search_text(question, previous[: get_settings().ask_max_chars])
     if not context:
         return stitched
-    settings = replace(
-        AgentSettings.from_config(Rewriter.name), model_spec=deps.settings.model_spec
-    )
+    settings = AgentSettings.from_config(Rewriter.name)
     rewrite_deps = replace(deps, settings=settings, events=NullChannel())
     prompt = f"{context}\n\nThe question now:\n{question}"
     try:

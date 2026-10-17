@@ -1,5 +1,4 @@
-"""Which model a chat turn runs on: its `model_ref` turned into agent settings and, for an
-own model, the endpoint and keys this run may use."""
+"""Which model a chat turn runs on: its `model_ref` turned into one `ModelSource`."""
 
 from dataclasses import dataclass, replace
 
@@ -18,6 +17,7 @@ from mycel.agents.core.exceptions import (
     translate_agent_errors,
 )
 from mycel.agents.core.model_builder import build_own_model
+from mycel.agents.core.model_source import GatewayModel, ModelSource, OwnModel
 from mycel.agents.core.own_endpoint import OwnEndpoint
 from mycel.core import redact
 from mycel.core.exceptions import ConfigError
@@ -28,18 +28,15 @@ from mycel.services import models, tokens, url_guard
 from mycel.services.own_models import own_id
 
 
-def model_settings(agent: str, model_ref: str) -> AgentSettings:
-    """The agent's own settings, on the model the turn picked.
-
-    An own model keeps the agent's settings as they are: `MycelDeps.own` carries the model.
-    """
-    cfg = AgentSettings.from_config(agent)
-    if own_id(model_ref) is not None:
-        return cfg
+async def model_source(owner_id: int, model_ref: str) -> ModelSource:
+    """The model behind a picker ref: a host model by gateway name, or this person's own."""
+    own = await own_endpoint(owner_id, model_ref)
+    if own is not None:
+        return OwnModel(own)
     name = models.gateway_name(model_ref)
     if name is None:
         raise ConfigError(f"no model behind {model_ref}")
-    return replace(cfg, model_spec=f"cloud:{name}")
+    return GatewayModel(f"cloud:{name}")
 
 
 async def own_endpoint(owner_id: int, model_ref: str) -> OwnEndpoint | None:

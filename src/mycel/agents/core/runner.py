@@ -6,7 +6,6 @@ are recorded once, by the caller. `iter()` rather than `run()` so a run stopped 
 still reports what it spent.
 """
 
-from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic_ai import Agent
@@ -14,19 +13,14 @@ from pydantic_ai.models import Model
 
 from mycel.agents.core.emit import RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
-from mycel.agents.core.model_builder import build_model, build_own_model
-from mycel.core import redact
-from mycel.core.config import get_settings
+from mycel.agents.core.model_source import GatewayModel, ModelSource
 from mycel.core.logging import get_logger
 from mycel.events.event import RUN_FINISHED, RUN_STARTED
-from mycel.infra.redis import key_rotation
-from mycel.llm.budget import BudgetExceeded, own_price, price_usd
-from mycel.llm.quota import cooldown_seconds
-from mycel.llm.router import resolve
+from mycel.llm.budget import BudgetExceeded
 from mycel.observability.metrics import tokens_spent_total
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import Callable
 
     from pydantic_ai import RunContext
     from pydantic_ai.agent import AgentRun
@@ -87,16 +81,13 @@ def _record_usage(
 ) -> BudgetExceeded | None:
     """Record one run's spend, returning the overdraft rather than raising it."""
     # `usage` already includes delegated tokens, so count only here.
-    name = model_name(deps, cfg)
+    source = source_of(deps, cfg)
+    name = source.name
     tokens_spent_total.labels(model=name, direction="input").inc(usage.input_tokens)
     tokens_spent_total.labels(model=name, direction="output").inc(usage.output_tokens)
 
-    if deps.own is not None:
-        price = own_price(deps.own.endpoint_model, deps.own.api_base, usage)
-    else:
-        price = price_usd(get_settings().model_prices_usd, resolve(cfg.model_spec).name, usage)
     try:
-        deps.budget.record(usage, price)
+        deps.budget.record(usage, source.price(usage))
         overdrawn = None
     except BudgetExceeded as exc:
         overdrawn = exc
@@ -112,9 +103,9 @@ def _record_usage(
     return overdrawn
 
 
-def model_name(deps: "MycelDeps", cfg: "AgentSettings") -> str:
-    """What answers this run: the own model when the asker picked one, else the gateway's."""
-    return f"own:{deps.own.endpoint_model}" if deps.own is not None else cfg.model_spec
+def source_of(deps: "MycelDeps", cfg: "AgentSettings") -> ModelSource:
+    """The turn's model, or this agent's own `model_spec` when no turn picked one."""
+    return deps.model or GatewayModel(cfg.model_spec)
 
 
 async def delegate(
@@ -140,8 +131,9 @@ async def _iterate(
     on_usage: "Callable[[RunUsage], None] | None" = None,
 ) -> OutputT:
     emitter = RunEmitter(deps, _name_of(agent), parent_tool_call_id)
-    async with _model_for(deps, cfg) as (model, name):
-        with translate_agent_errors(name):
+    source = source_of(deps, cfg)
+    async with source.open(cfg, deps.job_id) as model:
+        with translate_agent_errors(source.label):
             async with agent.iter(
                 prompt, deps=deps, model=model, usage=usage, usage_limits=limits
             ) as agent_run:
@@ -156,32 +148,3 @@ async def _iterate(
             if result is None:  # pragma: no cover - iter() always sets it on success
                 raise RuntimeError("agent run produced no result")
     return result.output
-
-
-@asynccontextmanager
-async def _model_for(deps: "MycelDeps", cfg: "AgentSettings") -> "AsyncIterator[tuple[Model, str]]":
-    """The gateway model, or the run's own model with its per-run clients closed after."""
-    if deps.own is None:
-        yield build_model(cfg.model_spec, cfg), cfg.model_spec
-        return
-    own = deps.own
-
-    async def set_aside(position: int, status: int, error: str) -> None:
-        log.warning(
-            "own model key set aside",
-            extra={
-                "job_id": deps.job_id,
-                "own_model": own.model_id,
-                "key": position,
-                "status": status,
-            },
-        )
-        await key_rotation.cool(own.model_id, position, cooldown_seconds(status, error))
-
-    model, clients = build_own_model(own, cfg, set_aside)
-    try:
-        with redact.holding(*(key.get_secret_value() for _, key in own.keys)):
-            yield model, own.label
-    finally:
-        for client in clients:
-            await client.close()

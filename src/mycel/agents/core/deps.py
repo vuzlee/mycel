@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
 
 from mycel.agents.core.config import AgentSettings
-from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.model_source import ModelSource
 from mycel.core.chips import Chip
 from mycel.core.principal import Principal
 from mycel.events.channel import EventChannel, NullChannel
@@ -24,8 +24,9 @@ class MycelDeps:
     #: Chips picked this turn. `None` keeps every tool; an empty set keeps none.
     chips: "frozenset[Chip] | None" = None
 
-    #: Set when the turn runs on a person's own model; every agent of the run uses it.
-    own: OwnEndpoint | None = None
+    #: The model the turn picked; every agent of the run calls it. `None` lets each agent
+    #: run on its own `model_spec` (a smoke script, an eval of one agent).
+    model: ModelSource | None = None
 
     #: The asker's zone, from their browser; what "now", "tonight" and a booking mean.
     tz: ZoneInfo = field(default_factory=lambda: ZoneInfo("UTC"))

@@ -11,7 +11,7 @@ from mycel.agents.core import charts, runner
 from mycel.agents.core.chips import parse as parse_chips
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.model_source import ModelSource
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.core.chips import Chip
@@ -26,7 +26,7 @@ from mycel.domains.chat_knowledge import (
     cite,
     search_query,
 )
-from mycel.domains.chat_model import model_settings, own_endpoint
+from mycel.domains.chat_model import model_source
 from mycel.events.channel import EventChannel, RecordingChannel
 from mycel.events.event import ATTEMPT_STARTED, CHART, NOTICE, AgentEvent
 from mycel.infra.postgres.repositories.conversations import (
@@ -121,8 +121,8 @@ async def _prepare(job: Job) -> "_Turn | None":
     model_ref, notice = await models.resolve(
         principal.id, asked if isinstance(asked, str) else None
     )
-    settings = model_settings(Orchestrator.name, model_ref)
-    own = await own_endpoint(principal.id, model_ref)
+    settings = AgentSettings.from_config(Orchestrator.name)
+    model = await model_source(principal.id, model_ref)
     recorder = RecordingChannel(RedisEventChannel(job.job_id))
     return _Turn(
         job=job,
@@ -132,7 +132,7 @@ async def _prepare(job: Job) -> "_Turn | None":
         chips=chips,
         settings=settings,
         recorder=recorder,
-        deps=await _deps(job, settings, recorder, principal, chips, own),
+        deps=await _deps(job, settings, recorder, principal, chips, model),
         model_ref=model_ref,
         notice=notice,
     )
@@ -261,7 +261,7 @@ async def _deps(
     events: EventChannel,
     principal: Principal,
     chips: frozenset[Chip] | None,
-    own: OwnEndpoint | None = None,
+    model: ModelSource | None = None,
 ) -> MycelDeps:
     """What one attempt runs with."""
     ceiling = get_settings().job_ceiling_usd
@@ -273,7 +273,7 @@ async def _deps(
         events=events,
         principal=principal,
         chips=chips,
-        own=own,
+        model=model,
         tz=zone_of(job.payload.get("timezone")),
     )
 
@@ -344,7 +344,7 @@ def _log_start(job: Job, settings: AgentSettings, deps: MycelDeps) -> None:
         extra={
             "job_id": job.job_id,
             "kind": str(job.kind),
-            "model": runner.model_name(deps, settings),
+            "model": runner.source_of(deps, settings).name,
             "spent_usd": str(deps.budget.spent_usd),
         },
     )
