@@ -1,0 +1,6 @@
+# Nothing was logged then: "none" is the answer, not a reason to keep searching.
+question: How many hours were logged in January 2020?
+expect:
+  tools: [run_sql]
+  max_requests: 4
+  min_figures: 0

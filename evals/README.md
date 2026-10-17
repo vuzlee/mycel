@@ -3,9 +3,12 @@
 Tests catch broken code. Evals catch broken **quality**: an answer with no error that is
 simply worse than the last one.
 
-Two suites:
+Three suites:
 
 - **Summarizer golden set** in `summarizer/`: prompt → what a good summary must contain.
+- **Analyst golden set** in `analyst/`: a question over gold → which tools, how many model
+  requests, cited figures. `EVAL_USER=<email> uv run python -m evals.analyst.run [--model SPEC]
+  [--save-baseline | --compare-baseline]`. The baseline is per model; about 2–4 calls a case.
 - **RAG benchmark** in `rag/`: does Knowledge document search find, cite and state the right passage.
 
 ## Summarizer golden set

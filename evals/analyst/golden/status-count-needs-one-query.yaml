@@ -1,0 +1,5 @@
+# No ready read covers it: one grouped query, not one per status.
+question: How many work items are in each status category?
+expect:
+  tools: [run_sql]
+  max_requests: 3

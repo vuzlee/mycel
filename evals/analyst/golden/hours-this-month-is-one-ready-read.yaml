@@ -1,0 +1,6 @@
+# The question that took 87s on Gemini: one ready read answers it.
+question: Who logged the most hours this month, and on what?
+expect:
+  tools: [hours_by_person]
+  never: [run_sql]
+  max_requests: 3

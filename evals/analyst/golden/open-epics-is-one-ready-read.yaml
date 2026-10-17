@@ -1,0 +1,7 @@
+# Gold may hold no open epic; "none" is a valid answer, so no figure is required.
+question: Which epics are still open, and how much estimated work is left in them?
+expect:
+  tools: [open_epics]
+  never: [run_sql]
+  max_requests: 3
+  min_figures: 0
