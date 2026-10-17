@@ -1,6 +1,7 @@
 """The analyst agent, run against fake models."""
 
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -11,13 +12,15 @@ from pydantic_ai.messages import (
     ModelResponse,
     RetryPromptPart,
     ToolCallPart,
+    ToolReturnPart,
 )
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.tools import ToolDefinition
 
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import DegenerateLoop
-from mycel.agents.specialists.analyst import Analysis, Analyst
+from mycel.agents.specialists.analyst import Analysis, Analyst, unanswered
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
@@ -229,3 +232,22 @@ class TestDegenerateLoop:
         with agent.override(model=FunctionModel(respond)):
             result = await agent.run("Revenue?", deps=deps)
         assert result.output.findings == ["up"]
+
+
+class TestARunWithAReadyAnswer:
+    """Once a ready-made read returned, run_sql and the compute tools are withdrawn."""
+
+    @staticmethod
+    def _open(*returned: str) -> bool:
+        parts = [ToolReturnPart(tool_name=t, content="rows", tool_call_id=t) for t in returned]
+        ctx: Any = SimpleNamespace(messages=[ModelRequest(parts=parts)] if parts else [])
+        return unanswered(ctx, ToolDefinition(name="run_sql"))
+
+    def test_open_before_any_read(self) -> None:
+        assert self._open()
+
+    def test_open_after_run_sql_rows(self) -> None:
+        assert self._open("run_sql")
+
+    def test_closed_after_hours_by_person(self) -> None:
+        assert not self._open("hours_by_person")

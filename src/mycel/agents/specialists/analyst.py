@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, Field
 from pydantic_ai import ModelRetry, RunContext
+from pydantic_ai.messages import ToolReturnPart
+from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import AbstractToolset
 
 from mycel.agents.core.base import BaseAgent
@@ -39,6 +41,19 @@ class Analysis(BaseModel):
     )
 
 
+#: Reads whose rows are already the answer.
+READY_READS = frozenset({"hours_by_person", "late_items", "open_epics"})
+
+
+def unanswered(ctx: RunContext[MycelDeps], _: ToolDefinition) -> bool:
+    """False once a ready read returned: weaker models re-check it call by call otherwise."""
+    return not any(
+        isinstance(part, ToolReturnPart) and part.tool_name in READY_READS
+        for message in ctx.messages
+        for part in message.parts
+    )
+
+
 class Analyst(BaseAgent[Analysis]):
     name = "analyst"
     instructions = load("analyst")
@@ -48,8 +63,8 @@ class Analyst(BaseAgent[Analysis]):
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
         sets: list[AbstractToolset[MycelDeps]] = [
             work.build_toolset(),
-            compute.build_toolset(),
-            query.build_toolset(),
+            compute.build_toolset().filtered(unanswered),
+            query.build_toolset().filtered(unanswered),
         ]
         if jira.offered():
             sets.append(jira.build_toolset())
