@@ -33,7 +33,7 @@ def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     async def deps(*_: Any) -> Any:
         budget = SimpleNamespace(spent_usd=Decimal("0"), tokens_in=700, tokens_out=200)
-        return SimpleNamespace(budget=budget)
+        return SimpleNamespace(budget=budget, own=None)
 
     async def query(*_: Any) -> str:
         return "q"

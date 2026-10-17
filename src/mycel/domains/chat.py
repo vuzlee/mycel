@@ -344,7 +344,7 @@ def _log_start(job: Job, settings: AgentSettings, deps: MycelDeps) -> None:
         extra={
             "job_id": job.job_id,
             "kind": str(job.kind),
-            "model": settings.model_spec,
+            "model": runner.model_name(deps, settings),
             "spent_usd": str(deps.budget.spent_usd),
         },
     )

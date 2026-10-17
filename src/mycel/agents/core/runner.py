@@ -87,8 +87,9 @@ def _record_usage(
 ) -> BudgetExceeded | None:
     """Record one run's spend, returning the overdraft rather than raising it."""
     # `usage` already includes delegated tokens, so count only here.
-    tokens_spent_total.labels(model=cfg.model_spec, direction="input").inc(usage.input_tokens)
-    tokens_spent_total.labels(model=cfg.model_spec, direction="output").inc(usage.output_tokens)
+    name = model_name(deps, cfg)
+    tokens_spent_total.labels(model=name, direction="input").inc(usage.input_tokens)
+    tokens_spent_total.labels(model=name, direction="output").inc(usage.output_tokens)
 
     if deps.own is not None:
         price = own_price(deps.own.endpoint_model, deps.own.api_base, usage)
@@ -104,11 +105,16 @@ def _record_usage(
         "run finished",
         extra={
             "job_id": deps.job_id,
-            "model_spec": cfg.model_spec,
+            "model_spec": name,
             "spent_usd": str(deps.budget.spent_usd),
         },
     )
     return overdrawn
+
+
+def model_name(deps: "MycelDeps", cfg: "AgentSettings") -> str:
+    """What answers this run: the own model when the asker picked one, else the gateway's."""
+    return f"own:{deps.own.endpoint_model}" if deps.own is not None else cfg.model_spec
 
 
 async def delegate(
