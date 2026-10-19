@@ -4,18 +4,217 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Processes · Overview · Mycel handbook</title>
 <link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Overview</nav>
+<style>
+  .diagram { width: 100%; height: auto; display: block; min-width: 720px; }
+  .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
+  .ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .op { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .op-svc { font: 13px var(--mono); color: var(--accent); }
+  .op-role { font-size: 14px; font-weight: 600; }
+  .op p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .op code { font-size: 12px; }
+</style>
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Processes</span></nav>
 <main>
-  <h1>Processes</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li><span class="src" data-path="src/mycel/lifecycle.py" tabindex="0">src/mycel/lifecycle.py</span></li>
-    <li><span class="src" data-path="src/mycel/worker.py" tabindex="0">src/mycel/worker.py</span></li>
-    <li><span class="src" data-path="src/mycel/scheduler/__main__.py" tabindex="0">src/mycel/scheduler/__main__.py</span></li>
-    <li><span class="src" data-path="src/mycel/__init__.py" tabindex="0">src/mycel/__init__.py</span></li>
+
+<h1>Four processes, one image</h1>
+<p class="lede">The same code runs as four programs. Each does one kind of work, so a slow model answer never blocks a page load and a crash loses no question.</p>
+
+<nav class="toc">
+  <a href="#four">01 The four</a><a href="#life">02 Start and stop</a><a href="#job">03 A job in the worker</a>
+  <a href="#timers">04 Scheduler timers</a><a href="#wrong">05 When things go wrong</a><a href="#promise">06 Guarantees</a><a href="#vocab">Vocabulary</a>
+</nav>
+
+<h2 id="four">01 · The four</h2>
+<p class="purpose">What each process consumes, and how many may run.</p>
+<div class="ops">
+  <div class="op" data-path="src/mycel/api/app.py"><span class="op-svc">api</span><span class="op-role">Answers HTTP</span>
+    <p>Routes, sign-in, the web app at <code>/app</code>, event streams. Writes jobs; never runs a model.</p>
+    <p><code>uvicorn --factory mycel.api.app:create_app</code> · replicas: any</p></div>
+  <div class="op" data-path="src/mycel/worker.py"><span class="op-svc">worker</span><span class="op-role">Runs chat jobs</span>
+    <p>Consumes queue <code>jobs</code>, 2 at a time. Runs the agents, stores the answer.</p>
+    <p><code>python -m mycel.worker</code> · replicas: 2</p></div>
+  <div class="op" data-path="src/mycel/domains/ingest.py"><span class="op-svc">ingest</span><span class="op-role">Parses and embeds</span>
+    <p>Consumes queue <code>ingest</code>, 1 at a time. Restarts itself after 20 jobs to give memory back.</p>
+    <p><code>python -m mycel.worker --queue ingest</code> · replicas: 1</p></div>
+  <div class="op" data-path="src/mycel/scheduler/__main__.py"><span class="op-svc">scheduler</span><span class="op-role">Keeps time</span>
+    <p>Timers: outbox relay, one sync per plugin, sweeps, queue gauges.</p>
+    <p><code>python -m mycel.scheduler</code> · replicas: 1, <code>Recreate</code></p></div>
+</div>
+<p class="insight"><b>Key insight:</b> ingest is a separate process because parsing a PDF can take gigabytes; a chat worker next to it would be killed with it.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li>Dev: <code>scripts/dev/up.sh</code> runs all four on the host; ingest under <code>scripts/dev/ingest-loop.sh</code>, capped at <code>INGEST_MEM</code> (4G) and <code>INGEST_CPUS</code> (2).</li>
+    <li>Compose: the ingest service has its own image target (<code>ingest</code>), <code>mem_limit: 5g</code>.</li>
+    <li>The scheduler is <code>Recreate</code>: a rolling update would run two for a moment. Its per-timer lock would still stop doubles, but a tick would be skipped.</li>
   </ul>
+</details>
+
+<h2 id="life">02 · Start and stop</h2>
+<p class="purpose">Every process opens the same way and closes the same stores in the same order.</p>
+<div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 230" role="img" aria-label="Process lifecycle: start sets up logging and tracing, running serves metrics, the process works until SIGTERM, then closes broker, redis, postgres, qdrant, models, http and s3, then flushes traces.">
+  <defs><marker id="pa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g font-family="var(--mono)" font-size="11.5">
+    <rect x="16" y="30" width="170" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="32" y="53" fill="var(--accent)">start(process)</text>
+    <text x="32" y="72" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">settings · logging · tracing</text>
+
+    <rect x="226" y="30" width="170" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="242" y="53" fill="var(--accent)">running(process)</text>
+    <text x="242" y="72" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">/metrics on its port</text>
+
+    <rect x="436" y="30" width="190" height="56" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+    <text x="452" y="53" fill="var(--accent)">work</text>
+    <text x="452" y="72" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">until SIGTERM or SIGINT</text>
+
+    <rect x="666" y="30" width="218" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="682" y="53" fill="var(--accent)">close_all()</text>
+    <text x="682" y="72" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">each closer alone; one failing does not stop the rest</text>
+  </g>
+  <g stroke="currentColor" color="var(--ink-faint)" stroke-width="1.3" marker-end="url(#pa)">
+    <path d="M186 58H222"/><path d="M396 58H432"/><path d="M626 58H662"/>
+  </g>
+  <text x="56" y="128" font-family="var(--mono)" font-size="10" letter-spacing="1.2" fill="var(--accent)">CLOSE ORDER</text>
+  <g font-family="var(--mono)" font-size="11">
+    <rect x="16" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="64" y="161" text-anchor="middle" fill="var(--ink)">broker</text>
+    <rect x="124" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="172" y="161" text-anchor="middle" fill="var(--ink)">redis</text>
+    <rect x="232" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="280" y="161" text-anchor="middle" fill="var(--ink)">postgres</text>
+    <rect x="340" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="388" y="161" text-anchor="middle" fill="var(--ink)">qdrant</text>
+    <rect x="448" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="496" y="161" text-anchor="middle" fill="var(--ink)">models</text>
+    <rect x="556" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="604" y="161" text-anchor="middle" fill="var(--ink)">http</text>
+    <rect x="664" y="140" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="712" y="161" text-anchor="middle" fill="var(--ink)">s3</text>
+    <rect x="772" y="140" width="112" height="34" rx="2" fill="var(--gold-wash, var(--accent-soft))" stroke="var(--accent)"/><text x="828" y="161" text-anchor="middle" fill="var(--accent)">flush traces</text>
+  </g>
+  <text x="16" y="206" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">Broker first: no new job arrives while the stores behind it are closing. Traces last: the closing itself is traced.</text>
+</svg>
+</div>
+<p class="insight"><b>Key insight:</b> <code>lifecycle.py</code> is shared by all four, so a new store needs one closer in one list, not four shutdown paths.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li>The api does not call <code>start()</code>: <code>create_app</code> sets up logging and tracing itself, then <code>lifespan</code> uses <code>running("api")</code>.</li>
+    <li><code>/metrics</code> port = <code>METRICS_PORT</code> (9100) + offset: worker 0, scheduler 1, ingest 2, api 3.</li>
+  </ul>
+</details>
+
+<h2 id="job">03 · A job in the worker</h2>
+<p class="purpose">The worker reads the job's kind, runs that domain, and sorts any failure into one of three bins.</p>
+<div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 300" role="img" aria-label="A delivered job is checked, run by the domain for its kind, then acked; a final failure dead-letters it, a transient one retries it, anything else dead-letters it.">
+  <defs><marker id="pb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g font-family="var(--mono)" font-size="11.5">
+    <rect x="16" y="20" width="150" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="32" y="42" fill="var(--ink)">delivery</text>
+    <text x="32" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">from jobs or ingest</text>
+
+    <rect x="206" y="20" width="190" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="222" y="42" fill="var(--ink)">checks</text>
+    <text x="222" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">parses? delivered too often?</text>
+
+    <rect x="436" y="20" width="200" height="52" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+    <text x="452" y="42" fill="var(--accent)">RUNS[kind](job)</text>
+    <text x="452" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">chat · ingest · index · sync · keys</text>
+
+    <rect x="676" y="20" width="208" height="52" rx="2" fill="var(--surface)" stroke="var(--ok, var(--accent))"/>
+    <text x="692" y="42" fill="var(--ok, var(--accent))">ack</text>
+    <text x="692" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">done; the queue forgets it</text>
+  </g>
+  <g stroke="currentColor" color="var(--ink-faint)" stroke-width="1.3" marker-end="url(#pb)" fill="none">
+    <path d="M166 46H202"/><path d="M396 46H432"/><path d="M636 46H672"/>
+    <path d="M536 72V112"/>
+  </g>
+  <text x="546" y="96" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">raises</text>
+
+  <g font-family="var(--mono)" font-size="11">
+    <rect x="16" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--bad, #c0392b)"/>
+    <text x="32" y="142" fill="var(--bad, #c0392b)">final → dead-letter now</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="32" y="164">budget exceeded · unknown kind</text>
+      <text x="32" y="182">runaway · repeat loop · bad output</text>
+      <text x="32" y="200">tool failed · model auth / not found</text>
+      <text x="32" y="218">model rejected / blocked</text>
+      <text x="32" y="246" fill="var(--ink)">retrying would fail the same way</text>
+    </g>
+
+    <rect x="312" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--warn, #b7791f)"/>
+    <text x="328" y="142" fill="var(--warn, #b7791f)">transient → retry later</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="328" y="164">job already running elsewhere</text>
+      <text x="328" y="182">network, Postgres, Redis, Qdrant</text>
+      <text x="328" y="200">S3, model transport errors</text>
+      <text x="328" y="218">dead-lettered once retries run out</text>
+      <text x="328" y="246" fill="var(--ink)">the same job may work in a minute</text>
+    </g>
+
+    <rect x="608" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--bad, #c0392b)" stroke-dasharray="5 4"/>
+    <text x="624" y="142" fill="var(--bad, #c0392b)">anything else → dead-letter</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="624" y="164">a bug: logged with its repr</text>
+      <text x="624" y="182">the failure is recorded on the turn</text>
+      <text x="624" y="246" fill="var(--ink)">a bug is not retried into a bill</text>
+    </g>
+  </g>
+</svg>
+</div>
+<p class="insight"><b>Key insight:</b> only failures that can pass on their own are retried; a model that refused, or a loop the guard stopped, goes straight to the dead-letter queue.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li>Lists: <code>FINAL</code> and <code>TRANSIENT</code> in <code>worker.py</code>; settling in <code>queue/consumer.py</code>.</li>
+    <li>A body that will not parse is dead-lettered with nothing recorded: there is no turn to record it on.</li>
+    <li>Retries, the dead-letter queue and replay: <a href="../queue/retry-dlq-replay.html">Retry, DLQ, replay</a>. Running a job once: <a href="../queue/idempotency.html">Idempotency</a>.</li>
+  </ul>
+</details>
+
+<h2 id="timers">04 · Scheduler timers</h2>
+<p class="purpose">Each timer takes a Postgres lock named after itself, so two schedulers never fire the same tick.</p>
+<div class="table-wrap"><table>
+  <tr><th>Timer (and its lock)</th><th>Does</th><th>Every</th></tr>
+  <tr><td><code>relay:outbox</code></td><td>sends jobs whose publish failed</td><td>5 s</td></tr>
+  <tr><td><code>sync:&lt;plugin&gt;</code></td><td>one per plugin that syncs (today: Jira)</td><td>15 min · <code>SYNC_INTERVAL_SECONDS</code></td></tr>
+  <tr><td><code>watchdog:documents</code></td><td>requeues documents stuck mid-ingest</td><td>60 s</td></tr>
+  <tr><td><code>count:queues</code></td><td>queue depth, consumers, Redis memory gauges</td><td>60 s</td></tr>
+  <tr><td><code>sweep:sessions</code></td><td>deletes expired sign-in sessions</td><td>1 day</td></tr>
+</table></div>
+
+<h2 id="wrong">05 · When things go wrong</h2>
+<div class="branches">
+  <div class="branch"><div class="when">Worker gets SIGTERM</div><div class="then"><span class="chip">stops taking jobs</span><span class="arrow">→</span><span class="chip ok">waits up to 50 s for running ones</span><span class="arrow">→</span><span class="chip warn">the rest are redelivered</span></div></div>
+  <div class="branch"><div class="when">Worker killed outright</div><div class="then"><span class="chip warn">unacked jobs redelivered</span><span class="arrow">→</span><span class="chip">too many deliveries → dead-letter</span></div></div>
+  <div class="branch"><div class="when">A timer tick fails</div><div class="then"><span class="chip">logged</span><span class="arrow">→</span><span class="chip ok">next tick runs as usual</span></div></div>
+  <div class="branch"><div class="when">Scheduler stops</div><div class="then"><span class="chip warn">ticks in progress are cancelled, not finished</span></div></div>
+  <div class="branch"><div class="when">One store fails to close</div><div class="then"><span class="chip">warning</span><span class="arrow">→</span><span class="chip ok">the others still close</span></div></div>
+</div>
+
+<h2 id="promise">06 · Guaranteed / not guaranteed</h2>
+<div class="cols">
+  <div class="col ok"><h3>Guaranteed</h3><ul>
+    <li>A job a worker did not ack is delivered again</li>
+    <li>One timer tick at a time across replicas</li>
+    <li>Every store is closed on a clean stop</li>
+  </ul></div>
+  <div class="col bad"><h3>Not guaranteed</h3><ul>
+    <li>A job cut short finishes: it starts again from the beginning</li>
+    <li>A scheduler tick that was cancelled runs again before its next interval</li>
+  </ul></div>
+</div>
+
+<h2 id="vocab">Vocabulary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>RUNS</td><td>job kind → function that runs it</td><td><span class="src" data-path="src/mycel/worker.py" tabindex="0">worker.py</span></td></tr>
+  <tr><td>Ack</td><td>tell the queue a job is done</td><td><span class="src" data-path="src/mycel/queue/consumer.py" tabindex="0">queue/consumer.py</span></td></tr>
+  <tr><td>Dead-letter</td><td>parked job, kept for a human</td><td><span class="src" data-path="src/mycel/queue/topology.py" tabindex="0">queue/topology.py</span></td></tr>
+  <tr><td>Drain</td><td>wait for running jobs before exit</td><td><span class="src" data-path="src/mycel/queue/inflight.py" tabindex="0">queue/inflight.py</span></td></tr>
+  <tr><td>Advisory lock</td><td>Postgres lock by name, not row</td><td><span class="src" data-path="src/mycel/infra/postgres/locks.py" tabindex="0">infra/postgres/locks.py</span></td></tr>
+</table></div>
+
+<h2>Built in</h2>
+<p>E4 (background work) · 108 (one sync timer per plugin).</p>
+
+<h2>Related</h2>
+<div class="related"><a href="architecture.html">Architecture</a><a href="../queue/retry-dlq-replay.html">Retry, DLQ, replay</a><a href="../queue/worker-shutdown.html">Worker shutdown</a></div>
+
 </main>
 </body>
 </html>

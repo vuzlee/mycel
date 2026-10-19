@@ -4,15 +4,124 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Code map · Overview · Mycel handbook</title>
 <link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Overview</nav>
+<style>
+  .diagram { width: 100%; height: auto; display: block; min-width: 760px; }
+  .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
+  .dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .dirs .d { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .dirs .d b { font: 600 13.5px var(--mono); color: var(--accent); }
+  .dirs .d small { font-size: 12.5px; color: var(--ink-soft); line-height: 1.35; }
+  .dirs .d i { font: normal 11.5px var(--mono); color: var(--ink-soft); }
+  .dirs .d.root { border-style: dashed; }
+</style>
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Code map</span></nav>
 <main>
-  <h1>Code map</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li>(cross-cutting: owns no file)</li>
+
+<h1>Where code lives, and which way imports may point</h1>
+<p class="lede">Each folder has one job. Lower layers never import higher ones, and a test fails the build if one does.</p>
+
+<nav class="toc"><a href="#layers">01 The layers</a><a href="#folders">02 Every folder</a><a href="#rules">03 Rules a test enforces</a><a href="#vocab">Vocabulary</a></nav>
+
+<h2 id="layers">01 · The layers</h2>
+<p class="purpose">Imports point down. A box may use anything below it, never above.</p>
+<div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 340" role="img" aria-label="Layers from top to bottom: processes (worker.py, lifecycle.py, api, scheduler); domains and agents; services, plugins and queue; infra, etl and sources; llm and events; core. Imports point down only.">
+  <g font-family="var(--mono)" font-size="12">
+    <text x="16" y="34" font-size="10" letter-spacing="1.2" fill="var(--accent)">PROCESSES</text>
+    <rect x="120" y="14" width="160" height="34" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="200" y="36" text-anchor="middle" fill="var(--accent)">worker.py</text>
+    <rect x="292" y="14" width="160" height="34" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="372" y="36" text-anchor="middle" fill="var(--accent)">lifecycle.py</text>
+    <rect x="464" y="14" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="544" y="36" text-anchor="middle" fill="var(--ink)">api/</text>
+    <rect x="636" y="14" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="716" y="36" text-anchor="middle" fill="var(--ink)">scheduler/</text>
+
+    <text x="16" y="92" font-size="10" letter-spacing="1.2" fill="var(--accent)">WORK</text>
+    <rect x="120" y="72" width="246" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="243" y="94" text-anchor="middle" fill="var(--ink)">domains/</text>
+    <rect x="378" y="72" width="246" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="501" y="94" text-anchor="middle" fill="var(--ink)">agents/</text>
+
+    <text x="16" y="150" font-size="10" letter-spacing="1.2" fill="var(--accent)">SINGLE JOBS</text>
+    <rect x="120" y="130" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="200" y="152" text-anchor="middle" fill="var(--ink)">services/</text>
+    <rect x="292" y="130" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="372" y="152" text-anchor="middle" fill="var(--ink)">plugins/</text>
+    <rect x="464" y="130" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="544" y="152" text-anchor="middle" fill="var(--ink)">queue/</text>
+
+    <text x="16" y="208" font-size="10" letter-spacing="1.2" fill="var(--accent)">STORES · I/O</text>
+    <rect x="120" y="188" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="200" y="210" text-anchor="middle" fill="var(--ink)">infra/</text>
+    <rect x="292" y="188" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="372" y="210" text-anchor="middle" fill="var(--ink)">etl/</text>
+    <rect x="464" y="188" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="544" y="210" text-anchor="middle" fill="var(--ink)">sources/</text>
+
+    <text x="16" y="266" font-size="10" letter-spacing="1.2" fill="var(--accent)">VALUE TYPES</text>
+    <rect x="120" y="246" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="200" y="268" text-anchor="middle" fill="var(--ink)">llm/</text>
+    <rect x="292" y="246" width="160" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="372" y="268" text-anchor="middle" fill="var(--ink)">events/</text>
+
+    <text x="16" y="322" font-size="10" letter-spacing="1.2" fill="var(--accent)">FOUNDATION</text>
+    <rect x="120" y="302" width="504" height="34" rx="2" fill="var(--surface)" stroke="var(--accent)"/><text x="372" y="324" text-anchor="middle" fill="var(--accent)">core/ — settings, shared types; imports nothing else</text>
+  </g>
+  <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none">
+    <path d="M840 20 V330"/><path d="M834 322 L840 334 L846 322"/>
+  </g>
+  <text x="852" y="180" font-family="var(--mono)" font-size="10" fill="var(--ink-faint)" transform="rotate(90 852 180)">imports point down</text>
+</svg>
+</div>
+<p class="insight"><b>Key insight:</b> <code>worker.py</code> and <code>lifecycle.py</code> sit at the root because each wires every layer; inside one they would import upward.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li><code>observability/</code>, <code>doctor/</code> and <code>mcp/</code> sit beside the layers: called at start-up or by hand, not on the request path.</li>
+    <li><code>devtools/</code> is never imported by the app.</li>
   </ul>
+</details>
+
+<h2 id="folders">02 · Every folder</h2>
+<p class="purpose">The folder's own one-line docstring, and the files to open first.</p>
+<div class="dirs">
+  <div class="d" data-path="src/mycel/api/app.py"><b>api/</b><small>HTTP shell — as thin as it can be.</small><i>app.py · dependencies.py · routes/</i></div>
+  <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does. Nothing here knows about HTTP.</small><i>chat.py · ingest.py · index.py · sync.py</i></div>
+  <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, specialist agents, and their tools.</small><i>registry.py · specialists/ · tools/ · core/</i></div>
+  <div class="d" data-path="src/mycel/services/enqueue.py"><b>services/</b><small>One file = one single job, done once.</small><i>enqueue.py · permission.py · tokens.py · oauth.py</i></div>
+  <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>Accounts each person connects: one package per provider.</small><i>base.py · registry.py · jira/ · google/</i></div>
+  <div class="d" data-path="src/mycel/queue/consumer.py"><b>queue/</b><small>RabbitMQ: publish, consume, retry, dead-letter.</small><i>producer.py · consumer.py · retry.py · topology.py</i></div>
+  <div class="d" data-path="src/mycel/scheduler/runner.py"><b>scheduler/</b><small>Timers: relay, sync, sweeps, watchdog.</small><i>runner.py · __main__.py</i></div>
+  <div class="d" data-path="src/mycel/infra/postgres/engine.py"><b>infra/</b><small>Postgres, Qdrant, object store, Redis, SMTP.</small><i>postgres/ · redis/ · vectors/ · objects/</i></div>
+  <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold.</small><i>normalize.py · promote.py · checks/</i></div>
+  <div class="d" data-path="src/mycel/sources/jira.py"><b>sources/</b><small>Provider HTTP clients: Jira, Gmail, Calendar.</small><i>jira.py · jira_http.py · gmail.py</i></div>
+  <div class="d" data-path="src/mycel/llm/budget.py"><b>llm/</b><small>Model routing and per-job cost budget.</small><i>router.py · budget.py · quota.py</i></div>
+  <div class="d" data-path="src/mycel/events/__init__.py"><b>events/</b><small>Events a run publishes, and the channels that carry them.</small><i>event.py · channel.py</i></div>
+  <div class="d" data-path="src/mycel/core/config.py"><b>core/</b><small>Config, logging, base exceptions. Imports nothing else.</small><i>config.py · principal.py · exceptions.py</i></div>
+  <div class="d" data-path="src/mycel/observability/tracing.py"><b>observability/</b><small>Logs, OpenTelemetry traces, Prometheus metrics.</small><i>tracing.py · metrics.py</i></div>
+  <div class="d" data-path="src/mycel/doctor/__init__.py"><b>doctor/</b><small>What is configured, broken, or off on purpose.</small><i>probes.py · declared.py</i></div>
+  <div class="d" data-path="src/mycel/mcp/__init__.py"><b>mcp/</b><small>Clients for tools on external MCP servers.</small><i>clients.py</i></div>
+  <div class="d" data-path="src/mycel/devtools/signin_code.py"><b>devtools/</b><small>Dev machines only; never imported by the app.</small><i>signin_code.py</i></div>
+  <div class="d root" data-path="src/mycel/worker.py"><b>worker.py · lifecycle.py</b><small>Job dispatch; process start and stop.</small><i>see <a href="processes.html">Processes</a></i></div>
+</div>
+
+<h2 id="rules">03 · Rules a test enforces</h2>
+<p class="purpose">Break one and CI goes red; the test names the file and the import.</p>
+<div class="table-wrap"><table>
+  <tr><th>Package</th><th>May never import</th><th>Why</th></tr>
+  <tr><td><code>core</code></td><td>agents, services, domains, api</td><td>the foundation</td></tr>
+  <tr><td><code>infra</code></td><td>agents, services, domains, api, queue, lifecycle</td><td>stores sit under everything that runs work</td></tr>
+  <tr><td><code>llm</code>, <code>events</code></td><td>infra and everything above it</td><td>value types infra may store</td></tr>
+  <tr><td><code>queue</code></td><td>agents, services, domains, api, lifecycle</td><td>moves jobs; <code>worker.py</code> runs them</td></tr>
+  <tr><td><code>services</code></td><td>agents</td><td>tools call services, never the reverse</td></tr>
+  <tr><td><code>api</code></td><td>agents, domains</td><td>the API queues work; agents run only in the worker</td></tr>
+</table></div>
+<div class="branches" style="margin-top:12px">
+  <div class="branch" data-path="tests/test_layers.py"><div class="when">tests/test_layers.py</div><div class="then">the table above, checked on every import in every file</div></div>
+  <div class="branch" data-path="tests/test_gold_entry_point.py"><div class="when">tests/test_gold_entry_point.py</div><div class="then">a file that reads gold for a person must also ask <code>services/permission.py</code></div></div>
+</div>
+
+<h2 id="vocab">Vocabulary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>Layer</td><td>folders at one height in the map</td><td><span class="src" data-path="tests/test_layers.py" tabindex="0">tests/test_layers.py</span></td></tr>
+  <tr><td>Domain</td><td>what one kind of job does</td><td><span class="src" data-path="src/mycel/domains/chat.py" tabindex="0">domains/</span></td></tr>
+  <tr><td>Service</td><td>one single job, inside a request</td><td><span class="src" data-path="src/mycel/services/enqueue.py" tabindex="0">services/</span></td></tr>
+</table></div>
+
+<h2>Built in</h2>
+<p>E1 (foundation) · 102 (infra's import exception, tests in one place) · 106–108 (plugins/).</p>
+
+<h2>Related</h2>
+<div class="related"><a href="architecture.html">Architecture</a><a href="processes.html">Processes</a><a href="../change/add-plugin.html">Add a plugin</a></div>
+
 </main>
 </body>
 </html>

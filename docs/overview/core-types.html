@@ -4,19 +4,86 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Core types · Overview · Mycel handbook</title>
 <link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Overview</nav>
+<style>
+  .types { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .t { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font: 12.5px var(--mono); }
+  .t > b { display: block; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--accent-soft); color: var(--accent); border-radius: 9px 9px 0 0; }
+  .t > b small { display: block; font: 12px var(--font, inherit); color: var(--ink-soft); font-weight: 400; }
+  .t ul { list-style: none; margin: 0; padding: 8px 12px; }
+  .t li { padding: 1px 0; }
+  .t li i { font-style: normal; color: var(--ink-soft); }
+  .t .use { border-top: 1px solid var(--line); color: var(--ink-soft); font-size: 12px; }
+</style>
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Core types</span></nav>
 <main>
-  <h1>Core types</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li><span class="src" data-path="src/mycel/core/principal.py" tabindex="0">src/mycel/core/principal.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/usage.py" tabindex="0">src/mycel/core/usage.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/exceptions.py" tabindex="0">src/mycel/core/exceptions.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/chips.py" tabindex="0">src/mycel/core/chips.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/__init__.py" tabindex="0">src/mycel/core/__init__.py</span></li>
-  </ul>
+
+<h1>Core types: the few values every layer passes around</h1>
+<p class="lede">Who is asking, what a turn cost, which sources are on, and the errors Mycel raises on purpose. They live in <code>core/</code>, which imports nothing else.</p>
+
+<nav class="toc"><a href="#types">01 The types</a><a href="#errors">02 Errors</a><a href="#chips">03 Chips filter tools</a><a href="#vocab">Vocabulary</a></nav>
+
+<h2 id="types">01 · The types</h2>
+<div class="types">
+  <div class="t" data-path="src/mycel/core/principal.py"><b>Principal<small>who is asking</small></b>
+    <ul><li>id <i>: int</i></li><li>email <i>: str</i></li></ul>
+    <ul class="use"><li>route → <code>current_user</code> → job → agents → plugins</li></ul></div>
+  <div class="t" data-path="src/mycel/core/usage.py"><b>TurnUsage<small>the line under an answer</small></b>
+    <ul><li>model_ref <i>: str</i></li><li>tokens_in, tokens_out <i>: int</i></li><li>duration_ms <i>: int — queue wait excluded</i></li></ul>
+    <ul class="use"><li>stored on the turn and the job result</li></ul></div>
+  <div class="t" data-path="src/mycel/core/chips.py"><b>Chip<small>a source a person switches on</small></b>
+    <ul><li>knowledge · web · jira</li><li>calendar · mail</li></ul>
+    <ul class="use"><li>picked in the composer, sent with the job</li></ul></div>
+</div>
+
+<h2 id="errors">02 · Errors</h2>
+<figure class="fig"><div class="flow">
+  <div class="node"><b>Exception</b></div>
+  <div class="lk"><span>base of</span></div>
+  <div class="node key" data-path="src/mycel/core/exceptions.py"><b>MycelError</b><small>every error Mycel raises on purpose</small></div>
+  <div class="lk"><span>base of</span></div>
+  <div class="node" data-path="src/mycel/core/exceptions.py"><b>ConfigError</b><small>a credential, model spec or URL missing or malformed</small></div>
+</div></figure>
+<p class="insight"><b>Key insight:</b> catching <code>MycelError</code> means "an expected failure, say it plainly"; anything else is a bug and is logged with its trace.</p>
+<details><summary>Details</summary>
+  <ul><li>Agent failures (<code>DegenerateLoop</code>, <code>ModelAuth</code>…) live in <code>agents/core/exceptions.py</code>; how the worker sorts them: <a href="processes.html#job">Processes</a>.</li></ul>
+</details>
+
+<h2 id="chips">03 · Chips filter tools</h2>
+<p class="purpose">Every toolset is tagged with the chips that open it; a turn sees only tools its chips open.</p>
+<figure class="fig"><div class="flow">
+  <div class="node" data-path="src/mycel/core/chips.py"><b>Job's chips</b><small>e.g. {jira}</small></div>
+  <div class="lk"><span>ctx.deps.chips</span></div>
+  <div class="node key" data-path="src/mycel/agents/core/chips.py"><b>allowed(ctx, tool)</b><small>keeps a tool if its chips overlap</small></div>
+  <div class="lk"><span>filtered</span></div>
+  <div class="node" data-path="src/mycel/agents/core/base.py"><b>Toolsets offered</b><small>analyst opens on jira; researcher on web, mail, calendar</small></div>
+</div></figure>
+<div class="branches" style="margin-top:12px">
+  <div class="branch"><div class="when">chips = None</div><div class="then"><span class="chip ok">every tool offered</span></div></div>
+  <div class="branch"><div class="when">chips = {} (all off)</div><div class="then"><span class="chip warn">no tool offered; the orchestrator says which sources are off</span></div></div>
+  <div class="branch"><div class="when">A tool with no chip tag</div><div class="then"><span class="chip bad">never offered once chips are set</span></div></div>
+</div>
+
+<h2>Guaranteed / not guaranteed</h2>
+<div class="cols">
+  <div class="col ok"><h3>Guaranteed</h3><ul><li>Types are frozen: a Principal cannot change mid-job</li><li>Unknown chip names from a job are dropped, not trusted</li></ul></div>
+  <div class="col bad"><h3>Not guaranteed</h3><ul><li>Every <code>MycelError</code> subclass lives in <code>core/</code>: layers add their own</li></ul></div>
+</div>
+
+<h2 id="vocab">Vocabulary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>Principal</td><td>the signed-in person</td><td><span class="src" data-path="src/mycel/core/principal.py" tabindex="0">core/principal.py</span></td></tr>
+  <tr><td>Chip</td><td>a source switch in the composer</td><td><span class="src" data-path="src/mycel/core/chips.py" tabindex="0">core/chips.py</span></td></tr>
+  <tr><td>opens(...)</td><td>tag a toolset with its chips</td><td><span class="src" data-path="src/mycel/agents/core/chips.py" tabindex="0">agents/core/chips.py</span></td></tr>
+</table></div>
+
+<h2>Built in</h2>
+<p>E1 (core) · 102 (TurnUsage moved into core).</p>
+
+<h2>Related</h2>
+<div class="related"><a href="code-map.html">Code map</a><a href="../agents/tools-and-chips.html">Tools and chips</a><a href="config.html">Config</a></div>
+
 </main>
 </body>
 </html>

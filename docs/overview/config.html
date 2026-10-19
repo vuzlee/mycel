@@ -4,20 +4,129 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Config · Overview · Mycel handbook</title>
 <link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Overview</nav>
+<style>
+  .diagram { width: 100%; height: auto; display: block; min-width: 760px; }
+  .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
+</style>
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Config</span></nav>
 <main>
-  <h1>Config</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li><span class="src" data-path="src/mycel/core/config.py" tabindex="0">src/mycel/core/config.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/config_files.py" tabindex="0">src/mycel/core/config_files.py</span></li>
-    <li><span class="src" data-path="src/mycel/core/settings_source.py" tabindex="0">src/mycel/core/settings_source.py</span></li>
-    <li><span class="src" data-path="config/environments" tabindex="0">config/environments/</span></li>
-    <li><span class="src" data-path="config/agents" tabindex="0">config/agents/</span></li>
-    <li><span class="src" data-path=".env.example" tabindex="0">.env.example</span></li>
+
+<h1>Config: secrets in .env, everything else in git</h1>
+<p class="lede">One <code>Settings</code> object, read once per process. A value can come from five places; the nearest one wins.</p>
+
+<nav class="toc"><a href="#without">01 Without it</a><a href="#order">02 Who wins</a><a href="#where">03 Where a value goes</a><a href="#agents">04 Agent files</a><a href="#stores">05 Store URLs</a><a href="#wrong">06 When things go wrong</a><a href="#vocab">Vocabulary</a></nav>
+
+<h2 id="without">01 · Without it</h2>
+<figure class="fig"><div class="flow">
+  <div class="node bad"><b>Settings scattered</b><small>os.environ read in twenty files</small></div>
+  <div class="lk"><span>so</span></div>
+  <div class="node bad"><b>No one knows the value</b><small>dev and prod differ by accident; a secret ends up in git</small></div>
+</div></figure>
+
+<h2 id="order">02 · Who wins</h2>
+<p class="purpose">Lowest at the left; each layer overrides the ones before it.</p>
+<div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 150" role="img" aria-label="Precedence from lowest to highest: class default, base.yaml, the environment yaml, .env, process environment.">
+  <defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g font-family="var(--mono)" font-size="12">
+    <rect x="16" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="32" y="48" fill="var(--ink)">class default</text><text x="32" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">core/config.py</text>
+    <rect x="196" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="212" y="48" fill="var(--ink)">base.yaml</text><text x="212" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">every environment</text>
+    <rect x="376" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="392" y="48" fill="var(--ink)">&lt;env&gt;.yaml</text><text x="392" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">dev or prod: only diffs</text>
+    <rect x="556" y="24" width="148" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="572" y="48" fill="var(--accent)">.env</text><text x="572" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">secrets, per machine</text>
+    <rect x="736" y="24" width="148" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="752" y="48" fill="var(--accent)">environment</text><text x="752" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">container env, k8s</text>
+  </g>
+  <g stroke="currentColor" color="var(--ink-faint)" stroke-width="1.3" marker-end="url(#ca)">
+    <path d="M164 54H192"/><path d="M344 54H372"/><path d="M524 54H552"/><path d="M704 54H732"/>
+  </g>
+  <text x="16" y="120" font-family="var(--sans)" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--ink)">MYCEL_ENV</tspan> picks which &lt;env&gt;.yaml (default dev). YAML merges deep: a nested key overrides one key; a list is replaced whole.</text>
+</svg>
+</div>
+<p class="insight"><b>Key insight:</b> a container's own env beats <code>.env</code>, which is how compose and Helm point every process at the right host without editing the file.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li>Order is set in <code>Settings.settings_customise_sources</code>; YAML is read by <code>core/settings_source.py</code>.</li>
+    <li>A YAML file that fails to parse is ignored and the defaults stand; <code>doctor</code> and start-up logs are where it shows.</li>
+    <li><code>MYCEL_ENV</code> may be <code>staging</code>; no <code>staging.yaml</code> exists, so it runs on base.yaml alone.</li>
   </ul>
+</details>
+
+<h2 id="where">03 · Where a value goes</h2>
+<div class="cols">
+  <div class="col"><h3><code>.env</code> — not in git</h3><ul>
+    <li>Passwords: <code>POSTGRES_PASSWORD</code>, <code>RABBITMQ_PASSWORD</code></li>
+    <li>Keys: <code>TOKEN_ENCRYPTION_KEY</code>, <code>LITELLM_API_KEY</code></li>
+    <li>Plugin app secrets: <code>JIRA_CLIENT_SECRET</code></li>
+  </ul></div>
+  <div class="col"><h3><code>config/</code> — in git</h3><ul>
+    <li><code>log_level</code>, <code>db_pool_size</code>, <code>timezone</code></li>
+    <li>Host models and their prices</li>
+    <li>Per-agent limits: <code>config/agents/*.yaml</code></li>
+  </ul></div>
+</div>
+<p class="insight"><b>Key insight:</b> a YAML key is the <code>Settings</code> field name in lower case, so any of them can still be overridden by an env var of the same name.</p>
+
+<h2 id="agents">04 · Agent files</h2>
+<p class="purpose">Each agent's model and limits in its own file; anything left out comes from <code>agents.defaults</code>.</p>
+<figure class="fig"><div class="flow">
+  <div class="node" data-path="src/mycel/agents/core/config.py"><b>AgentSettings defaults</b><small>model, temperature, retries, repeat guard</small></div>
+  <div class="lk"><span>overridden by</span></div>
+  <div class="node" data-path="config/environments/base.yaml"><b>agents.defaults</b><small>in base / env yaml</small></div>
+  <div class="lk"><span>overridden by</span></div>
+  <div class="node key" data-path="config/agents/analyst.yaml"><b>config/agents/&lt;name&gt;.yaml</b><small>e.g. analyst: 12 tool calls, 13 requests, 1200 tokens</small></div>
+</div></figure>
+<details><summary>Details</summary>
+  <ul>
+    <li>Files: analyst, orchestrator, researcher, rewriter, summarizer.</li>
+    <li>Run limits (<code>request_limit</code>, <code>tool_calls_limit</code>) are set only in each agent's file, never in defaults.</li>
+    <li>An unknown key raises <code>ConfigError</code> listing the known ones.</li>
+  </ul>
+</details>
+
+<h2 id="stores">05 · Store URLs</h2>
+<p class="purpose">Each password is written once; the URL is built from it.</p>
+<div class="table-wrap"><table>
+  <tr><th>Property</th><th>Built from</th><th>Override</th></tr>
+  <tr><td><code>migration_database_url</code></td><td>postgres user + password: the schema owner</td><td><code>MIGRATION_DATABASE_URL</code>, then <code>DATABASE_URL</code></td></tr>
+  <tr><td><code>database_url</code></td><td><code>mycel_app</code> when <code>MYCEL_APP_PASSWORD</code> is set, else the owner</td><td><code>DATABASE_URL</code></td></tr>
+  <tr><td><code>rabbitmq_url</code></td><td>rabbitmq user + password + host</td><td><code>RABBITMQ_URL</code></td></tr>
+  <tr><td><code>redis_url</code>, <code>redis_cache_url</code></td><td>written as is (no password)</td><td>—</td></tr>
+</table></div>
+
+<h2 id="wrong">06 · When things go wrong</h2>
+<div class="branches">
+  <div class="branch"><div class="when">Not exactly one default host model</div><div class="then"><span class="chip bad">start-up fails</span></div></div>
+  <div class="branch"><div class="when">A required YAML is missing or not a mapping</div><div class="then"><span class="chip bad">ConfigError naming the file</span></div></div>
+  <div class="branch"><div class="when">Prod still holds a dev value</div><div class="then"><span class="chip warn">doctor: dev values BROKEN</span></div></div>
+  <div class="branch"><div class="when">A setting changes at runtime</div><div class="then"><span class="chip">not seen: settings are read once; restart</span></div></div>
+</div>
+
+<h2>Guaranteed / not guaranteed</h2>
+<div class="cols">
+  <div class="col ok"><h3>Guaranteed</h3><ul><li>Settings are frozen: no code changes them mid-run</li><li>Unknown keys in <code>.env</code> are ignored, not fatal</li></ul></div>
+  <div class="col bad"><h3>Not guaranteed</h3><ul><li>A typo in a key is caught: it is silently ignored</li></ul></div>
+</div>
+
+<h2 id="vocab">Vocabulary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>Settings</td><td>every value, one frozen object</td><td><span class="src" data-path="src/mycel/core/config.py" tabindex="0">core/config.py</span></td></tr>
+  <tr><td>MYCEL_ENV</td><td>which environment yaml to read</td><td><span class="src" data-path="src/mycel/core/settings_source.py" tabindex="0">core/settings_source.py</span></td></tr>
+  <tr><td>AgentSettings</td><td>one agent's model and limits</td><td><span class="src" data-path="src/mycel/agents/core/config.py" tabindex="0">agents/core/config.py</span></td></tr>
+  <tr><td>get_settings()</td><td>the cached Settings; tests clear it</td><td><span class="src" data-path="src/mycel/core/config_files.py" tabindex="0">core/config_files.py</span></td></tr>
+</table></div>
+
+<h2>Built in</h2>
+<p>E1 (config) · 100 (agent limits per file) · 105 and its follow-up (.env groups, URLs from one password).</p>
+
+<h2>Related</h2>
+<div class="related"><a href="../change/add-setting.html">Add a setting</a><a href="../operate/run-locally.html">Run locally</a><a href="../platform/doctor.html">Doctor</a></div>
+
 </main>
 </body>
 </html>

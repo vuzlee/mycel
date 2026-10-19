@@ -811,7 +811,7 @@ pre .c { color: var(--ink-faint); }
 <div class="page">
 
   <header class="hero">
-    <p class="eyebrow">Database reference · migration 0004</p>
+    <p class="eyebrow">Database reference · migration 0027</p>
     <h1>Database</h1>
     <p class="hero-lede">
       One PostgreSQL database, <em>one schema per data layer</em> — so a <code>GRANT</code> can
@@ -1316,12 +1316,12 @@ pre .c { color: var(--ink-faint); }
     </div>
 
     <p class="path-note">
-      Four tables from migration <code>0002</code>: <code>app.user</code> and
-      <code>app.session</code> for who is signed in, <code>app.conversation</code> and
-      <code>app.turn</code> for what they have asked. Migration <code>0006</code> renamed
-      <code>app.report</code> to <code>app.turn</code> and replaced its <code>jsonb</code>
-      <code>body</code> with <code>answer text</code>: every run is a chat answer in markdown
-      now, so there is no output schema left to store.
+      Fourteen tables in four groups: who is signed in (<code>user</code>, <code>session</code>),
+      what they asked (<code>conversation</code>, <code>turn</code>), what they connected and may
+      read (<code>google_account</code>, <code>jira_account</code>, <code>membership</code>,
+      <code>sync_state</code>), their models and documents (<code>model_pref</code>,
+      <code>own_model</code>, <code>own_model_key</code>, <code>document</code>, <code>chunk</code>),
+      and the job <code>outbox</code>. Every foreign key cascades on delete.
     </p>
 
     <div class="callout">
@@ -1417,15 +1417,107 @@ pre .c { color: var(--ink-faint); }
       </div>
     </div>
 
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.google_account · app.jira_account</span>
+        <p>One connected account per person per plugin, sealed.</p>
+      </div>
+      <div class="col" data-key="pk">
+        <span class="col-n">user_id</span>
+        <span class="col-t">int · primary key</span>
+        <span class="col-d">One account per person: connecting again replaces it.</span>
+      </div>
+      <div class="col">
+        <span class="col-n">refresh_token_encrypted</span>
+        <span class="col-t">text</span>
+        <span class="col-d">Sealed with <code>TOKEN_ENCRYPTION_KEY</code> (Fernet, newest key
+        first so keys rotate). Jira rotates it on each refresh and the new one is written back.</span>
+      </div>
+      <div class="col">
+        <span class="col-n">jira_account.cloud_id</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d">Which Atlassian site the grant opens; every Jira call names it.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.membership · app.sync_state</span>
+        <p>What each person may read, and how the last sync went.</p>
+      </div>
+      <div class="col" data-key="nk">
+        <span class="col-n">membership (user_id, project)</span>
+        <span class="col-t">unique</span>
+        <span class="col-d">Replaced whole from Jira on every sync and on connect: a project
+        Jira stops letting them browse disappears here too.</span>
+      </div>
+      <div class="col">
+        <span class="col-n">sync_state.id</span>
+        <span class="col-t">int · check id = 1</span>
+        <span class="col-d">One row, ever. Written by <code>plugins/jira/sync.py</code>; read by
+        doctor.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.model_pref · app.own_model · app.own_model_key</span>
+        <p>Which host models a person has on, and the models they brought.</p>
+      </div>
+      <div class="col">
+        <span class="col-n">own_model.api_base</span>
+        <span class="col-t">varchar(500)</span>
+        <span class="col-d">Checked on save and before every run: no internal host, https
+        unless allowed.</span>
+      </div>
+      <div class="col" data-key="pk">
+        <span class="col-n">own_model_key (own_model_id, position)</span>
+        <span class="col-t">key_sealed text · hint varchar(16)</span>
+        <span class="col-d">Several keys, tried in order when one runs out. Only the last four
+        characters are ever shown.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.document · app.chunk</span>
+        <p>An uploaded file, and the pieces it was cut into for search.</p>
+      </div>
+      <div class="col" data-key="nk">
+        <span class="col-n">document (user_id, sha256)</span>
+        <span class="col-t">unique</span>
+        <span class="col-d">The same file twice is one document.</span>
+      </div>
+      <div class="col">
+        <span class="col-n">document.status</span>
+        <span class="col-t">varchar(16)</span>
+        <span class="col-d"><code>uploaded</code> → parsing → ready or failed; a watchdog
+        requeues one stuck mid-way.</span>
+      </div>
+    </div>
+
+    <div class="dict" data-tone="app">
+      <div class="dict-head">
+        <span class="dict-name">app.outbox</span>
+        <p>A job written in the same transaction as the row that needs it.</p>
+      </div>
+      <div class="col" data-key="pk">
+        <span class="col-n">job_id</span>
+        <span class="col-t">varchar(64)</span>
+        <span class="col-d"><code>published_at</code> stays null until RabbitMQ has it; the relay
+        resends those. Why: <a href="../queue/outbox.html">Outbox</a>.</span>
+      </div>
+    </div>
+
     <div class="callout">
       <p><b>Redis and <code>app.turn</code> coexist.</b> Redis holds a result for
       <code>result_ttl_seconds</code> so a second process can read it — a holding area, always
       described as one. This is the record. Redis answers <em>is it done yet</em>; this answers
       <em>what did we produce last week</em>.</p>
-      <p><b>Expired sessions are not swept.</b>
-      <code>AppRepository.delete_expired_sessions</code> exists and nothing schedules it. An
-      expired row is deleted the moment someone reads it, which is enough while the cookie is
-      dead either way.</p>
+      <p><b>Expired sessions are swept daily.</b> The scheduler's <code>sweep:sessions</code>
+      timer calls <code>IdentityRepository.delete_expired_sessions</code>; an expired row read
+      before then is already treated as gone.</p>
     </div>
   </section>
 
@@ -1496,7 +1588,7 @@ pre .c { color: var(--ink-faint); }
     </div>
 
 <pre>uv run alembic upgrade head   <span class="c"># create everything</span>
-uv run alembic current        <span class="c"># → 0004 (head)</span>
+uv run alembic current        <span class="c"># → 0027 (head)</span>
 uv run alembic downgrade base <span class="c"># drop everything</span></pre>
 
     <div class="callout">
