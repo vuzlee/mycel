@@ -1,128 +1,717 @@
 <!doctype html>
-<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Config · Overview · Mycel handbook</title>
-<link rel="stylesheet" href="../handbook.css">
+<title>Mycel Config</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+
 <style>
-  .diagram { width: 100%; height: auto; display: block; min-width: 760px; }
-  .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
-  .bul { margin: 0.4rem 0 0; padding-left: 1.1rem; } .bul li { margin: 0.15rem 0; }
+:root {
+  color-scheme: light;
+
+  /* Surfaces, lightest first. */
+  --ground: #faf9fc;
+  --paper: #faf9fc;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --surface-alt: #f3f1f8;
+  --sunk: #f3f1f8;
+
+  /* Text, strongest first. */
+  --ink: #17141f;
+  --ink-2: #453e56;
+  --ink-soft: #6f6782;
+  --dim: #6f6782;
+  --ink-faint: #9d96ae;
+
+  --line: #e7e3f0;
+  --line-soft: #f0edf7;
+  --rule-2: #d9d3e6;
+
+  --accent: #6d3fd1;
+  --brand: #6d3fd1;
+  --accent-soft: #efe9fc;
+  --brand-soft: #efe9fc;
+  --brand-line: #d6c8f7;
+
+  /* A second, cooler voice for asides that must not read as the accent. */
+  --cool: #3a5ba8;
+  --cool-soft: #eaeefa;
+
+  /*
+   * The three data layers. They must stay tellable apart at a glance, so they step
+   * around the wheel rather than sitting on the accent — but each is pulled toward the
+   * page's violet so the set still reads as one family.
+   */
+  --bronze: #9c5a3c;
+  --silver: #4f6d9e;
+  --gold: #6d3fd1;
+  --bronze-wash: #9c5a3c18;
+  --silver-wash: #4f6d9e18;
+  --gold-wash: #6d3fd118;
+
+  /* Status: present, provisional, missing, wrong. */
+  --live: #3f7d58;
+  --live-bg: #e6f2ea;
+  --draft: #8a6510;
+  --draft-bg: #f7efd8;
+  --absent: #8f87a3;
+  --absent-bg: #efedf4;
+  --warn: #a63d6b;
+
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --step: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ground: #0b0910;
+    --paper: #0b0910;
+    --surface: #131019;
+    --card: #131019;
+    --surface-alt: #0f0d15;
+    --sunk: #0f0d15;
+
+    --ink: #f0edf7;
+    --ink-2: #c5bed6;
+    --ink-soft: #8f87a3;
+    --dim: #8f87a3;
+    --ink-faint: #6b6380;
+
+    --line: #241f30;
+    --line-soft: #1a1624;
+    --rule-2: #332c42;
+
+    --accent: #b79cff;
+    --brand: #b79cff;
+    --accent-soft: #1d1730;
+    --brand-soft: #1d1730;
+    --brand-line: #3a2f5c;
+
+    --cool: #8aa6e0;
+    --cool-soft: #151a2a;
+
+    --bronze: #d29472;
+    --silver: #92aee0;
+    --gold: #b79cff;
+    --bronze-wash: #d294721f;
+    --silver-wash: #92aee01f;
+    --gold-wash: #b79cff1f;
+
+    --live: #6fc894;
+    --live-bg: #14251b;
+    --draft: #d8ad55;
+    --draft-bg: #2a2110;
+    --absent: #6b6380;
+    --absent-bg: #1a1624;
+    --warn: #f090b4;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ground: #0b0910;
+  --paper: #0b0910;
+  --surface: #131019;
+  --card: #131019;
+  --surface-alt: #0f0d15;
+  --sunk: #0f0d15;
+
+  --ink: #f0edf7;
+  --ink-2: #c5bed6;
+  --ink-soft: #8f87a3;
+  --dim: #8f87a3;
+  --ink-faint: #6b6380;
+
+  --line: #241f30;
+  --line-soft: #1a1624;
+  --rule-2: #332c42;
+
+  --accent: #b79cff;
+  --brand: #b79cff;
+  --accent-soft: #1d1730;
+  --brand-soft: #1d1730;
+  --brand-line: #3a2f5c;
+
+  --cool: #8aa6e0;
+  --cool-soft: #151a2a;
+
+  --bronze: #d29472;
+  --silver: #92aee0;
+  --gold: #b79cff;
+  --bronze-wash: #d294721f;
+  --silver-wash: #92aee01f;
+  --gold-wash: #b79cff1f;
+
+  --live: #6fc894;
+  --live-bg: #14251b;
+  --draft: #d8ad55;
+  --draft-bg: #2a2110;
+  --absent: #6b6380;
+  --absent-bg: #1a1624;
+  --warn: #f090b4;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-inline: clamp(1rem, 4vw, 3rem);
+  padding-block: clamp(2.5rem, 7vw, 5rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--step);
+}
+
+/* ---------- Typography ---------- */
+
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.15;
+}
+
+h1 {
+  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  letter-spacing: -0.012em;
+}
+
+h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+p { margin: 0; max-width: 62ch; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+code, .mono {
+  font-family: var(--mono);
+  font-size: 0.8125em;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero-lede {
+  font-size: clamp(1.0625rem, 2.2vw, 1.25rem);
+  color: var(--ink-soft);
+  max-width: 54ch;
+}
+
+.hero-lede em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.hero-meta b {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+/* ---------- Sections ---------- */
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+figure { margin: 0; }
+
+figcaption {
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  max-width: 64ch;
+}
+
+.diagram {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.scroll-x {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.scroll-x .diagram { min-width: 620px; }
+
+/* ---------- Three-layer table ---------- */
+
+.layers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.layer {
+  background: var(--ground);
+  padding: 1.375rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border-top: 3px solid var(--tone);
+}
+
+.layer:nth-child(1) { --tone: var(--bronze); }
+.layer:nth-child(2) { --tone: var(--silver); }
+.layer:nth-child(3) { --tone: var(--gold); }
+
+.layer-name {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--tone);
+  letter-spacing: 0.02em;
+}
+
+.layer p { font-size: 0.9375rem; color: var(--ink-soft); }
+
+.layer dl {
+  margin: 0.25rem 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: var(--mono);
+}
+
+.layer dt { color: var(--ink-faint); }
+.layer dd { margin: 0; color: var(--ink-soft); }
+
+/* ---------- Directory tree ---------- */
+
+.tree {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: start;
+}
+
+.tree-col {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+  gap: 0 2.5rem;
+  align-items: baseline;
+  padding-block: 0.0625rem;
+}
+
+.tree-row + .tree-row { border-top: 1px solid var(--line-soft); }
+
+.tree-row.is-head {
+  border-top: 1px solid var(--line);
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.tree-row:first-child { border-top: none; }
+
+.tree-path {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  white-space: pre;
+  color: var(--ink);
+}
+
+.tree-path .dim { color: var(--ink-faint); }
+
+.tree-note {
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.tree-row.is-head .tree-path {
+  color: var(--ink-faint);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.tree-row.is-epic {
+  border-top: 1px solid var(--line);
+  margin-top: 0.625rem;
+  padding-top: 0.4375rem;
+}
+
+.tree-row.is-epic .tree-path {
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.tree-row[data-tone="bronze"]    .tree-path { color: var(--bronze); }
+.tree-row[data-tone="silver"] .tree-path { color: var(--silver); }
+.tree-row[data-tone="gold"]   .tree-path { color: var(--gold); }
+
+/* ---------- Principles ---------- */
+
+.rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.75rem 2.5rem;
+}
+
+.rules li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--line);
+}
+
+.rules li strong {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.rules li span {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Operations table ---------- */
+
+.ops {
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+}
+
+.op {
+  background: var(--ground);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4375rem;
+}
+
+.op-svc {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
+.op-role { font-size: 0.875rem; font-weight: 500; }
+
+.op p { font-size: 0.8125rem; color: var(--ink-soft); }
+
+/* ---------- Table of contents ---------- */
+
+.toc {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem 2rem;
+}
+
+.toc a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9375rem;
+  border-top: 2px solid var(--line);
+  padding-top: 0.625rem;
+}
+
+.toc a:hover { color: var(--accent); border-top-color: var(--accent); }
+
+.toc a b {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+section, .part { scroll-margin-top: 1.5rem; }
+
+/* ---------- Part markers ---------- */
+
+.part {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 2px solid var(--accent);
+  margin-top: 1rem;
+}
+
+.part-num {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.part-title {
+  font-size: clamp(1.875rem, 4.5vw, 2.75rem);
+  letter-spacing: -0.018em;
+}
+
+.part-blurb {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  max-width: 56ch;
+}
+
+.path-note {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  max-width: 68ch;
+  line-height: 1.7;
+}
+
+.path-note b { font-weight: 500; color: var(--ink); }
+
+/* ---------- Shared compact table ---------- */
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tbl th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--ink-faint);
+  padding: 0 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: bottom;
+}
+
+.tbl td {
+  padding: 0.6875rem 1rem 0.6875rem 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.tbl td:last-child, .tbl th:last-child { padding-right: 0; }
+
+.tbl tr:last-child td { border-bottom: none; }
+
+.tbl .who {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.tbl .no { color: var(--ink-faint); }
+
+.tbl .tone-bronze    .who { color: var(--bronze); }
+.tbl .tone-silver .who { color: var(--silver); }
+.tbl .tone-gold   .who { color: var(--gold); }
+.tbl .tone-accent .who { color: var(--accent); }
+
+/* ---------- Footer ---------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 760px) {
+  .layers { grid-template-columns: 1fr; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+  .tbl thead { display: none; }
+  .tbl tr { border-bottom: 1px solid var(--line); padding-block: 0.75rem; }
+  .tbl tr:last-child { border-bottom: none; }
+  .tbl td { border: none; padding: 0.125rem 0; }
+  .tree, .tree-row { grid-template-columns: 1fr; gap: 0.125rem; }
+  .tree-row { padding-block: 0.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+.bul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.bul li { margin: 0.15rem 0; line-height: 1.45; }
+figcaption .bul, .path-note .bul { font-size: inherit; }
+footer a { color: var(--accent); text-decoration: none; }
+.tbl-title { margin: 1.6rem 0 0.4rem; font: 600 13px var(--mono); color: var(--ink-soft); letter-spacing: 0.04em; }
 </style>
+<style>
+.bul { margin: 0.4rem 0 0; padding-left: 1.1rem; } .bul li { margin: 0.15rem 0; line-height: 1.45; }
+.tbl-title { margin: 1.6rem 0 0.4rem; font: 500 0.8125rem var(--mono); color: var(--ink-soft); letter-spacing: 0.04em; }
+</style>
+
 <body>
-<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Config</span></nav>
-<main>
+<div class="page">
 
-<h1>Config: secrets in .env, everything else in git</h1>
-<p class="lede">One <code>Settings</code> object, read once per process. A value can come from five places; the nearest one wins.</p>
+  <header class="hero">
+    <p class="eyebrow">Config</p>
+    <h1>Settings</h1>
+    <div class="hero-lede"><ul class="bul"><li>Secrets in <code>.env</code>; everything else in git</li><li>One object, read once per process</li></ul></div>
+    <nav class="toc">
+      <a href="#s1"><b>1</b><span>Who wins</span></a>
+      <a href="#s2"><b>2</b><span>Where a value goes</span></a>
+      <a href="#s3"><b>3</b><span>Agent files</span></a>
+      <a href="#s4"><b>4</b><span>Store URLs</span></a>
+    </nav>
+  </header>
 
-<nav class="toc"><a href="#without">01 Without it</a><a href="#order">02 Who wins</a><a href="#where">03 Where a value goes</a><a href="#agents">04 Agent files</a><a href="#stores">05 Store URLs</a><a href="#wrong">06 When things go wrong</a><a href="#vocab">Vocabulary</a></nav>
+  <section id="s1">
+    <div class="section-head">
+      <p class="eyebrow">1 · Precedence</p>
+      <h2>Five sources; the nearest wins</h2>
+    </div>
+    <figure><div class="scroll-x"><svg class="diagram" viewBox="0 0 940 200" role="img" aria-label="Precedence from lowest to highest: class default, base.yaml, the environment yaml, .env, process environment; the highest wins."><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2"><text x="16" y="30">LOWEST</text><text x="924" y="30" text-anchor="end">WINS</text></g><rect x="16" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="30" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">class default</text><text x="30" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">core/config.py</text><rect x="206" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="220" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">base.yaml</text><text x="220" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">every environment</text><rect x="396" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="410" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">&lt;env&gt;.yaml</text><text x="410" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">dev / prod: only diffs</text><rect x="586" y="46" width="160" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="600" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">.env</text><text x="600" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">secrets, this machine</text><rect x="776" y="46" width="148" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="790" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">process env</text><text x="790" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">compose, Helm</text><g stroke="var(--ink-faint)" stroke-width="1.3" fill="none" color="var(--ink-faint)" marker-end="url(#ca)"><path d="M 176 74 L 202 74"/><path d="M 366 74 L 392 74"/><path d="M 556 74 L 582 74"/><path d="M 746 74 L 772 74"/></g><text x="396" y="134" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">MYCEL_ENV picks it · default dev</text><path d="M 476 102 L 476 122" stroke="var(--ink-faint)" stroke-dasharray="3 3"/><rect x="16" y="150" width="908" height="34" rx="2" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/><text x="32" y="171" font-family="var(--sans)" font-size="11" fill="var(--ink-soft)">core/config.py · Settings — one frozen object, read once per process · get_settings() caches it</text></svg></div>
+      <figcaption><ul class="bul"><li>YAML merges deep: one nested key overrides one key; a list is replaced whole</li><li>Container env beats <code>.env</code>: that is how compose and Helm set hosts</li></ul></figcaption>
+    </figure>
+  </section>
 
-<h2 id="without">01 · Without it</h2>
-<figure class="fig"><div class="flow">
-  <div class="node bad"><b>Settings scattered</b><small>os.environ read in twenty files</small></div>
-  <div class="lk"><span>so</span></div>
-  <div class="node bad"><b>No one knows the value</b><small>dev and prod differ by accident; a secret ends up in git</small></div>
-</div></figure>
+  <section id="s2">
+    <div class="section-head">
+      <p class="eyebrow">2 · Placement</p>
+      <h2>Where a value goes</h2>
+    </div>
+    <table class="tbl">
+      <thead><tr><th>Kind of value</th><th>Goes in</th><th>Examples</th></tr></thead>
+      <tbody>
+        <tr class="tone-accent"><td class="who">password, key, secret</td><td><code>.env</code> — not in git</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code> · <code>LITELLM_API_KEY</code></td></tr>
+        <tr><td class="who">everything else</td><td><code>config/environments/*.yaml</code></td><td><code>log_level</code> · <code>db_pool_size</code> · host models and prices</td></tr>
+        <tr><td class="who">one agent's limits</td><td><code>config/agents/&lt;name&gt;.yaml</code></td><td><code>request_limit</code> · <code>tool_calls_limit</code> · <code>max_tokens</code></td></tr>
+        <tr><td class="who">a host only the runtime knows</td><td>process env (compose, Helm)</td><td><code>POSTGRES_HOST</code> · <code>QDRANT_URL</code></td></tr>
+      </tbody>
+    </table>
+    <div class="path-note"><ul class="bul"><li>YAML key = <code>Settings</code> field name, lower case</li><li>Same name in upper case as an env var overrides it</li></ul></div>
+  </section>
 
-<h2 id="order">02 · Who wins</h2>
-<p class="purpose">Lowest at the left; each layer overrides the ones before it.</p>
-<div class="scroll-x">
-<svg class="diagram" viewBox="0 0 900 150" role="img" aria-label="Precedence from lowest to highest: class default, base.yaml, the environment yaml, .env, process environment.">
-  <defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-  <g font-family="var(--mono)" font-size="12">
-    <rect x="16" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
-    <text x="32" y="48" fill="var(--ink)">class default</text><text x="32" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">core/config.py</text>
-    <rect x="196" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
-    <text x="212" y="48" fill="var(--ink)">base.yaml</text><text x="212" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">every environment</text>
-    <rect x="376" y="24" width="148" height="60" rx="2" fill="var(--surface)" stroke="var(--line)"/>
-    <text x="392" y="48" fill="var(--ink)">&lt;env&gt;.yaml</text><text x="392" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">dev or prod: only diffs</text>
-    <rect x="556" y="24" width="148" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
-    <text x="572" y="48" fill="var(--accent)">.env</text><text x="572" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">secrets, per machine</text>
-    <rect x="736" y="24" width="148" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
-    <text x="752" y="48" fill="var(--accent)">environment</text><text x="752" y="68" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">container env, k8s</text>
-  </g>
-  <g stroke="currentColor" color="var(--ink-faint)" stroke-width="1.3" marker-end="url(#ca)">
-    <path d="M164 54H192"/><path d="M344 54H372"/><path d="M524 54H552"/><path d="M704 54H732"/>
-  </g>
-  <text x="16" y="120" font-family="var(--sans)" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--ink)">MYCEL_ENV</tspan> picks which &lt;env&gt;.yaml (default dev). YAML merges deep: a nested key overrides one key; a list is replaced whole.</text>
-</svg>
+  <section id="s3">
+    <div class="section-head">
+      <p class="eyebrow">3 · Agents</p>
+      <h2>Each agent's model and limits in its own file</h2>
+    </div>
+    <figure><div class="scroll-x"><svg class="diagram" viewBox="0 0 940 130" role="img" aria-label="Agent settings: AgentSettings defaults, overridden by agents.defaults in the environment yaml, overridden by the agent own file."><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><rect x="16" y="30" width="270" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="30" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">agents/core/config.py</text><text x="30" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">AgentSettings: model, temperature, retries</text><rect x="334" y="30" width="270" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="348" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">config/environments/*.yaml</text><text x="348" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">agents.defaults</text><rect x="652" y="30" width="272" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="666" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">config/agents/&lt;name&gt;.yaml</text><text x="666" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">analyst: 12 tool calls · 13 requests</text><g stroke="var(--ink-faint)" stroke-width="1.3" fill="none" color="var(--ink-faint)" marker-end="url(#ca)"><path d="M 286 58 L 330 58"/><path d="M 604 58 L 648 58"/></g><text x="16" y="114" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">each file overrides the one to its left · run limits only in the agent's file · unknown key → ConfigError</text></svg></div></figure>
+  </section>
+
+  <section id="s4">
+    <div class="section-head">
+      <p class="eyebrow">4 · Stores</p>
+      <h2>Each password written once; the URL is built</h2>
+    </div>
+    <table class="tbl">
+      <thead><tr><th>Property</th><th>Built from</th><th>Override</th></tr></thead>
+      <tbody>
+        <tr><td class="who">migration_database_url</td><td>postgres user + password — the schema owner</td><td><code>MIGRATION_DATABASE_URL</code>, then <code>DATABASE_URL</code></td></tr>
+        <tr class="tone-accent"><td class="who">database_url</td><td><code>mycel_app</code> if <code>MYCEL_APP_PASSWORD</code> is set, else the owner</td><td><code>DATABASE_URL</code></td></tr>
+        <tr><td class="who">rabbitmq_url</td><td>rabbitmq user + password + host</td><td><code>RABBITMQ_URL</code></td></tr>
+        <tr><td class="who">redis_url · redis_cache_url</td><td>written as is</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <h3 class="tbl-title">When it goes wrong</h3>
+    <table class="tbl">
+      <thead><tr><th>Case</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td class="who">not exactly one default host model</td><td>start-up fails</td></tr>
+        <tr><td class="who">base.yaml missing or not a mapping</td><td><code>ConfigError</code> naming the file</td></tr>
+        <tr><td class="who">prod holds a dev value</td><td>doctor: <code>dev values</code> broken</td></tr>
+        <tr><td class="who">a key misspelled in <code>.env</code></td><td>silently ignored</td></tr>
+        <tr><td class="who">a value changed while running</td><td>not seen until restart</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <span><a href="../index.html">Handbook</a> · <a href="architecture.html">Architecture</a> · <a href="database.html">Database</a></span>
+    <span class="mono">docs/overview/config.html</span>
+  </footer>
 </div>
-<ul class="bul"><li>Container env beats <code>.env</code></li><li>That is how compose and Helm set hosts without editing the file</li></ul>
-<details><summary>Details</summary>
-  <ul>
-    <li>Order is set in <code>Settings.settings_customise_sources</code>; YAML is read by <code>core/settings_source.py</code>.</li>
-    <li>A YAML file that fails to parse is ignored and the defaults stand; <code>doctor</code> and start-up logs are where it shows.</li>
-    <li><code>MYCEL_ENV</code> may be <code>staging</code>; no <code>staging.yaml</code> exists, so it runs on base.yaml alone.</li>
-  </ul>
-</details>
-
-<h2 id="where">03 · Where a value goes</h2>
-<div class="table-wrap"><table>
-  <tr><th>Kind of value</th><th>Goes in</th><th>Examples</th></tr>
-  <tr><td>password, key, client secret</td><td><code>.env</code> — not in git</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code> · <code>LITELLM_API_KEY</code> · <code>JIRA_CLIENT_SECRET</code></td></tr>
-  <tr><td>anything else</td><td><code>config/environments/*.yaml</code> — in git</td><td><code>log_level</code> · <code>db_pool_size</code> · <code>timezone</code> · host models and prices</td></tr>
-  <tr><td>one agent's model and limits</td><td><code>config/agents/&lt;name&gt;.yaml</code></td><td>analyst: 12 tool calls · 13 requests · 1200 tokens</td></tr>
-  <tr><td>a host only one machine knows</td><td>the process env (compose, Helm)</td><td><code>POSTGRES_HOST</code> · <code>QDRANT_URL</code></td></tr>
-</table></div>
-<ul class="bul"><li>A YAML key = the <code>Settings</code> field name, lower case</li><li>An env var of the same name, upper case, overrides it</li></ul>
-
-<h2 id="agents">04 · Agent files</h2>
-<p class="purpose">Each agent's model and limits in its own file; anything left out comes from <code>agents.defaults</code>.</p>
-<figure class="fig"><div class="flow">
-  <div class="node" data-path="src/mycel/agents/core/config.py"><b>AgentSettings defaults</b><small>model, temperature, retries, repeat guard</small></div>
-  <div class="lk"><span>overridden by</span></div>
-  <div class="node" data-path="config/environments/base.yaml"><b>agents.defaults</b><small>in base / env yaml</small></div>
-  <div class="lk"><span>overridden by</span></div>
-  <div class="node key" data-path="config/agents/analyst.yaml"><b>config/agents/&lt;name&gt;.yaml</b><small>e.g. analyst: 12 tool calls, 13 requests, 1200 tokens</small></div>
-</div></figure>
-<details><summary>Details</summary>
-  <ul>
-    <li>Files: analyst, orchestrator, researcher, rewriter, summarizer.</li>
-    <li>Run limits (<code>request_limit</code>, <code>tool_calls_limit</code>) are set only in each agent's file, never in defaults.</li>
-    <li>An unknown key raises <code>ConfigError</code> listing the known ones.</li>
-  </ul>
-</details>
-
-<h2 id="stores">05 · Store URLs</h2>
-<p class="purpose">Each password is written once; the URL is built from it.</p>
-<div class="table-wrap"><table>
-  <tr><th>Property</th><th>Built from</th><th>Override</th></tr>
-  <tr><td><code>migration_database_url</code></td><td>postgres user + password: the schema owner</td><td><code>MIGRATION_DATABASE_URL</code>, then <code>DATABASE_URL</code></td></tr>
-  <tr><td><code>database_url</code></td><td><code>mycel_app</code> when <code>MYCEL_APP_PASSWORD</code> is set, else the owner</td><td><code>DATABASE_URL</code></td></tr>
-  <tr><td><code>rabbitmq_url</code></td><td>rabbitmq user + password + host</td><td><code>RABBITMQ_URL</code></td></tr>
-  <tr><td><code>redis_url</code>, <code>redis_cache_url</code></td><td>written as is (no password)</td><td>—</td></tr>
-</table></div>
-
-<h2 id="wrong">06 · When things go wrong</h2>
-<div class="branches">
-  <div class="branch"><div class="when">Not exactly one default host model</div><div class="then"><span class="chip bad">start-up fails</span></div></div>
-  <div class="branch"><div class="when">A required YAML is missing or not a mapping</div><div class="then"><span class="chip bad">ConfigError naming the file</span></div></div>
-  <div class="branch"><div class="when">Prod still holds a dev value</div><div class="then"><span class="chip warn">doctor: dev values BROKEN</span></div></div>
-  <div class="branch"><div class="when">A setting changes at runtime</div><div class="then"><span class="chip">not seen: settings are read once; restart</span></div></div>
-</div>
-
-<h2>Guaranteed / not guaranteed</h2>
-<div class="cols">
-  <div class="col ok"><h3>Guaranteed</h3><ul><li>Settings are frozen: no code changes them mid-run</li><li>Unknown keys in <code>.env</code> are ignored, not fatal</li></ul></div>
-  <div class="col bad"><h3>Not guaranteed</h3><ul><li>A typo in a key is caught: it is silently ignored</li></ul></div>
-</div>
-
-<h2 id="vocab">Vocabulary</h2>
-<div class="table-wrap"><table>
-  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
-  <tr><td>Settings</td><td>every value, one frozen object</td><td><span class="src" data-path="src/mycel/core/config.py" tabindex="0">core/config.py</span></td></tr>
-  <tr><td>MYCEL_ENV</td><td>which environment yaml to read</td><td><span class="src" data-path="src/mycel/core/settings_source.py" tabindex="0">core/settings_source.py</span></td></tr>
-  <tr><td>AgentSettings</td><td>one agent's model and limits</td><td><span class="src" data-path="src/mycel/agents/core/config.py" tabindex="0">agents/core/config.py</span></td></tr>
-  <tr><td>get_settings()</td><td>the cached Settings; tests clear it</td><td><span class="src" data-path="src/mycel/core/config_files.py" tabindex="0">core/config_files.py</span></td></tr>
-</table></div>
-
-<h2>Built in</h2>
-<ul class="bul"><li>E1: config</li><li>100: agent limits per file</li><li>105: .env groups, URLs from one password</li></ul>
-
-<h2>Related</h2>
-<div class="related"><a href="../change/add-setting.html">Add a setting</a><a href="../operate/run-locally.html">Run locally</a><a href="../platform/doctor.html">Doctor</a></div>
-
-</main>
 </body>
-</html>
