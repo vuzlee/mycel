@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+from pydantic import SecretStr
+
 from mycel.core.config import Settings
 from mycel.doctor.declared import declared, dev_values
 
@@ -24,11 +26,13 @@ def test_every_key_is_a_setting_or_read_by_a_container() -> None:
 
 
 def test_prod_with_a_dev_value_is_broken() -> None:
-    env = Settings(_env_file=None, mycel_env="prod", litellm_api_key="sk-mycel-dev")
+    env = Settings().model_copy(
+        update={"mycel_env": "prod", "litellm_api_key": SecretStr("sk-mycel-dev")}
+    )
     assert "LITELLM_API_KEY" in dev_values(env)
     assert any(c.name == "dev values" for c in declared(env))
 
 
 def test_no_way_to_sign_in_is_broken() -> None:
-    env = Settings(_env_file=None, smtp_host=None, google_client_id=None)
+    env = Settings().model_copy(update={"smtp_host": None, "google_client_id": None})
     assert any(c.name == "any way in" for c in declared(env))
