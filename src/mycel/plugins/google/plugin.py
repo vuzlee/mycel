@@ -17,6 +17,7 @@ class Google:
     key = "google"
     name = "Google"
     offers = "Your own calendar and mail. Mail is read-only; nothing is deleted."
+    syncs = False
 
     def configured(self, settings: Settings | None = None) -> bool:
         return oauth.configured(settings)
@@ -37,6 +38,12 @@ class Google:
 
     async def disconnect(self, user_id: int) -> bool:
         return await oauth.disconnect(user_id)
+
+    async def sync(self) -> None:
+        """Nothing is copied: calendar and mail are read live, per question."""
+
+    async def probe(self) -> str:
+        return "per-user OAuth ready — each person's own calendar and mail"
 
     def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
         """Calendar and mail for the researcher, only when someone could connect them."""

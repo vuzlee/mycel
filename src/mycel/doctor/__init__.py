@@ -7,7 +7,6 @@ from mycel.doctor.declared import declared
 from mycel.doctor.probes import (
     REMOTE_TIMEOUT_SECONDS,
     _gateway,
-    _jira,
     _langfuse,
     _minio,
     _parser,
@@ -21,6 +20,7 @@ from mycel.doctor.probes import (
 from mycel.doctor.report import Check, State, render
 from mycel.infra.objects import client as object_store
 from mycel.infra.vectors import client as vector_store
+from mycel.plugins import registry
 
 __all__ = ["Check", "State", "declared", "render", "run"]
 
@@ -35,14 +35,15 @@ async def run(settings: Settings | None = None) -> list[Check]:
         _probe("postgres", "STORES", lambda: _postgres(env), missing=None),
         _probe("rabbitmq", "STORES", lambda: _rabbitmq(env), missing=None),
         _probe("redis", "STORES", lambda: _redis(env), missing=None),
-        _probe(
-            "jira",
-            "SOURCES",
-            lambda: _jira(env),
-            missing=None
-            if (env.jira_client_id and env.jira_client_secret)
-            else "no OAuth app — set JIRA_CLIENT_ID and JIRA_CLIENT_SECRET",
-            timeout=REMOTE_TIMEOUT_SECONDS,
+        *(
+            _probe(
+                p.key,
+                "PLUGINS",
+                p.probe,
+                missing=None if p.configured(env) else "no OAuth client — not offered",
+                timeout=REMOTE_TIMEOUT_SECONDS,
+            )
+            for p in registry.PLUGINS
         ),
         _probe(
             "qdrant",

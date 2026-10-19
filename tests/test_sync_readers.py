@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-import mycel.domains.sync as sync
+import mycel.plugins.jira.sync as sync
 from mycel.plugins.jira import oauth as jira_oauth
 from mycel.services.fetch import FetchResult
 

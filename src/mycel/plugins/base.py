@@ -33,6 +33,8 @@ class Plugin(Protocol):
     name: str
     #: One line shown before connecting: what connecting opens.
     offers: str
+    #: Whether it pulls data in the background; `sync()` is called only when true.
+    syncs: bool
 
     def configured(self, settings: Settings | None = None) -> bool: ...
 
@@ -43,6 +45,14 @@ class Plugin(Protocol):
     async def status(self, user: Principal) -> Status: ...
 
     async def disconnect(self, user_id: int) -> bool: ...
+
+    async def sync(self) -> None:
+        """Pull this plugin's data on connected people's tokens."""
+        ...
+
+    async def probe(self) -> str:
+        """One line for `doctor`: what works. Raises when something is broken."""
+        ...
 
     def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
         """Tools this plugin gives one specialist; empty when it is not configured."""

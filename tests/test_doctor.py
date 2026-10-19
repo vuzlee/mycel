@@ -7,6 +7,7 @@ import pytest
 from mycel import doctor
 from mycel.core.config import Settings
 from mycel.doctor import Check, State, probes
+from mycel.plugins.google.plugin import PLUGIN as GOOGLE
 
 pytestmark = pytest.mark.anyio
 
@@ -78,8 +79,7 @@ class TestWhatCountsAsConfigured:
     def test_the_calendar_needs_all_three_keys(self) -> None:
         """Two of three is not partly working."""
         partial = _settings(google_client_id="id", google_client_secret="secret")
-        check = next(c for c in doctor.declared(partial) if c.name == "calendar & mail")
-        assert check.state is State.OFF
+        assert not GOOGLE.configured(partial)
 
 
 class TestTheOpenFrontDoor:

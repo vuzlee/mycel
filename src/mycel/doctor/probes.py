@@ -121,24 +121,6 @@ async def _parser(settings: Settings) -> str:
     return f"docling installed; embedding with {settings.document_embedding_model}"
 
 
-async def _jira(settings: Settings) -> str:
-    """How many people have Jira connected, and how the last sync went."""
-    from mycel.infra.postgres.repositories.accounts import AccountRepository
-    from mycel.infra.postgres.session import session_scope
-
-    async with session_scope() as session:
-        repo = AccountRepository(session)
-        people = len(await repo.jira_connected_users())
-        state = await repo.sync_state()
-    last = state.last_success_at.strftime("%Y-%m-%d %H:%M") if state.last_success_at else "never"
-    if state.last_error and (
-        state.last_success_at is None
-        or (state.last_failure_at and state.last_failure_at > state.last_success_at)
-    ):
-        raise RuntimeError(f"last sync failed: {state.last_error[:160]} (last success {last})")
-    return f"{people} people connected; last sync {last}"
-
-
 async def _gateway(settings: Settings) -> str:
     """The gateway answers and serves every host model. Free: no model is called."""
     names = sorted({m["id"] for m in (await _ask_gateway(settings, "/v1/models"))["data"]})

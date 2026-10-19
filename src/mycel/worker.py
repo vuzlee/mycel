@@ -77,7 +77,7 @@ RUNS: dict[JobKind, tuple[ModuleType, str]] = {
     JobKind.INGEST: (ingest, "run"),
     JobKind.DELETE_DOCUMENT: (ingest, "delete"),
     JobKind.INDEX_GOLD: (index, "run"),
-    JobKind.SYNC_JIRA: (sync, "run"),
+    JobKind.SYNC: (sync, "run"),
     JobKind.CHECK_KEYS: (key_check, "run"),
 }
 

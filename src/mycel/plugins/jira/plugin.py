@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
+from mycel.infra.postgres.repositories.accounts import AccountRepository
+from mycel.infra.postgres.session import session_scope
 from mycel.plugins.base import Role, Status
 from mycel.plugins.jira import oauth
 from mycel.services import access, enqueue
@@ -19,6 +21,7 @@ class Jira:
     key = "jira"
     name = "Jira"
     offers = "The projects Jira lets you browse. Writes only after you agree."
+    syncs = True
 
     def configured(self, settings: Settings | None = None) -> bool:
         return oauth.configured(settings)
@@ -30,7 +33,7 @@ class Jira:
         """Connect, then read access and queue a sync so the board fills without the timer."""
         await oauth.connect(state, code, user_id)
         await access.refresh(user_id)
-        await enqueue.queue(enqueue.sync_job())
+        await enqueue.queue(enqueue.sync_job(self.key))
 
     async def status(self, user: Principal) -> Status:
         if not self.configured():
@@ -48,6 +51,27 @@ class Jira:
 
     async def disconnect(self, user_id: int) -> bool:
         return await oauth.disconnect(user_id)
+
+    async def sync(self) -> None:
+        from mycel.plugins.jira.sync import sync_jira
+
+        await sync_jira()
+
+    async def probe(self) -> str:
+        """How many people have Jira connected, and how the last sync went."""
+        async with session_scope() as session:
+            repo = AccountRepository(session)
+            people = len(await repo.jira_connected_users())
+            state = await repo.sync_state()
+        last = (
+            state.last_success_at.strftime("%Y-%m-%d %H:%M") if state.last_success_at else "never"
+        )
+        if state.last_error and (
+            state.last_success_at is None
+            or (state.last_failure_at and state.last_failure_at > state.last_success_at)
+        ):
+            raise RuntimeError(f"last sync failed: {state.last_error[:160]} (last success {last})")
+        return f"{people} people connected; last sync {last}"
 
     def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
         """Live reads and writes for the analyst, when this deployment writes to Jira."""

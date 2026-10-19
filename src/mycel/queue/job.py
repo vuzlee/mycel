@@ -11,7 +11,7 @@ class JobKind(StrEnum):
     INGEST = "ingest"
     DELETE_DOCUMENT = "delete_document"
     INDEX_GOLD = "index_gold"
-    SYNC_JIRA = "sync_jira"
+    SYNC = "sync"
     CHECK_KEYS = "check_keys"
 
 

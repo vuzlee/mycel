@@ -19,11 +19,11 @@ require_env
 if [[ ${1:-} == "--refetch" ]]; then
   exec uv run python -c "
 import asyncio
-from mycel.domains.sync import refetch_jira
+from mycel.plugins.jira.sync import refetch_jira
 print(asyncio.run(refetch_jira()))"
 fi
 
 exec uv run python -c "
 import asyncio
-from mycel.domains.sync import sync_jira
+from mycel.plugins.jira.sync import sync_jira
 print(asyncio.run(sync_jira()))"

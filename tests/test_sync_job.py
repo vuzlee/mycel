@@ -1,4 +1,4 @@
-"""Connecting Jira queues a sync; a sync already running covers it."""
+"""Connecting Jira queues its sync; a sync already running covers it."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.anyio
 def _lock(free: bool):  # type: ignore[no-untyped-def]
     @asynccontextmanager
     async def lock(name: str) -> AsyncIterator[bool]:
-        assert name == sync.LOCK
+        assert name == "sync:jira"
         yield free
 
     return lock
@@ -32,8 +32,8 @@ async def test_the_worker_runs_a_sync_job(monkeypatch: pytest.MonkeyPatch) -> No
         ran.append("sync")
 
     monkeypatch.setattr(sync, "try_lock", _lock(True))
-    monkeypatch.setattr(sync, "sync_jira", fake_sync)
-    await worker.run(Job(kind=JobKind.SYNC_JIRA))
+    monkeypatch.setattr(JIRA, "sync", fake_sync)
+    await worker.run(Job(kind=JobKind.SYNC, payload={"plugin": "jira"}))
     assert ran == ["sync"]
 
 
@@ -42,8 +42,14 @@ async def test_a_sync_already_running_covers_the_request(monkeypatch: pytest.Mon
         raise AssertionError("ran twice")
 
     monkeypatch.setattr(sync, "try_lock", _lock(False))
-    monkeypatch.setattr(sync, "sync_jira", must_not_run)
-    await sync.run(Job(kind=JobKind.SYNC_JIRA))
+    monkeypatch.setattr(JIRA, "sync", must_not_run)
+    await sync.run(Job(kind=JobKind.SYNC, payload={"plugin": "jira"}))
+
+
+async def test_a_plugin_that_does_not_sync_is_never_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sync, "try_lock", _lock(True))
+    await sync.run(Job(kind=JobKind.SYNC, payload={"plugin": "google"}))
+    await sync.run(Job(kind=JobKind.SYNC, payload={"plugin": "nope"}))
 
 
 async def test_connecting_jira_refreshes_access_and_queues_a_sync(
@@ -64,4 +70,4 @@ async def test_connecting_jira_refreshes_access_and_queues_a_sync(
     monkeypatch.setattr(access, "refresh", refresh)
     monkeypatch.setattr(enqueue, "queue", queue)
     await JIRA.connect("state", "code", 7)
-    assert seen == ["connect", ("refresh", 7), JobKind.SYNC_JIRA]
+    assert seen == ["connect", ("refresh", 7), JobKind.SYNC]

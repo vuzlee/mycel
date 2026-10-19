@@ -7,7 +7,6 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.domains import sync
 from mycel.domains.ingest import watchdog
-from mycel.domains.sync import sync_jira
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis.client import get_client
@@ -17,6 +16,7 @@ from mycel.observability.metrics import (
     queue_ready,
     redis_memory_ratio,
 )
+from mycel.plugins import registry
 from mycel.queue.replay import depths, work_queues
 from mycel.services.auth import sweep_expired_sessions
 from mycel.services.enqueue import relay
@@ -25,10 +25,6 @@ WATCHDOG_INTERVAL_SECONDS = 60
 RELAY_INTERVAL_SECONDS = 5
 
 log = get_logger(__name__)
-
-
-async def _sync() -> None:
-    await sync_jira()
 
 
 async def _sweep() -> None:
@@ -55,7 +51,11 @@ async def run_forever() -> None:
     """Run each timer until stopped; an advisory lock per timer keeps replicas from doubling."""
     settings = get_settings()
     timers: list[tuple[str, Callable[[], Awaitable[None]], int]] = [
-        (sync.LOCK, _sync, settings.sync_interval_seconds),
+        *(
+            (sync.lock(p), p.sync, settings.sync_interval_seconds)
+            for p in registry.PLUGINS
+            if p.syncs
+        ),
         ("sweep:sessions", _sweep, settings.session_sweep_interval_seconds),
         ("watchdog:documents", watchdog, WATCHDOG_INTERVAL_SECONDS),
         ("relay:outbox", relay, RELAY_INTERVAL_SECONDS),

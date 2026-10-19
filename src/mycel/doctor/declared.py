@@ -48,17 +48,6 @@ def declared(env: Settings) -> list[Check]:
             else "off — no SMTP, so only Google sign-in works",
         )
     )
-    configured = google_oauth.configured(env)
-    out.append(
-        Check(
-            "TOOLS",
-            "calendar & mail",
-            State.OK if configured else State.OFF,
-            "per-user OAuth ready — each person's own calendar and mail"
-            if configured
-            else "not configured — the calendar and mail tools are not offered",
-        )
-    )
     # Two switches, and off is a decision rather than a gap.
     writes = jira_oauth.configured(env) and env.jira_write_enabled
     out.append(

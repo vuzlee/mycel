@@ -8,7 +8,7 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "mycel"
 
 #: Reads gold on behalf of nobody.
 NOT_PERSON_FACING = {
-    "domains/sync.py",
+    "plugins/jira/sync.py",
     "domains/index.py",
     "services/transform.py",
     "services/dashboard.py",

@@ -103,8 +103,9 @@ def key_check_job(user_id: int, model_ref: str) -> Job:
     return Job(kind=JobKind.CHECK_KEYS, payload={"user_id": user_id, "model_ref": model_ref})
 
 
-def sync_job() -> Job:
-    return Job(kind=JobKind.SYNC_JIRA)
+def sync_job(plugin: str) -> Job:
+    """Sync one plugin's data now, out of the timer's turn."""
+    return Job(kind=JobKind.SYNC, payload={"plugin": plugin})
 
 
 async def queue(job: Job) -> None:
