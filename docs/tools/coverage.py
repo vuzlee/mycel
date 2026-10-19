@@ -477,7 +477,8 @@ def main() -> int:
     strays = [
         str(f.relative_to(DOCS))
         for f in DOCS.rglob("*.html")
-        if str(f.relative_to(DOCS)) not in pages
+        # A flow figure built by docs/tools/flow.py, included into a page.
+        if str(f.relative_to(DOCS)) not in pages and not f.name.endswith(".svg.html")
     ]
     print(f"{len(files)} files · {len(files) - len(missing)} owned · {len(PAGES)} pages")
     for label, items in (

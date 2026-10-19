@@ -1,0 +1,37 @@
+title: "One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"
+lanes: [user, api, queue, worker, agents, tools, stores]
+boxes:
+  - {id: web,      lane: user,   col: 0, file: web/src/api.ts,                               label: web/src/api.ts,        role: "Lan types the question"}
+  - {id: stream,   lane: user,   col: 4, file: web/src/hooks/useJobStream.ts,                label: hooks/useJobStream.ts, role: "shows each step live"}
+  - {id: route,    lane: api,    col: 0, file: src/mycel/api/routes/chat.py,                 label: api/routes/chat.py,    role: "POST /chat → 202 + job id"}
+  - {id: svc,      lane: api,    col: 1, file: src/mycel/services/chat.py,                   label: services/chat.py,      role: "save turn, make the job"}
+  - {id: events,   lane: api,    col: 4, file: src/mycel/api/routes/events.py,               label: api/routes/events.py,  role: "GET /chat/{job}/events"}
+  - {id: enq,      lane: queue,  col: 1, file: src/mycel/services/enqueue.py,                label: services/enqueue.py,   role: "outbox row, then publish"}
+  - {id: rmq,      lane: queue,  col: 2, file: src/mycel/queue/producer.py,                  label: queue/producer.py,     role: "to RabbitMQ queue \"jobs\""}
+  - {id: domain,   lane: worker, col: 1, file: src/mycel/domains/chat.py,                    label: domains/chat.py,       role: "runs the turn", hot: true}
+  - {id: worker,   lane: worker, col: 2, file: src/mycel/queue/consumer.py,                  label: queue/consumer.py,     role: "takes the job"}
+  - {id: orch,     lane: agents, col: 1, file: src/mycel/agents/specialists/orchestrator.py, label: orchestrator.py,       role: "picks a specialist"}
+  - {id: delegate, lane: agents, col: 2, file: src/mycel/agents/tools/delegate.py,           label: tools/delegate.py,     role: "tool \"analyst\""}
+  - {id: analyst,  lane: agents, col: 3, file: src/mycel/agents/specialists/analyst.py,      label: analyst.py,            role: "needs work numbers"}
+  - {id: query,    lane: tools,  col: 2, file: src/mycel/agents/tools/query.py,              label: tools/query.py,        role: "read_rows() as the asker"}
+  - {id: tool,     lane: tools,  col: 3, file: src/mycel/agents/tools/work.py,               label: tools/work.py,         role: "hours_by_person()"}
+  - {id: turn,     lane: stores, col: 0, file: src/mycel/infra/postgres/repositories/conversations.py, label: "Postgres · app.turn", role: "the answer, kept"}
+  - {id: gold,     lane: stores, col: 2, file: src/mycel/infra/postgres/acl.py,              label: "Postgres · gold",     role: "only the asker's projects", hot: true}
+  - {id: redis,    lane: stores, col: 4, file: src/mycel/infra/redis/streams.py,             label: Redis stream,          role: "each step, in order"}
+edges:
+  - {from: web,      to: route,    step: 1, kind: http,   text: '"/chat"', label: POST /chat}
+  - {from: route,    to: svc,      step: 2, kind: import, label: request_chat()}
+  - {from: svc,      to: enq,      step: 3, kind: import, label: job}
+  - {from: enq,      to: rmq,               kind: import, label: publish}
+  - {from: rmq,      to: worker,   step: 4, kind: queue,  text: topology.QUEUE, label: deliver}
+  - {from: worker,   to: domain,            kind: calls,  text: jobs.run, label: "RUNS[kind]", label_at: [1.62, 2.72]}
+  - {from: domain,   to: orch,     step: 5, kind: import, label: run}
+  - {from: orch,     to: delegate, step: 6, kind: import, label: delegate}
+  - {from: delegate, to: analyst,           kind: import, label: run}
+  - {from: analyst,  to: tool,              kind: import, label: tool}
+  - {from: tool,     to: query,    step: 7, kind: import, label: SQL}
+  - {from: query,    to: gold,              kind: calls,  text: READER_ROLE, label: as mycel_reader}
+  - {from: domain,   to: turn,              kind: import, label: store, label_at: [0.12, 4.5], via: [[0.5, 3], [0.5, 6]]}
+  - {from: domain,   to: redis,    step: 8, kind: import, label: XADD each step, label_at: [3.2, 3.42], exit: 0.3, enter: 0.3, via: [[1.3, 3.5], [4.3, 3.5]]}
+  - {from: events,   to: redis,             kind: import, label: XREAD, reverse: true}
+  - {from: stream,   to: events,            kind: http,   text: "/events", label: SSE, reverse: true}
