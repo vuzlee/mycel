@@ -33,8 +33,16 @@ KEPT = {
 }
 
 PAGES: dict[str, list[str]] = {
-    "overview/architecture": [],
-    "overview/code-map": [],
+    "overview/architecture": [
+        "src/mycel/lifecycle.py",
+        "src/mycel/worker.py",
+        "src/mycel/scheduler/__main__.py",
+        "src/mycel/__init__.py",
+        "src/mycel/core/principal.py",
+        "src/mycel/core/usage.py",
+        "src/mycel/core/exceptions.py",
+        "src/mycel/core/__init__.py",
+    ],
     "overview/config": [
         "src/mycel/core/config.py",
         "src/mycel/core/config_files.py",
@@ -42,13 +50,6 @@ PAGES: dict[str, list[str]] = {
         "config/environments/",
         "config/agents/",
         ".env.example",
-    ],
-    "overview/core-types": [
-        "src/mycel/core/principal.py",
-        "src/mycel/core/usage.py",
-        "src/mycel/core/exceptions.py",
-        "src/mycel/core/chips.py",
-        "src/mycel/core/__init__.py",
     ],
     "overview/database": [
         "src/mycel/infra/postgres/models/app.py",
@@ -59,12 +60,6 @@ PAGES: dict[str, list[str]] = {
         "src/mycel/infra/postgres/repositories/models.py",
         "src/mycel/infra/postgres/repositories/own_models.py",
         "src/mycel/infra/postgres/repositories/conversations.py",
-    ],
-    "overview/processes": [
-        "src/mycel/lifecycle.py",
-        "src/mycel/worker.py",
-        "src/mycel/scheduler/__main__.py",
-        "src/mycel/__init__.py",
     ],
     "flows/ask-a-question": [
         "src/mycel/api/routes/chat.py",
@@ -192,6 +187,7 @@ PAGES: dict[str, list[str]] = {
         "src/mycel/agents/core/exceptions.py",
     ],
     "agents/tools-and-chips": [
+        "src/mycel/core/chips.py",
         "src/mycel/agents/core/chips.py",
         "src/mycel/agents/tools/__init__.py",
         "src/mycel/agents/tools/limits.py",

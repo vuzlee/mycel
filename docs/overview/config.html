@@ -7,6 +7,7 @@
 <style>
   .diagram { width: 100%; height: auto; display: block; min-width: 760px; }
   .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
+  .bul { margin: 0.4rem 0 0; padding-left: 1.1rem; } .bul li { margin: 0.15rem 0; }
 </style>
 <body>
 <nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Overview / Config</span></nav>
@@ -47,7 +48,7 @@
   <text x="16" y="120" font-family="var(--sans)" font-size="11" fill="var(--ink-soft)"><tspan fill="var(--ink)">MYCEL_ENV</tspan> picks which &lt;env&gt;.yaml (default dev). YAML merges deep: a nested key overrides one key; a list is replaced whole.</text>
 </svg>
 </div>
-<p class="insight"><b>Key insight:</b> a container's own env beats <code>.env</code>, which is how compose and Helm point every process at the right host without editing the file.</p>
+<ul class="bul"><li>Container env beats <code>.env</code></li><li>That is how compose and Helm set hosts without editing the file</li></ul>
 <details><summary>Details</summary>
   <ul>
     <li>Order is set in <code>Settings.settings_customise_sources</code>; YAML is read by <code>core/settings_source.py</code>.</li>
@@ -57,19 +58,14 @@
 </details>
 
 <h2 id="where">03 · Where a value goes</h2>
-<div class="cols">
-  <div class="col"><h3><code>.env</code> — not in git</h3><ul>
-    <li>Passwords: <code>POSTGRES_PASSWORD</code>, <code>RABBITMQ_PASSWORD</code></li>
-    <li>Keys: <code>TOKEN_ENCRYPTION_KEY</code>, <code>LITELLM_API_KEY</code></li>
-    <li>Plugin app secrets: <code>JIRA_CLIENT_SECRET</code></li>
-  </ul></div>
-  <div class="col"><h3><code>config/</code> — in git</h3><ul>
-    <li><code>log_level</code>, <code>db_pool_size</code>, <code>timezone</code></li>
-    <li>Host models and their prices</li>
-    <li>Per-agent limits: <code>config/agents/*.yaml</code></li>
-  </ul></div>
-</div>
-<p class="insight"><b>Key insight:</b> a YAML key is the <code>Settings</code> field name in lower case, so any of them can still be overridden by an env var of the same name.</p>
+<div class="table-wrap"><table>
+  <tr><th>Kind of value</th><th>Goes in</th><th>Examples</th></tr>
+  <tr><td>password, key, client secret</td><td><code>.env</code> — not in git</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code> · <code>LITELLM_API_KEY</code> · <code>JIRA_CLIENT_SECRET</code></td></tr>
+  <tr><td>anything else</td><td><code>config/environments/*.yaml</code> — in git</td><td><code>log_level</code> · <code>db_pool_size</code> · <code>timezone</code> · host models and prices</td></tr>
+  <tr><td>one agent's model and limits</td><td><code>config/agents/&lt;name&gt;.yaml</code></td><td>analyst: 12 tool calls · 13 requests · 1200 tokens</td></tr>
+  <tr><td>a host only one machine knows</td><td>the process env (compose, Helm)</td><td><code>POSTGRES_HOST</code> · <code>QDRANT_URL</code></td></tr>
+</table></div>
+<ul class="bul"><li>A YAML key = the <code>Settings</code> field name, lower case</li><li>An env var of the same name, upper case, overrides it</li></ul>
 
 <h2 id="agents">04 · Agent files</h2>
 <p class="purpose">Each agent's model and limits in its own file; anything left out comes from <code>agents.defaults</code>.</p>
@@ -122,7 +118,7 @@
 </table></div>
 
 <h2>Built in</h2>
-<p>E1 (config) · 100 (agent limits per file) · 105 and its follow-up (.env groups, URLs from one password).</p>
+<ul class="bul"><li>E1: config</li><li>100: agent limits per file</li><li>105: .env groups, URLs from one password</li></ul>
 
 <h2>Related</h2>
 <div class="related"><a href="../change/add-setting.html">Add a setting</a><a href="../operate/run-locally.html">Run locally</a><a href="../platform/doctor.html">Doctor</a></div>

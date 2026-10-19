@@ -606,6 +606,9 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+.tbl-title { margin: 1.8rem 0 0.2rem; font: 600 14px var(--mono); color: var(--accent); }
+.tbl-sub { margin: 0 0 0.5rem; color: var(--ink-soft); font-size: 0.9rem; }
+.bul { margin: 0.4rem 0 0; padding-left: 1.1rem; } .bul li { margin: 0.15rem 0; }
 </style>
 <style>
 /* ---------- Column dictionary ---------- */
@@ -813,11 +816,7 @@ pre .c { color: var(--ink-faint); }
   <header class="hero">
     <p class="eyebrow">Database reference · migration 0027</p>
     <h1>Database</h1>
-    <p class="hero-lede">
-      One PostgreSQL database, <em>one schema per data layer</em> — so a <code>GRANT</code> can
-      follow the layer boundary. Agents get <code>SELECT</code> on <code>gold</code> and cannot
-      reach anything below it.
-    </p>
+    <div class="hero-lede"><ul class="bul"><li>One database, one schema per layer: bronze · silver · gold · app</li><li>Agents read gold only</li></ul></div>
     <div class="hero-meta">
       <span><b>Database</b> mycel</span>
       <span><b>Schemas</b> bronze · silver · gold · app · public</span>
@@ -879,33 +878,19 @@ pre .c { color: var(--ink-faint); }
     <div class="legend">
       <div class="pk">
         <b>Primary key</b>
-        <p>Issued by PostgreSQL. Addresses a row, means nothing outside this database — copy
-        the data elsewhere and the numbers differ.</p>
+        <div><ul class="bul"><li>Set by Postgres</li><li>Means nothing outside this database</li></ul></div>
       </div>
       <div class="nk">
         <b>Natural key</b>
-        <p>Issued by the source: <code>(source, issue_key)</code> in <code>work_item</code>,
-        <code>(source, worklog_id)</code> in <code>worklog</code>. An edited issue keeps it, so
-        a re-sync updates the row instead of appending a second opinion.</p>
+        <div><ul class="bul"><li>Set by the source: <code>(source, issue_key)</code>, <code>(source, worklog_id)</code></li><li>An edited issue keeps it → re-sync updates, never duplicates</li></ul></div>
       </div>
     </div>
 
-    <p class="path-note">
-      <code>source</code> belongs in the key because Jira will not be the last tracker, and
-      <code>PROJ-12</code> is a name anyone can mint. The bronze tables are the exception:
-      Jira's own <code>id</code> is already unique and serves as the primary key directly.
-    </p>
+    <div class="path-note"><ul class="bul"><li><code>source</code> is in the key: Jira will not be the last tracker</li><li>bronze uses Jira's own id as its primary key</li></ul></div>
 
     <div class="callout">
-      <p><b>No foreign keys link the layers.</b> Deliberate — each layer must be rebuildable
-      on its own, from the layer below.</p>
-      <p><b>NULL means something here, it is not missing data.</b> The older rule was that
-      every column is <code>NOT NULL</code>, because a nullable column becomes an
-      <code>if</code> branch at every read site. An issue tracker breaks that rule legitimately:
-      <i>unassigned</i>, <i>unestimated</i>, <i>no due date</i> and <i>not resolved</i> are real
-      states of real work, and coercing them to <code>0</code> would be a lie. Columns that are
-      always present — keys, kind, status, title, the sync timestamps — stay
-      <code>NOT NULL</code>.</p>
+      <div><ul class="bul"><li>No foreign keys between layers</li><li>Each layer rebuilds from the one below</li></ul></div>
+      <div><ul class="bul"><li>NULL is a real state: unassigned, unestimated, no due date, not resolved</li><li>Never coerced to 0</li><li>Always NOT NULL: keys, kind, status, title, sync timestamps</li></ul></div>
     </div>
   </section>
 
@@ -917,84 +902,9 @@ pre .c { color: var(--ink-faint); }
       <h2>Written once, never edited</h2>
     </div>
 
-    <div class="dict" data-tone="bronze">
-      <div class="dict-head">
-        <span class="dict-name">bronze.jira_issue</span>
-        <p>Written by <code>plugins/jira/sync.py</code>, read by <code>etl/</code>. The payload goes
-        down before anything is parsed, so whatever the normalizer gets wrong today can be re-run
-        against this table tomorrow without calling Jira again.</p>
-      </div>
+    <h3 class="tbl-title">bronze.jira_issue</h3><p class="tbl-sub">Raw issue from Jira, never edited</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">issue_id</td><td><code>varchar(32)</code></td><td>PK</td><td>Jira's id; survives a project rename</td></tr><tr><td class="who">issue_key</td><td><code>varchar(64)</code></td><td></td><td>the name people read, e.g. MYC-12</td></tr><tr><td class="who">payload</td><td><code>jsonb</code></td><td></td><td>the whole issue, queryable as JSON</td></tr><tr><td class="who">fetched_at</td><td><code>timestamptz · now()</code></td><td></td><td>when we pulled it, not when it changed</td></tr></tbody></table>
 
-      <div class="col" data-key="pk">
-        <span class="col-n">issue_id</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">Jira's internal id. The primary key rather than the issue key,
-        because renaming a project rewrites every key and leaves the ids alone.
-        <span class="ex">10042</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">issue_key</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">The name people read. Lifted out of <code>payload</code> so a lookup
-        needs no JSON access.
-        <span class="ex">MYC-12</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">payload</span>
-        <span class="col-t">jsonb</span>
-        <span class="col-d">The whole issue. <b>jsonb</b>, not <code>text</code>: PostgreSQL
-        parses on write, so it can be queried in place —
-        <code>payload-&gt;'fields'-&gt;&gt;'summary'</code>.
-        <span class="ex">{"id":"10042","key":"MYC-12","fields":{…}}</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">fetched_at</span>
-        <span class="col-t">timestamptz · now()</span>
-        <span class="col-d">When <b>we</b> pulled it — not when the issue changed. That moment
-        lives in <code>gold.work_item.updated_at</code>. Filled by the database.
-        <span class="ex">2026-09-21 07:14:02+07</span></span>
-      </div>
-
-      <div class="dict-foot">PRIMARY KEY (issue_id)</div>
-    </div>
-
-    <div class="dict" data-tone="bronze">
-      <div class="dict-head">
-        <span class="dict-name">bronze.jira_worklog</span>
-        <p>A separate table because it is a separate API call, paged separately, that fails
-        independently of the issue it belongs to.</p>
-      </div>
-
-      <div class="col" data-key="pk">
-        <span class="col-n">worklog_id</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">Jira's id for the logged entry.
-        <span class="ex">10307</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">issue_key</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">Which issue the hours were logged against.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">payload</span>
-        <span class="col-t">jsonb</span>
-        <span class="col-d">The entry, verbatim.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">fetched_at</span>
-        <span class="col-t">timestamptz · now()</span>
-        <span class="col-d">When we pulled it.</span>
-      </div>
-
-      <div class="dict-foot">PRIMARY KEY (worklog_id)</div>
-    </div>
+    <h3 class="tbl-title">bronze.jira_worklog</h3><p class="tbl-sub">Raw logged entry</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">worklog_id</td><td><code>varchar(32)</code></td><td>PK</td><td>Jira's id for the entry</td></tr><tr><td class="who">issue_key</td><td><code>varchar(64)</code></td><td></td><td>issue the hours went to</td></tr><tr><td class="who">payload</td><td><code>jsonb</code></td><td></td><td>the entry, verbatim</td></tr><tr><td class="who">fetched_at</td><td><code>timestamptz · now()</code></td><td></td><td>when we pulled it</td></tr></tbody></table>
   </section>
 
   <!-- ============ SILVER ============ -->
@@ -1008,8 +918,7 @@ pre .c { color: var(--ink-faint); }
     <div class="dict" data-tone="silver">
       <div class="dict-head">
         <span class="dict-name">silver.work_item · silver.worklog</span>
-        <p>Column for column identical to their gold counterparts below, natural keys included,
-        so this page does not list them twice. Read section 05 and you have read both.</p>
+        <div><ul class="bul"><li>Same columns as gold, below</li></ul></div>
       </div>
 
       <div class="dict-foot">
@@ -1031,9 +940,7 @@ pre .c { color: var(--ink-faint); }
         <li><b>What it buys:</b> a place for the difference when a second tracker arrives.</li>
         <li><b>What it costs:</b> every sync writes each row twice.</li>
       </ul>
-      <p><b><code>silver.message</code> was dropped by migration 0005.</b> Empty since its
-      source was removed. An unwritten table beside a live layer is a standing question about
-      which of the two is real.</p>
+      <div><ul class="bul"><li><code>silver.message</code> dropped in migration 0005</li></ul></div>
     </div>
   </section>
 
@@ -1045,265 +952,15 @@ pre .c { color: var(--ink-faint); }
       <h2>The only layer agents read</h2>
     </div>
 
-    <div class="dict" data-tone="gold">
-      <div class="dict-head">
-        <span class="dict-name">gold.work_item</span>
-        <p>One issue, one row. A <b>contract</b>: adding a column is free, changing what an
-        existing column means takes two releases, because the chat agents, the dashboard and the
-        calendar writer all read it.</p>
-      </div>
+    <h3 class="tbl-title">gold.work_item</h3><p class="tbl-sub">One issue, one row — what agents read. Changing a column's meaning takes two releases</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">id</td><td><code>serial</code></td><td>PK</td><td>row address; never expose</td></tr><tr><td class="who">source</td><td><code>varchar(32)</code></td><td>natural key</td><td>tracker, e.g. jira</td></tr><tr><td class="who">issue_key</td><td><code>varchar(64)</code></td><td>natural key</td><td>stable across edits → re-sync is an UPDATE</td></tr><tr><td class="who">project</td><td><code>varchar(32) · indexed</code></td><td></td><td>one team; every query starts here</td></tr><tr><td class="who">issue_id</td><td><code>varchar(32)</code></td><td></td><td>points back to bronze</td></tr><tr><td class="who">kind</td><td><code>varchar(16)</code></td><td></td><td>epic · story · task · subtask (normalized)</td></tr><tr><td class="who">parent_key</td><td><code>varchar(64) · nullable</code></td><td></td><td>epic's key; a key, not a FK, so order of sync does not matter</td></tr><tr><td class="who">title</td><td><code>text</code></td><td></td><td>summary, verbatim</td></tr><tr><td class="who">status</td><td><code>varchar(64)</code></td><td></td><td>site's own label, untranslated</td></tr><tr><td class="who">status_category</td><td><code>varchar(16)</code></td><td></td><td>todo · doing · done — compare on this</td></tr><tr><td class="who">assignee_account_id</td><td><code>varchar(128) · nullable</code></td><td></td><td>group by this</td></tr><tr><td class="who">assignee_name</td><td><code>varchar(128) · nullable</code></td><td></td><td>display only; can change</td></tr><tr><td class="who">original_estimate_seconds</td><td><code>bigint · nullable</code></td><td></td><td>seconds; ÷ 28800 for days</td></tr><tr><td class="who">time_spent_seconds</td><td><code>bigint · nullable</code></td><td></td><td>Jira's logged total</td></tr><tr><td class="who">due_at</td><td><code>timestamptz · indexed · nullable</code></td><td></td><td>deadline; end of day UTC</td></tr><tr><td class="who">created_at</td><td><code>timestamptz</code></td><td></td><td>stamped at API call; unreliable</td></tr><tr><td class="who">resolved_at</td><td><code>timestamptz · nullable</code></td><td></td><td>stamped at API call; never chart on it</td></tr><tr><td class="who">labels</td><td><code>jsonb</code></td><td></td><td>array of strings</td></tr><tr><td class="who">updated_at</td><td><code>timestamptz · indexed</code></td><td></td><td>sync watermark: next fetch asks updated ≥ this</td></tr></tbody></table>
 
-      <div class="col" data-key="pk">
-        <span class="col-n">id</span>
-        <span class="col-t">serial</span>
-        <span class="col-d">Internal row address. Not stable across databases — do not expose it.</span>
-      </div>
+    <h3 class="tbl-title">gold.worklog</h3><p class="tbl-sub">One logged entry, one row — effort over days</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">id</td><td><code>serial</code></td><td>PK</td><td>row address</td></tr><tr><td class="who">source</td><td><code>varchar(32)</code></td><td>natural key</td><td>tracker</td></tr><tr><td class="who">worklog_id</td><td><code>varchar(32)</code></td><td>natural key</td><td>stable across edits</td></tr><tr><td class="who">project</td><td><code>varchar(32) · indexed</code></td><td></td><td>copied from the issue: no join for charts</td></tr><tr><td class="who">issue_key</td><td><code>varchar(64)</code></td><td></td><td>issue the hours went to</td></tr><tr><td class="who">author_account_id</td><td><code>varchar(128) · nullable</code></td><td></td><td>who logged it</td></tr><tr><td class="who">author_name</td><td><code>varchar(128) · nullable</code></td><td></td><td>display only</td></tr><tr><td class="who">time_spent_seconds</td><td><code>bigint</code></td><td></td><td>seconds for this entry</td></tr><tr><td class="who">started_at</td><td><code>timestamptz · indexed</code></td><td></td><td>the day the hours were for — chart on this</td></tr><tr><td class="who">comment</td><td><code>text · nullable</code></td><td></td><td>why, if anyone wrote it</td></tr></tbody></table>
 
-      <div class="col" data-key="nk">
-        <span class="col-n">source</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">Which tracker.
-        <span class="ex">jira</span></span>
-      </div>
-
-      <div class="col" data-key="nk">
-        <span class="col-n">issue_key</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">The issue's name. Retitling, restatusing and logging hours all
-        <b>keep</b> it, so the next sync is an <code>UPDATE</code> rather than a second row.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">project</span>
-        <span class="col-t">varchar(32) · indexed</span>
-        <span class="col-d">One project is one team; every query starts here. Stored rather than
-        derived from the key, because an index on a column is cheaper than one on a substring
-        expression.
-        <span class="ex">MYC</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">issue_id</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">Points back at the bronze row.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">kind</span>
-        <span class="col-t">varchar(16)</span>
-        <span class="col-d">The issue type, <b>normalized</b>. Every Jira site names its own
-        types, so "Story" here and "User Story" there have to become one word before gold.
-        <span class="ex">epic · story · task · subtask</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">parent_key</span>
-        <span class="col-t">varchar(64) · nullable</span>
-        <span class="col-d">The hierarchy, held as a key rather than a foreign key: a sync can
-        fetch a child before its parent, and an FK would fail a transaction over an accident of
-        ordering. <code>NULL</code> on an epic, which has no parent.
-        <span class="ex">MYC-3</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">title</span>
-        <span class="col-t">text</span>
-        <span class="col-d">The summary, verbatim. <b>text</b> has no length limit and is no
-        slower than <code>varchar</code> in PostgreSQL.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">status</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">The site's <b>own</b> name for the status, untranslated. A team that
-        calls it "Đang review" should read that word in its answer.
-        <span class="ex">In Progress · Đang review</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">status_category</span>
-        <span class="col-t">varchar(16)</span>
-        <span class="col-d">Jira's own three-way grouping. This is what counts and compares
-        across sites; <code>status</code> does not.
-        <span class="ex">todo · doing · done</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">assignee_account_id</span>
-        <span class="col-t">varchar(128) · nullable</span>
-        <span class="col-d">Since 2019 <code>accountId</code> is the only identifier Jira
-        supports — username and email were removed from the API for GDPR. This is what to group
-        by.
-        <span class="ex">557058:9f1a…</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">assignee_name</span>
-        <span class="col-t">varchar(128) · nullable</span>
-        <span class="col-d">Display only, and it <b>can change</b>. Grouping by it splits one
-        person in two the day they edit their profile.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">original_estimate_seconds</span>
-        <span class="col-t">bigint · nullable</span>
-        <span class="col-d">In <b>seconds</b>, because that is the unit Jira stores. Converted to
-        days only for display, in <code>services/analyze.py</code> and
-        <code>Dashboard.tsx</code> — a conversion in the warehouse is a rounding nobody can undo.
-        <span class="ex">28800 = one 8-hour day</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">time_spent_seconds</span>
-        <span class="col-t">bigint · nullable</span>
-        <span class="col-d">Jira's own total of logged work. The difference between this and the
-        line above is the number the dashboard exists to show.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">due_at</span>
-        <span class="col-t">timestamptz · indexed · nullable</span>
-        <span class="col-d">The deadline. Indexed because "what is overdue" runs on every
-        dashboard load, and it is the only column that leaves for Google Calendar.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">created_at</span>
-        <span class="col-t">timestamptz</span>
-        <span class="col-d">Stamped by Jira at the moment of the API call, so <b>wrong</b> for
-        anything entered after the fact. Recorded because it is free; no chart is drawn from it.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">resolved_at</span>
-        <span class="col-t">timestamptz · nullable</span>
-        <span class="col-d">The same problem, worse: a back-filled project produces one tidy,
-        entirely fictional day on which everything shipped. Effort curves come from
-        <code>worklog.started_at</code> instead.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">labels</span>
-        <span class="col-t">jsonb</span>
-        <span class="col-d">An array of strings, kept as-is. Nothing filters on it yet — kept
-        because collecting it costs nothing now and a full re-sync later.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">updated_at</span>
-        <span class="col-t">timestamptz · indexed</span>
-        <span class="col-d">When <b>Jira</b> last recorded a change, not when we wrote the row.
-        This is the sync's high-water mark: the next JQL asks
-        <code>updated &gt;=</code> this, so only what moved comes back.</span>
-      </div>
-
-      <div class="dict-foot">
-        PRIMARY KEY (id)<br>
-        UNIQUE uq_work_item_natural_key (source, issue_key)<br>
-        INDEX ix_work_item_project_updated (project, updated_at)<br>
-        INDEX ix_work_item_due_at (due_at)
-      </div>
-    </div>
-
-    <div class="dict" data-tone="gold">
-      <div class="dict-head">
-        <span class="dict-name">gold.worklog</span>
-        <p>One logged entry, one row. This is what turns effort into a curve over days rather
-        than a single running total sitting on an issue.</p>
-      </div>
-
-      <div class="col" data-key="pk">
-        <span class="col-n">id</span>
-        <span class="col-t">serial</span>
-        <span class="col-d">Internal row address.</span>
-      </div>
-
-      <div class="col" data-key="nk">
-        <span class="col-n">source</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">As above, for the same reason.</span>
-      </div>
-
-      <div class="col" data-key="nk">
-        <span class="col-n">worklog_id</span>
-        <span class="col-t">varchar(32)</span>
-        <span class="col-d">Jira's id for the entry. Editing an entry keeps it, so a re-sync is
-        an <code>UPDATE</code>.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">project</span>
-        <span class="col-t">varchar(32) · indexed</span>
-        <span class="col-d">Copied down from the issue so a chart needs no join. Indexed together
-        with <code>started_at</code> — the shape of the question "this project, this week".</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">issue_key</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">Which issue the hours went to.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">author_account_id</span>
-        <span class="col-t">varchar(128) · nullable</span>
-        <span class="col-d">Who logged it — <code>accountId</code> again, not a name.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">author_name</span>
-        <span class="col-t">varchar(128) · nullable</span>
-        <span class="col-d">Display only.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">time_spent_seconds</span>
-        <span class="col-t">bigint</span>
-        <span class="col-d">Seconds, for <b>this entry alone</b>. Summed by day it is a chart;
-        summed by person it is load.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">started_at</span>
-        <span class="col-t">timestamptz · indexed</span>
-        <span class="col-d"><b>The one time field that can be back-dated honestly.</b> The person
-        logging declares "these hours were Tuesday" and Jira records exactly that — unlike created
-        dates and status transitions, which are stamped at the moment of the API call. Everything
-        time-shaped in an answer goes through this column.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">comment</span>
-        <span class="col-t">text · nullable</span>
-        <span class="col-d">What the person wrote, if anything. Usually the only sentence saying
-        <i>why</i> it took that long.</span>
-      </div>
-
-      <div class="dict-foot">
-        PRIMARY KEY (id)<br>
-        UNIQUE uq_worklog_natural_key (source, worklog_id)<br>
-        INDEX ix_worklog_project_started (project, started_at)
-      </div>
-    </div>
-
-    <p class="path-note">
-      The accepted values for <code>kind</code> and <code>status_category</code> live in
-      <code>etl/normalize.py</code>. The database itself accepts any string of the right length —
-      <b>there is no CHECK constraint yet</b>.
-    </p>
+    <div class="path-note"><ul class="bul"><li>Allowed values for <code>kind</code> and <code>status_category</code>: <code>etl/normalize.py</code></li><li>No CHECK constraint in the database</li></ul></div>
 
     <div class="callout">
-      <p><b>What migration 0004 dropped.</b> <code>gold.progress_update</code> and
-      <code>bronze.telegram_message</code> were removed rather than deprecated. They held the
-      output of a hashtag convention — <code>#done</code>, <code>#wip</code>,
-      <code>#blocked</code> at the front of a chat message — which made a person do the parser's
-      job and still could not say what a task was estimated at, when it was due, or which epic it
-      belonged to. Keeping a table nothing writes to keeps an open question about which one is
-      real.</p>
-      <p><b>No status history.</b> <code>GET /issue/{key}/changelog</code> would give
-      transitions, but it costs one request per issue and returns timestamps that cannot be
-      back-dated. So Mycel does not ask, and nothing downstream claims to know how long an item
-      has been sitting in a status.</p>
+      <div><ul class="bul"><li>Migration 0004 dropped <code>gold.progress_update</code> and <code>bronze.telegram_message</code></li><li>They held hashtag status from chat; Jira replaced them</li></ul></div>
+      <div><ul class="bul"><li>No status history: changelog costs one call per issue</li><li>Nothing claims to know time-in-status</li></ul></div>
     </div>
   </section>
 
@@ -1315,209 +972,32 @@ pre .c { color: var(--ink-faint); }
       <h2>Product data, not pipeline data</h2>
     </div>
 
-    <p class="path-note">
-      Fourteen tables in four groups: who is signed in (<code>user</code>, <code>session</code>),
-      what they asked (<code>conversation</code>, <code>turn</code>), what they connected and may
-      read (<code>google_account</code>, <code>jira_account</code>, <code>membership</code>,
-      <code>sync_state</code>), their models and documents (<code>model_pref</code>,
-      <code>own_model</code>, <code>own_model_key</code>, <code>document</code>, <code>chunk</code>),
-      and the job <code>outbox</code>. Every foreign key cascades on delete.
-    </p>
+    <div class="path-note"><ul class="bul"><li>14 tables: sign-in · conversations · connected accounts and access · models and documents · outbox</li><li>Every foreign key cascades on delete</li></ul></div>
 
     <div class="callout">
-      <p><b>A separate schema, on purpose.</b> The medallion grant — agents get
-      <code>SELECT</code> on <code>gold</code> and nothing else — should not accidentally hand
-      them session tokens. Product data sitting in its own schema does not
-      inherit a pipeline grant.</p>
+      <div><ul class="bul"><li>Separate schema so the gold grant never reaches session tokens</li></ul></div>
     </div>
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.user</span>
-        <p>Someone who can sign in.</p>
-      </div>
+    <h3 class="tbl-title">app.user</h3><p class="tbl-sub">Someone who can sign in</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">email</td><td><code>varchar(254) · unique</code></td><td>natural key</td><td>the identity; no username</td></tr><tr><td class="who">google_sub</td><td><code>varchar(255) · unique · nullable</code></td><td></td><td>Google's stable id; no password stored</td></tr></tbody></table>
 
-      <div class="col" data-key="nk">
-        <span class="col-n">email</span>
-        <span class="col-t">varchar(254) · unique</span>
-        <span class="col-d">The identity itself. No separate username: two names for one
-        person is two things to keep in step for no gain.</span>
-      </div>
+    <h3 class="tbl-title">app.session</h3><p class="tbl-sub">One signed-in browser</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">id</td><td><code>varchar(64)</code></td><td>PK</td><td>the cookie value itself; deleting the row signs out</td></tr><tr><td class="who">expires_at</td><td><code>timestamptz</code></td><td></td><td>14 days; checked on read</td></tr><tr><td class="who">last_seen_at</td><td><code>timestamptz</code></td><td></td><td>touched on every request</td></tr></tbody></table>
 
-      <div class="col">
-        <span class="col-n">google_sub</span>
-        <span class="col-t">varchar(255) · unique · nullable</span>
-        <span class="col-d">Google's stable id, set on the first Google sign-in. It wins over
-        the address, so a renamed Google address still lands in the same account. No
-        password is stored anywhere.</span>
-      </div>
-    </div>
-
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.session</span>
-        <p>One browser, signed in, until it expires or signs out.</p>
-      </div>
-
-      <div class="col" data-key="pk">
-        <span class="col-n">id</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d"><b>The cookie value itself</b>: 32 random bytes, hex-encoded. Not a
-        JWT — revoking one needs a server-side list of the revoked, which is this table with
-        extra steps.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">expires_at</span>
-        <span class="col-t">timestamptz</span>
-        <span class="col-d">Checked on <b>read</b>, enforced by nothing. A session one second
-        past expiry must read as gone before any sweeper runs.
-        <span class="ex">14 days</span></span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">last_seen_at</span>
-        <span class="col-t">timestamptz</span>
-        <span class="col-d">Touched on every valid request. Nothing reads it yet.</span>
-      </div>
-    </div>
-
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.conversation · app.turn</span>
-        <p>One thread in the sidebar, and one finished run kept beside it.</p>
-      </div>
-
-      <div class="col">
-        <span class="col-n">conversation.kind</span>
-        <span class="col-t">varchar(16)</span>
-        <span class="col-d"><code>"chat"</code> for every thread. Kept as a column so a second
-        kind is a new value, not a migration.</span>
-      </div>
-
-      <div class="col" data-key="fk">
-        <span class="col-n">turn.conversation_id</span>
-        <span class="col-t">int · on delete cascade</span>
-        <span class="col-d">Forgetting a thread in the sidebar forgets every run under it.
-        The cascade is why <code>DELETE /conversations/{id}</code> needs no second step.</span>
-      </div>
-
-      <div class="col" data-key="nk">
-        <span class="col-n">turn.job_id</span>
-        <span class="col-t">varchar(64) · unique</span>
-        <span class="col-d">A redelivered job updates its row instead of writing a second
-        one.</span>
-      </div>
-
-      <div class="col">
-        <span class="col-n">turn.spent_usd</span>
-        <span class="col-t">numeric(12,6)</span>
-        <span class="col-d">Not a float. These numbers are added up and reported; binary
-        floating point does not hold a decimal value exactly.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.conversation · app.turn</h3><p class="tbl-sub">A thread, and each answered question in it</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">conversation.kind</td><td><code>varchar(16)</code></td><td></td><td>"chat" today</td></tr><tr><td class="who">turn.conversation_id</td><td><code>int · on delete cascade</code></td><td>FK</td><td>delete a thread → its turns go too</td></tr><tr><td class="who">turn.job_id</td><td><code>varchar(64) · unique</code></td><td>natural key</td><td>a redelivered job updates its row</td></tr><tr><td class="who">turn.spent_usd</td><td><code>numeric(12,6)</code></td><td></td><td>numeric, not float</td></tr></tbody></table>
 
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.google_account · app.jira_account</span>
-        <p>One connected account per person per plugin, sealed.</p>
-      </div>
-      <div class="col" data-key="pk">
-        <span class="col-n">user_id</span>
-        <span class="col-t">int · primary key</span>
-        <span class="col-d">One account per person: connecting again replaces it.</span>
-      </div>
-      <div class="col">
-        <span class="col-n">refresh_token_encrypted</span>
-        <span class="col-t">text</span>
-        <span class="col-d">Sealed with <code>TOKEN_ENCRYPTION_KEY</code> (Fernet, newest key
-        first so keys rotate). Jira rotates it on each refresh and the new one is written back.</span>
-      </div>
-      <div class="col">
-        <span class="col-n">jira_account.cloud_id</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d">Which Atlassian site the grant opens; every Jira call names it.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.google_account · app.jira_account</h3><p class="tbl-sub">One connected account per person per plugin</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">user_id</td><td><code>int · primary key</code></td><td>PK</td><td>one per person: reconnect replaces</td></tr><tr><td class="who">refresh_token_encrypted</td><td><code>text</code></td><td></td><td>sealed with TOKEN_ENCRYPTION_KEY; Jira rotates it</td></tr><tr><td class="who">jira_account.cloud_id</td><td><code>varchar(64)</code></td><td></td><td>which Atlassian site</td></tr></tbody></table>
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.membership · app.sync_state</span>
-        <p>What each person may read, and how the last sync went.</p>
-      </div>
-      <div class="col" data-key="nk">
-        <span class="col-n">membership (user_id, project)</span>
-        <span class="col-t">unique</span>
-        <span class="col-d">Replaced whole from Jira on every sync and on connect: a project
-        Jira stops letting them browse disappears here too.</span>
-      </div>
-      <div class="col">
-        <span class="col-n">sync_state.id</span>
-        <span class="col-t">int · check id = 1</span>
-        <span class="col-d">One row, ever. Written by <code>plugins/jira/sync.py</code>; read by
-        doctor.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.membership · app.sync_state</h3><p class="tbl-sub">Who may read which project; how the last sync went</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">membership (user_id, project)</td><td><code>unique</code></td><td>natural key</td><td>replaced from Jira on every sync</td></tr><tr><td class="who">sync_state.id</td><td><code>int · check id = 1</code></td><td></td><td>one row ever; read by doctor</td></tr></tbody></table>
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.model_pref · app.own_model · app.own_model_key</span>
-        <p>Which host models a person has on, and the models they brought.</p>
-      </div>
-      <div class="col">
-        <span class="col-n">own_model.api_base</span>
-        <span class="col-t">varchar(500)</span>
-        <span class="col-d">Checked on save and before every run: no internal host, https
-        unless allowed.</span>
-      </div>
-      <div class="col" data-key="pk">
-        <span class="col-n">own_model_key (own_model_id, position)</span>
-        <span class="col-t">key_sealed text · hint varchar(16)</span>
-        <span class="col-d">Several keys, tried in order when one runs out. Only the last four
-        characters are ever shown.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.model_pref · app.own_model · app.own_model_key</h3><p class="tbl-sub">Host models a person turned on; models they brought</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">own_model.api_base</td><td><code>varchar(500)</code></td><td></td><td>checked on save and before every run</td></tr><tr><td class="who">own_model_key (own_model_id, position)</td><td><code>key_sealed text · hint varchar(16)</code></td><td>PK</td><td>several keys, tried in order; last 4 chars shown</td></tr></tbody></table>
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.document · app.chunk</span>
-        <p>An uploaded file, and the pieces it was cut into for search.</p>
-      </div>
-      <div class="col" data-key="nk">
-        <span class="col-n">document (user_id, sha256)</span>
-        <span class="col-t">unique</span>
-        <span class="col-d">The same file twice is one document.</span>
-      </div>
-      <div class="col">
-        <span class="col-n">document.status</span>
-        <span class="col-t">varchar(16)</span>
-        <span class="col-d"><code>uploaded</code> → parsing → ready or failed; a watchdog
-        requeues one stuck mid-way.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.document · app.chunk</h3><p class="tbl-sub">An uploaded file and its search pieces</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">document (user_id, sha256)</td><td><code>unique</code></td><td>natural key</td><td>same file twice = one document</td></tr><tr><td class="who">document.status</td><td><code>varchar(16)</code></td><td></td><td>uploaded → parsing → ready | failed</td></tr></tbody></table>
 
-    <div class="dict" data-tone="app">
-      <div class="dict-head">
-        <span class="dict-name">app.outbox</span>
-        <p>A job written in the same transaction as the row that needs it.</p>
-      </div>
-      <div class="col" data-key="pk">
-        <span class="col-n">job_id</span>
-        <span class="col-t">varchar(64)</span>
-        <span class="col-d"><code>published_at</code> stays null until RabbitMQ has it; the relay
-        resends those. Why: <a href="../queue/outbox.html">Outbox</a>.</span>
-      </div>
-    </div>
+    <h3 class="tbl-title">app.outbox</h3><p class="tbl-sub">A job written with the row that needs it</p><table class="tbl"><thead><tr><th>Column</th><th>Type</th><th>Key</th><th>Meaning</th></tr></thead><tbody><tr><td class="who">job_id</td><td><code>varchar(64)</code></td><td>PK</td><td>published_at null until RabbitMQ has it; relay resends</td></tr></tbody></table>
 
     <div class="callout">
-      <p><b>Redis and <code>app.turn</code> coexist.</b> Redis holds a result for
-      <code>result_ttl_seconds</code> so a second process can read it — a holding area, always
-      described as one. This is the record. Redis answers <em>is it done yet</em>; this answers
-      <em>what did we produce last week</em>.</p>
-      <p><b>Expired sessions are swept daily.</b> The scheduler's <code>sweep:sessions</code>
-      timer calls <code>IdentityRepository.delete_expired_sessions</code>; an expired row read
-      before then is already treated as gone.</p>
+      <div><ul class="bul"><li>Redis holds a result for an hour: "is it done yet"</li><li><code>app.turn</code> is the record: "what did we answer last week"</li></ul></div>
+      <div><ul class="bul"><li>Expired sessions swept daily by the scheduler</li><li>Expired ones already read as gone</li></ul></div>
     </div>
   </section>
 
@@ -1592,11 +1072,8 @@ uv run alembic current        <span class="c"># → 0027 (head)</span>
 uv run alembic downgrade base <span class="c"># drop everything</span></pre>
 
     <div class="callout">
-      <p><b>A migration file is a description, not an action.</b> It does nothing until
-      <code>upgrade</code> runs. A fresh container, or a dropped volume, needs
-      <code>upgrade head</code> again.</p>
-      <p><b>Not seeing the tables in a DB client?</b> Check which schema is open. Clients default
-      to <code>public</code>, which holds only <code>alembic_version</code>.</p>
+      <div><ul class="bul"><li>A migration does nothing until <code>alembic upgrade head</code> runs</li></ul></div>
+      <div><ul class="bul"><li>No tables in your DB client? Open schema <code>gold</code> / <code>app</code>, not <code>public</code></li></ul></div>
     </div>
   </section>
 

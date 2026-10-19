@@ -4,11 +4,90 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Retry dlq replay · Queue · Mycel handbook</title>
 <link rel="stylesheet" href="../handbook.css">
+<style>
+  .diagram { width: 100%; height: auto; display: block; min-width: 720px; }
+  .scroll-x { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px; }
+  .ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .op { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+  .op-svc { font: 13px var(--mono); color: var(--accent); }
+  .op-role { font-size: 14px; font-weight: 600; }
+  .op p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .op code { font-size: 12px; }
+</style>
 <body data-status="stub">
 <nav class="top"><a href="../index.html">Mycel handbook</a> · Queue</nav>
 <main>
   <h1>Retry dlq replay</h1>
-  <p class="stub">Not written yet.</p>
+  <h2 id="job">03 · A job in the worker</h2>
+<p class="purpose">The worker reads the job's kind, runs that domain, and sorts any failure into one of three bins.</p>
+<div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 300" role="img" aria-label="A delivered job is checked, run by the domain for its kind, then acked; a final failure dead-letters it, a transient one retries it, anything else dead-letters it.">
+  <defs><marker id="pb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+  <g font-family="var(--mono)" font-size="11.5">
+    <rect x="16" y="20" width="150" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="32" y="42" fill="var(--ink)">delivery</text>
+    <text x="32" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">from jobs or ingest</text>
+
+    <rect x="206" y="20" width="190" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+    <text x="222" y="42" fill="var(--ink)">checks</text>
+    <text x="222" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">parses? delivered too often?</text>
+
+    <rect x="436" y="20" width="200" height="52" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.3"/>
+    <text x="452" y="42" fill="var(--accent)">RUNS[kind](job)</text>
+    <text x="452" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">chat · ingest · index · sync · keys</text>
+
+    <rect x="676" y="20" width="208" height="52" rx="2" fill="var(--surface)" stroke="var(--ok, var(--accent))"/>
+    <text x="692" y="42" fill="var(--ok, var(--accent))">ack</text>
+    <text x="692" y="60" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">done; the queue forgets it</text>
+  </g>
+  <g stroke="currentColor" color="var(--ink-faint)" stroke-width="1.3" marker-end="url(#pb)" fill="none">
+    <path d="M166 46H202"/><path d="M396 46H432"/><path d="M636 46H672"/>
+    <path d="M536 72V112"/>
+  </g>
+  <text x="546" y="96" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">raises</text>
+
+  <g font-family="var(--mono)" font-size="11">
+    <rect x="16" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--bad, #c0392b)"/>
+    <text x="32" y="142" fill="var(--bad, #c0392b)">final → dead-letter now</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="32" y="164">budget exceeded · unknown kind</text>
+      <text x="32" y="182">runaway · repeat loop · bad output</text>
+      <text x="32" y="200">tool failed · model auth / not found</text>
+      <text x="32" y="218">model rejected / blocked</text>
+      <text x="32" y="246" fill="var(--ink)">retrying would fail the same way</text>
+    </g>
+
+    <rect x="312" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--warn, #b7791f)"/>
+    <text x="328" y="142" fill="var(--warn, #b7791f)">transient → retry later</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="328" y="164">job already running elsewhere</text>
+      <text x="328" y="182">network, Postgres, Redis, Qdrant</text>
+      <text x="328" y="200">S3, model transport errors</text>
+      <text x="328" y="218">dead-lettered once retries run out</text>
+      <text x="328" y="246" fill="var(--ink)">the same job may work in a minute</text>
+    </g>
+
+    <rect x="608" y="120" width="276" height="150" rx="2" fill="var(--surface)" stroke="var(--bad, #c0392b)" stroke-dasharray="5 4"/>
+    <text x="624" y="142" fill="var(--bad, #c0392b)">anything else → dead-letter</text>
+    <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
+      <text x="624" y="164">a bug: logged with its repr</text>
+      <text x="624" y="182">the failure is recorded on the turn</text>
+      <text x="624" y="246" fill="var(--ink)">a bug is not retried into a bill</text>
+    </g>
+  </g>
+</svg>
+</div>
+<p class="insight"><b>Key insight:</b> only failures that can pass on their own are retried; a model that refused, or a loop the guard stopped, goes straight to the dead-letter queue.</p>
+<details><summary>Details</summary>
+  <ul>
+    <li>Lists: <code>FINAL</code> and <code>TRANSIENT</code> in <code>worker.py</code>; settling in <code>queue/consumer.py</code>.</li>
+    <li>A body that will not parse is dead-lettered with nothing recorded: there is no turn to record it on.</li>
+    <li>Retries, the dead-letter queue and replay: <a <a href="idempotency.html">Idempotency</a>.</li>
+  </ul>
+</details>
+
+
+  <p class="stub">The rest of this page is not written yet.</p>
   <h2>Owns</h2>
   <ul class="owns">
     <li><span class="src" data-path="src/mycel/queue/retry.py" tabindex="0">src/mycel/queue/retry.py</span></li>

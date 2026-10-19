@@ -620,6 +620,11 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+.bul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.bul li { margin: 0.15rem 0; line-height: 1.45; }
+figcaption .bul, .path-note .bul { font-size: inherit; }
+.tbl-title { margin: 1.6rem 0 0.4rem; font: 600 13px var(--mono); color: var(--ink-soft); letter-spacing: 0.04em; }
 </style>
 
 <div class="page">
@@ -627,11 +632,7 @@ footer {
   <header class="hero">
     <p class="eyebrow">Architecture</p>
     <h1>Mycel</h1>
-    <p class="hero-lede">
-      A multi-agent system that answers questions about scattered data from one box.
-      Named after <em>mycelium</em> — the underground fungal network connecting a whole forest: running
-      in the background, quietly gathering data, and only then surfacing as an answer.
-    </p>
+    <div class="hero-lede"><ul class="bul"><li>Answers questions about a team's work, from one box</li><li>Named after mycelium: works underground, surfaces as an answer</li></ul></div>
     <div class="hero-meta">
       <span><b>Storage</b> PostgreSQL · 3 schema</span>
       <span><b>LLM</b> vLLM 3B local + cloud</span>
@@ -871,32 +872,15 @@ footer {
                 stroke-dasharray="2 4" fill="none" opacity="0.6"/>
         </svg>
       </div>
-      <figcaption>
-        The bold gold line from <code>gold</code> to <code>agents/</code> is the only way data
-        leaves the database for the AI layer. Dashed lines are control and observability, not
-        business data.
-      </figcaption>
+      <figcaption><ul class="bul"><li>Bold gold line: the only way data reaches the AI layer</li><li>Dashed: control and observability, not business data</li></ul></figcaption>
     </figure>
-    <p class="path-note">
-      <b>This is the data axis, not the request axis.</b> The flow
-      <code>sources → bronze → etl → silver → gold</code> runs in the background on a schedule, measured in minutes.
-      When a user presses a button the request takes a different axis —
-      <code>route → domain → service</code>, measured in seconds. The two meet in exactly
-      one place: at <code>gold</code>. Part 2 covers the request axis.
-    </p>
+    <div class="path-note"><ul class="bul"><li>Data axis: <code>sources → bronze → etl → silver → gold</code>, on a timer, minutes</li><li>Request axis: <code>route → domain → service</code>, seconds (Part 2)</li><li>The two meet only at gold</li></ul></div>
   </section>
   <section id="s02">
     <div class="section-head">
       <p class="eyebrow">1.2 · The contract between layers</p>
       <h2>Why <code>bronze</code> is kept untouched</h2>
-      <p>
-        With one source, silver and gold hold the same columns —
-        <code>etl/promote.py</code> is the identity function until a second tracker gives it
-        something to reconcile.
-        When transform logic is wrong — and it will be — it can be re-run from <code>bronze</code> instead of
-        calling the provider again. Providers have rate limits, deleted data, and APIs that change
-        schema. <code>bronze</code> is the copy we control.
-      </p>
+      <div><ul class="bul"><li>One source today: silver and gold hold the same columns</li><li>Bad transform → re-run from bronze, no new Jira calls</li><li>bronze is the copy we control: providers rate-limit, delete, change schema</li></ul></div>
     </div>
 
     <div class="layers">
@@ -943,11 +927,7 @@ footer {
     <div class="section-head">
       <p class="eyebrow">2.1 · Each layer's responsibility</p>
       <h2>Who does what in a request</h2>
-      <p>
-        HTTP does not call services directly. A route in <code>api/routes/</code> validates the request
-        and hands it to a module in <code>domains/</code>, which chains services into the operation.
-        Nothing below the route knows HTTP exists.
-      </p>
+      <div><ul class="bul"><li>Route in <code>api/routes/</code>: validate, hand off</li><li>Module in <code>domains/</code>: chains services</li><li>Nothing below the route knows HTTP</li></ul></div>
     </div>
 
     <figure>
@@ -1135,15 +1115,7 @@ footer {
           </g>
         </svg>
       </div>
-      <figcaption>
-A domain is a pair: one route module, one domain module. HTTP types stop at the route, so the
-        same domain module is what <code>scheduler/</code> and any script call — the dashed arrow.
-The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</code>, <code>sync</code>,
-        <code>dashboard</code> and <code>threads</code>. <code>dashboard</code> is
-        reached through <code>/dashboard</code> and <code>/projects</code> &mdash; kept because its queries are
-        a verified read of gold. <code>auth</code> is the exception — it is a route plus a
-        service, with no domain module, because signing in chains nothing.
-      </figcaption>
+      <figcaption><ul class="bul"><li>Domain = one route module + one domain module</li><li><code>scheduler/</code> and scripts call the domain module directly (dashed)</li><li><code>auth</code> is route + service only: sign-in chains nothing</li></ul></figcaption>
     </figure>
 
     <table class="tbl">
@@ -1188,132 +1160,27 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </tbody>
     </table>
 
-    <p class="path-note">
-      <b>How a domain module differs from a service:</b> the domain is the <em>chain</em>, a service
-      is a <em>link</em>. <code>domains/chat.py</code> queues the question through
-      <code>enqueue</code>, then the worker runs the orchestrator and stores the answer in
-      <code>app.turn</code>.
-      <code>plugins/jira/sync.py</code> calls <code>fetch</code> →
-      <code>transform</code> → <code>check</code>. Services are reused by both;
-      a service itself does not know which chain it is in.
-    </p>
+    <div class="path-note"><ul class="bul"><li>Domain = the chain; service = one link</li><li><code>domains/chat.py</code>: enqueue → worker → orchestrator → <code>app.turn</code></li><li><code>plugins/jira/sync.py</code>: fetch → transform → check</li></ul></div>
   </section>
   <section id="s07">
     <div class="section-head">
       <p class="eyebrow">2.2 · The life of a request</p>
       <h2>From the question to the stored answer</h2>
-      <p>
-        Answering a question takes minutes and will sometimes fail halfway. So the API does not run it —
-        it pushes the work onto the queue and returns immediately. The whole path is <em>one</em> trace.
-      </p>
+      <div><ul class="bul"><li>An answer takes minutes and may fail halfway</li><li>So the API queues it and returns at once</li><li>The whole path is one trace</li></ul></div>
     </div>
 
     <figure>
       <div class="scroll-x">
-        <svg class="diagram" viewBox="0 0 940 240" role="img"
-             aria-label="The life of a chat request: the chat domain module pushes the work onto the queue and returns a job id immediately; a worker pulls the job and runs it, the orchestrator splits the work across specialist agents, which query gold and call models through the llm layer, and the answer is stored; on failure the job is retried, and out of retries it lands in dead-letter; the whole path is a single trace.">
-          <defs>
-            <marker id="lc-ar" viewBox="0 0 10 10" refX="9" refY="5"
-                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
-            </marker>
-          </defs>
-
-          <g font-family="var(--mono)" font-size="11" text-anchor="middle">
-            <rect x="16" y="56" width="126" height="44" rx="2"
-                  fill="var(--surface)" stroke="var(--line)"/>
-            <text x="79" y="75" fill="var(--ink)">domain</text>
-            <text x="79" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">chat domain</text>
-
-            <rect x="182" y="56" width="126" height="44" rx="2"
-                  fill="var(--surface)" stroke="var(--line)"/>
-            <text x="245" y="75" fill="var(--ink)">queue</text>
-            <text x="245" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">a worker pulls it</text>
-
-            <rect x="348" y="56" width="126" height="44" rx="2"
-                  fill="var(--gold-wash)" stroke="var(--gold)"/>
-            <text x="411" y="75" fill="var(--gold)">orchestrator</text>
-            <text x="411" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">splits the work</text>
-
-            <rect x="514" y="56" width="126" height="44" rx="2"
-                  fill="var(--gold-wash)" stroke="var(--gold)"/>
-            <text x="577" y="75" fill="var(--gold)">specialists</text>
-            <text x="577" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">gold + llm</text>
-
-            <rect x="680" y="56" width="126" height="44" rx="2"
-                  fill="var(--surface)" stroke="var(--line)"/>
-            <text x="743" y="75" fill="var(--ink)">answer</text>
-            <text x="743" y="91" font-family="var(--sans)" font-size="10"
-                  fill="var(--ink-soft)">markdown + citations</text>
-
-            <rect x="846" y="56" width="78" height="44" rx="2"
-                  fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.6"/>
-            <text x="885" y="82" fill="var(--gold)">store</text>
-          </g>
-
-          <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
-             marker-end="url(#lc-ar)">
-            <path d="M 142 78 L 178 78"/>
-            <path d="M 308 78 L 344 78"/>
-            <path d="M 474 78 L 510 78"/>
-            <path d="M 640 78 L 676 78"/>
-            <path d="M 806 78 L 842 78"/>
-          </g>
-
-          <!-- return the job id immediately -->
-          <path d="M 245 56 L 245 40 L 79 40 L 79 52"
-                stroke="var(--ink-faint)" stroke-width="1.1" stroke-dasharray="3 3"
-                fill="none" color="var(--ink-faint)" marker-end="url(#lc-ar)"/>
-          <text x="162" y="34" font-family="var(--mono)" font-size="9.5"
-                fill="var(--ink-faint)" text-anchor="middle">returns the job id immediately, no waiting</text>
-
-          <!-- failure path: a failed job goes back to the queue, and out of retries to the
-               dead-letter queue. Both lines start at the queue, because that is where both
-               decisions are taken - the earlier version drew the retry leaving the
-               orchestrator and the dead-letter arrow starting in empty space. -->
-          <path d="M 411 100 L 411 130 L 252 130"
-                stroke="var(--bronze)" stroke-width="1.2" fill="none"
-                color="var(--bronze)" marker-end="url(#lc-ar)"/>
-          <text x="420" y="145" font-family="var(--mono)" font-size="9.5"
-                fill="var(--bronze)" text-anchor="start">failure &#8594; jobs.retry.5s / 30s / 2m (TTL, then back)</text>
-
-          <path d="M 238 130 L 238 174"
-                stroke="var(--bronze)" stroke-width="1.2" stroke-dasharray="3 3"
-                fill="none" color="var(--bronze)" marker-end="url(#lc-ar)"/>
-
-          <rect x="182" y="178" width="126" height="34" rx="2"
-                fill="var(--surface)" stroke="var(--bronze)" stroke-dasharray="3 3"/>
-          <text x="245" y="200" font-family="var(--mono)" font-size="10.5"
-                fill="var(--bronze)" text-anchor="middle">jobs.dlq</text>
-          <text x="320" y="200" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-faint)">out of retries &#8212; nothing consumes it, so nothing is lost</text>
-
-          <!-- the enclosing trace -->
-          <text x="16" y="16" font-family="var(--mono)" font-size="9.5"
-                fill="var(--accent)">a single trace &#8212; every step is a span</text>
-          <path d="M 292 12 L 924 12" stroke="var(--accent)" stroke-width="1"
-                stroke-dasharray="2 4" opacity="0.55" fill="none"/>
-        </svg>
+        <svg class="diagram" viewBox="0 0 940 510" role="img" aria-label="One question end to end: the browser posts to api/routes/chat.py, services/chat.py saves the turn and makes a job, services/enqueue.py publishes it to RabbitMQ, worker.py hands it to domains/chat.py, the orchestrator delegates to the analyst, the analyst calls hours_by_person which reads gold through query.py as the asker, each step goes to a Redis stream that api/routes/events.py streams to the browser, and the answer is stored in app.turn."><defs><marker id="m7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2"><text x="112" y="55">USER</text><text x="112" y="125">API</text><text x="112" y="195">QUEUE</text><text x="112" y="265">WORKER</text><text x="112" y="335">AGENTS</text><text x="112" y="405">TOOLS</text><text x="112" y="475">STORES</text></g><g data-path="web/src/api.ts"><rect x="128" y="30" width="200" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="138" y="48" font-family="var(--mono)" font-size="11" fill="var(--ink)">web/src/api.ts</text><text x="138" y="63" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">Lan types the question</text></g><g data-path="src/mycel/api/routes/chat.py"><rect x="128" y="100" width="200" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="138" y="118" font-family="var(--mono)" font-size="11" fill="var(--ink)">api/routes/chat.py</text><text x="138" y="133" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">POST /chat → 202 + job id</text></g><g data-path="src/mycel/services/chat.py"><rect x="352" y="100" width="210" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="362" y="118" font-family="var(--mono)" font-size="11" fill="var(--ink)">services/chat.py</text><text x="362" y="133" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">save the turn, make the job</text></g><g data-path="src/mycel/api/routes/events.py"><rect x="716" y="100" width="200" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="726" y="118" font-family="var(--mono)" font-size="11" fill="var(--ink)">api/routes/events.py</text><text x="726" y="133" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">GET /chat/{job}/events · SSE</text></g><g data-path="src/mycel/services/enqueue.py"><rect x="352" y="170" width="210" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="362" y="188" font-family="var(--mono)" font-size="11" fill="var(--ink)">services/enqueue.py</text><text x="362" y="203" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">outbox row + publish</text></g><g data-path="src/mycel/queue/topology.py"><rect x="586" y="170" width="150" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="596" y="188" font-family="var(--mono)" font-size="11" fill="var(--ink)">RabbitMQ</text><text x="596" y="203" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">queue "jobs"</text></g><g data-path="src/mycel/worker.py"><rect x="586" y="240" width="150" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="596" y="258" font-family="var(--mono)" font-size="11" fill="var(--ink)">worker.py</text><text x="596" y="273" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">RUNS[kind] → chat.run</text></g><g data-path="src/mycel/domains/chat.py"><rect x="352" y="240" width="210" height="42" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="362" y="258" font-family="var(--mono)" font-size="11" fill="var(--accent)">domains/chat.py</text><text x="362" y="273" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">run the turn, store the answer</text></g><g data-path="src/mycel/agents/specialists/orchestrator.py"><rect x="352" y="310" width="210" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="362" y="328" font-family="var(--mono)" font-size="11" fill="var(--ink)">specialists/orchestrator.py</text><text x="362" y="343" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">reads it, picks a specialist</text></g><g data-path="src/mycel/agents/specialists/analyst.py"><rect x="586" y="310" width="150" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="596" y="328" font-family="var(--mono)" font-size="11" fill="var(--ink)">specialists/analyst.py</text><text x="596" y="343" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">needs work numbers</text></g><g data-path="src/mycel/agents/tools/work.py"><rect x="586" y="380" width="150" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="596" y="398" font-family="var(--mono)" font-size="11" fill="var(--ink)">tools/work.py</text><text x="596" y="413" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">hours_by_person()</text></g><g data-path="src/mycel/agents/tools/query.py"><rect x="760" y="380" width="156" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="770" y="398" font-family="var(--mono)" font-size="11" fill="var(--ink)">tools/query.py</text><text x="770" y="413" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">read_rows() as the asker</text></g><g data-path="src/mycel/infra/postgres/acl.py"><rect x="586" y="450" width="150" height="42" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="596" y="468" font-family="var(--mono)" font-size="11" fill="var(--gold)">Postgres · gold</text><text x="596" y="483" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">only Lan's projects</text></g><g data-path="src/mycel/infra/postgres/repositories/conversations.py"><rect x="352" y="450" width="210" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="362" y="468" font-family="var(--mono)" font-size="11" fill="var(--ink)">Postgres · app.turn</text><text x="362" y="483" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">the answer, kept</text></g><g data-path="src/mycel/infra/redis/streams.py"><rect x="760" y="450" width="156" height="42" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="770" y="468" font-family="var(--mono)" font-size="11" fill="var(--ink)">Redis stream</text><text x="770" y="483" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">each step, live</text></g><circle cx="242.0" cy="86.0" r="9" fill="var(--accent)"/><text x="242.0" y="89.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">1</text><text x="256.0" y="89.0" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="start">POST /chat</text><circle cx="340.0" cy="109.0" r="9" fill="var(--accent)"/><text x="340.0" y="112.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">2</text><circle cx="471.0" cy="156.0" r="9" fill="var(--accent)"/><text x="471.0" y="159.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">3</text><text x="485.0" y="159.0" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="start">job</text><circle cx="675.0" cy="226.0" r="9" fill="var(--accent)"/><text x="675.0" y="229.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">4</text><text x="689.0" y="229.0" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="start">deliver</text><circle cx="471.0" cy="296.0" r="9" fill="var(--accent)"/><text x="471.0" y="299.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">5</text><circle cx="574.0" cy="319.0" r="9" fill="var(--accent)"/><text x="574.0" y="322.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">6</text><text x="574.0" y="366" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="middle">delegate</text><circle cx="852.0" cy="424" r="9" fill="var(--accent)"/><text x="852.0" y="427.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">7</text><text x="709.0" y="433" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="start">SELECT as mycel_reader</text><text x="322" y="465.0" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end">store</text><circle cx="900" cy="246" r="9" fill="var(--accent)"/><text x="900" y="249.5" font-family="var(--mono)" font-size="10" fill="#fff" text-anchor="middle">8</text><text x="878" y="222" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end">XREAD → SSE</text><text x="810.0" y="45.0" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end">live steps</text><text x="752" y="294" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="start">XADD each step</text><g stroke="var(--ink-faint)" stroke-width="1.3" fill="none" color="var(--ink-faint)" marker-end="url(#m7)"><path d="M 228.0 72 L 228.0 96"/><path d="M 328 121.0 L 348 121.0"/><path d="M 457.0 142 L 457.0 166"/><path d="M 562 191.0 L 582 191.0"/><path d="M 661.0 212 L 661.0 236"/><path d="M 586 261.0 L 566 261.0"/><path d="M 457.0 282 L 457.0 306"/><path d="M 562 331.0 L 582 331.0"/><path d="M 661.0 352 L 661.0 376"/><path d="M 736 401.0 L 756 401.0"/><path d="M 838.0 422 L 838.0 436 L 701.0 436 L 701.0 446"/><path d="M 382 282 L 382 292 L 330 292 L 330 471.0 L 348 471.0" stroke-dasharray="4 3"/><path d="M 886 450 L 886 146"/><path d="M 816.0 100 L 816.0 51.0 L 332 51.0"/><path d="M 540 282 L 540 298 L 748 298 L 748 446" stroke-dasharray="4 3"/></g></svg>
       </div>
-      <figcaption>
-        Every model call is a span in that same trace, with the tokens and the model used.
-        When an answer is slow or unexpectedly expensive, opening the trace shows which step caused it.
-      </figcaption>
+      <figcaption><ul class="bul"><li>Lan asks: <i>"Who logged the most hours this month?"</i></li><li>Each box = the file doing that step</li><li>API done at (2); slow part (4–7) in the worker; live steps (8) via Redis</li></ul></figcaption>
     </figure>
   </section>
   <section id="s10">
     <div class="section-head">
       <p class="eyebrow">2.3 · Who is calling</p>
       <h2>A cookie, and one row that can be deleted</h2>
-      <p>
-        The data is a team's own tracked work, so every request has to name a person. HTTP
-        remembers nothing between requests, so the browser carries a token and the server keeps
-        the matching row.
-      </p>
+      <div><ul class="bul"><li>Every request names a person: the data is the team's own</li><li>Browser holds a token; server keeps the matching row</li></ul></div>
     </div>
 
     <table class="tbl">
@@ -1354,20 +1221,9 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </tbody>
     </table>
 
-    <p>
-      Every security decision is in <code>services/auth.py</code> — one file to read before
-      trusting this, and one file to change when an answer stops being good enough. The route
-      layer in <code>api/routes/auth.py</code> only turns those calls into HTTP.
-    </p>
+    <div><ul class="bul"><li>Every security decision: <code>services/auth.py</code></li><li><code>api/routes/auth.py</code> only turns it into HTTP</li></ul></div>
 
-    <p>
-      Authorisation is a separate question and is deliberately unfinished.
-      <code>services/permission.py</code> holds one function that always returns true: there is
-      no membership table, and inventing one that always answers true would be the same rule
-      with more code. What is already right is the <em>call site</em> — every route that reads
-      one project's data asks it first, before touching gold, so the day a rule exists it is
-      added in one place.
-    </p>
+    <div><ul class="bul"><li>Which projects may this person read? → <code>services/permission.py</code></li><li>Answer comes from <code>app.membership</code>, filled from Jira</li><li>Agent queries: same list, enforced by Postgres row security</li></ul></div>
   </section>
   <section id="s05">
     <div class="section-head">
@@ -1465,11 +1321,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
     <div class="section-head">
       <p class="eyebrow">3.1 · Directory layout</p>
       <h2>The name tells you the job</h2>
-      <p>
-        Modules are flat, one level deep. When a module outgrows a file it becomes a directory with the same
-        name. A provider each person connects is a folder under <code>plugins/</code>.
-        No abstraction layer is built before there is anything to put in it.
-      </p>
+      <div><ul class="bul"><li>Flat, one level deep; a big file becomes a same-name folder</li><li>A provider a person connects = a folder in <code>plugins/</code></li></ul></div>
     </div>
 
     <style>
@@ -1513,15 +1365,26 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       <div class="d" data-path="deploy/helm/mycel/values.yaml"><b>deploy/</b><small>Helm chart, monitoring.</small></div>
       <div class="d" data-path="docs/index.html"><b>docs/</b><small>This handbook.</small></div>
     </div>
+
+    <p class="dirs-h">import rules — tests/test_layers.py fails the build on any of these</p>
+    <table class="tbl">
+      <thead><tr><th>Package</th><th>May never import</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="who">core/</td><td>agents, services, domains, api</td><td>the foundation; imports nothing else</td></tr>
+        <tr><td class="who">infra/</td><td>agents, services, domains, api, queue, lifecycle</td><td>stores sit under everything that runs work</td></tr>
+        <tr><td class="who">llm/ · events/</td><td>infra and everything above it</td><td>value types that infra may store</td></tr>
+        <tr><td class="who">queue/</td><td>agents, services, domains, api, lifecycle</td><td>moves jobs; worker.py runs them</td></tr>
+        <tr><td class="who">services/</td><td>agents</td><td>tools call services, never the reverse</td></tr>
+        <tr><td class="who">api/</td><td>agents, domains</td><td>the API queues work; agents run only in the worker</td></tr>
+      </tbody>
+    </table>
+    <div class="path-note"><ul class="bul"><li><code>test_gold_entry_point.py</code>: reading gold for a person must ask <code>permission.py</code></li><li><code>worker.py</code>, <code>lifecycle.py</code> at the root: each wires every layer</li></ul></div>
   </section>
   <section id="s03">
     <div class="section-head">
       <p class="eyebrow">3.2 · The AI layer</p>
       <h2>Local carries the volume, cloud does the reasoning</h2>
-      <p>
-        Every model call goes through <code>llm/</code> — no module imports a provider SDK
-        directly. That way switching models, adding a cache or setting a spend ceiling is one change.
-      </p>
+      <div><ul class="bul"><li>Every model call goes through <code>llm/</code> and the gateway</li><li>Swap model, add cache, cap spend: one change</li></ul></div>
     </div>
 
     <figure>
@@ -1692,11 +1555,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
           </g>
         </svg>
       </div>
-      <figcaption>
-        <code>router</code> is the only place that knows which model runs where. Without the vLLM
-        container enabled, every call goes to the cloud — no code change, because both are
-        OpenAI-compatible.
-      </figcaption>
+      <figcaption><ul class="bul"><li><code>router</code> alone knows which model runs where</li><li>No local model → every call goes to the cloud, no code change</li></ul></figcaption>
     </figure>
 
   </section>
@@ -1706,94 +1565,81 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
     <h2 class="part-title">Running for real</h2>
     <p class="part-blurb">Docker, observability, and the path from dev machine to cluster. With a clear line between what exists and what is still only design.</p>
   </div>
+  <section id="s15">
+    <div class="section-head">
+      <p class="eyebrow">4.0 · Processes</p>
+      <h2>One image, four programs</h2>
+    </div>
+    <table class="tbl">
+      <thead><tr><th>Program</th><th>Does</th><th>Command</th><th>Replicas</th></tr></thead>
+      <tbody>
+        <tr><td class="who">api</td><td>HTTP, sign-in, web app at <code>/app</code>, live events; writes jobs, never runs a model</td><td><code>uvicorn --factory mycel.api.app:create_app</code></td><td>any</td></tr>
+        <tr class="tone-accent"><td class="who">worker</td><td>queue <code>jobs</code>, 2 at a time: runs the agents</td><td><code>python -m mycel.worker</code></td><td>2</td></tr>
+        <tr><td class="who">ingest</td><td>queue <code>ingest</code>, 1 at a time: parse and embed; restarts after 20 jobs</td><td><code>python -m mycel.worker --queue ingest</code></td><td>1</td></tr>
+        <tr><td class="who">scheduler</td><td>timers: outbox relay 5 s · plugin sync 15 min · watchdog · session sweep</td><td><code>python -m mycel.scheduler</code></td><td>1, <code>Recreate</code></td></tr>
+      </tbody>
+    </table>
+    <h3 class="tbl-title">Start and stop — all four through lifecycle.py</h3>
+    <table class="tbl">
+      <thead><tr><th>When</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td class="who">start</td><td>settings → logging → tracing → <code>/metrics</code> on its port</td></tr>
+        <tr><td class="who">SIGTERM</td><td>stop taking jobs → wait up to 50 s for running ones → the rest are redelivered</td></tr>
+        <tr><td class="who">close</td><td>broker → Redis → Postgres → Qdrant → model clients → HTTP → S3 → flush traces</td></tr>
+      </tbody>
+    </table>
+  </section>
+
   <section id="s09">
     <div class="section-head">
       <p class="eyebrow">4.1 &middot; The operational stack</p>
-      <h2>Three containers are required; the rest sit behind a profile</h2>
-      <p>
-        <code>docker compose up</code> brings up what the code actually talks to. Everything else
-        is real config that is simply not this batch's turn &mdash; it costs no RAM until the
-        profile is named, and deleting it would delete the decision with it.
-      </p>
+      <h2>What <code>docker compose up</code> starts</h2>
     </div>
-
-    <div class="ops">
-      <article class="op">
-        <span class="op-svc">postgres</span>
-        <span class="op-role">Data store &middot; required</span>
-        <p>One database, four schemas &mdash; <code>bronze</code> &middot; <code>silver</code> &middot; <code>gold</code> &middot; <code>app</code>. A separate volume, so upgrading the image does not lose data.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">rabbitmq</span>
-        <span class="op-role">Job queue &middot; required</span>
-        <p>A task queue, not a log: retry and dead-lettering are broker features here rather than something to build. Chosen over Kafka, whose JVM costs ~1.2&nbsp;GiB for a few chat turns an hour.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">redis</span>
-        <span class="op-role">In-flight state &middot; required</span>
-        <p>Where the worker puts events for the API to read back, plus job status and budget. Every key has a TTL, so nothing here is storage &mdash; that is what Postgres is for.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">qdrant</span>
-        <span class="op-role">Vector store &middot; idle</span>
-        <p>Up, but nothing writes to it until the indexer batch lands. Kept out of Postgres so it scales on its own.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">worker</span>
-        <span class="op-role">The hands</span>
-        <p>Pulls jobs and runs them. This is where agents actually execute. In dev it runs straight on the host with <code>uv run</code>, so editing code needs no rebuild.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">scheduler</span>
-        <span class="op-role">The clock</span>
-        <p>A tick every 15 minutes, calling each plugin's <code>sync()</code> directly &mdash; no HTTP, no queue. Always one replica, <code>Recreate</code>: two of them fire every schedule twice.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">api</span>
-        <span class="op-role">Front door &middot; <code>--profile api</code></span>
-        <p>In dev, uvicorn runs on the host instead: reload is faster. It stays in compose to run it in a container.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">vllm</span>
-        <span class="op-role">Local model &middot; <code>--profile local-llm</code></span>
-        <p>~8&nbsp;GiB and a GPU. The cloud tier is Gemini, so this stays off until there is hardware to carry it.</p>
-      </article>
-      <article class="op">
-        <span class="op-svc">prometheus &middot; grafana<br>loki &middot; alloy</span>
-        <span class="op-role">Observability &middot; <code>--profile monitoring</code></span>
-        <p>Every process serves <code>/metrics</code> on its own port: worker 9100, scheduler 9101, ingest 9102, api 9103.</p>
-      </article>
-    </div>
-
-    <p class="path-note">
-      Traces do <b>not</b> go through a local collector. The app ships OTLP straight to Langfuse
-      Cloud, which understands agents and tool calls &mdash; Grafana sees only anonymous spans.
-    </p>
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Role</th><th>Started by</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td class="who">postgres</td><td>truth: bronze · silver · gold · app</td><td>default</td><td>own volume; the gateway keeps its keys in a second database</td></tr>
+        <tr><td class="who">rabbitmq</td><td>job queue</td><td>default</td><td>retry and dead-letter built in; chosen over Kafka</td></tr>
+        <tr><td class="who">redis</td><td>live events, job status, budgets</td><td>default</td><td><code>noeviction</code>; every key has a TTL</td></tr>
+        <tr><td class="who">redis-cache</td><td>answer and token cache</td><td>default</td><td><code>allkeys-lru</code>: may drop anything</td></tr>
+        <tr><td class="who">qdrant</td><td>vectors for search</td><td>default</td><td>written by ingest, read by <code>rag_search</code></td></tr>
+        <tr><td class="who">minio</td><td>uploaded files</td><td>default</td><td>S3-compatible</td></tr>
+        <tr class="tone-gold"><td class="who">litellm</td><td>gateway for every host model call</td><td>default</td><td>holds the master key; the app gets a capped key</td></tr>
+        <tr><td class="who">worker · ingest · scheduler</td><td>the app's background programs</td><td><code>--profile app</code></td><td>dev runs them on the host instead (<code>scripts/stack.sh dev</code>)</td></tr>
+        <tr><td class="who">api</td><td>HTTP and the web app</td><td><code>--profile api</code></td><td>dev runs it on the host: faster reload</td></tr>
+        <tr><td class="who">vllm</td><td>local model</td><td><code>--profile local-llm</code></td><td>needs ~8 GiB and a GPU; off by default</td></tr>
+        <tr><td class="who">prometheus · grafana · loki · alloy · alertmanager</td><td>metrics, logs, alerts</td><td><code>--profile monitoring</code></td><td><code>/metrics</code>: worker 9100 · scheduler 9101 · ingest 9102 · api 9103</td></tr>
+      </tbody>
+    </table>
+    <div class="path-note"><ul class="bul"><li>Traces go straight to Langfuse (OTLP)</li><li>Grafana sees only anonymous spans</li></ul></div>
   </section>
 
   <section id="s13">
     <div class="section-head">
       <p class="eyebrow">4.1b &middot; Ports</p>
       <h2>What listens where</h2>
-      <p>Every port a developer needs on the dev machine, and the one deliberate offset.</p>
+      
     </div>
 
     <table class="tbl">
       <thead><tr><th>Port</th><th>Service</th><th>What it is</th></tr></thead>
       <tbody>
-        <tr><td class="who">8000</td><td>api</td><td>FastAPI &mdash; <code>/app</code>, <code>/chat</code>, <code>/health</code></td></tr>
-        <tr><td class="who">5432</td><td>postgres</td><td>PostgreSQL 16</td></tr>
-        <tr><td class="who">5433</td><td>postgres (test)</td><td>A throwaway container for the suite. Offset so it cannot collide with a Postgres already installed on the machine</td></tr>
+        <tr><td class="who">8000</td><td>api</td><td>FastAPI: <code>/app</code>, <code>/chat</code>, <code>/health</code></td></tr>
+        <tr><td class="who">5433</td><td>postgres</td><td>PostgreSQL 16. 5433 on the host so a local Postgres keeps 5432; tests use <code>mycel_test</code> on the same server</td></tr>
         <tr><td class="who">5672</td><td>rabbitmq</td><td>AMQP</td></tr>
-        <tr><td class="who">15672</td><td>rabbitmq</td><td>Management UI</td></tr>
-        <tr><td class="who">6379</td><td>redis</td><td>Events, job status, budget</td></tr>
-        <tr><td class="who">6380</td><td>redis-cache</td><td>Cached answers and access tokens; evicts when full</td></tr>
+        <tr><td class="who">15672</td><td>rabbitmq</td><td>management UI</td></tr>
+        <tr><td class="who">6379</td><td>redis</td><td>live events, job status, budgets</td></tr>
+        <tr><td class="who">6380</td><td>redis-cache</td><td>cached answers and access tokens; evicts when full</td></tr>
+        <tr><td class="who">4000</td><td>litellm</td><td>model gateway</td></tr>
         <tr><td class="who">6333</td><td>qdrant</td><td>HTTP + dashboard</td></tr>
+        <tr><td class="who">9000</td><td>minio</td><td>S3 API</td></tr>
+        <tr><td class="who">9001</td><td>minio</td><td>console</td></tr>
         <tr><td class="who">8001</td><td>vllm</td><td>OpenAI-compatible, profile only</td></tr>
-        <tr><td class="who">9090</td><td>prometheus</td><td>Profile only</td></tr>
-        <tr><td class="who">9093</td><td>alertmanager</td><td>Profile only; webhook receiver from config</td></tr>
-        <tr><td class="who">3100</td><td>loki</td><td>Profile only</td></tr>
-        <tr><td class="who">3000</td><td>grafana</td><td>Profile only</td></tr>
+        <tr><td class="who">9100–9103</td><td>app processes</td><td><code>/metrics</code>: worker · scheduler · ingest · api</td></tr>
+        <tr><td class="who">9090</td><td>prometheus</td><td>profile only</td></tr>
+        <tr><td class="who">9093</td><td>alertmanager</td><td>profile only</td></tr>
+        <tr><td class="who">3100</td><td>loki</td><td>profile only</td></tr>
+        <tr><td class="who">3000</td><td>grafana</td><td>profile only</td></tr>
       </tbody>
     </table>
 
@@ -1841,11 +1687,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
     <div class="section-head">
       <p class="eyebrow">4.2 · From dev machine to cluster</p>
       <h2>Two images, one environment</h2>
-      <p>
-        CI builds two images <em>once</em>, tagged by commit SHA, and pushes them to Docker Hub:
-        <code>&lt;user&gt;/mycel</code> and <code>&lt;user&gt;/mycel-ingest</code>. There is no staging and
-        no prod; CI renders the Helm chart rather than deploying it.
-      </p>
+      <div><ul class="bul"><li>CI builds two images per commit SHA: <code>mycel</code>, <code>mycel-ingest</code></li><li>CI renders the Helm chart; it does not deploy</li></ul></div>
     </div>
 
     <figure>
@@ -1956,11 +1798,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
                 fill="var(--ink-faint)" text-anchor="end">rollback = back to the previous SHA tag</text>
         </svg>
       </div>
-      <figcaption>
-        Migrations run before the new containers, so every schema change has to leave the old code
-        working. Dropping a column takes two releases: first remove the code using it,
-        then <code>drop</code> it.
-      </figcaption>
+      <figcaption><ul class="bul"><li>Migrations run before new containers</li><li>So a schema change must keep old code working</li><li>Drop a column in two releases: code first, column second</li></ul></figcaption>
     </figure>
 
     <table class="tbl">
@@ -1988,30 +1826,14 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </tbody>
     </table>
 
-    <p>
-      Both run <em>the same images</em>. Every difference is an environment variable:
-      the DB connection string, API keys, whether <code>vllm</code> is enabled. Secrets are always read from
-      env — never from a committed <code>config/</code>.
-    </p>
+    <div><ul class="bul"><li>Same images everywhere</li><li>Differences are env vars only; secrets never in <code>config/</code></li></ul></div>
   </section>
   <section id="s12">
     <div class="section-head">
       <p class="eyebrow">4.3 · On the cluster</p>
       <h2>Kubernetes on-premise</h2>
-      <p>
-        The whole system runs in-house, with no dependency on a cloud service beyond the final LLM
-        call. <code>docker-compose.yml</code> is the dev machine's stack; <code>deploy/helm/</code>
-        is the cluster's. Two different files, but <em>the same image</em> and the same set of
-        environment variables — there is no <code>if env == "prod"</code> branch in the code.
-      </p>
-      <p>
-        <b>Four app pods, on minikube.</b> The chart renders <code>api</code>,
-        <code>worker</code>, <code>scheduler</code> and <code>ingest</code> plus a ConfigMap, a Service, an Ingress and a
-        migration hook. Postgres, RabbitMQ and Redis stay <em>outside</em> the cluster, reached at
-        <code>host.minikube.internal</code>. Four things this section used to promise are deliberately
-        not built: Argo CD, Harbor, autoscaling, and <code>StatefulSet</code> for the stores. Each is
-        priced below.
-      </p>
+      <div><ul class="bul"><li>Runs in-house; only the final model call leaves</li><li><code>docker-compose.yml</code> = dev; <code>deploy/helm/</code> = cluster</li><li>Same image, same env vars, no <code>if env == "prod"</code></li></ul></div>
+      <div><ul class="bul"><li>Four app pods on minikube + ConfigMap, Service, Ingress, migration hook</li><li>Stores stay outside, at <code>host.minikube.internal</code></li><li>Not built on purpose: Argo CD, Harbor, autoscaling, StatefulSets</li></ul></div>
     </div>
 
     <table class="tbl">
@@ -2061,58 +1883,20 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </tbody>
     </table>
 
-    <p>
-      <b>Two probes, and only on the <code>api</code>.</b> <code>readinessProbe</code> hits
-      <code>/health/ready</code>, which does touch Postgres and returns 503 rather than raising — a pod
-      that cannot reach its database leaves the Service instead of dying. <code>livenessProbe</code> hits
-      <code>/health/live</code>, which touches nothing outside the process: a liveness probe that asks the
-      database restarts healthy pods every time the database blinks. No <code>startupProbe</code> — it
-      protects a process that takes minutes to boot, and uvicorn does not.
-    </p>
-
-    <p>
-      <b><code>worker</code>, <code>scheduler</code> and <code>ingest</code> have a liveness probe on <code>/metrics</code> and no readiness probe.</b> They serve no
-      requests, and <code>/metrics</code> is not readiness — a process can serve metrics while doing no work.
-    </p>
-
-    <p>
-      <b>No ceiling on <code>worker</code>.</b> RabbitMQ hands each message to one consumer, so workers
-      share a queue rather than being capped by a partition count. The old figure on this page —
-      pods = min(replicas, partitions) — was Kafka's, and Kafka left the stack.
-    </p>
-
-    <p>
-      <b><code>scheduler</code> is always one replica</b>, with <code>strategy: Recreate</code>.
-      Two schedulers fire every schedule twice; and <code>RollingUpdate</code> starts the new pod
-      <em>before</em> removing the old one, leaving a window with two alive.
-    </p>
-
-    <p>
-      <b>The stores are outside the cluster.</b> Postgres, RabbitMQ and Redis keep running under
-      docker-compose on the host, reached at <code>host.minikube.internal</code>.
-      <code>StatefulSet</code> + PVC is the most labour-intensive part of Kubernetes — storage
-      classes, a volume per pod identity — and it proves nothing the chart is meant to prove.
-    </p>
-
-    <p>
-      <b><code>localhost</code> inside a pod is that pod.</b> A <code>DATABASE_URL</code> copied straight
-      out of <code>.env</code> looks perfectly correct and the pod dies with connection refused to itself.
-      This is the one mistake worth naming, because nothing about the value looks wrong.
-    </p>
-
-    <p>
-      <b>Migrations run first, and the hook is <code>pre-install,pre-upgrade</code>.</b> Both events
-      matter: <code>pre-upgrade</code> alone means the very first <code>--install</code> never migrates,
-      and all three pods come up against an empty database — which reads as a broken application
-      rather than a missing step. If the hook fails Helm stops and the new pods never start, while the old
-      ones keep serving. That only holds while migrations stay backward compatible for one step.
-    </p>
-
-    <p>
-      <b>Secrets are never rendered.</b> The chart references a <code>Secret</code> by name and writes
-      none, so <code>helm template</code> produces no credential of any kind. It is created once, outside
-      Helm, with <code>kubectl create secret generic mycel-secrets --from-env-file=.env</code>.
-    </p>
+    <h3 class="tbl-title">Each pod on the cluster</h3>
+    <table class="tbl">
+      <thead><tr><th>Topic</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="who">api probes</td><td>ready: <code>/health/ready</code> (checks Postgres) · live: <code>/health/live</code> (checks nothing)</td><td>DB down → pod leaves the Service; a DB blink restarts nothing</td></tr>
+        <tr><td class="who">worker, scheduler, ingest probes</td><td>liveness on <code>/metrics</code>, no readiness</td><td>they serve no requests</td></tr>
+        <tr><td class="who">worker replicas</td><td>any number</td><td>RabbitMQ gives each message to one consumer</td></tr>
+        <tr><td class="who">scheduler replicas</td><td>1, <code>Recreate</code></td><td>RollingUpdate would run two for a moment</td></tr>
+        <tr><td class="who">stores</td><td>outside the cluster, compose on the host</td><td>StatefulSet + PVC is the hard part, proves nothing here</td></tr>
+        <tr class="tone-gold"><td class="who">store hosts</td><td>set by the chart, never from <code>.env</code></td><td><code>localhost</code> in a pod is that pod</td></tr>
+        <tr><td class="who">migrations</td><td>hook <code>pre-install,pre-upgrade</code></td><td>first install migrates too; a failed hook keeps old pods serving</td></tr>
+        <tr><td class="who">secrets</td><td>chart names the Secret, renders none</td><td>created once: <code>kubectl create secret generic mycel-secrets --from-env-file=.env</code></td></tr>
+      </tbody>
+    </table>
   </section>
   <section id="s11">
     <div class="section-head">
