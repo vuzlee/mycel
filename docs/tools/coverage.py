@@ -1,6 +1,6 @@
 """Which handbook page owns which source file: every file has exactly one owner page.
 
-    python docs/tools/coverage.py      # lists files with no page, files with two, pages that do not exist
+    python docs/tools/coverage.py      # files with no page or two pages; pages that do not exist
 
 Paths are repo-relative; a trailing "/" owns everything under it. An empty list is a page
 that explains across files (a how-to, a map) and owns none.
@@ -33,10 +33,8 @@ KEPT = {
 }
 
 PAGES: dict[str, list[str]] = {
-    "overview/architecture": [
-    ],
-    "overview/code-map": [
-    ],
+    "overview/architecture": [],
+    "overview/code-map": [],
     "overview/config": [
         "src/mycel/core/config.py",
         "src/mycel/core/config_files.py",
@@ -402,20 +400,13 @@ PAGES: dict[str, list[str]] = {
         "web/src/components/Modal.tsx",
         "web/src/components/Dialogs.tsx",
     ],
-    "change/add-agent": [
-    ],
-    "change/add-data-source": [
-    ],
-    "change/add-gold-column": [
-    ],
-    "change/add-host-model": [
-    ],
-    "change/add-route": [
-    ],
-    "change/add-setting": [
-    ],
-    "change/add-tool": [
-    ],
+    "change/add-agent": [],
+    "change/add-data-source": [],
+    "change/add-gold-column": [],
+    "change/add-host-model": [],
+    "change/add-route": [],
+    "change/add-setting": [],
+    "change/add-tool": [],
     "change/evals": [
         "evals/",
     ],
@@ -444,20 +435,28 @@ PAGES: dict[str, list[str]] = {
     "operate/runbooks": [
         "scripts/ops/",
     ],
-    "operate/troubleshooting": [
-    ],
+    "operate/troubleshooting": [],
 }
 
 
 def owned(path: str) -> list[str]:
-    return [page for page, owns in PAGES.items() if any(path == o or (o.endswith("/") and path.startswith(o)) for o in owns)]
+    return [
+        page
+        for page, owns in PAGES.items()
+        if any(path == o or (o.endswith("/") and path.startswith(o)) for o in owns)
+    ]
 
 
 def sources() -> list[str]:
     found = []
     for base, suffixes in SCANNED.items():
         for path in (ROOT / base).rglob("*"):
-            if path.is_file() and path.suffix in suffixes and "__pycache__" not in path.parts and ".test." not in path.name:
+            if (
+                path.is_file()
+                and path.suffix in suffixes
+                and "__pycache__" not in path.parts
+                and ".test." not in path.name
+            ):
                 found.append(str(path.relative_to(ROOT)))
     return sorted(found)
 
@@ -468,7 +467,11 @@ def main() -> int:
     doubled = {f: owned(f) for f in files if len(owned(f)) > 1}
     absent = [p for p in PAGES if not (DOCS / f"{p}.html").exists()]
     pages = {f"{p}.html" for p in PAGES} | KEPT
-    strays = [str(f.relative_to(DOCS)) for f in DOCS.rglob("*.html") if str(f.relative_to(DOCS)) not in pages]
+    strays = [
+        str(f.relative_to(DOCS))
+        for f in DOCS.rglob("*.html")
+        if str(f.relative_to(DOCS)) not in pages
+    ]
     print(f"{len(files)} files · {len(files) - len(missing)} owned · {len(PAGES)} pages")
     for label, items in (
         ("no page", missing),
