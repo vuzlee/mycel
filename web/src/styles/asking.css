@@ -228,7 +228,7 @@
      the measurement rather than a guess, so it stays clear of the prose at every width
      between 1120px and a very wide monitor. */
   right: 20px;
-  width: min(168px, calc((100% - var(--conversation)) / 2 - 40px));
+  width: 14px;
   transform: translateY(-50%);
   max-height: 60vh;
   overflow-y: auto;
@@ -236,15 +236,20 @@
   scrollbar-width: none;
   /* It is a map, not a thing you read. Dim until the cursor comes near. */
   opacity: 0.5;
-  transition: opacity 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    width 0.18s ease;
 }
 
 .topics::-webkit-scrollbar {
   display: none;
 }
 
-.topics:hover {
+/* Folded to the line alone; the titles open on hover or keyboard focus. */
+.topics:hover,
+.topics:focus-within {
   opacity: 1;
+  width: min(168px, calc((100% - var(--conversation)) / 2 - 40px));
 }
 
 .topics ol {

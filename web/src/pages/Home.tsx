@@ -189,7 +189,7 @@ export function Home() {
             <a href={REPO} target="_blank" rel="noreferrer">
               Source
             </a>
-            <a href={`${REPO}/blob/main/docs/architecture.html`} target="_blank" rel="noreferrer">
+            <a href={`${REPO}/blob/main/docs/overview/architecture.html`} target="_blank" rel="noreferrer">
               Architecture
             </a>
             <a href={`${REPO}/issues`} target="_blank" rel="noreferrer">

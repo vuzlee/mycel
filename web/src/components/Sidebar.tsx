@@ -5,7 +5,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { ConversationSummary } from "../api";
 import { useConversations } from "../context/ConversationsContext";
 import { Account } from "./Account";
-import { ConversationRow as Row } from "./ConversationRow";
+import { ConversationRow } from "./ConversationRow";
+import { Confirm } from "./Dialogs";
 import {
   Archive,
   Bars,
@@ -14,8 +15,11 @@ import {
   Mycelium,
   Notebook,
   PanelLeft,
+  Pin,
   Plus,
   Search,
+  Sliders,
+  Trash,
 } from "./icons";
 
 interface Props {
@@ -41,6 +45,34 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
   const archived = conversations.filter((t) => t.archived);
   const pinned = live.filter((t) => t.pinned);
   const recent = live.filter((t) => !t.pinned);
+  const [picked, setPicked] = useState<Set<number> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const picking = picked !== null;
+  const chosen = all.filter((t) => picked?.has(t.id));
+  const toggle = (id: number): void =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  // One verb for the whole pick: if every row already has it, the verb undoes it.
+  const bulkPin = (): void => {
+    const rows = chosen.filter((t) => !t.archived);
+    const to = !rows.every((t) => t.pinned);
+    rows.forEach((t) => void pin(t.id, to));
+    setPicked(null);
+  };
+  const bulkArchive = (): void => {
+    const to = !chosen.every((t) => t.archived);
+    chosen.forEach((t) => void edit(t.id, { archived: to }));
+    setPicked(null);
+  };
+  const bulkDelete = (): void => {
+    chosen.forEach((t) => void forget(t.id));
+    if (chosen.some((t) => t.job_id !== null && t.job_id === current)) navigate("/");
+    setConfirmDelete(false);
+    setPicked(null);
+  };
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -164,7 +196,9 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
               <h2 className="label">Pinned</h2>
               <ol>
                 {pinned.map((conversation) => (
-                  <Row
+                  <ConversationRow
+                    selection={picked}
+                    onPick={toggle}
                     key={conversation.id}
                     conversation={conversation}
                     current={current}
@@ -193,7 +227,9 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
             {showArchived && archived.length > 0 && (
               <ol>
                 {archived.map((conversation) => (
-                  <Row
+                  <ConversationRow
+                    selection={picked}
+                    onPick={toggle}
                     key={conversation.id}
                     conversation={conversation}
                     current={current}
@@ -206,7 +242,18 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
               </ol>
             )}
           </section>
-          <h2 className="label">Recent</h2>
+          <div className="recent-head">
+            <h2 className="label">Recent</h2>
+            <button
+              className="icon-button"
+              aria-label="Select conversations"
+              aria-pressed={picking}
+              title="Select"
+              onClick={() => setPicked((p) => (p === null ? new Set() : null))}
+            >
+              <Sliders />
+            </button>
+          </div>
           {recent.length === 0 && pinned.length === 0 ? (
             <p className="empty">
               {needle ? "No conversation matches." : "Runs you start appear here, ready to reopen."}
@@ -214,7 +261,9 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
           ) : (
             <ol>
               {recent.map((conversation) => (
-                <Row
+                <ConversationRow
+                  selection={picked}
+                  onPick={toggle}
                   key={conversation.id}
                   conversation={conversation}
                   current={current}
@@ -227,6 +276,47 @@ export function Sidebar({ current, open, onClose, onCollapse }: Props) {
             </ol>
           )}
         </div>
+
+        {picking && (
+          <div className="pick-bar">
+            <span>{chosen.length} selected</span>
+            <button
+              className="icon-button"
+              title="Pin / unpin"
+              disabled={!chosen.length}
+              onClick={bulkPin}
+            >
+              <Pin />
+            </button>
+            <button
+              className="icon-button"
+              title="Archive / unarchive"
+              disabled={!chosen.length}
+              onClick={bulkArchive}
+            >
+              <Archive />
+            </button>
+            <button
+              className="icon-button danger"
+              title="Delete"
+              disabled={!chosen.length}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash />
+            </button>
+            <button onClick={() => setPicked(null)}>Cancel</button>
+          </div>
+        )}
+        {confirmDelete && (
+          <Confirm
+            title={`Delete ${chosen.length} conversations?`}
+            body="They and every answer in them will be gone for good."
+            action="Delete"
+            danger
+            onConfirm={bulkDelete}
+            onCancel={() => setConfirmDelete(false)}
+          />
+        )}
 
         {/* The same menu the home page has, in the same shape: profile, settings, help,
             sign out. One component, so the account is never somewhere else. */}

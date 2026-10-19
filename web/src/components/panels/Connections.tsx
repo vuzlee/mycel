@@ -111,7 +111,7 @@ export function Connection({ provider }: { provider: Provider }) {
       </header>
       {status === null && <p className="muted">Checking…</p>}
       {status && !status.configured && (
-        <p className="muted">Not set up on this deployment — see docs/setup.md.</p>
+        <p className="muted">Not set up on this deployment — see docs/operate/setup.md.</p>
       )}
       {status?.configured && status.who && (
         <>

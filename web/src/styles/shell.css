@@ -523,3 +523,54 @@ a.brand:hover .mark {
 .archived li > button:not(.more) {
   opacity: 0.75;
 }
+
+/* Picking several rows: a box replaces the bubble, the ⋯ is gone, a bar holds the verbs. */
+.rail .tick {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--faint);
+  border-radius: 4px;
+  color: var(--surface);
+}
+
+.rail .tick[data-on="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.pick-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rule-2);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.pick-bar span {
+  flex: 1;
+}
+
+.pick-bar .icon-button:disabled {
+  opacity: 0.4;
+}
+
+.pick-bar .danger {
+  color: var(--danger, #c0392b);
+}
+
+.recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 12px;
+  margin-bottom: 8px;
+}
+
+.recent-head .label {
+  margin-bottom: 0;
+}
