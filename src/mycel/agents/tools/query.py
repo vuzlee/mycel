@@ -50,12 +50,38 @@ def _limited(query: str) -> str:
     return f"{stripped}\nLIMIT {MAX_ROWS}"
 
 
+#: Said with every result: a model that doubts a table asks for it again.
+COMPLETE = "That is every row this query returns. Answer from it."
+EMPTY = "(no rows) Nothing matches, and that is the answer: report it and stop."
+#: An aggregate over nothing is one row of NULLs, which models read as a broken query.
+NOTHING = "Every value is empty: no rows matched, so the total is zero. That is the answer."
+
+
 def table(columns: list[str], rows: Sequence[Sequence[Any]]) -> str:
-    """Rows as a pipe-separated table. Empty says so rather than returning nothing."""
+    """Rows as a pipe-separated table. Empty says it is an answer, not a failed read."""
     if not rows:
-        return f"{' | '.join(columns)}\n(no rows)"
+        return f"{' | '.join(columns)}\n{EMPTY}"
     body = "\n".join(" | ".join("" if v is None else str(v) for v in row) for row in rows)
     return f"{' | '.join(columns)}\n{body}"
+
+
+def final(columns: list[str], rows: Sequence[Sequence[Any]]) -> str:
+    """The table and the line that tells the model it is the whole answer."""
+    closing = _closing(rows)
+    return f"{table(columns, rows)}\n{closing}" if closing else table(columns, rows)
+
+
+def _closing(rows: Sequence[Sequence[Any]]) -> str:
+    """The line after a table: what the model should take from it."""
+    if rows and all(v is None for row in rows for v in row):
+        return NOTHING
+    return COMPLETE if rows else ""
+
+
+def _same_query(args: dict[str, Any]) -> dict[str, Any]:
+    """Whitespace, case and a trailing semicolon do not make a query new."""
+    query = str(args.get("query", ""))
+    return {"query": " ".join(query.rstrip().rstrip(";").split()).lower()}
 
 
 async def _scope(deps: MycelDeps) -> str:
@@ -110,13 +136,14 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
                 `gold.work_item` and `gold.worklog`. Add your own LIMIT when you want
                 fewer than 200 rows.
         """
-        guard_repeat(ctx, "run_sql", query=query)
+        guard_repeat(ctx, "run_sql", same=_same_query, query=query)
         if refusal := _reject(query):
             raise ModelRetry(refusal)
         try:
-            return await read(ctx.deps, _limited(query))
+            columns, rows = await read_rows(ctx.deps, _limited(query))
         except _Failed as exc:
             # Bad SQL is a draft to fix; send the driver's underlying cause.
             raise ModelRetry(f"That query failed: {exc}. Fix it and retry.") from exc
+        return final(columns, rows)
 
     return toolset

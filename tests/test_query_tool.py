@@ -83,7 +83,7 @@ class TestTheTable:
 
     def test_no_rows_says_so(self) -> None:
         """An empty string reads as a failed call, and a model retries what did not fail."""
-        assert table(["a"], []) == "a\n(no rows)"
+        assert table(["a"], []).startswith("a\n(no rows)")
 
     def test_null_is_blank_not_the_word_none(self) -> None:
         """Python's `None` in a table would be read back as a value."""
@@ -183,12 +183,12 @@ class TestAgainstTheDatabase(_AgainstTheDatabase):
 
     async def test_an_empty_result_is_a_table_not_an_error(self, run_sql: Any, ctx: Any) -> None:
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE project = 'NONE'")
-        assert out == "issue_key\n(no rows)"
+        assert out.startswith("issue_key\n(no rows)")
 
     async def test_the_row_cap_is_enforced_by_the_database(self, run_sql: Any, ctx: Any) -> None:
         """`_limited` adds the clause; this proves the clause reaches Postgres."""
         out = await run_sql(ctx, "SELECT g FROM generate_series(1, 500) g")
-        assert len(out.splitlines()) == MAX_ROWS + 1
+        assert len(out.splitlines()) == MAX_ROWS + 2  # header, rows, the closing line
 
     async def test_a_write_that_slips_past_the_string_check_still_cannot_write(
         self, run_sql: Any, ctx: Any
@@ -253,7 +253,7 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
         """No rows rather than an error."""
         await self._two_projects()
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE project = 'ACME'")
-        assert out == "issue_key\n(no rows)"
+        assert out.startswith("issue_key\n(no rows)")
 
     async def test_a_subquery_cannot_reach_around_it(self, run_sql: Any, ctx: Any) -> None:
         """A policy applies per table scan, so it applies inside a CTE too."""
@@ -271,14 +271,14 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
         """A count is a leak of exactly one number, and it leaks through the same scan."""
         await self._two_projects()
         out = await run_sql(ctx, "SELECT count(*) AS n FROM gold.work_item")
-        assert out.endswith("\n1")
+        assert out.splitlines()[:2] == ["n", "1"]
 
     async def test_a_run_with_nobody_attached_reads_nothing(self, run_sql: Any, ctx: Any) -> None:
         """`None` is closed."""
         await self._two_projects()
         ctx.deps = replace(ctx.deps, principal=None)
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item")
-        assert out == "issue_key\n(no rows)"
+        assert out.startswith("issue_key\n(no rows)")
 
     async def test_a_grant_taken_back_applies_to_the_next_query(
         self, run_sql: Any, ctx: Any, granted: list[str]
@@ -289,4 +289,21 @@ class TestOnlyTheProjectsTheAskerWasGranted(_AgainstTheDatabase):
 
         granted.clear()
         out = await run_sql(ctx, "SELECT issue_key FROM gold.work_item WHERE issue_key <> 'x'")
-        assert out == "issue_key\n(no rows)"
+        assert out.startswith("issue_key\n(no rows)")
+
+
+class TestTheClosingLine:
+    def test_a_sum_over_nothing_says_the_total_is_zero(self) -> None:
+        from mycel.agents.tools.query import NOTHING, _closing
+
+        assert _closing([(None,)]) == NOTHING
+
+    def test_rows_with_values_are_final(self) -> None:
+        from mycel.agents.tools.query import COMPLETE, _closing
+
+        assert _closing([(1, None)]) == COMPLETE
+
+    def test_no_rows_needs_no_second_line(self) -> None:
+        from mycel.agents.tools.query import _closing
+
+        assert _closing([]) == ""

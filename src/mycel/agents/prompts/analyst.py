@@ -71,6 +71,8 @@ Writing `run_sql`:
 - One SELECT or WITH per call, no semicolon.
 - 200 rows come back at most. Aggregate in SQL rather than pulling rows to count them.
 - A failed query comes back with its error. Read it and send a fixed one.
+- A query that ran is final. Never send it again, reworded or not: its rows, or "(no rows)",
+  are the answer to that question.
 
 ## Writing to Jira, when you have the tools for it
 

@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 from mycel.agents.core.exceptions import DegenerateLoop
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pydantic_ai import RunContext
 
 
@@ -32,8 +34,10 @@ def fingerprint(tool: str, args: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-def count_identical_calls(messages: "list[Any]", target: str) -> int:
-    """How many times `target`'s fingerprint already appears in this run's history."""
+def count_identical_calls(
+    messages: "list[Any]", target: str, same: "Callable[[dict[str, Any]], dict[str, Any]]" = dict
+) -> int:
+    """How many times `target`'s fingerprint already appears; `same` maps args to their key."""
     from pydantic_ai.messages import ModelResponse, ToolCallPart
 
     seen = 0
@@ -44,17 +48,25 @@ def count_identical_calls(messages: "list[Any]", target: str) -> int:
             if not isinstance(part, ToolCallPart):
                 continue
             args = part.args_as_dict() if part.args is not None else {}
-            if fingerprint(part.tool_name, args) == target:
+            if fingerprint(part.tool_name, same(args)) == target:
                 seen += 1
     return seen
 
 
-def guard_repeat(ctx: "RunContext[Any]", tool: str, **args: Any) -> None:
-    """Call first in every tool body: warn on the threshold repeat, raise `DegenerateLoop` after."""
+def guard_repeat(
+    ctx: "RunContext[Any]",
+    tool: str,
+    same: "Callable[[dict[str, Any]], dict[str, Any]]" = dict,
+    **args: Any,
+) -> None:
+    """Call first in every tool body: warn on the threshold repeat, raise `DegenerateLoop` after.
+
+    `same` maps a call's args to what counts as identical, applied to history and this call.
+    """
     from pydantic_ai import ModelRetry
 
     threshold = ctx.deps.settings.repeat_threshold
-    calls = count_identical_calls(ctx.messages, fingerprint(tool, args))
+    calls = count_identical_calls(ctx.messages, fingerprint(tool, same(args)), same)
 
     if calls > threshold:
         raise DegenerateLoop(tool, calls)

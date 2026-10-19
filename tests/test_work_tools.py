@@ -59,7 +59,7 @@ class TestWorkTools(_AgainstTheDatabase):
 
         out = await _tool("hours_by_person")(ctx, "this_month", 5)
 
-        assert "ann" in out and "eve" not in out
+        assert "ann" in out and "\neve |" not in out
 
     async def test_late_items_lists_only_open_items_past_due(self, ctx: Any) -> None:
         await self._seed("MYC", "MYC-1")

@@ -113,3 +113,16 @@ class TestNumericCanonicalisation:
 
     def test_different_values_still_differ(self) -> None:
         assert fingerprint("t", {"n": 100}) != fingerprint("t", {"n": 101})
+
+
+class TestSameMeansTheSameQuery:
+    def test_a_reformatted_query_counts_as_a_repeat(self) -> None:
+        from mycel.agents.tools.query import _same_query
+
+        history = [_call("run_sql", query="SELECT 1"), _call("run_sql", query="select  1;")]
+        target = fingerprint("run_sql", _same_query({"query": "SELECT\n1"}))
+        assert count_identical_calls(history, target, _same_query) == 2
+
+    def test_without_it_only_exact_args_match(self) -> None:
+        history = [_call("run_sql", query="SELECT 1"), _call("run_sql", query="select  1;")]
+        assert count_identical_calls(history, fingerprint("run_sql", {"query": "SELECT 1"})) == 1

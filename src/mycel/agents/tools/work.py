@@ -11,7 +11,7 @@ from pydantic_ai import FunctionToolset, RunContext
 from mycel.agents.core import charts
 from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.tools.query import read_rows, table
+from mycel.agents.tools.query import final, read_rows
 from mycel.core.chips import Chip
 from mycel.events.event import CHART, AgentEvent
 
@@ -109,7 +109,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             issues = [(f"{row[3]} {row[4] or ''}".strip(), float(row[5])) for row in rows]
             chart = charts.build("bar", f"Hours per issue, {when}", "h", issues)
         await _draw(ctx, chart)
-        return table(columns, rows)
+        return final(columns, rows)
 
     @toolset.tool(name="late_items")
     async def _late_items(ctx: RunContext[MycelDeps]) -> str:
@@ -120,7 +120,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         columns, rows = await read_rows(ctx.deps, _LATE)
         points = [(f"{row[0]} {row[1]}", float(row[6])) for row in rows]
         await _draw(ctx, charts.build("bar", "Days late", "d", points))
-        return table(columns, rows)
+        return final(columns, rows)
 
     @toolset.tool(name="open_epics")
     async def _open_epics(ctx: RunContext[MycelDeps]) -> str:
@@ -131,7 +131,7 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
         columns, rows = await read_rows(ctx.deps, _OPEN_EPICS)
         points = [(f"{row[0]} {row[1]}", float(row[7])) for row in rows]
         await _draw(ctx, charts.build("bar", "Open estimate per epic", "h", points))
-        return table(columns, rows)
+        return final(columns, rows)
 
     return toolset
 
