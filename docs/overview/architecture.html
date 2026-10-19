@@ -625,7 +625,7 @@ footer {
 <div class="page">
 
   <header class="hero">
-    <p class="eyebrow">Architecture design · v0.1</p>
+    <p class="eyebrow">Architecture</p>
     <h1>Mycel</h1>
     <p class="hero-lede">
       A multi-agent system that answers questions about scattered data from one box.
@@ -1467,187 +1467,51 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       <h2>The name tells you the job</h2>
       <p>
         Modules are flat, one level deep. When a module outgrows a file it becomes a directory with the same
-        name: <code>sources/slack.py</code> → <code>sources/slack/{client,parser}.py</code>.
+        name. A provider each person connects is a folder under <code>plugins/</code>.
         No abstraction layer is built before there is anything to put in it.
       </p>
     </div>
 
-    <div class="tree-col">
-      <div class="tree-row is-head">
-        <span class="tree-path">Source</span>
-        <span></span>
-      </div>
-
-      <div class="tree-row">
-        <span class="tree-path">src/mycel/</span>
-        <span class="tree-note"></span>
-      </div>
-      <div class="tree-row is-epic">
-        <span class="tree-path">E1 · Foundation</span>
-        <span class="tree-note">Models, agents, config, tracing. Knows how to build an agent and emit a span; knows nothing about what the product does.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>core/</span>
-        <span class="tree-note">Config, logging, exceptions, shared types. The bottom layer — imports no other module.</span>
-      </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path"><span class="dim">├─ </span>llm/</span>
-        <span class="tree-note">The only gateway to any model. <code>router</code> picks local or cloud, <code>client</code> is the only place that imports a provider SDK, <code>cache</code> avoids repeat calls, <code>tokens</code>/<code>usage</code> count before and after, <code>budget</code> blocks going over the ceiling.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>mcp/</span>
-        <span class="tree-note">MCP client only: toolsets built from <code>config/mcp/servers.yaml</code>, declared servers and never discovery — a tool&rsquo;s name and description go straight into the prompt, so the list of them belongs in a diff.</span>
-      </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path"><span class="dim">├─ </span>agents/</span>
-        <span class="tree-note">Peers, differing in capability rather than rank &mdash; <code>registry.py</code> is the list that decides, and an agent appears there when it has code and not before: <code>orchestrator</code> routes a request, <code>researcher</code> searches the web and reads the asker&rsquo;s own Gmail through the Gmail API on their OAuth token (headers only, via <code>sources/gmail.py</code>), <code>analyst</code> reads gold with <code>run_sql</code> and computes, <code>summarizer</code> writes a project's progress. The orchestrator's output also carries <code>follow_ups</code>, up to three questions its own answer made worth asking — on the same structured output, so suggesting them costs no extra request. <code>tools/</code> holds those capabilities — <code>delegate.py</code> wraps an agent under that agent's own name, because pydantic-ai has no way to hand an <code>Agent</code> to an <code>Agent</code>; <code>prompts/</code> is kept out of the code so edits need no redeploy.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>agents/core/</span>
-        <span class="tree-note">The shared foundation for <code>agents/</code> alone, with no business logic: the agent loop (<code>runner</code>), <code>emit</code> for run events, <code>chips</code>, <code>guards</code>, <code>model_builder</code>.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>observability/</span>
-        <span class="tree-note"><code>tracing</code> sets OTel up and exports OTLP, <code>llm_trace</code> attaches LLM attributes to spans (readable by Langfuse), <code>logging</code> prints JSON to stdout (Alloy ships it to Loki), <code>metrics</code> feeds Prometheus and <code>metrics_server</code> serves <code>/metrics</code> on each process&rsquo;s own port (worker 9100, scheduler 9101, ingest 9102, api 9103). Three signals, three questions: metrics <em>is something broken</em>, traces <em>where</em>, logs <em>why</em> — joined by <code>trace_id</code> appearing in all three. It knows nothing about HTTP, so <code>scheduler</code> and <code>queue</code> can import it too. Every layer calls into it.</span>
-      </div>
-      <div class="tree-row is-epic">
-        <span class="tree-path">E2 · Entrypoints</span>
-        <span class="tree-note">The ways in. A route parses and authorizes; a service answers inside the request, in SQL. Work that takes seconds is handed to E4.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>api/</span>
-        <span class="tree-note">The HTTP shell, as thin as possible. Endpoints live in <code>api/routes/</code>, and each one validates then calls a module in <code>domains/</code>. There is authentication — the data is internal Slack and Gmail.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>api/app.py</span>
-        <span class="tree-note">The assembly point: create the app, mount each router, middleware, observability. The only file that knows which domains exist. <code>uvicorn --factory</code> points here.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>api/middleware.py</span>
-        <span class="tree-note">Only <code>request_id</code> — tracing, CORS, errors and rate limiting all use what already exists. Written as pure ASGI, not <code>BaseHTTPMiddleware</code> (which buffers the response and blocks SSE).</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>api/dependencies.py</span>
-        <span class="tree-note">What routes declare via <code>Depends()</code>: authentication, DB session, pagination. Authentication lives here rather than in middleware — it reaches the OpenAPI schema and mypy can check it.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>api/health.py</span>
-        <span class="tree-note"><code>/health/live</code> for the container restart policy, <code>/health/ready</code> for the load balancer. Belongs to no business domain.</span>
-      </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path"><span class="dim">├─ </span>services/</span>
-        <span class="tree-note">Single links, one job per file: <code>auth</code>, <code>permission</code>, <code>enqueue</code>, <code>fetch</code>, <code>transform</code>, <code>gather</code>, <code>analyze</code>, <code>render</code>, <code>check</code>, <code>dashboard</code>. Names are verbs with no <code>_service</code> suffix. Reusable across domains.</span>
-      </div>
-      <div class="tree-row is-epic">
-        <span class="tree-path">E3 · Data</span>
-        <span class="tree-note">Everything that owns a table. Connectors fill bronze, the ETL lifts it to silver then gold, the scheduler decides when. Nothing here calls a model.</span>
-      </div>
-      <div class="tree-row" data-tone="bronze">
-        <span class="tree-path"><span class="dim">├─ </span>sources/</span>
-        <span class="tree-note">One file per provider. Same interface: take a time range, return raw records, write to <code>bronze</code>.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>infra/</span>
-        <span class="tree-note">Three stores, three kinds of data. Every access goes through here — not scattered through domains and agents.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>infra/postgres/</span>
-        <span class="tree-note">Transactional state: engine, session, a repository per <code>bronze</code> · <code>silver</code> · <code>gold</code> layer. Every SQL statement lives here.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>infra/vectors/</span>
-        <span class="tree-note">Knowledge base search over embeddings (Qdrant). Embeddings come from <code>gold</code>, not bronze. View permissions are a Qdrant filter, not a post-filter after top-k.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>infra/objects/</span>
-        <span class="tree-note">Uploaded documents over an S3 API (MinIO in compose), with Postgres holding the metadata and the bucket the content.</span>
-      </div>
-      <div class="tree-row" data-tone="silver">
-        <span class="tree-path"><span class="dim">├─ </span>etl/</span>
-        <span class="tree-note">The <code>bronze → silver → gold</code> transform steps. Scheduled background work — not the request-handling chain. Every step is idempotent.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>etl/checks/</span>
-        <span class="tree-note">Validation after each step: missing columns, unexpected nulls, row counts off. On failure it stops and does not write to the layer above.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>scheduler/</span>
-        <span class="tree-note">Answers <em>when to run</em>. Calls <code>domains/</code> directly — the same place a route calls, just without the HTTP link.</span>
-      </div>
-      <div class="tree-row is-epic">
-        <span class="tree-path">E4 · Background</span>
-        <span class="tree-note">Work that outlives the request that asked for it. A route hands over an id; <code>domains/</code> is the whole of one such unit of work, <code>queue/</code> moves it between processes.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>queue/</span>
-        <span class="tree-note">The job layer <em>on top of</em> RabbitMQ (the broker runs outside). A task queue, not an ordered log, so retry and dead-lettering are broker features: <code>mycel.jobs</code> → <code>jobs</code>, dead-lettering to <code>mycel.jobs.dlx</code> → <code>jobs.retry.5s</code>, <code>.30s</code>, <code>.2m</code> (TTL, then back) and <code>jobs.dlq</code> (nothing consumes it). Ack after the job finishes ⇒ at-least-once ⇒ an idempotency key is mandatory. The way in is <code>services/enqueue.py</code>.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">├─ </span>events/</span>
-        <span class="tree-note">The run narration: one event per step, published to a Redis Stream so <code>/events</code> can replay it as SSE. Separate from logs — logs are for operators, these are for the person watching an answer being written.</span>
-      </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path"><span class="dim">├─ </span>domains/</span>
-        <span class="tree-note"><b>The business chains, one module per domain, none of them aware of HTTP.</b> Adding a domain = one module here and one under <code>api/routes/</code>, with existing domains untouched.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>domains/chat.py</span>
-        <span class="tree-note">Ask a question, read what became of it. Queues the job and reads the answer back out of <code>app.turn</code>.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>domains/sync.py</span>
-        <span class="tree-note">The <code>fetch → transform → check</code> flow, against Jira. Called by <code>scheduler/</code> on a timer and by <code>stack.sh sync</code> by hand — never over HTTP.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  ├─ </span>domains/dashboard.py</span>
-        <span class="tree-note">Counts for one project over one window, and the list of projects that have work in them. <code>/dashboard</code> and <code>/projects</code> call it. A query, so it answers inside the request rather than queueing.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">│  └─ </span>domains/threads.py</span>
-        <span class="tree-note">Whose sidebar history this is. <code>GET /conversations</code> reads it, so the list follows a person to any browser — which is why it stopped living in <code>localStorage</code>. <code>DELETE /conversations/{id}</code> forgets one, scoped by <code>user_id</code> in the WHERE rather than by a check the caller could skip.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path"><span class="dim">└─ </span>notify/</span>
-        <span class="tree-note">Outside this system: one person's Google Calendar, read and written on their own consent, and their mailbox read through the Gmail API, each on that person&rsquo;s own OAuth consent. Both optional, and a deployment without either runs unchanged.</span>
-      </div>
-
-      <div class="tree-row is-head">
-        <span class="tree-path">Operations</span>
-        <span></span>
-      </div>
-
-      <div class="tree-row">
-        <span class="tree-path">.github/workflows/</span>
-        <span class="tree-note">CI runs on every PR; builds an image tagged by commit SHA on <code>main</code>.</span>
-      </div>
-      <div class="tree-row" data-tone="gold">
-        <span class="tree-path">evals/</span>
-        <span class="tree-note">The golden set that scores answer quality. Run by hand before a prompt or model change merges; CI cannot reach the model gateway.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">deploy/</span>
-        <span class="tree-note">Infrastructure config: <code>otel/</code> (Prometheus, Loki, Alloy config), <code>grafana/</code> (both behind the monitoring profile), Postgres init, <code>inference/</code> for vLLM, <code>envs/</code>, and the cluster deployment side: <code>kubernetes/</code> · <code>helm/</code>.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">config/</span>
-        <span class="tree-note">Per-environment and per-source configuration. Secrets live in <code>.env</code>, never here.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">migrations/</span>
-        <span class="tree-note">Alembic. Every schema change is a revision; the DB is never edited by hand.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">docs/</span>
-        <span class="tree-note">Design documentation — including this page.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">tests/</span>
-        <span class="tree-note">Code tests, mirroring the structure of <code>src/mycel/</code>. Answer quality is <code>evals/</code>&rsquo;s job.</span>
-      </div>
-      <div class="tree-row">
-        <span class="tree-path">scripts/</span>
-        <span class="tree-note">One-off operational scripts. Not a place for business logic.</span>
-      </div>
+    <style>
+      .dirs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+      .dirs .d { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+      .dirs .d b { font: 600 13.5px var(--mono); color: var(--accent); }
+      .dirs .d small { font-size: 12.5px; color: var(--ink-soft); line-height: 1.35; }
+      .dirs .d.root { border-style: dashed; }
+      .dirs-h { margin: 18px 0 4px; font: 600 12px var(--mono); color: var(--ink-soft); }
+      .dirs [data-path] { position: relative; cursor: help; }
+      .dirs [data-path]:hover::after { content: attr(data-path); position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap; padding: 3px 8px; border-radius: 6px; background: var(--ink); color: var(--ground); font: 500 11.5px var(--mono); }
+    </style>
+    <p class="dirs-h">src/mycel/</p>
+    <div class="dirs">
+      <div class="d" data-path="src/mycel/api/app.py"><b>api/</b><small>Routes, middleware, serves the web app. Parses and authorises; never runs a model.</small></div>
+      <div class="d" data-path="src/mycel/services/enqueue.py"><b>services/</b><small>One job each, done inside a request: enqueue, fetch, transform, permission.</small></div>
+      <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does: chat, ingest, index, sync. Knows nothing about HTTP.</small></div>
+      <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, analyst, researcher; their tools and prompts.</small></div>
+      <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>Jira and Google behind one interface: OAuth, tools, sync, doctor probe.</small></div>
+      <div class="d" data-path="src/mycel/sources/jira.py"><b>sources/</b><small>Provider HTTP clients: Jira, Gmail, Google Calendar.</small></div>
+      <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold, and the checks between.</small></div>
+      <div class="d" data-path="src/mycel/queue/topology.py"><b>queue/</b><small>RabbitMQ: publish, consume, retry, dead-letter.</small></div>
+      <div class="d" data-path="src/mycel/scheduler/runner.py"><b>scheduler/</b><small>Timers: outbox relay, one sync per plugin, sweeps.</small></div>
+      <div class="d" data-path="src/mycel/infra/postgres/engine.py"><b>infra/</b><small>Postgres, Redis, Qdrant, MinIO, SMTP, HTTP clients.</small></div>
+      <div class="d" data-path="src/mycel/llm/budget.py"><b>llm/</b><small>Model routing and the per-job cost budget.</small></div>
+      <div class="d" data-path="src/mycel/events/__init__.py"><b>events/</b><small>What a run publishes while it works.</small></div>
+      <div class="d" data-path="src/mycel/core/config.py"><b>core/</b><small>Settings and shared types. Imports no other layer.</small></div>
+      <div class="d" data-path="src/mycel/observability/tracing.py"><b>observability/</b><small>Traces to Langfuse, Prometheus metrics.</small></div>
+      <div class="d" data-path="src/mycel/doctor/__init__.py"><b>doctor/</b><small>What is configured, broken, or off on purpose.</small></div>
+      <div class="d" data-path="src/mycel/mcp/__init__.py"><b>mcp/</b><small>Tools on external MCP servers.</small></div>
+      <div class="d root" data-path="src/mycel/lifecycle.py"><b>lifecycle.py · worker.py</b><small>At the root: process start/stop, and job dispatch. Each wires every layer, so inside one they would import upward.</small></div>
+    </div>
+    <p class="dirs-h">repo root</p>
+    <div class="dirs">
+      <div class="d" data-path="web/src/main.tsx"><b>web/</b><small>The React app, served by the API at /app.</small></div>
+      <div class="d" data-path="migrations/env.py"><b>migrations/</b><small>Alembic. A downgrade outside a _test database is refused.</small></div>
+      <div class="d" data-path="config/litellm/config.yaml"><b>config/</b><small>Environment YAML, the gateway, MCP servers.</small></div>
+      <div class="d" data-path="evals/analyst/run.py"><b>evals/</b><small>Golden questions run by hand against real models.</small></div>
+      <div class="d" data-path="tests/conftest.py"><b>tests/</b><small>Code tests; only ever on a _test database.</small></div>
+      <div class="d" data-path="scripts/stack.sh"><b>scripts/</b><small>Run, deploy, doctor, sync, gateway key.</small></div>
+      <div class="d" data-path="deploy/helm/mycel/values.yaml"><b>deploy/</b><small>Helm chart, monitoring.</small></div>
+      <div class="d" data-path="docs/index.html"><b>docs/</b><small>This handbook.</small></div>
     </div>
   </section>
   <section id="s03">
@@ -2285,9 +2149,10 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
           <td>Built — four app pods (api, worker, scheduler, ingest) and a migration hook; CI renders it. There is no cluster beyond minikube to deploy to</td>
         </tr>
         <tr>
-          <td class="who">sources/ — Jira</td>
-          <td>Built — <code>search_issues</code> and <code>issue_worklogs</code> run against a
-            real site. <b>Writes are off</b> unless <code>JIRA_WRITE_ENABLED</code> turns them on</td>
+          <td class="who">plugins/ — Jira, Google</td>
+          <td>Built — one interface and a registry; each person connects with OAuth. The Jira sync
+            reads each project on a connected person's token. <b>Writes are off</b> unless
+            <code>JIRA_WRITE_ENABLED</code> turns them on</td>
         </tr>
         <tr>
           <td class="who">etl/ — bronze → silver → gold</td>
@@ -2305,14 +2170,14 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
             the old report page went once an agent could answer it</td>
         </tr>
         <tr class="tone-bronze">
-          <td class="who">sources/ — anything but Jira</td>
-          <td class="no">Slack and Confluence are still intentions; Gmail is read live per user, not synced. The
-            <code>source</code> column already leaves room for them</td>
+          <td class="who">Plugins beyond Jira and Google</td>
+          <td class="no">Slack and Confluence are still intentions. Adding one is a folder under
+            <code>plugins/</code> and a line in the registry</td>
         </tr>
-        <tr class="tone-bronze">
+        <tr>
           <td class="who">Project membership</td>
-          <td class="no"><code>services/permission.py</code> always returns true. Every call
-            site already asks it, so the rule lands in one file when it exists</td>
+          <td>Built — Jira says which projects each person may browse; gold rows are filtered by
+            Postgres row-level security</td>
         </tr>
         <tr class="tone-bronze">
           <td class="who">Vector search · librarian</td>
@@ -2351,7 +2216,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       </li>
       <li>
         <strong>Adding a source does not change existing code</strong>
-        <span>A new provider = one file in <code>sources/</code> + one config file.</span>
+        <span>A new provider = one folder in <code>plugins/</code> + one line in the registry.</span>
       </li>
       <li>
         <strong>Models are called only through <code>llm/</code></strong>
@@ -2380,7 +2245,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
     </ul>
   </section>
   <footer>
-    <span>Mycel v0.1 — a design. The skeleton is built; no connector runs for real yet.</span>
+    <span>Mycel — the architecture as built. Details live in the handbook pages this one links to.</span>
     <span class="mono">docs/overview/architecture.html</span>
   </footer>
 
