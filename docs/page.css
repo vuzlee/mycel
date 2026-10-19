@@ -817,3 +817,8 @@ pre .c { color: var(--ink-faint); }
 .dirs [data-path] { position: relative; cursor: help; }
 .dirs [data-path]:hover::after { content: attr(data-path); position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); z-index: 5; pointer-events: none; white-space: nowrap; padding: 3px 8px; border-radius: 6px; background: var(--ink); color: var(--ground); font: 500 11.5px var(--mono); }
 .tbl-title-accent { margin: 1.8rem 0 0.2rem; font: 600 14px var(--mono); color: var(--accent); letter-spacing: 0; }
+svg .hv { cursor: help; }
+svg .hv:hover rect, svg .hv:focus rect { stroke: var(--accent); stroke-width: 1.8; }
+details { margin-top: 1.6rem; }
+details summary { cursor: pointer; font: 600 13px var(--mono); color: var(--ink-soft); }
+details .tbl { margin-top: 0.8rem; }

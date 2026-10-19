@@ -9,79 +9,46 @@
 
 <body>
 <div class="page">
-
   <header class="hero">
     <p class="eyebrow">Config</p>
     <h1>Settings</h1>
-    <div class="hero-lede"><ul class="bul"><li>Secrets in <code>.env</code>; everything else in git</li><li>One object, read once per process</li></ul></div>
-    <nav class="toc">
-      <a href="#s1"><b>1</b><span>Who wins</span></a>
-      <a href="#s2"><b>2</b><span>Where a value goes</span></a>
-      <a href="#s3"><b>3</b><span>Agent files</span></a>
-      <a href="#s4"><b>4</b><span>Store URLs</span></a>
-    </nav>
+    <div class="hero-lede"><ul class="bul"><li>Where a value lives, and which one wins</li><li>Hover a box for what it holds</li></ul></div>
   </header>
 
   <section id="s1">
-    <div class="section-head">
-      <p class="eyebrow">1 · Precedence</p>
-      <h2>Five sources; the nearest wins</h2>
-    </div>
-    <figure><div class="scroll-x"><svg class="diagram" viewBox="0 0 940 200" role="img" aria-label="Precedence from lowest to highest: class default, base.yaml, the environment yaml, .env, process environment; the highest wins."><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2"><text x="16" y="30">LOWEST</text><text x="924" y="30" text-anchor="end">WINS</text></g><rect x="16" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="30" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">class default</text><text x="30" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">core/config.py</text><rect x="206" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="220" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">base.yaml</text><text x="220" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">every environment</text><rect x="396" y="46" width="160" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="410" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">&lt;env&gt;.yaml</text><text x="410" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">dev / prod: only diffs</text><rect x="586" y="46" width="160" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="600" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">.env</text><text x="600" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">secrets, this machine</text><rect x="776" y="46" width="148" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="790" y="68" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">process env</text><text x="790" y="86" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">compose, Helm</text><g stroke="var(--ink-faint)" stroke-width="1.3" fill="none" color="var(--ink-faint)" marker-end="url(#ca)"><path d="M 176 74 L 202 74"/><path d="M 366 74 L 392 74"/><path d="M 556 74 L 582 74"/><path d="M 746 74 L 772 74"/></g><text x="396" y="134" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">MYCEL_ENV picks it · default dev</text><path d="M 476 102 L 476 122" stroke="var(--ink-faint)" stroke-dasharray="3 3"/><rect x="16" y="150" width="908" height="34" rx="2" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/><text x="32" y="171" font-family="var(--sans)" font-size="11" fill="var(--ink-soft)">core/config.py · Settings — one frozen object, read once per process · get_settings() caches it</text></svg></div>
-      <figcaption><ul class="bul"><li>YAML merges deep: one nested key overrides one key; a list is replaced whole</li><li>Container env beats <code>.env</code>: that is how compose and Helm set hosts</li></ul></figcaption>
-    </figure>
-  </section>
+    <figure><div class="scroll-x"><svg class="diagram" viewBox="0 0 940 310" role="img" aria-label="Where settings come from: class defaults, base.yaml and the environment yaml in git; .env and the process environment outside git; all merged into Settings, and agent files into AgentSettings. Numbers give precedence, 5 wins."><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2"><text x="118" y="58">IN GIT</text><text x="118" y="168">NOT IN GIT</text><text x="118" y="268">READ BY</text></g><line x1="128" y1="112" x2="924" y2="112" stroke="var(--line)" stroke-dasharray="4 3"/><g class="hv" tabindex="0"><title>Settings field defaults. Lowest priority.</title><rect x="136" y="30" width="170" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="148" y="51" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">core/config.py</text><text x="148" y="68" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">class defaults</text></g><circle cx="136" cy="30" r="10" fill="var(--accent)"/><text x="136" y="34" font-family="var(--mono)" font-size="11" fill="#fff" text-anchor="middle">1</text><g class="hv" tabindex="0"><title>Non-secret values for every environment. Keys = Settings field names, lower case.</title><rect x="326" y="30" width="180" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="338" y="51" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">environments/base.yaml</text><text x="338" y="68" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">every environment</text></g><circle cx="326" cy="30" r="10" fill="var(--accent)"/><text x="326" y="34" font-family="var(--mono)" font-size="11" fill="#fff" text-anchor="middle">2</text><g class="hv" tabindex="0"><title>Chosen by MYCEL_ENV (default dev). Deep-merged over base.yaml; a list replaces whole.</title><rect x="526" y="30" width="180" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="538" y="51" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">environments/&lt;env&gt;.yaml</text><text x="538" y="68" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">dev / prod: only diffs</text></g><circle cx="526" cy="30" r="10" fill="var(--accent)"/><text x="526" y="34" font-family="var(--mono)" font-size="11" fill="#fff" text-anchor="middle">3</text><g class="hv" tabindex="0"><title>Per-agent AgentSettings over agents.defaults. Run limits live only here. Unknown key raises ConfigError.</title><rect x="726" y="30" width="198" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="738" y="51" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">agents/&lt;name&gt;.yaml</text><text x="738" y="68" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">one agent: model, limits</text></g><g class="hv" tabindex="0"><title>Passwords, keys, client secrets. Never committed. Beats YAML.</title><rect x="326" y="140" width="180" height="52" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="338" y="161" font-family="var(--mono)" font-size="11.5" fill="var(--gold)">.env</text><text x="338" y="178" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">secrets, this machine</text></g><circle cx="326" cy="140" r="10" fill="var(--accent)"/><text x="326" y="144" font-family="var(--mono)" font-size="11" fill="#fff" text-anchor="middle">4</text><g class="hv" tabindex="0"><title>Container env set by compose/Helm, e.g. POSTGRES_HOST. Highest priority.</title><rect x="526" y="140" width="180" height="52" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="538" y="161" font-family="var(--mono)" font-size="11.5" fill="var(--gold)">process env</text><text x="538" y="178" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">compose · Helm · shell</text></g><circle cx="526" cy="140" r="10" fill="var(--accent)"/><text x="526" y="144" font-family="var(--mono)" font-size="11" fill="#fff" text-anchor="middle">5</text><g class="hv" tabindex="0"><title>core/config.py. Cached; a change needs a restart. Builds store URLs from one password each.</title><rect x="236" y="240" width="370" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="248" y="261" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">Settings  ·  get_settings()</text><text x="248" y="278" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">one frozen object, read once per process</text></g><g class="hv" tabindex="0"><title>defaults < agents.defaults < config/agents/&lt;name&gt;.yaml</title><rect x="656" y="240" width="268" height="52" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="668" y="261" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">AgentSettings.from_config(name)</text><text x="668" y="278" font-family="var(--sans)" font-size="10" fill="var(--ink-soft)">agents/core/config.py</text></g><g stroke="var(--ink-faint)" stroke-width="1.2" fill="none" color="var(--ink-faint)" marker-end="url(#ca)"><path d="M 221 82 L 221 226 L 260 226 L 260 236"/><path d="M 336 82 L 336 120 L 316 120 L 316 226 L 300 226 L 300 236"/><path d="M 416 192 L 416 236"/><path d="M 616 192 L 616 216 L 560 216 L 560 236"/><path d="M 716 82 L 716 216 L 590 216 L 590 236"/><path d="M 825 82 L 825 236"/></g></svg></div></figure>
 
-  <section id="s2">
-    <div class="section-head">
-      <p class="eyebrow">2 · Placement</p>
-      <h2>Where a value goes</h2>
-    </div>
+    <h3 class="tbl-title">Which wins — highest number</h3>
     <table class="tbl">
-      <thead><tr><th>Kind of value</th><th>Goes in</th><th>Examples</th></tr></thead>
+      <thead><tr><th>#</th><th>Source</th><th>Holds</th><th>Example</th></tr></thead>
       <tbody>
-        <tr class="tone-accent"><td class="who">password, key, secret</td><td><code>.env</code> — not in git</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code> · <code>LITELLM_API_KEY</code></td></tr>
-        <tr><td class="who">everything else</td><td><code>config/environments/*.yaml</code></td><td><code>log_level</code> · <code>db_pool_size</code> · host models and prices</td></tr>
-        <tr><td class="who">one agent's limits</td><td><code>config/agents/&lt;name&gt;.yaml</code></td><td><code>request_limit</code> · <code>tool_calls_limit</code> · <code>max_tokens</code></td></tr>
-        <tr><td class="who">a host only the runtime knows</td><td>process env (compose, Helm)</td><td><code>POSTGRES_HOST</code> · <code>QDRANT_URL</code></td></tr>
+        <tr class="tone-gold"><td class="who">5</td><td>process env</td><td>what only the runtime knows</td><td><code>POSTGRES_HOST=postgres</code></td></tr>
+        <tr class="tone-gold"><td class="who">4</td><td><code>.env</code></td><td>secrets</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code></td></tr>
+        <tr><td class="who">3</td><td><code>&lt;env&gt;.yaml</code></td><td>what differs in dev / prod</td><td><code>log_level: DEBUG</code></td></tr>
+        <tr><td class="who">2</td><td><code>base.yaml</code></td><td>everything else non-secret</td><td><code>db_pool_size: 5</code> · host models</td></tr>
+        <tr><td class="who">1</td><td>class default</td><td>fallback</td><td><code>timezone = "UTC"</code></td></tr>
       </tbody>
     </table>
-    <div class="path-note"><ul class="bul"><li>YAML key = <code>Settings</code> field name, lower case</li><li>Same name in upper case as an env var overrides it</li></ul></div>
-  </section>
 
-  <section id="s3">
-    <div class="section-head">
-      <p class="eyebrow">3 · Agents</p>
-      <h2>Each agent's model and limits in its own file</h2>
-    </div>
-    <figure><div class="scroll-x"><svg class="diagram" viewBox="0 0 940 130" role="img" aria-label="Agent settings: AgentSettings defaults, overridden by agents.defaults in the environment yaml, overridden by the agent own file."><defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><rect x="16" y="30" width="270" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="30" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">agents/core/config.py</text><text x="30" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">AgentSettings: model, temperature, retries</text><rect x="334" y="30" width="270" height="56" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="348" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--ink)">config/environments/*.yaml</text><text x="348" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">agents.defaults</text><rect x="652" y="30" width="272" height="56" rx="2" fill="var(--gold-wash)" stroke="var(--accent)"/><text x="666" y="52" font-family="var(--mono)" font-size="11.5" fill="var(--accent)">config/agents/&lt;name&gt;.yaml</text><text x="666" y="70" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">analyst: 12 tool calls · 13 requests</text><g stroke="var(--ink-faint)" stroke-width="1.3" fill="none" color="var(--ink-faint)" marker-end="url(#ca)"><path d="M 286 58 L 330 58"/><path d="M 604 58 L 648 58"/></g><text x="16" y="114" font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">each file overrides the one to its left · run limits only in the agent's file · unknown key → ConfigError</text></svg></div></figure>
-  </section>
-
-  <section id="s4">
-    <div class="section-head">
-      <p class="eyebrow">4 · Stores</p>
-      <h2>Each password written once; the URL is built</h2>
-    </div>
-    <table class="tbl">
-      <thead><tr><th>Property</th><th>Built from</th><th>Override</th></tr></thead>
-      <tbody>
-        <tr><td class="who">migration_database_url</td><td>postgres user + password — the schema owner</td><td><code>MIGRATION_DATABASE_URL</code>, then <code>DATABASE_URL</code></td></tr>
-        <tr class="tone-accent"><td class="who">database_url</td><td><code>mycel_app</code> if <code>MYCEL_APP_PASSWORD</code> is set, else the owner</td><td><code>DATABASE_URL</code></td></tr>
-        <tr><td class="who">rabbitmq_url</td><td>rabbitmq user + password + host</td><td><code>RABBITMQ_URL</code></td></tr>
-        <tr><td class="who">redis_url · redis_cache_url</td><td>written as is</td><td>—</td></tr>
-      </tbody>
-    </table>
-    <h3 class="tbl-title">When it goes wrong</h3>
-    <table class="tbl">
-      <thead><tr><th>Case</th><th>Result</th></tr></thead>
-      <tbody>
-        <tr><td class="who">not exactly one default host model</td><td>start-up fails</td></tr>
-        <tr><td class="who">base.yaml missing or not a mapping</td><td><code>ConfigError</code> naming the file</td></tr>
-        <tr><td class="who">prod holds a dev value</td><td>doctor: <code>dev values</code> broken</td></tr>
-        <tr><td class="who">a key misspelled in <code>.env</code></td><td>silently ignored</td></tr>
-        <tr><td class="who">a value changed while running</td><td>not seen until restart</td></tr>
-      </tbody>
-    </table>
+    <details><summary>Store URLs · when it goes wrong</summary>
+      <table class="tbl">
+        <thead><tr><th>URL</th><th>Built from</th><th>Override</th></tr></thead>
+        <tbody>
+          <tr><td class="who">migration_database_url</td><td>postgres user + password (owner)</td><td><code>MIGRATION_DATABASE_URL</code></td></tr>
+          <tr><td class="who">database_url</td><td><code>mycel_app</code> if its password is set, else owner</td><td><code>DATABASE_URL</code></td></tr>
+          <tr><td class="who">rabbitmq_url</td><td>rabbitmq user + password + host</td><td><code>RABBITMQ_URL</code></td></tr>
+        </tbody>
+      </table>
+      <table class="tbl">
+        <thead><tr><th>Case</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td class="who">not exactly one default host model</td><td>start-up fails</td></tr>
+          <tr><td class="who">prod holds a dev value</td><td>doctor: broken</td></tr>
+          <tr><td class="who">a key misspelled in <code>.env</code></td><td>silently ignored</td></tr>
+          <tr><td class="who">a value changed while running</td><td>seen after restart</td></tr>
+        </tbody>
+      </table>
+    </details>
   </section>
 
   <footer>
@@ -90,3 +57,4 @@
   </footer>
 </div>
 </body>
+</html>
