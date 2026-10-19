@@ -1,19 +1,19 @@
 """The sync domain: pull one source and push its data up to gold."""
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from mycel.core.config import get_settings
-from mycel.core.exceptions import ConfigError
+from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.observability.metrics import records_written, sync_duration_seconds
 from mycel.queue.job import Job, JobKind
-from mycel.services import access, enqueue
-from mycel.services.fetch import fetch_jira
+from mycel.services import access, enqueue, jira_oauth
+from mycel.services.fetch import UNSET, FetchResult, fetch_jira
 from mycel.services.transform import transform
 from mycel.sources.jira import Auth
 
@@ -32,33 +32,16 @@ class SyncResult:
 
 
 async def refetch_jira() -> SyncResult:
-    """Read the whole project again, ignoring the watermark, then transform it."""
-    async with session_scope() as session:
-        fetched = await fetch_jira(session, service_auth(), since=None)
-
-    async with session_scope() as session:
-        result = await transform(session, keys=fetched.keys)
-
-    log.warning(
-        "refetched whole project",
-        extra={"fetched": fetched.issues, "items": result.items},
-    )
-    return SyncResult(
-        fetched=fetched.issues,
-        silver_items=result.silver_items,
-        silver_worklogs=result.silver_worklogs,
-        items=result.items,
-        worklogs=result.worklogs,
-    )
+    """Read every project again, ignoring the watermarks, then transform it."""
+    return await sync_jira(since=None)
 
 
-async def sync_jira() -> SyncResult:
-    """Fetch, then transform what the fetch brought in."""
+async def sync_jira(since: datetime | None = UNSET) -> SyncResult:
+    """Fetch on connected people's tokens, then transform what the fetch brought in."""
     started = time.monotonic()
     try:
-        async with session_scope() as session:
-            fetched = await fetch_jira(session, service_auth())
-
+        access_now = await access.refresh_everyone()
+        fetched = await _fetch_all(readers(access_now), since)
         async with session_scope() as session:
             result = await transform(session, keys=fetched.keys)
     except Exception as exc:
@@ -67,7 +50,6 @@ async def sync_jira() -> SyncResult:
 
     await _queue_index()
     await _record()
-    refreshed = await access.refresh_everyone()
 
     # Observed after the transform, not in a `finally`: a failed sync has no useful duration.
     sync_duration_seconds.labels(domain="jira").observe(time.monotonic() - started)
@@ -86,7 +68,7 @@ async def sync_jira() -> SyncResult:
             "silver_worklogs": result.silver_worklogs,
             "items": result.items,
             "worklogs": result.worklogs,
-            "access_refreshed": refreshed,
+            "people": len(access_now),
         },
     )
     return SyncResult(
@@ -96,6 +78,34 @@ async def sync_jira() -> SyncResult:
         items=result.items,
         worklogs=result.worklogs,
     )
+
+
+def readers(access_now: Mapping[int, frozenset[str]]) -> dict[int, list[str]]:
+    """Who reads which project: each project once, by the first person who may browse it."""
+    plan: dict[int, list[str]] = {}
+    taken: set[str] = set()
+    for user_id in sorted(access_now):
+        mine = sorted(access_now[user_id] - taken)
+        if mine:
+            plan[user_id] = mine
+            taken.update(mine)
+    return plan
+
+
+async def _fetch_all(plan: Mapping[int, list[str]], since: datetime | None) -> FetchResult:
+    """One fetch per reader. A reader whose token fails is skipped; the rest still sync."""
+    issues = worklogs = 0
+    keys: list[str] = []
+    for user_id, projects in plan.items():
+        try:
+            token, cloud_id = await jira_oauth.token_for(user_id)
+        except MycelError:
+            log.warning("skipping a reader with no usable token", extra={"user_id": user_id})
+            continue
+        async with session_scope() as session:
+            one = await fetch_jira(session, Auth(token, cloud_id), projects, since)
+        issues, worklogs, keys = issues + one.issues, worklogs + one.worklogs, keys + one.keys
+    return FetchResult(issues=issues, worklogs=worklogs, keys=keys)
 
 
 #: One sync at a time, whether the scheduler or a fresh connection asked for it.
@@ -109,14 +119,6 @@ async def run(job: Job) -> None:
             log.info("sync already running, this request is covered", extra={"job_id": job.job_id})
             return
         await sync_jira()
-
-
-def service_auth() -> Auth:
-    """The deployment's own Jira identity: the service account's token and its site."""
-    settings = get_settings()
-    if settings.jira_service_token is None or not settings.jira_cloud_id:
-        raise ConfigError("JIRA_SERVICE_TOKEN and JIRA_CLOUD_ID must be set for the sync to run")
-    return Auth(settings.jira_service_token.get_secret_value(), settings.jira_cloud_id)
 
 
 async def _record(error: str | None = None) -> None:

@@ -4,7 +4,6 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 from mycel.core.config import get_settings
-from mycel.core.exceptions import ConfigError
 from mycel.core.logging import get_logger
 from mycel.domains import sync
 from mycel.domains.ingest import watchdog
@@ -29,10 +28,7 @@ log = get_logger(__name__)
 
 
 async def _sync() -> None:
-    try:
-        await sync_jira()
-    except ConfigError as exc:
-        log.error("sync cannot run: %s", exc)
+    await sync_jira()
 
 
 async def _sweep() -> None:

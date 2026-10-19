@@ -3,7 +3,6 @@
 `extra="ignore"` because `.env` also carries container-only variables with no field here.
 """
 
-from datetime import date
 from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
@@ -81,11 +80,6 @@ class Settings(BaseSettings):
 
     tavily_api_key: SecretStr | None = None
 
-    #: The background sync's Atlassian service account token (never a person's).
-    jira_service_token: SecretStr | None = None
-    jira_cloud_id: str | None = None
-    #: The service token's last day (Atlassian does not return it); `doctor` warns early.
-    jira_service_token_expires: date | None = None
     #: Atlassian OAuth 3LO app; callback `{public_base_url}/auth/jira/callback`.
     jira_client_id: str | None = None
     jira_client_secret: SecretStr | None = None

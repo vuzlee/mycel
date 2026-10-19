@@ -21,6 +21,10 @@ async def _no_session() -> AsyncIterator[None]:
     yield None
 
 
+async def _empty() -> dict[int, frozenset[str]]:
+    return {}
+
+
 async def test_a_sync_queues_one_index_job_and_embeds_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -47,11 +51,10 @@ async def test_a_sync_queues_one_index_job_and_embeds_nothing(
         raise AssertionError("the scheduler loaded the embedder")
 
     monkeypatch.setattr(sync, "session_scope", _no_session)
-    monkeypatch.setattr(sync, "fetch_jira", fetched)
+    monkeypatch.setattr(sync, "_fetch_all", fetched)
     monkeypatch.setattr(sync, "transform", transformed)
     monkeypatch.setattr(sync, "_record", nothing)
-    monkeypatch.setattr(access, "refresh_everyone", nothing)
-    monkeypatch.setattr(sync, "service_auth", lambda: None)
+    monkeypatch.setattr(access, "refresh_everyone", lambda: _empty())
     monkeypatch.setattr(enqueue, "stage", stage)
     monkeypatch.setattr(enqueue, "send", send)
     monkeypatch.setattr(index, "run", no_embedding)

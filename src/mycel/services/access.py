@@ -33,16 +33,16 @@ async def refresh(user_id: int) -> frozenset[str]:
     return projects
 
 
-async def refresh_everyone() -> int:
-    """Refresh every connected person. Returns how many were refreshed."""
+async def refresh_everyone() -> dict[int, frozenset[str]]:
+    """Refresh every connected person. Returns what each may browse now."""
     async with session_scope() as session:
         users = await AccountRepository(session).jira_connected_users()
     gate = asyncio.Semaphore(PARALLEL)
 
-    async def one(user_id: int) -> None:
+    async def one(user_id: int) -> frozenset[str]:
         async with gate:
-            await refresh(user_id)
+            return await refresh(user_id)
 
     async with jira_session():
-        await asyncio.gather(*(one(u) for u in users))
-    return len(users)
+        found = await asyncio.gather(*(one(u) for u in users))
+    return dict(zip(users, found, strict=True))

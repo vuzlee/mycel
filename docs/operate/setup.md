@@ -13,42 +13,11 @@ calendar and mail are connected by that person, in the app.
 
 ## Setup — once, by an admin
 
-### 1. A Jira service account for the sync
+### 1. The Jira OAuth app, for "Connect Jira"
 
-The sync reads Jira in the background, when nobody is signed in. It reads as its own
-account, so nobody leaving can stop it. It needs **Browse** on the projects to sync and
-nothing more — never admin.
-
-Needs: organization admin on Atlassian Cloud. Free: up to five service accounts.
-
-1. [admin.atlassian.com](https://admin.atlassian.com) → **Directory** → **Service accounts**
-   → **Create service account**. Name it e.g. `mycel-sync`. App role: **Jira → User**,
-   everything else **None**.
-   ([Atlassian: service accounts](https://support.atlassian.com/user-management/docs/understand-service-accounts/))
-2. Open it → **Create credentials** → **API token**. Expiry: up to 365 days. Scopes:
-   `read:jira-work` and `read:jira-user` only.
-   ([Atlassian: API tokens for service accounts](https://support.atlassian.com/user-management/docs/manage-api-tokens-for-service-accounts/))
-   The token is shown once.
-3. Add it to **every project to sync**: Jira → the project → **Project settings** →
-   **Access** → **Add people** → pick `mycel-sync` (the entry with an avatar, not the
-   email invite) → role **Viewer**. Do the same for any project added later.
-   Atlassian does not let a service account join a group, so this is per project.
-4. Find the site's cloud id: open `https://<your-site>.atlassian.net/_edge/tenant_info`
-   and copy `cloudId`.
-5. In `.env`:
-   ```
-   JIRA_SERVICE_TOKEN=<the token>
-   JIRA_CLOUD_ID=<the cloud id>
-   JIRA_SERVICE_TOKEN_EXPIRES=<its last day, YYYY-MM-DD>
-   ```
-   `doctor` warns a month before that day. Make the next token then.
-
-Every project the service account can browse is synced. There is no project list to keep.
-
-### 2. The Jira OAuth app, for "Connect Jira"
-
-Each person connects their own Jira so Mycel can ask Jira which projects *they* may browse,
-and write comments or tickets under *their* name.
+Each person connects their own Jira. Mycel asks Jira which projects *they* may browse,
+writes under *their* name, and the background sync reads each project on the token of one
+person who may browse it. A project nobody connected can browse is not synced.
 
 1. [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps/)
    → **Create** → **OAuth 2.0 integration**.
@@ -57,7 +26,7 @@ and write comments or tickets under *their* name.
 4. **Settings** → copy the client id and secret into `.env`:
    `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`.
 
-### 3. The Google OAuth client, for "Connect Google"
+### 2. The Google OAuth client, for "Connect Google"
 
 Each person's own calendar and mail.
 
@@ -68,13 +37,13 @@ Each person's own calendar and mail.
    `<PUBLIC_BASE_URL>/auth/google/callback`.
 4. Into `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
-### 4. Models
+### 3. Models
 
 Copy `config/litellm/models.example.yaml` to `config/litellm/models.yaml` (not tracked) and
 keep the providers you have. Each `model_name` is what `config/agents/*.yaml` asks for as
 `cloud:<model_name>`. Put the keys it names in `.env`.
 
-### 5. The rest of `.env`
+### 4. The rest of `.env`
 
 | Key | What |
 |---|---|
@@ -91,8 +60,8 @@ scripts/stack.sh doctor      # what is set, what is broken, what is off
 
 ### Not supported yet
 
-- **Jira Server / Data Center.** No service accounts there; it would need a plain user and
-  a personal access token. Not built, and nothing to test it against.
+- **Jira Server / Data Center.** Only Atlassian Cloud OAuth is built; Server would need
+  personal access tokens. Nothing to test it against.
 - **Per-issue permissions** (Jira issue security). Access is per project.
 
 ## Use — each person

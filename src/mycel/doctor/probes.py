@@ -2,7 +2,6 @@
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
 from typing import Any
 
 from mycel.core.config import Settings
@@ -123,38 +122,21 @@ async def _parser(settings: Settings) -> str:
 
 
 async def _jira(settings: Settings) -> str:
-    """Whether the sync's own identity works, and how its last run went."""
-    from mycel.domains.sync import service_auth
+    """How many people have Jira connected, and how the last sync went."""
     from mycel.infra.postgres.repositories.accounts import AccountRepository
     from mycel.infra.postgres.session import session_scope
-    from mycel.sources import jira
 
-    projects = await jira.browsable_projects(service_auth())
-    if not projects:
-        raise RuntimeError(
-            "the service account can browse no project — add it to each project as Viewer"
-        )
     async with session_scope() as session:
-        state = await AccountRepository(session).sync_state()
+        repo = AccountRepository(session)
+        people = len(await repo.jira_connected_users())
+        state = await repo.sync_state()
     last = state.last_success_at.strftime("%Y-%m-%d %H:%M") if state.last_success_at else "never"
     if state.last_error and (
         state.last_success_at is None
         or (state.last_failure_at and state.last_failure_at > state.last_success_at)
     ):
         raise RuntimeError(f"last sync failed: {state.last_error[:160]} (last success {last})")
-    return f"service account browses {', '.join(projects)}; last sync {last}"
-
-
-def _service_token_expiry(env: Settings) -> Check | None:
-    """Warn a month before the service token's last day. None when no date is written down."""
-    end = env.jira_service_token_expires
-    if end is None:
-        return None
-    days = (end - datetime.now(UTC).date()).days
-    if days < 0:
-        return Check("SOURCES", "jira token", State.BROKEN, f"expired on {end} — make a new one")
-    soon = f" — EXPIRES IN {days} DAYS, make the next one now" if days <= 30 else ""
-    return Check("SOURCES", "jira token", State.OK, f"valid until {end}{soon}")
+    return f"{people} people connected; last sync {last}"
 
 
 async def _gateway(settings: Settings) -> str:

@@ -16,7 +16,6 @@ from mycel.doctor.probes import (
     _qdrant,
     _rabbitmq,
     _redis,
-    _service_token_expiry,
     _upstreams,
 )
 from mycel.doctor.report import Check, State, render
@@ -41,8 +40,8 @@ async def run(settings: Settings | None = None) -> list[Check]:
             "SOURCES",
             lambda: _jira(env),
             missing=None
-            if (env.jira_service_token and env.jira_cloud_id)
-            else "no service account — set JIRA_SERVICE_TOKEN and JIRA_CLOUD_ID",
+            if (env.jira_client_id and env.jira_client_secret)
+            else "no OAuth app — set JIRA_CLIENT_ID and JIRA_CLIENT_SECRET",
             timeout=REMOTE_TIMEOUT_SECONDS,
         ),
         _probe(
@@ -75,7 +74,4 @@ async def run(settings: Settings | None = None) -> list[Check]:
 
     # Not probes: nothing to connect to, but the answer is what somebody wants to know.
     checks.extend(declared(env))
-    expiry = _service_token_expiry(env)
-    if expiry is not None:
-        checks.append(expiry)
     return checks

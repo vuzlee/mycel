@@ -1,6 +1,7 @@
 """Call one connector in sources/, write the original payload down to bronze."""
 
 import asyncio
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -15,7 +16,7 @@ from mycel.sources import jira
 from mycel.sources.jira_http import session as jira_session
 
 #: Distinguishes "no argument" from an explicit None, which means read everything.
-_UNSET: datetime = datetime.min
+UNSET: datetime = datetime.min
 
 log = get_logger(__name__)
 
@@ -36,15 +37,17 @@ class FetchResult:
 
 
 async def fetch_jira(
-    session: AsyncSession, auth: jira.Auth, since: datetime | None = _UNSET
+    session: AsyncSession, auth: jira.Auth, projects: Sequence[str], since: datetime | None = UNSET
 ) -> FetchResult:
-    """Pull every issue that moved since the last sync, and its logged effort."""
+    """Pull every issue in `projects` that moved since that project's last fetch."""
     bronze = BronzeRepository(session)
-    if since is _UNSET:
-        since = await _watermark(session)
+    marks = await _watermarks(session) if since is UNSET else {}
+    issues: list[dict[str, Any]] = []
 
     async with jira_session():
-        issues = await jira.search_issues(auth, _jql(since))
+        for project in projects:
+            mark = since if since is not UNSET else marks.get(project)
+            issues += await jira.search_issues(auth, _jql(project, mark))
         keys = [str(i["key"]) for i in issues if i.get("key")]
         worklogs = await _worklogs(auth, keys)
 
@@ -52,7 +55,8 @@ async def fetch_jira(
     logged = await bronze.save_all_worklogs(dict(zip(keys, worklogs, strict=True)))
 
     log.info(
-        "fetched into bronze", extra={"issues": stored, "worklogs": logged, "since": str(since)}
+        "fetched into bronze",
+        extra={"issues": stored, "worklogs": logged, "projects": len(projects)},
     )
     return FetchResult(issues=stored, worklogs=logged, keys=keys)
 
@@ -68,15 +72,16 @@ async def _worklogs(auth: jira.Auth, keys: list[str]) -> list[list[dict[str, Any
     return list(await asyncio.gather(*(one(k) for k in keys)))
 
 
-def _jql(since: datetime | None) -> str:
-    """Which issues to ask for: everything the service account may browse, since a time."""
+def _jql(project: str, since: datetime | None) -> str:
+    """One project's issues, all of them or those updated since a time."""
+    scope = f'project = "{project}"'
     if since is None:
-        # Jira refuses a query with no restriction; this one matches every issue.
-        return 'created >= "1970-01-01" ORDER BY updated ASC'
-    return f'updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'
+        return f"{scope} ORDER BY updated ASC"
+    return f'{scope} AND updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'
 
 
-async def _watermark(session: AsyncSession) -> datetime | None:
-    """When bronze last heard from Jira. None on an empty table, meaning read everything."""
-    stamp: datetime | None = await session.scalar(select(func.max(JiraIssue.fetched_at)))
-    return stamp
+async def _watermarks(session: AsyncSession) -> dict[str, datetime]:
+    """When bronze last heard of each project. A project absent here is read in full."""
+    project = JiraIssue.payload["fields"]["project"]["key"].astext
+    rows = await session.execute(select(project, func.max(JiraIssue.fetched_at)).group_by(project))
+    return {str(p): stamp for p, stamp in rows.all() if p}

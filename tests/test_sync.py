@@ -661,4 +661,4 @@ class TestTheFetchQuery:
         """Jira answers an unrestricted JQL with 'Unbounded JQL queries are not allowed'."""
         from mycel.services.fetch import _jql
 
-        assert _jql(None).split(" ORDER BY")[0].strip() != ""
+        assert _jql("MYC", None).split(" ORDER BY")[0].strip() != ""
