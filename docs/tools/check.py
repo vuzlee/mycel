@@ -6,9 +6,11 @@
 - every data-path and every vscode:// link names a file that exists
 - every flow figure's boxes exist and every edge is seen in the code (docs/tools/flow.py)
 - every flow page and the architecture figure match their YAML (rebuild with page.py / flow.py)
+- prints, without failing, each flow whose files were committed after the flow was
 """
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,7 +19,7 @@ from flow import ROOT, check, draw
 from page import build
 
 DOCS = ROOT / "docs"
-FLOWS = sorted([*(DOCS / "flows").glob("*.yaml"), *(DOCS / "change").glob("*.yaml")])
+FLOWS = sorted([*(DOCS / "flows").glob("*.yaml"), *(DOCS / "change").glob("*.yaml"), *(DOCS / "operate").glob("*.yaml")])
 #: Pages that embed a flow figure in place, besides the flow pages themselves.
 EMBEDS = {"overview/architecture.html": ("flows/ask.yaml", '<section id="s07">')}
 
@@ -73,10 +75,40 @@ def flows() -> list[str]:
     return misses
 
 
+def last_commit(path: Path) -> int:
+    """Unix time of the last commit that touched `path`; 0 when it has none."""
+    out = subprocess.run(
+        ["git", "log", "-1", "--format=%ct", "--", str(path)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    return int(out) if out else 0
+
+
+def stale() -> list[str]:
+    """Flow pages whose files changed after the page did: worth a look, not an error."""
+    notes = []
+    for y in FLOWS:
+        spec = yaml.safe_load(y.read_text())
+        files = {b["file"] for b in spec.get("boxes", [])} | {r[1] for r in spec.get("steps", [])}
+        page = last_commit(y)
+        newer = sorted(f for f in files if "/" in f and last_commit(ROOT / f) > page)
+        if newer:
+            notes.append(
+                f"{y.relative_to(DOCS)}: code changed since — {', '.join(newer[:3])}"
+                + (f" (+{len(newer) - 3})" if len(newer) > 3 else "")
+            )
+    return notes
+
+
 def main() -> int:
     misses = links() + flows()
     for m in misses:
         print(m)
+    for n in stale():
+        print(f"stale? {n}")
     print(f"{len(misses)} misses · {len(FLOWS)} flows")
     return 1 if misses else 0
 

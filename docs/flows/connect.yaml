@@ -30,6 +30,7 @@ edges:
   - {from: jplugin,  to: access,   step: 7, kind: calls,  text: "access.refresh(user_id)",   label: "projects"}
   - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
 notes:
+  - ["Google", "`plugins/google/` (oauth, calendar, mail) — same shape, no access or sync step"]
   - ["routes", "`/auth/{key}/start` · `/auth/{key}/callback` · `DELETE /auth/{key}` · `GET /auth/plugins`"]
   - ["state", "Redis, 10 min, used once; only the account that started may finish"]
   - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]

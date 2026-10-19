@@ -45,7 +45,7 @@
       </p>
     </div>
 
-    <figure>
+    <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 560" role="img"
              aria-label="Mycel's four-layer diagram: external providers feed the sources collection layer, which writes to the bronze schema in PostgreSQL; etl transforms bronze into silver and then gold; agents read gold only to produce reports; scheduler and api drive things from the side; every layer emits OpenTelemetry spans.">
@@ -99,8 +99,8 @@
           <!-- ===== Layer 1: sources ===== -->
           <rect x="218" y="86" width="200" height="64" rx="2"
                 fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
-          <text x="234" y="110" font-family="var(--mono)" font-size="12.5"
-                fill="var(--bronze)">sources/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/sources/jira.py" class="hv" data-path="src/mycel/sources/jira.py" data-tip="sources/jira.py&#10;provider HTTP clients"><text x="234" y="110" font-family="var(--mono)" font-size="12.5"
+                fill="var(--bronze)">sources/</text></a>
           <text x="234" y="130" font-family="var(--sans)" font-size="11.5"
                 fill="var(--ink-soft)">pull in, no processing</text>
 
@@ -151,8 +151,8 @@
           <!-- etl label -->
           <rect x="434" y="232" width="216" height="44" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="450" y="252" font-family="var(--mono)" font-size="12"
-                fill="var(--ink)">etl/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py" class="hv" data-path="src/mycel/etl/promote.py" data-tip="etl/promote.py&#10;bronze → silver → gold"><text x="450" y="252" font-family="var(--mono)" font-size="12"
+                fill="var(--ink)">etl/</text></a>
           <text x="450" y="268" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">idempotent transform steps</text>
           <g stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 3" fill="none">
@@ -172,8 +172,8 @@
 
           <rect x="742" y="44" width="174" height="180" rx="2"
                 fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="758" y="66" font-family="var(--mono)" font-size="12.5"
-                fill="var(--gold)">agents/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/registry.py" class="hv" data-path="src/mycel/agents/registry.py" data-tip="agents/registry.py&#10;orchestrator, specialists, tools"><text x="758" y="66" font-family="var(--mono)" font-size="12.5"
+                fill="var(--gold)">agents/</text></a>
 
           <g font-family="var(--sans)" font-size="11" fill="var(--ink-soft)">
             <rect x="758" y="78" width="142" height="30" rx="2"
@@ -197,8 +197,8 @@
 
           <rect x="742" y="258" width="174" height="56" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="758" y="280" font-family="var(--mono)" font-size="12"
-                fill="var(--ink)">domains/chat.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/domains/chat.py" class="hv" data-path="src/mycel/domains/chat.py" data-tip="domains/chat.py&#10;runs one turn"><text x="758" y="280" font-family="var(--mono)" font-size="12"
+                fill="var(--ink)">domains/chat.py</text></a>
           <text x="758" y="299" font-family="var(--sans)" font-size="11"
                 fill="var(--ink-soft)">answers · summaries</text>
 
@@ -208,15 +208,15 @@
 
           <rect x="24" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="40" y="497" font-family="var(--mono)" font-size="12"
-                fill="var(--ink)">scheduler/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/scheduler/runner.py" class="hv" data-path="src/mycel/scheduler/runner.py" data-tip="scheduler/runner.py&#10;timers"><text x="40" y="497" font-family="var(--mono)" font-size="12"
+                fill="var(--ink)">scheduler/</text></a>
           <text x="40" y="515" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">runs jobs on a schedule</text>
 
           <rect x="216" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="232" y="497" font-family="var(--mono)" font-size="12"
-                fill="var(--ink)">api/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/app.py" class="hv" data-path="src/mycel/api/app.py" data-tip="api/app.py&#10;HTTP"><text x="232" y="497" font-family="var(--mono)" font-size="12"
+                fill="var(--ink)">api/</text></a>
           <text x="232" y="515" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-soft)">ask · read answers</text>
 
@@ -229,8 +229,8 @@
 
           <rect x="600" y="476" width="316" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="616" y="497" font-family="var(--mono)" font-size="12"
-                fill="var(--accent)">observability/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/observability/tracing.py" class="hv" data-path="src/mycel/observability/tracing.py" data-tip="observability/tracing.py&#10;traces, metrics"><text x="616" y="497" font-family="var(--mono)" font-size="12"
+                fill="var(--accent)">observability/</text></a>
           <text x="616" y="515" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">logs · traces · metrics — every layer emits</text>
 
@@ -310,7 +310,7 @@
       <div><ul class="bul"><li>Route in <code>api/routes/</code>: validate, hand off</li><li>Module in <code>domains/</code>: chains services</li><li>Nothing below the route knows HTTP</li></ul></div>
     </div>
 
-    <figure>
+    <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 470" role="img"
              aria-label="Six layers in a Mycel request: the UI makes an HTTP call into api/app.py; app.py mounts each router; each domain is a pair, a route module that receives requests and a domain module that chains services; the domain module calls single-purpose services in order; services call down into etl, agents and reports; at the bottom infra holds every SQL statement. The scheduler calls the domain module directly, skipping the route.">
@@ -346,8 +346,8 @@
           <!-- app.py -->
           <rect x="136" y="72" width="360" height="46" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="152" y="92" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">api/app.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/app.py" class="hv" data-path="src/mycel/api/app.py" data-tip="api/app.py&#10;mounts routers, middleware"><text x="152" y="92" font-family="var(--mono)" font-size="11.5"
+                fill="var(--ink)">api/app.py</text></a>
           <text x="152" y="109" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">mounts each router · middleware · tracing</text>
 
@@ -371,14 +371,14 @@
                 fill="var(--gold)">chat</text>
           <rect x="176" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
-          <text x="186" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--ink)">routes/chat.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/chat.py" class="hv" data-path="src/mycel/api/routes/chat.py" data-tip="api/routes/chat.py&#10;POST /chat"><text x="186" y="217" font-family="var(--mono)" font-size="10"
+                fill="var(--ink)">routes/chat.py</text></a>
           <text x="186" y="231" font-family="var(--sans)" font-size="8.5"
                 fill="var(--ink-faint)">receive · validate</text>
           <rect x="316" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
-          <text x="326" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--accent)">domains/chat.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/domains/chat.py" class="hv" data-path="src/mycel/domains/chat.py" data-tip="domains/chat.py&#10;runs one turn"><text x="326" y="217" font-family="var(--mono)" font-size="10"
+                fill="var(--accent)">domains/chat.py</text></a>
           <text x="326" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -393,14 +393,14 @@
                 fill="var(--silver)">sync — no route, scheduler only</text>
           <rect x="500" y="202" width="132" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--line)"/>
-          <text x="510" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--ink)">routes/sync.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/domains/sync.py" class="hv" data-path="src/mycel/domains/sync.py" data-tip="domains/sync.py&#10;runs a plugin sync under a lock"><text x="510" y="217" font-family="var(--mono)" font-size="10"
+                fill="var(--ink)">domains/sync.py</text></a>
           <text x="510" y="231" font-family="var(--sans)" font-size="8.5"
-                fill="var(--ink-faint)">receive · validate</text>
+                fill="var(--ink-faint)">timer or SYNC job</text>
           <rect x="640" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
-          <text x="650" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--accent)">plugins/jira/sync.py</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/sync.py" class="hv" data-path="src/mycel/plugins/jira/sync.py" data-tip="plugins/jira/sync.py&#10;one Jira sync run"><text x="650" y="217" font-family="var(--mono)" font-size="10"
+                fill="var(--accent)">plugins/jira/sync.py</text></a>
           <text x="650" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -459,7 +459,7 @@
           <g font-family="var(--mono)" font-size="10.5" text-anchor="middle">
             <rect x="136" y="364" width="164" height="32" rx="2"
                   fill="var(--silver-wash)" stroke="var(--silver)"/>
-            <text x="218" y="384" fill="var(--silver)">etl/</text>
+            <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py" class="hv" data-path="src/mycel/etl/promote.py" data-tip="etl/promote.py&#10;bronze → silver → gold"><text x="218" y="384" fill="var(--silver)">etl/</text></a>
 
             <rect x="316" y="364" width="164" height="32" rx="2"
                   fill="var(--gold-wash)" stroke="var(--gold)"/>
@@ -467,11 +467,11 @@
 
             <rect x="496" y="364" width="164" height="32" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="578" y="384" fill="var(--ink)">domains/chat.py</text>
+            <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/domains/chat.py" class="hv" data-path="src/mycel/domains/chat.py" data-tip="domains/chat.py&#10;runs one turn"><text x="578" y="384" fill="var(--ink)">domains/chat.py</text></a>
 
             <rect x="676" y="364" width="164" height="32" rx="2"
                   fill="var(--bronze-wash)" stroke="var(--bronze)"/>
-            <text x="758" y="384" fill="var(--bronze)">sources/</text>
+            <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/sources/jira.py" class="hv" data-path="src/mycel/sources/jira.py" data-tip="sources/jira.py&#10;provider HTTP clients"><text x="758" y="384" fill="var(--bronze)">sources/</text></a>
           </g>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -630,7 +630,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       </p>
     </div>
 
-    <figure>
+    <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
              aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by domains; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
@@ -771,7 +771,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       <div><ul class="bul"><li>Every model call goes through <code>llm/</code> and the gateway</li><li>Swap model, add cache, cap spend: one change</li></ul></div>
     </div>
 
-    <figure>
+    <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 400" role="img"
              aria-label="Mycel's AI layer: the orchestrator takes a chat request and splits it across specialist agents; agents call tools to query gold; every model call goes through the llm module, where the router chooses between vLLM running locally for high-volume work and a cloud API for the final reasoning; cache and budget sit on the path; evals score the results against a golden set.">
@@ -817,8 +817,8 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
           <!-- tools -->
           <rect x="24" y="232" width="168" height="46" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
-          <text x="40" y="252" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">tools/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/tools/work.py" class="hv" data-path="src/mycel/agents/tools/work.py" data-tip="agents/tools/work.py&#10;functions the model may call"><text x="40" y="252" font-family="var(--mono)" font-size="11.5"
+                fill="var(--ink)">tools/</text></a>
           <text x="40" y="269" font-family="var(--sans)" font-size="9"
                 fill="var(--ink-soft)">query gold · compute · charts</text>
 
@@ -929,8 +929,8 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
           <!-- evals -->
           <rect x="556" y="338" width="360" height="40" rx="2"
                 fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="576" y="363" font-family="var(--mono)" font-size="11.5"
-                fill="var(--accent)">evals/</text>
+          <a href="vscode://file/home/vuzle/Documents/mycel/evals/analyst/run.py" class="hv" data-path="evals/analyst/run.py" data-tip="evals/analyst/run.py&#10;golden questions, run by hand"><text x="576" y="363" font-family="var(--mono)" font-size="11.5"
+                fill="var(--accent)">evals/</text></a>
           <text x="648" y="363" font-family="var(--sans)" font-size="10.5"
                 fill="var(--ink-soft)">golden set — run by hand, compared to a baseline</text>
           <g stroke="var(--accent)" stroke-width="1.1" stroke-dasharray="3 3" fill="none"
@@ -1074,7 +1074,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       <div><ul class="bul"><li>CI builds two images per commit SHA: <code>mycel</code>, <code>mycel-ingest</code></li><li>CI renders the Helm chart; it does not deploy</li></ul></div>
     </div>
 
-    <figure>
+    <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
              aria-label="Mycel's path to production: a developer pushes code, CI runs lint, type checks, migrations and tests, while the golden-set evals are run by hand; merging to main has CI build two images tagged by commit SHA, push them to Docker Hub and render the Helm chart; on a cluster, migrations run first and only then containers swap; rollback is going back to the previous SHA tag.">

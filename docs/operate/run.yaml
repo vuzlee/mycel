@@ -1,0 +1,37 @@
+page:
+  eyebrow: Operate
+  title: Run and fix it
+  lede: ["Every command goes through `scripts/stack.sh`", "When something is wrong, run doctor first"]
+tables:
+  - title: Start and stop
+    head: [Mode, Command, What runs where]
+    rows:
+      - ["dev", "`scripts/stack.sh dev up` · `down` · `status` · `logs <name>`", "app on your machine, stores in docker compose"]
+      - ["compose", "`scripts/stack.sh compose up [monitoring]`", "everything in containers"]
+      - ["k8s", "`scripts/stack.sh k8s build` · `up` · `secret`", "the Helm chart on minikube; stores stay on the host"]
+      - ["first time", "`docs/operate/setup.md`", "OAuth apps, `.env`, gateway key"]
+  - title: Everyday commands
+    head: [Command, Does]
+    rows:
+      - ["`scripts/stack.sh doctor`", "what is set up, what is broken, what is off on purpose"]
+      - ["`scripts/stack.sh sync [--refetch]`", "one Jira sync now; `--refetch` reads everything again"]
+      - ["`scripts/stack.sh replay [jobs.dlq N]`", "count parked jobs, or send N back"]
+      - ["`scripts/stack.sh gateway-key [usd]`", "a new capped key for the app (default $10 / 30 days)"]
+      - ["`uv run alembic upgrade head`", "apply database migrations"]
+      - ["`uv run pytest -q`", "tests — only ever on the `mycel_test` database"]
+  - title: Something is wrong
+    head: [You see, Likely cause, Check, Fix]
+    rows:
+      - ["page will not load", "api not running", "`scripts/stack.sh dev status`", "`scripts/stack.sh dev up`"]
+      - ["question never answers", "worker down, or job parked", "`scripts/stack.sh replay`", "start the worker; replay the dead-letter queue"]
+      - ["\"model error\" on every answer", "gateway down, or its key over $10", "doctor: `litellm`, `upstreams`", "restart litellm; `gateway-key`"]
+      - ["dashboard empty", "nobody connected Jira, or sync failing", "doctor: `jira` line", "connect Jira; `sync --refetch`"]
+      - ["issues missing from answers", "a sync stopped after bronze", "doctor: last sync", "`scripts/stack.sh sync --refetch`"]
+      - ["document stuck on parsing", "ingest worker not running", "`scripts/stack.sh dev logs ingest`", "start it; the watchdog fails it after 10 min"]
+      - ["signed out unexpectedly", "session reached 14 days", "—", "sign in again (MYC-214)"]
+      - ["Connect button missing", "plugin client not in `.env`", "doctor: PLUGINS group", "set `<KEY>_CLIENT_ID` / `_SECRET`"]
+      - ["docs figure looks wrong", "code changed since the figure", "`uv run python docs/tools/check.py`", "fix the YAML, run `page.py`"]
+related:
+  - [Architecture, ../overview/architecture.html]
+  - [Job failures, ../flows/job-failures.html]
+  - ["Traces, metrics, events", ../flows/observe.html]

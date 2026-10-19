@@ -25,6 +25,15 @@ EXPLAINED = {
     "config/environments": "overview/config.html",
     "config/agents": "overview/config.html",
     "migrations/versions": "overview/database.html",
+    "src/mycel/infra/documents": "flows/upload.html",
+    "src/mycel/etl/checks": "flows/jira-sync.html",
+    "web/src/context": "flows/sign-in.html",
+    "src/mycel/plugins/google": "flows/connect.html",
+    "src/mycel/agents": "overview/architecture.html",
+    "src/mycel/mcp": "change/add-tool.html",
+    "web/src/components": "overview/architecture.html",
+    # Dev-machine helpers, never imported by the app.
+    "src/mycel/devtools": "operate/run.html",
 }
 
 

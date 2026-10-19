@@ -94,6 +94,8 @@ def build(path: Path) -> str:
             '<h3 class="tbl-title">Files to change, in order</h3>'
             + table(["#", "File", "Do"], spec["steps"], files_col=1)
         )
+    for name, head, rows in [(t["title"], t["head"], t["rows"]) for t in spec.get("tables", [])]:
+        out.append(f'<h3 class="tbl-title">{e(name)}</h3>' + table(head, rows))
     if spec.get("mistakes"):
         out.append(
             '<h3 class="tbl-title">Easy to get wrong</h3>'

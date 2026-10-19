@@ -10,6 +10,11 @@ steps:
   - ["5", "config/agents/analyst.yaml", "raise `tool_calls_limit` if needed — and the \"twelve queries\" line in the prompt"]
   - ["6", "web/src/lib/toolLabel.ts", "a label for the live step, else it shows \"Running my tool\""]
   - ["test", "tests/test_work_tools.py", "behaviour; chip in `tests/test_chips.py`; ready read in `tests/test_analyst.py`"]
+tables:
+  - title: Or a tool on another server
+    head: [Way, Where]
+    rows:
+      - ["an MCP server's tools", "declare the server in `config/mcp/`, name it in the agent's `mcp_servers`; `src/mycel/mcp/clients.py` connects"]
 mistakes:
   - ["toolset made without `opens(Chip…)`", "never offered once the person picks sources"]
   - ["chip set per tool, not per toolset", "chips apply to the whole toolset"]

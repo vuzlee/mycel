@@ -859,3 +859,6 @@ svg [data-path]:hover::after { content: none; }
 a.file { font: 12px var(--mono); color: var(--accent); text-decoration: none; }
 a.file:hover { text-decoration: underline; }
 svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
+/* Generated flow figures keep a readable size and scroll inside their frame on small screens. */
+.tipfig .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tipfig .scroll-x .diagram { min-width: 760px; }

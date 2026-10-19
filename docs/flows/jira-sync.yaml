@@ -33,6 +33,7 @@ edges:
   - {from: index,     to: gold,      step: 8, kind: import, label: "read gold", reverse: true}
   - {from: index,     to: qdrant,    step: 9, kind: calls,  text: "indexer",  label: "embed"}
 notes:
+  - ["checks", "`etl/checks/work.py` rejects bad rows before gold; the whole batch rolls back"]
   - ["who reads", "each project once, by the first connected person who may browse it"]
   - ["what is read", "only issues changed since the last run (the newest `fetched_at`)"]
   - ["one at a time", "Postgres lock `sync:jira`; a second run is skipped"]

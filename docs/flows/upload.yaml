@@ -31,6 +31,7 @@ edges:
   - {from: ingest, to: events,          kind: import, label: "changed", exit: 0.3}
   - {from: live,   to: route,           kind: http,   text: "/documents/status",   label: "SSE", via: [[3, 0.5], [1.3, 0.5]], enter: 0.3}
 notes:
+  - ["parse and chunk", "`infra/documents/parse.py` (docling) · `chunk.py` → passages of ~500 tokens"]
   - ["accepted", "PDF, DOCX, Markdown · up to 2 MB · checked by its bytes, not its name"]
   - ["limits", "200 documents per person · 5 processing at once"]
   - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]

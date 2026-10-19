@@ -28,6 +28,7 @@ edges:
   - {from: sauth, to: idrepo, step: 6, kind: calls,  text: "create_session(",               label: "session row"}
   - {from: deps,  to: sauth,  step: 7, kind: calls,  text: "session_user(",                 label: "each request", enter: 0.2}
 notes:
+  - ["in the browser", "`web/src/context/auth.tsx` holds who is signed in; `main.tsx` guards private pages"]
   - ["session cookie", "`mycel_session` · 14 days · httponly · samesite=lax · secure outside dev"]
   - ["renewed?", "no — it ends 14 days after sign-in, however often it is used"]
   - ["who may sign up", "`REGISTRATION_ALLOWED_DOMAINS`; empty = anyone"]
