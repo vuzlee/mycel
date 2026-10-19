@@ -5,6 +5,24 @@ from mycel.doctor.report import Check, State
 from mycel.infra import smtp
 from mycel.services import google_oauth, jira_oauth
 
+#: Values shipped in .env.example; a prod deployment still holding one is open to anyone.
+DEV_VALUES = {
+    "litellm_api_key": "sk-mycel-dev",
+    "s3_secret_key": "mycel-dev-secret",
+    "database_url": "postgresql://mycel:mycel@",
+    "rabbitmq_url": "amqp://mycel:mycel@",
+}
+
+
+def dev_values(env: Settings) -> list[str]:
+    """Which settings still hold a value from .env.example."""
+
+    def raw(name: str) -> str:
+        value = getattr(env, name)
+        return value.get_secret_value() if hasattr(value, "get_secret_value") else str(value or "")
+
+    return [n.upper() for n, dev in DEV_VALUES.items() if raw(n).startswith(dev)]
+
 
 def declared(env: Settings) -> list[Check]:
     """Things that are settings rather than connections."""
@@ -55,6 +73,18 @@ def declared(env: Settings) -> list[Check]:
             else "off — the Jira write tools are not offered",
         )
     )
+
+    if not mail_out and not google_oauth.configured(env):
+        out.append(
+            Check(
+                "SIGN-IN", "any way in", State.BROKEN, "no SMTP and no Google — nobody can sign in"
+            )
+        )
+    left = dev_values(env)
+    if env.mycel_env == "prod" and left:
+        out.append(
+            Check("SECRETS", "dev values", State.BROKEN, f"still the dev value: {', '.join(left)}")
+        )
 
     # The one with a default that is wrong as soon as the app is not on a laptop.
     domains = env.allowed_domains

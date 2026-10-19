@@ -48,8 +48,8 @@ def test_get_settings_is_cached() -> None:
 
 
 def test_provider_keys_never_reach_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
-    """LLM_API_KEY is read by the gateway, not by Settings."""
-    monkeypatch.setenv("LLM_API_KEY", "one")
+    """DEFAULT_MODEL_API_KEY is read by the gateway, not by Settings."""
+    monkeypatch.setenv("DEFAULT_MODEL_API_KEY", "one")
     assert not hasattr(Settings(), "llm_api_key")
 
 

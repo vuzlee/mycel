@@ -434,7 +434,7 @@ class TestErrorsComeBackAsThemselves:
     def test_no_error_response_leaks_a_traceback(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _queues(monkeypatch, ConfigError("LLM_API_KEY is unset"))
+        _queues(monkeypatch, ConfigError("DEFAULT_MODEL_API_KEY is unset"))
         body = client.post("/chat", json={"question": "anything"}).text
         assert "Traceback" not in body
         assert "mycel/api" not in body
