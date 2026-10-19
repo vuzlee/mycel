@@ -10,8 +10,9 @@ from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import calendar, mail, rag_search, web_search
+from mycel.agents.tools import rag_search, web_search
 from mycel.infra.vectors.client import configured as vectors_configured
+from mycel.plugins import registry
 
 
 class Claim(BaseModel):
@@ -82,8 +83,7 @@ class Researcher(BaseAgent[Research]):
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:
         sets: list[AbstractToolset[MycelDeps]] = [
             web_search.build_toolset(),
-            mail.build_toolset(),
-            calendar.build_toolset(),
+            *registry.toolsets("researcher"),
         ]
         # A visible tool gets called; one with nothing behind it wastes a turn.
         if vectors_configured():

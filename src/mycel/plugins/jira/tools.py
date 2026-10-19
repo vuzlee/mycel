@@ -10,12 +10,12 @@ from mycel.agents.core.chips import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
-from mycel.agents.tools.jira_writes import JiraWriteRequest, apply, resolve
 from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
 from mycel.plugins.jira.oauth import JiraAuthError, NotConnected, token_for
+from mycel.plugins.jira.writes import JiraWriteRequest, apply, resolve
 from mycel.sources import NotWritten, SourceError, jira
 
 log = get_logger(__name__)

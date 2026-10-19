@@ -9,11 +9,11 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from mycel.agents.tools import calendar as calendar_tool
 from mycel.core.config import get_settings
 from mycel.infra.postgres.engine import async_dsn
 from mycel.infra.postgres.models import Base
 from mycel.infra.postgres.repositories.conversations import TurnRow
+from mycel.plugins.google import calendar as calendar_tool
 
 #: The suite's own database, set by `conftest.py`. Empty means the Postgres tests skip.
 DSN = os.environ.get("DATABASE_URL", "")

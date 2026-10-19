@@ -12,11 +12,11 @@ from pydantic_ai import ModelRetry
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
-from mycel.agents.tools import mail as mail_tool
 from mycel.agents.tools.limits import MAX_HOURS
-from mycel.agents.tools.mail import CONNECT, MAX_MESSAGES, build_toolset
 from mycel.core.principal import Principal
 from mycel.llm.budget import JobBudget
+from mycel.plugins.google import mail as mail_tool
+from mycel.plugins.google.mail import CONNECT, MAX_MESSAGES, build_toolset
 from mycel.plugins.google.oauth import NotConnected
 from mycel.sources import gmail
 

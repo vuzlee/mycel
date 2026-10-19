@@ -2,10 +2,18 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
+
+if TYPE_CHECKING:
+    from pydantic_ai.toolsets import AbstractToolset
+
+    from mycel.agents.core.deps import MycelDeps
+
+#: Which specialist a toolset is for: numbers from work data, or reading the outside world.
+Role = Literal["analyst", "researcher"]
 
 
 @dataclass(frozen=True)
@@ -35,3 +43,7 @@ class Plugin(Protocol):
     async def status(self, user: Principal) -> Status: ...
 
     async def disconnect(self, user_id: int) -> bool: ...
+
+    def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
+        """Tools this plugin gives one specialist; empty when it is not configured."""
+        ...

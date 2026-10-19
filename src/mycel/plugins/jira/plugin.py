@@ -1,11 +1,18 @@
 """Jira as a plugin."""
 
+from typing import TYPE_CHECKING
+
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
-from mycel.plugins.base import Status
+from mycel.plugins.base import Role, Status
 from mycel.plugins.jira import oauth
 from mycel.services import access, enqueue
 from mycel.services.permission import readable_projects
+
+if TYPE_CHECKING:
+    from pydantic_ai.toolsets import AbstractToolset
+
+    from mycel.agents.core.deps import MycelDeps
 
 
 class Jira:
@@ -41,6 +48,14 @@ class Jira:
 
     async def disconnect(self, user_id: int) -> bool:
         return await oauth.disconnect(user_id)
+
+    def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
+        """Live reads and writes for the analyst, when this deployment writes to Jira."""
+        if role != "analyst":
+            return []
+        from mycel.plugins.jira import tools
+
+        return [tools.build_toolset()] if tools.offered() else []
 
 
 PLUGIN = Jira()

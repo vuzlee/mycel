@@ -157,8 +157,8 @@ PAGES: dict[str, list[str]] = {
         "src/mycel/agents/core/guards.py",
     ],
     "agents/jira-writes": [
-        "src/mycel/agents/tools/jira.py",
-        "src/mycel/agents/tools/jira_writes.py",
+        "src/mycel/plugins/jira/tools.py",
+        "src/mycel/plugins/jira/writes.py",
         "src/mycel/infra/redis/drafts.py",
     ],
     "agents/mcp": [
@@ -199,8 +199,8 @@ PAGES: dict[str, list[str]] = {
         "src/mycel/agents/tools/limits.py",
         "src/mycel/agents/tools/compute.py",
         "src/mycel/agents/tools/web_search.py",
-        "src/mycel/agents/tools/mail.py",
-        "src/mycel/agents/tools/calendar.py",
+        "src/mycel/plugins/google/mail.py",
+        "src/mycel/plugins/google/calendar.py",
     ],
     "rag/citations": [
         "src/mycel/services/citations.py",

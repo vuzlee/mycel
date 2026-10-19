@@ -10,11 +10,11 @@ from pydantic_ai import ModelRetry
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
-from mycel.agents.tools.jira import CONNECT, build_toolset, offered
 from mycel.core.config import get_settings
 from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
+from mycel.plugins.jira.tools import CONNECT, build_toolset, offered
 from mycel.sources import jira
 from tests.fakes import FakeRedis
 
@@ -74,7 +74,7 @@ def redis(monkeypatch: pytest.MonkeyPatch) -> FakeRedis:
 @pytest.fixture(autouse=True)
 def grant(monkeypatch: pytest.MonkeyPatch) -> None:
     """Everyone is connected unless a test says otherwise."""
-    from mycel.agents.tools import jira as tool
+    from mycel.plugins.jira import tools as tool
 
     async def _token(user_id: int) -> tuple[str, str]:
         return "access-token", "cloud-1"
@@ -352,7 +352,7 @@ class TestWhenNobodyIsConnected:
     async def test_an_unconnected_person_gets_a_sentence_not_an_exception(
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from mycel.agents.tools import jira as tool
+        from mycel.plugins.jira import tools as tool
         from mycel.plugins.jira.oauth import NotConnected
 
         async def _refuse(user_id: int) -> tuple[str, str]:

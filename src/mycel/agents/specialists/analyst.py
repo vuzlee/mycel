@@ -9,7 +9,8 @@ from pydantic_ai.toolsets import AbstractToolset
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
-from mycel.agents.tools import compute, jira, query, work
+from mycel.agents.tools import compute, query, work
+from mycel.plugins import registry
 
 
 class Figure(BaseModel):
@@ -61,9 +62,8 @@ class Analyst(BaseAgent[Analysis]):
             work.build_toolset(),
             compute.build_toolset().filtered(unanswered),
             query.build_toolset().filtered(unanswered),
+            *registry.toolsets("analyst"),
         ]
-        if jira.offered():
-            sets.append(jira.build_toolset())
         return sets
 
     @classmethod

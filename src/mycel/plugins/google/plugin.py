@@ -1,9 +1,16 @@
 """Google as a plugin."""
 
+from typing import TYPE_CHECKING
+
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
-from mycel.plugins.base import Status
+from mycel.plugins.base import Role, Status
 from mycel.plugins.google import oauth
+
+if TYPE_CHECKING:
+    from pydantic_ai.toolsets import AbstractToolset
+
+    from mycel.agents.core.deps import MycelDeps
 
 
 class Google:
@@ -30,6 +37,14 @@ class Google:
 
     async def disconnect(self, user_id: int) -> bool:
         return await oauth.disconnect(user_id)
+
+    def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
+        """Calendar and mail for the researcher, only when someone could connect them."""
+        if role != "researcher" or not self.configured():
+            return []
+        from mycel.plugins.google import calendar, mail
+
+        return [mail.build_toolset(), calendar.build_toolset()]
 
 
 PLUGIN = Google()
