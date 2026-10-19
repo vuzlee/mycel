@@ -833,3 +833,14 @@ svg [data-path]:hover::after { content: none; }
 .dbcols td.cols code { font-size: 0.78rem; color: var(--ink); }
 .dbcols td.cols i { font-style: normal; color: var(--ink-faint); font-family: var(--mono); font-size: 0.72rem; }
 .dbcols td.who { white-space: nowrap; vertical-align: top; }
+.tcards { column-width: 290px; column-gap: 14px; }
+.tcard { break-inside: avoid; margin: 0 0 14px; border: 1px solid var(--line); border-top: 3px solid var(--ink-faint); background: var(--surface); }
+.tcard.t-gold { border-top-color: var(--gold); }
+.tcard.t-bronze { border-top-color: var(--bronze); }
+.tcard .tname { padding: 8px 12px; font: 600 13px var(--mono); color: var(--ink); border-bottom: 1px solid var(--line); }
+.tcard table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+.tcard th { text-align: left; padding: 4px 12px; font-weight: 500; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+.tcard td { padding: 3px 12px; border-top: 1px solid var(--line); color: var(--ink); }
+.tcard td + td { color: var(--ink-soft); }
+.tcard td b { color: var(--bronze); font-weight: 600; }
+.tcard td { white-space: nowrap; } .tcard td:first-child { width: 100%; }
