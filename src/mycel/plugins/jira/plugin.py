@@ -2,13 +2,13 @@
 
 from typing import TYPE_CHECKING
 
-from mycel.core.config import Settings
+from mycel.core.config import Settings, get_settings
 from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.plugins.base import Role, Status
-from mycel.plugins.jira import oauth
-from mycel.services import access, enqueue
+from mycel.plugins.jira import access, oauth
+from mycel.services import enqueue
 from mycel.services.permission import readable_projects
 
 if TYPE_CHECKING:
@@ -71,7 +71,8 @@ class Jira:
             or (state.last_failure_at and state.last_failure_at > state.last_success_at)
         ):
             raise RuntimeError(f"last sync failed: {state.last_error[:160]} (last success {last})")
-        return f"{people} people connected; last sync {last}"
+        writes = "writes on" if get_settings().jira_write_enabled else "writes off"
+        return f"{people} people connected; last sync {last}; {writes}"
 
     def toolsets(self, role: Role) -> "list[AbstractToolset[MycelDeps]]":
         """Live reads and writes for the analyst, when this deployment writes to Jira."""

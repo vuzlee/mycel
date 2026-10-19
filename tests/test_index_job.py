@@ -9,10 +9,10 @@ import pytest
 
 from mycel import worker
 from mycel.domains import index
-from mycel.plugins.jira import sync
+from mycel.plugins.jira import access, sync
 from mycel.queue import producer, topology
 from mycel.queue.job import INGEST_KINDS, Job, JobKind
-from mycel.services import access, enqueue
+from mycel.services import enqueue
 
 pytestmark = pytest.mark.anyio
 

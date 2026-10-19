@@ -249,7 +249,7 @@ PAGES: dict[str, list[str]] = {
     "data/gold-access": [
         "src/mycel/infra/postgres/acl.py",
         "src/mycel/services/permission.py",
-        "src/mycel/services/access.py",
+        "src/mycel/plugins/jira/access.py",
     ],
     "data/sync-scheduler-locks": [
         "src/mycel/domains/sync.py",

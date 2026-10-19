@@ -10,9 +10,10 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.observability.metrics import records_written, sync_duration_seconds
+from mycel.plugins.jira import access
 from mycel.plugins.jira import oauth as jira_oauth
 from mycel.queue.job import Job, JobKind
-from mycel.services import access, enqueue
+from mycel.services import enqueue
 from mycel.services.fetch import UNSET, FetchResult, fetch_jira
 from mycel.services.transform import transform
 from mycel.sources.jira import Auth

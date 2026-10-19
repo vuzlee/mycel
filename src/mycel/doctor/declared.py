@@ -4,7 +4,6 @@ from mycel.core.config import Settings
 from mycel.doctor.report import Check, State
 from mycel.infra import smtp
 from mycel.plugins.google import oauth as google_oauth
-from mycel.plugins.jira import oauth as jira_oauth
 
 #: Values shipped in .env.example; a prod deployment still holding one is open to anyone.
 DEV_VALUES = {
@@ -48,22 +47,6 @@ def declared(env: Settings) -> list[Check]:
             else "off — no SMTP, so only Google sign-in works",
         )
     )
-    # Two switches, and off is a decision rather than a gap.
-    writes = jira_oauth.configured(env) and env.jira_write_enabled
-    out.append(
-        Check(
-            "TOOLS",
-            "jira writes",
-            State.OK if writes else State.OFF,
-            (
-                "on, as whoever is asking"
-                + (" — including create_project" if env.jira_allow_create_project else "")
-            )
-            if writes
-            else "off — the Jira write tools are not offered",
-        )
-    )
-
     if not mail_out and not google_oauth.configured(env):
         out.append(
             Check(

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import pytest
 
 import mycel.domains.sync as sync
-import mycel.services.access as access
+import mycel.plugins.jira.access as access
 import mycel.services.enqueue as enqueue
 import mycel.worker as worker
 from mycel.plugins.jira import oauth as jira_oauth
