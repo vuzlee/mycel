@@ -19,7 +19,13 @@ from flow import ROOT, check, draw
 from page import build
 
 DOCS = ROOT / "docs"
-FLOWS = sorted([*(DOCS / "flows").glob("*.yaml"), *(DOCS / "change").glob("*.yaml"), *(DOCS / "operate").glob("*.yaml")])
+FLOWS = sorted(
+    [
+        *(DOCS / "flows").glob("*.yaml"),
+        *(DOCS / "change").glob("*.yaml"),
+        *(DOCS / "operate").glob("*.yaml"),
+    ]
+)
 #: Pages that embed a flow figure in place, besides the flow pages themselves.
 EMBEDS = {"overview/architecture.html": ("flows/ask.yaml", '<section id="s07">')}
 
