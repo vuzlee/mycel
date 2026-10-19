@@ -825,3 +825,11 @@ details .tbl { margin-top: 0.8rem; }
 .tipfig { position: relative; }
 .tip { position: absolute; z-index: 10; max-width: 300px; padding: 8px 12px; border-radius: 8px; background: var(--ink); color: var(--ground); font: 12.5px/1.45 var(--sans); pointer-events: none; opacity: 0; transition: opacity .12s; }
 .tip.on { opacity: 1; }
+.tip { max-width: 320px; }
+.tip code { display: block; font: 600 12px var(--mono); color: var(--ground); background: none; padding: 0; }
+.tip span { display: block; margin-top: 4px; }
+svg [data-path]:hover::after { content: none; }
+.dbcols td.cols { font-size: 0.8125rem; line-height: 1.7; }
+.dbcols td.cols code { font-size: 0.78rem; color: var(--ink); }
+.dbcols td.cols i { font-style: normal; color: var(--ink-faint); font-family: var(--mono); font-size: 0.72rem; }
+.dbcols td.who { white-space: nowrap; vertical-align: top; }
