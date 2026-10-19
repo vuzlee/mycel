@@ -18,7 +18,7 @@ from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
-from mycel.services.google_oauth import NotConnected
+from mycel.plugins.google.oauth import NotConnected
 from tests.fakes import FakeRedis
 
 pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("google_token")]

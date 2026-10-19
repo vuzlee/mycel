@@ -11,9 +11,9 @@ from cryptography.fernet import Fernet
 
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
-from mycel.services import jira_oauth as oauth
+from mycel.plugins.jira import oauth
+from mycel.plugins.jira.oauth import JiraAuthError, NotConnected
 from mycel.services import oauth as shared_oauth
-from mycel.services.jira_oauth import JiraAuthError, NotConnected
 from mycel.services.tokens import TokenUnreadable, seal, unseal
 from tests.fakes import FakeRedis
 
@@ -319,7 +319,7 @@ class TestTheTokenAtRest:
 
     def test_one_key_covers_both_providers(self, configured: None) -> None:
         """`TOKEN_ENCRYPTION_KEY`, not `GOOGLE_TOKEN_KEY`."""
-        from mycel.services import google_oauth
+        from mycel.plugins.google import oauth as google_oauth
 
         assert google_oauth.unseal(seal("rt-1")) == "rt-1"
 

@@ -6,7 +6,7 @@ from typing import Any
 from pydantic_ai import ModelRetry
 
 from mycel.infra.redis import drafts
-from mycel.services.jira_oauth import connected
+from mycel.plugins.jira.oauth import connected
 from mycel.sources import jira
 
 

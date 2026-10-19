@@ -3,7 +3,8 @@
 from mycel.core.config import Settings
 from mycel.doctor.report import Check, State
 from mycel.infra import smtp
-from mycel.services import google_oauth, jira_oauth
+from mycel.plugins.google import oauth as google_oauth
+from mycel.plugins.jira import oauth as jira_oauth
 
 #: Values shipped in .env.example; a prod deployment still holding one is open to anyone.
 DEV_VALUES = {

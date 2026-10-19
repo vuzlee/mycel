@@ -16,7 +16,7 @@ from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
-from mycel.services.google_oauth import GoogleError, NotConnected, token_for
+from mycel.plugins.google.oauth import GoogleError, NotConnected, token_for
 from mycel.sources import SourceError, google_calendar
 
 #: How far behind the clock a start may be: a draft for now, agreed to a moment later.

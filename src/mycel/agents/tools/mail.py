@@ -9,7 +9,7 @@ from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
-from mycel.services.google_oauth import NotConnected, token_for
+from mycel.plugins.google.oauth import NotConnected, token_for
 from mycel.sources import SourceError, gmail
 
 log = get_logger(__name__)

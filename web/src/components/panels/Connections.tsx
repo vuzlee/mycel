@@ -1,87 +1,42 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import {
-  connectGoogle,
-  connectJira,
-  disconnectGoogle,
-  disconnectJira,
-  fetchGoogle,
-  fetchJira,
-} from "../../api";
-import { Board, Calendar, Spinner } from "../icons";
+import { connectPlugin, disconnectPlugin, fetchPlugins, type PluginStatus } from "../../api";
+import { Board, Calendar, Chip, Spinner } from "../icons";
 
-function outcome(provider: "google" | "jira"): "connected" | "failed" | null {
+const KEY = ["plugins"];
+
+/** Icons by plugin key; an unknown plugin gets the generic one. */
+const ICONS: Record<string, React.ReactNode> = {
+  google: <Calendar size={16} />,
+  jira: <Board size={16} />,
+};
+
+function outcome(key: string): "connected" | "failed" | null {
   const query = new URLSearchParams(window.location.search);
-  if (query.has(provider)) return "connected";
-  if (query.has(`${provider}_error`)) return "failed";
+  if (query.has(key)) return "connected";
+  if (query.has(`${key}_error`)) return "failed";
   return null;
 }
 
-/** One account a person connects. Adding a provider is one entry in `CONNECTIONS` — the
- *  status call, the consent redirect and the disconnect are all it needs from `api.ts`. */
-interface Provider {
-  id: "google" | "jira";
-  title: string;
-  icon: React.ReactNode;
-  /** One line, shown before connecting: what connecting opens. */
-  offers: string;
-  status: () => Promise<{
-    configured: boolean;
-    who: string | null;
-    since: string | null;
-    note?: string;
-  }>;
-  connect: () => void;
-  disconnect: () => Promise<void>;
+/** Every plugin the server ships, one card each. */
+export function Connections() {
+  const { data: plugins = null } = useQuery({ queryKey: KEY, queryFn: fetchPlugins });
+  if (plugins === null) return <p className="muted">Checking…</p>;
+  return (
+    <>
+      {plugins.map((p) => (
+        <Connection key={p.key} plugin={p} />
+      ))}
+    </>
+  );
 }
 
-export const CONNECTIONS: Provider[] = [
-  {
-    id: "google",
-    title: "Google",
-    icon: <Calendar size={16} />,
-    offers: "Your own calendar and mail. Mail is read-only; nothing is deleted.",
-    status: async () => {
-      const s = await fetchGoogle();
-      return { configured: s.configured, who: s.email, since: s.connected_at };
-    },
-    connect: connectGoogle,
-    disconnect: disconnectGoogle,
-  },
-  {
-    id: "jira",
-    title: "Jira",
-    icon: <Board size={16} />,
-    offers: "The projects Jira lets you browse. Writes only after you agree.",
-    status: async () => {
-      const s = await fetchJira();
-      const note = s.display_name
-        ? s.projects.length
-          ? `Reads ${s.projects.join(", ")}`
-          : "Jira lets this account browse no project"
-        : undefined;
-      return {
-        configured: s.configured,
-        who: s.display_name,
-        since: s.connected_at,
-        note,
-      };
-    },
-    connect: connectJira,
-    disconnect: disconnectJira,
-  },
-];
-
-type Status = Awaited<ReturnType<Provider["status"]>>;
-
-/** One provider's card: not set up here, connected, or not yet. */
-export function Connection({ provider }: { provider: Provider }) {
+/** One plugin's card: not set up here, connected, or not yet. */
+function Connection({ plugin }: { plugin: PluginStatus }) {
   const client = useQueryClient();
-  const key = ["connection", provider.id];
-  const { data: status = null } = useQuery<Status>({ queryKey: key, queryFn: provider.status });
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [came] = useState(() => outcome(provider.id));
+  const [came] = useState(() => outcome(plugin.key));
 
   useEffect(() => {
     if (came) window.history.replaceState({}, "", window.location.pathname);
@@ -91,8 +46,8 @@ export function Connection({ provider }: { provider: Provider }) {
     setBusy(true);
     setFailure(null);
     try {
-      await provider.disconnect();
-      await client.invalidateQueries({ queryKey: key });
+      await disconnectPlugin(plugin.key);
+      await client.invalidateQueries({ queryKey: KEY });
     } catch (error) {
       setFailure(error instanceof Error ? error.message : String(error));
     } finally {
@@ -104,24 +59,23 @@ export function Connection({ provider }: { provider: Provider }) {
     <section className="connection">
       <header className="connection-head">
         <span className="connection-icon" aria-hidden>
-          {provider.icon}
+          {ICONS[plugin.key] ?? <Chip size={16} />}
         </span>
-        <h4>{provider.title}</h4>
-        {status?.who && <span className="pill on">Connected</span>}
+        <h4>{plugin.name}</h4>
+        {plugin.who && <span className="pill on">Connected</span>}
       </header>
-      {status === null && <p className="muted">Checking…</p>}
-      {status && !status.configured && (
+      {!plugin.configured && (
         <p className="muted">Not set up on this deployment — see docs/operate/setup.md.</p>
       )}
-      {status?.configured && status.who && (
+      {plugin.configured && plugin.who && (
         <>
           <div className="connection-who">
-            <b>{status.who}</b>
+            <b>{plugin.who}</b>
             <span className="muted">
-              since {status.since ? new Date(status.since).toLocaleDateString() : "—"}
+              since {plugin.since ? new Date(plugin.since).toLocaleDateString() : "—"}
             </span>
           </div>
-          {status.note && <p className="muted">{status.note}</p>}
+          {plugin.note && <p className="muted">{plugin.note}</p>}
           {failure && <p className="failure">{failure}</p>}
           <button className="outline" onClick={() => void drop()} disabled={busy}>
             {busy && <Spinner className="spin" size={14} />}
@@ -129,14 +83,14 @@ export function Connection({ provider }: { provider: Provider }) {
           </button>
         </>
       )}
-      {status?.configured && !status.who && (
+      {plugin.configured && !plugin.who && (
         <>
-          <p className="muted">{provider.offers}</p>
+          <p className="muted">{plugin.offers}</p>
           {came === "failed" && (
             <p className="failure">That did not finish. Nothing was connected.</p>
           )}
-          <button className="primary" onClick={provider.connect}>
-            Connect {provider.title}
+          <button className="primary" onClick={() => connectPlugin(plugin.key)}>
+            Connect {plugin.name}
           </button>
         </>
       )}

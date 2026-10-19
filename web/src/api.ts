@@ -316,51 +316,29 @@ export async function me(): Promise<User | null> {
   return shaped<User>(await json<unknown>(res), USER, "user");
 }
 
-// -- google -----------------------------------------------------------------
+// -- plugins ----------------------------------------------------------------
 
-/** Whether a Google account is attached, and which one.
- *
- *  `configured` is about the deployment, not the person: a machine with no OAuth client
- *  cannot connect anything, and the panel says so rather than offering a button that
- *  leads to an error. */
-export interface GoogleStatus {
+/** One plugin as this person sees it. `configured` is about the deployment, not the person:
+ *  with no OAuth client the panel says so rather than offering a button that errors. */
+export interface PluginStatus {
+  key: string;
+  name: string;
+  offers: string;
   configured: boolean;
-  email: string | null;
-  connected_at: string | null;
+  who: string | null;
+  since: string | null;
+  note: string | null;
 }
 
-export const fetchGoogle = (): Promise<GoogleStatus> => get<GoogleStatus>("/auth/google");
+export const fetchPlugins = (): Promise<PluginStatus[]> => get<PluginStatus[]>("/auth/plugins");
 
-/** Connecting is a navigation, not a call: consent happens on Google's own screen, so the
- *  browser has to actually go there. The server answers `/auth/google/start` with a
- *  redirect, and comes back to `/app/home` with the outcome in the query string. */
-export function connectGoogle(): void {
-  window.location.href = "/auth/google/start";
+/** A navigation, not a call: consent happens on the provider's own screen, and the server
+ *  comes back to `/app/home` with the outcome in the query string. */
+export function connectPlugin(key: string): void {
+  window.location.href = `/auth/${key}/start`;
 }
 
-export const disconnectGoogle = (): Promise<void> => del("/auth/google");
-
-// -- jira -------------------------------------------------------------------
-
-/** Whether a Jira account is attached, and whether it is the one the sync runs on.
- *
- *  `configured` is about the deployment, as the Google one is. `projects` is what Jira
- *  said this person may browse, which is exactly what Mycel shows them. */
-export interface JiraStatus {
-  configured: boolean;
-  display_name: string | null;
-  connected_at: string | null;
-  projects: string[];
-}
-
-export const fetchJira = (): Promise<JiraStatus> => get<JiraStatus>("/auth/jira");
-
-/** A navigation, not a call: consent happens on Atlassian's own screen. */
-export function connectJira(): void {
-  window.location.href = "/auth/jira/start";
-}
-
-export const disconnectJira = (): Promise<void> => del("/auth/jira");
+export const disconnectPlugin = (key: string): Promise<void> => del(`/auth/${key}`);
 
 // -- work -------------------------------------------------------------------
 

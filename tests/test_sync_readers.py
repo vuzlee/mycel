@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import mycel.domains.sync as sync
-from mycel.services import jira_oauth
+from mycel.plugins.jira import oauth as jira_oauth
 from mycel.services.fetch import FetchResult
 
 pytestmark = pytest.mark.anyio

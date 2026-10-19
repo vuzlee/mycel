@@ -611,7 +611,17 @@ class TestTheGoogleRoutesOverHttp:
 
         body = client.get("/auth/google").json()
 
-        assert body == {"configured": False, "email": None, "connected_at": None}
+        assert body["configured"] is False
+        assert body["who"] is None
+
+    def test_every_plugin_is_listed_and_an_unknown_one_is_404(self, client: TestClient) -> None:
+        self._sign_in(client)
+
+        keys = [p["key"] for p in client.get("/auth/plugins").json()]
+
+        assert keys == ["google", "jira"]
+        assert client.get("/auth/nope").status_code == 404
+        assert client.get("/auth/methods").status_code == 200
 
     def test_starting_a_round_it_cannot_finish_is_refused(self, client: TestClient) -> None:
         self._sign_in(client)

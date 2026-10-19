@@ -1,6 +1,6 @@
 """Sign in with Google (OpenID Connect): only `openid email`, nothing kept from Google.
 
-Separate from `google_oauth`, which connects Gmail and Calendar for someone already in.
+Separate from `plugins.google.oauth`, which connects Gmail and Calendar for someone already in.
 Same client and one callback: a sign-in's state starts with `STATE_PREFIX`, which is how the
 callback tells the two rounds apart, so the console holds one redirect uri, not two.
 """
@@ -17,8 +17,8 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.redis._kv import key, put, take
 from mycel.infra.redis.client import get_client
+from mycel.plugins.google.oauth import AUTH_URL, CALLBACK_PATH, TOKEN_URL
 from mycel.services import oauth
-from mycel.services.google_oauth import AUTH_URL, CALLBACK_PATH, TOKEN_URL
 
 log = get_logger(__name__)
 

@@ -353,7 +353,7 @@ class TestWhenNobodyIsConnected:
         self, tools: dict[str, Any], ctx: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from mycel.agents.tools import jira as tool
-        from mycel.services.jira_oauth import NotConnected
+        from mycel.plugins.jira.oauth import NotConnected
 
         async def _refuse(user_id: int) -> tuple[str, str]:
             raise NotConnected("nope")
@@ -399,7 +399,7 @@ class TestTheTwoSwitches:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Asking for everything up front."""
-        from mycel.services.jira_oauth import PROJECT_SCOPE, scopes
+        from mycel.plugins.jira.oauth import PROJECT_SCOPE, scopes
 
         assert PROJECT_SCOPE not in scopes()
 
@@ -411,7 +411,7 @@ class TestTheTwoSwitches:
     def test_the_sprint_scopes_follow_their_own_switch(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from mycel.services.jira_oauth import SPRINT_SCOPES, scopes
+        from mycel.plugins.jira.oauth import SPRINT_SCOPES, scopes
 
         monkeypatch.setenv("JIRA_MANAGE_SPRINTS", "false")
         get_settings.cache_clear()

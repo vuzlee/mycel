@@ -53,7 +53,7 @@ def bangkok(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def google_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The grant is `services/google_oauth.py`'s; here it is a string in a header."""
+    """The grant is `plugins/google/oauth.py`'s; here it is a string in a header."""
 
     async def _token(user_id: int) -> str:
         return "access-token"

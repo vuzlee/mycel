@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Chip, Moon, Person, Screen, Sun } from "../icons";
 import type { Theme } from "../../lib/theme";
 import { useTheme } from "../../lib/theme";
-import { CONNECTIONS, Connection } from "./Connections";
+import { Connections } from "./Connections";
 import { ModelsPage } from "./ModelsPage";
 
 const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
@@ -82,9 +82,7 @@ export function SettingsPanel({ start }: { start?: string }) {
 function AccountsPage() {
   return (
     <div className="settings-grid">
-      {CONNECTIONS.map((p) => (
-        <Connection key={p.id} provider={p} />
-      ))}
+      <Connections />
     </div>
   );
 }

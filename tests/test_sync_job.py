@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-import mycel.api.routes.connections as connections
 import mycel.domains.sync as sync
 import mycel.services.access as access
 import mycel.services.enqueue as enqueue
 import mycel.worker as worker
+from mycel.plugins.jira import oauth as jira_oauth
+from mycel.plugins.jira.plugin import PLUGIN as JIRA
 from mycel.queue.job import Job, JobKind
 
 pytestmark = pytest.mark.anyio
@@ -56,7 +57,11 @@ async def test_connecting_jira_refreshes_access_and_queues_a_sync(
     async def queue(job: Job) -> None:
         seen.append(job.kind)
 
+    async def connect(*_: object) -> None:
+        seen.append("connect")
+
+    monkeypatch.setattr(jira_oauth, "connect", connect)
     monkeypatch.setattr(access, "refresh", refresh)
     monkeypatch.setattr(enqueue, "queue", queue)
-    await connections._first_look(7)
-    assert seen == [("refresh", 7), JobKind.SYNC_JIRA]
+    await JIRA.connect("state", "code", 7)
+    assert seen == ["connect", ("refresh", 7), JobKind.SYNC_JIRA]

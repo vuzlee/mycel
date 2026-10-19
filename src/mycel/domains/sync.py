@@ -11,8 +11,9 @@ from mycel.infra.postgres.locks import try_lock
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.observability.metrics import records_written, sync_duration_seconds
+from mycel.plugins.jira import oauth as jira_oauth
 from mycel.queue.job import Job, JobKind
-from mycel.services import access, enqueue, jira_oauth
+from mycel.services import access, enqueue
 from mycel.services.fetch import UNSET, FetchResult, fetch_jira
 from mycel.services.transform import transform
 from mycel.sources.jira import Auth

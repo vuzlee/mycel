@@ -1,7 +1,7 @@
-"""Connected accounts: Google and Jira, each on the person's own consent."""
+"""Connected accounts: one set of routes for every plugin, each on the person's own consent."""
 
-from collections.abc import Awaitable, Callable
-from typing import Annotated, Protocol
+from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
@@ -12,52 +12,31 @@ from mycel.api.routes.auth import OIDC_COOKIE, finish_google_signin
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
-from mycel.services import access, enqueue, google_oauth, google_signin, jira_oauth
-from mycel.services.permission import readable_projects
+from mycel.plugins import registry
+from mycel.plugins.base import Plugin
+from mycel.services import google_signin
 
 router = APIRouter(prefix="/auth", tags=["connections"])
 
 log = get_logger(__name__)
 
 
-class _Connected(Protocol):
-    """Any connected-account row: what `_finish_connect` reads off it."""
+class PluginResponse(BaseModel):
+    """One plugin as one person sees it."""
 
-    @property
-    def user_id(self) -> int: ...
-
-
-class GoogleConnectionResponse(BaseModel):
-    """Whether a Google account is attached, and which one."""
-
+    key: str
+    name: str
+    offers: str
     configured: bool
-    email: str | None = None
-    connected_at: str | None = None
+    who: str | None = None
+    since: datetime | None = None
+    note: str | None = None
 
 
-@router.get("/google", response_model=GoogleConnectionResponse)
-async def get_google_connection(user: CurrentUser) -> GoogleConnectionResponse:
-    """Which Google account this person has connected, if any."""
-    if not google_oauth.configured():
-        return GoogleConnectionResponse(configured=False)
-    row = await google_oauth.connected(user.id)
-    if row is None:
-        return GoogleConnectionResponse(configured=True)
-    return GoogleConnectionResponse(
-        configured=True, email=row.email, connected_at=row.connected_at.isoformat()
-    )
-
-
-@router.get("/google/start")
-async def start_google_connection(
-    user: CurrentUser,
-) -> RedirectResponse:
-    """Send the browser to Google's consent screen."""
-    if not google_oauth.configured():
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment has no Google client"
-        )
-    return RedirectResponse(await google_oauth.consent_url(user.id))
+@router.get("/plugins", response_model=list[PluginResponse])
+async def list_plugins(user: CurrentUser) -> list[PluginResponse]:
+    """Every plugin, and what this person has attached to each."""
+    return [await _describe(p, user) for p in registry.PLUGINS]
 
 
 @router.get("/google/callback")
@@ -72,104 +51,89 @@ async def finish_google(
     """The one Google redirect uri: a sign-in or a connection, told apart by the state."""
     if google_signin.is_signin(state):
         return await finish_google_signin(session, code, state, error, mycel_oidc)
-    return await _finish_connect("google", google_oauth.connect, user, code, state, error)
+    return await _finish(_plugin("google"), user, code, state, error)
 
 
-@router.delete("/google", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_google_connection(user: CurrentUser) -> None:
-    """Disconnect. Google is asked to forget the grant, and the row goes either way."""
-    removed = await google_oauth.disconnect(user.id)
-    log.info("google account disconnected", extra={"user_id": user.id, "removed": removed})
+@router.get("/{key}", response_model=PluginResponse)
+async def get_connection(key: str, user: CurrentUser) -> PluginResponse:
+    """What this person has attached to one plugin."""
+    return await _describe(_plugin(key), user)
 
 
-class JiraConnectionResponse(BaseModel):
-    """Whether a Jira account is attached, which one, and the projects it opens here."""
-
-    configured: bool
-    display_name: str | None = None
-    connected_at: str | None = None
-    projects: list[str] = []
-
-
-@router.get("/jira", response_model=JiraConnectionResponse)
-async def get_jira_connection(user: CurrentUser) -> JiraConnectionResponse:
-    """Which Jira account this person has connected, if any, and what it lets them read."""
-    if not jira_oauth.configured():
-        return JiraConnectionResponse(configured=False)
-    row = await jira_oauth.connected(user.id)
-    if row is None:
-        return JiraConnectionResponse(configured=True)
-    return JiraConnectionResponse(
-        configured=True,
-        display_name=row.display_name,
-        connected_at=row.connected_at.isoformat(),
-        projects=sorted(await readable_projects(user)),
-    )
-
-
-@router.get("/jira/start")
-async def start_jira_connection(user: CurrentUser) -> RedirectResponse:
-    """Send the browser to Atlassian's consent screen."""
-    if not jira_oauth.configured():
+@router.get("/{key}/start")
+async def start_connection(key: str, user: CurrentUser) -> RedirectResponse:
+    """Send the browser to the provider's consent screen."""
+    plugin = _plugin(key)
+    if not plugin.configured():
         raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE, "this deployment has no Jira OAuth client"
+            status.HTTP_503_SERVICE_UNAVAILABLE, f"this deployment has no {plugin.name} client"
         )
-    return RedirectResponse(await jira_oauth.consent_url(user.id))
+    return RedirectResponse(await plugin.consent_url(user.id))
 
 
-@router.get("/jira/callback")
-async def finish_jira_connection(
+@router.get("/{key}/callback")
+async def finish_connection(
+    key: str,
     user: MaybeUser,
     code: Annotated[str | None, Query()] = None,
     state: Annotated[str | None, Query()] = None,
     error: Annotated[str | None, Query()] = None,
 ) -> RedirectResponse:
-    """Where Atlassian sends the browser back. Connects the account, then returns to the app."""
-    return await _finish_connect(
-        "jira", jira_oauth.connect, user, code, state, error, then=_first_look
+    """Where the provider sends the browser back."""
+    return await _finish(_plugin(key), user, code, state, error)
+
+
+@router.delete("/{key}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_connection(key: str, user: CurrentUser) -> None:
+    """Disconnect."""
+    removed = await _plugin(key).disconnect(user.id)
+    log.info(f"{key} account disconnected", extra={"user_id": user.id, "removed": removed})
+
+
+def _plugin(key: str) -> Plugin:
+    plugin = registry.get(key)
+    if plugin is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"no plugin named {key}")
+    return plugin
+
+
+async def _describe(plugin: Plugin, user: Principal) -> PluginResponse:
+    s = await plugin.status(user)
+    return PluginResponse(
+        key=plugin.key,
+        name=plugin.name,
+        offers=plugin.offers,
+        configured=s.configured,
+        who=s.who,
+        since=s.since,
+        note=s.note,
     )
 
 
-async def _first_look(user_id: int) -> None:
-    """Access now, and a sync queued, so the board fills without waiting for the timer."""
-    await access.refresh(user_id)
-    await enqueue.queue(enqueue.sync_job())
-
-
-@router.delete("/jira", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_jira_connection(user: CurrentUser) -> None:
-    """Disconnect."""
-    removed = await jira_oauth.disconnect(user.id)
-    log.info("jira account disconnected", extra={"user_id": user.id, "removed": removed})
-
-
-async def _finish_connect(
-    provider: str,
-    connect: Callable[[str, str, int], Awaitable[_Connected]],
+async def _finish(
+    plugin: Plugin,
     user: Principal | None,
     code: str | None,
     state: str | None,
     error: str | None,
-    then: Callable[[int], Awaitable[object]] | None = None,
 ) -> RedirectResponse:
-    """The end of a consent round, the same for every provider: always a redirect.
+    """The end of a consent round, the same for every plugin: always a redirect.
 
     Only the account that started the round may finish it, or a link sent to someone else
     would attach their account to the sender's.
     """
+    key = plugin.key
     if error or not code or not state:
-        return _back(f"{provider}_error={error or 'cancelled'}")
+        return _back(f"{key}_error={error or 'cancelled'}")
     if user is None:
-        return _back(f"{provider}_error=signed_out")
+        return _back(f"{key}_error=signed_out")
     try:
-        row = await connect(state, code, user.id)
+        await plugin.connect(state, code, user.id)
     except Exception:  # any failure must still redirect to a readable page
-        log.warning(f"{provider} connect failed", exc_info=True)
-        return _back(f"{provider}_error=failed")
-    if then is not None:
-        await then(row.user_id)
-    log.info(f"{provider} account connected", extra={"user_id": row.user_id})
-    return _back(f"{provider}=connected")
+        log.warning(f"{key} connect failed", exc_info=True)
+        return _back(f"{key}_error=failed")
+    log.info(f"{key} account connected", extra={"user_id": user.id})
+    return _back(f"{key}=connected")
 
 
 def _back(outcome: str) -> RedirectResponse:

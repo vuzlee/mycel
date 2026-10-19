@@ -15,7 +15,7 @@ from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
-from mycel.services.jira_oauth import JiraAuthError, NotConnected, token_for
+from mycel.plugins.jira.oauth import JiraAuthError, NotConnected, token_for
 from mycel.sources import NotWritten, SourceError, jira
 
 log = get_logger(__name__)
@@ -187,7 +187,7 @@ async def _confirm_jira_write(ctx: RunContext[MycelDeps], draft_id: str) -> str:
 
 def offered() -> bool:
     """Whether this deployment writes to Jira; when false the toolset is not offered."""
-    from mycel.services.jira_oauth import configured
+    from mycel.plugins.jira.oauth import configured
 
     return configured() and get_settings().jira_write_enabled
 

@@ -8,7 +8,7 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
-from mycel.services import jira_oauth
+from mycel.plugins.jira import oauth as jira_oauth
 from mycel.sources import jira
 from mycel.sources.jira_http import session as jira_session
 

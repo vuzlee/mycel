@@ -10,9 +10,9 @@ from cryptography.fernet import Fernet
 from mycel.core.config import get_settings
 from mycel.core.exceptions import ConfigError
 from mycel.infra.redis import access_tokens as access_store
-from mycel.services import google_oauth as oauth
+from mycel.plugins.google import oauth
+from mycel.plugins.google.oauth import GoogleError, NotConnected
 from mycel.services import oauth as shared_oauth
-from mycel.services.google_oauth import GoogleError, NotConnected
 from mycel.services.tokens import seal
 from tests.fakes import FakeRedis
 
