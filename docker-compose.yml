@@ -2,8 +2,9 @@
 
 # Store addresses inside the compose network; `environment:` outranks the .env localhost ones.
 x-stores: &stores
-  DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mycel}
-  RABBITMQ_URL: amqp://${RABBITMQ_USER:-mycel}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  RABBITMQ_HOST: rabbitmq
   REDIS_URL: redis://redis:6379/0
   REDIS_CACHE_URL: redis://redis-cache:6379/0
   QDRANT_URL: http://qdrant:6333
@@ -17,7 +18,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-mycel}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set it in .env}
       POSTGRES_DB: ${POSTGRES_DB:-mycel}
-    # 5433 on the host so a local Postgres keeps 5432; DATABASE_URL must agree.
+    # 5433 on the host so a local Postgres keeps 5432; POSTGRES_PORT defaults to it.
     ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -149,11 +150,14 @@ services:
   litellm:
     image: ghcr.io/berriai/litellm@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
     entrypoint: ["/app/entrypoint.sh"]
-    # Provider keys only: DATABASE_URL would make LiteLLM use the app's Postgres.
+    # Its own database on the same Postgres: it holds the app's scoped key, not app data.
     environment:
       DEFAULT_MODEL_API_KEY: ${DEFAULT_MODEL_API_KEY:-}
       DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
-      LITELLM_MASTER_KEY: ${LITELLM_API_KEY:?set it in .env}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set it in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/litellm
+    depends_on:
+      postgres: {condition: service_healthy}
     volumes:
       - ./config/litellm/config.yaml:/app/config.yaml:ro
       - ./config/litellm/models.yaml:/app/models.yaml:ro

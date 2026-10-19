@@ -7,10 +7,10 @@ from mycel.plugins.google import oauth as google_oauth
 
 #: Values shipped in .env.example; a prod deployment still holding one is open to anyone.
 DEV_VALUES = {
-    "litellm_api_key": "sk-mycel-dev",
+    "litellm_master_key": "sk-mycel-dev",
     "s3_secret_key": "mycel-dev-secret",
-    "database_url": "postgresql://mycel:mycel@",
-    "rabbitmq_url": "amqp://mycel:mycel@",
+    "postgres_password": "mycel",
+    "rabbitmq_password": "mycel",
 }
 
 
@@ -21,7 +21,7 @@ def dev_values(env: Settings) -> list[str]:
         value = getattr(env, name)
         return value.get_secret_value() if hasattr(value, "get_secret_value") else str(value or "")
 
-    return [n.upper() for n, dev in DEV_VALUES.items() if raw(n).startswith(dev)]
+    return [n.upper() for n, dev in DEV_VALUES.items() if raw(n) == dev]
 
 
 def declared(env: Settings) -> list[Check]:
@@ -47,6 +47,16 @@ def declared(env: Settings) -> list[Check]:
             else "off — no SMTP, so only Google sign-in works",
         )
     )
+    master, app = env.litellm_master_key, env.litellm_api_key
+    if master and app and master.get_secret_value() == app.get_secret_value():
+        out.append(
+            Check(
+                "SECRETS",
+                "gateway key",
+                State.BROKEN,
+                "the app holds the master key — run gateway-key",
+            )
+        )
     if not mail_out and not google_oauth.configured(env):
         out.append(
             Check(

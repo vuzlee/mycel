@@ -10,6 +10,7 @@
 #   scripts/stack.sh sync [--refetch]   one Jira sync now
 #   scripts/stack.sh replay [dlq [N]]   count parked jobs, or send them back
 #   scripts/stack.sh broker-rebuild     fresh broker data dir, users kept (queues must be empty)
+#   scripts/stack.sh gateway-key [usd]  the app's scoped gateway key, from the master key
 #   scripts/stack.sh web-smoke [base]   the batch A web fixes in headless Chrome
 
 set -euo pipefail
@@ -41,6 +42,7 @@ case "$mode" in
   sync)         run "$HERE/ops/sync.sh" "$@" ;;
   replay)       run "$HERE/ops/replay.sh" "$@" ;;
   broker-rebuild) run "$HERE/ops/broker-rebuild.sh" "$@" ;;
+  gateway-key)  run "$HERE/ops/gateway-key.sh" "$@" ;;
   web-smoke)    run "$HERE/ops/web-smoke.sh" "$@" ;;
 
   -h|--help|help) usage 0 ;;

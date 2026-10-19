@@ -14,11 +14,12 @@ tmp=$(mktemp)
 chmod 600 "$tmp"
 trap 'rm -f "$tmp"' EXIT
 
-sed -E "s#(MIGRATION_DATABASE_URL|DATABASE_URL|RABBITMQ_URL|REDIS_URL|REDIS_CACHE_URL)=(.*)localhost#\1=\2$HOST#" \
-  "$ROOT/.env" > "$tmp"
+# Postgres and RabbitMQ hosts come from the chart; only the Redis URLs carry one.
+sed -E "s#(REDIS_URL|REDIS_CACHE_URL)=(.*)localhost#\1=\2$HOST#" \
+  "$ROOT/.env" | grep -v '^LITELLM_MASTER_KEY=' > "$tmp"
 
-rewritten=$(grep -cE "^(DATABASE_URL|RABBITMQ_URL|REDIS_URL|REDIS_CACHE_URL)=.*$HOST" "$tmp" || true)
-[[ $rewritten -eq 4 ]] || warn "only $rewritten of 4 store URLs name $HOST — check .env"
+rewritten=$(grep -cE "^(REDIS_URL|REDIS_CACHE_URL)=.*$HOST" "$tmp" || true)
+[[ $rewritten -eq 2 ]] || warn "only $rewritten of 2 Redis URLs name $HOST — check .env"
 
 kubectl delete secret mycel-secrets --ignore-not-found >/dev/null
 kubectl create secret generic mycel-secrets --from-env-file="$tmp" >/dev/null

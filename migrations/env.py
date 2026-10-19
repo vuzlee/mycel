@@ -1,6 +1,7 @@
 """Alembic entry point; the DSN comes from Settings, and alembic_version stays in public."""
 
 import asyncio
+import os
 
 from alembic import context
 from sqlalchemy import Connection, pool
@@ -25,7 +26,7 @@ def _configure(connection: Connection) -> None:
 def _url() -> str:
     """The owner's URL, since only the owner may change the schema; falls back to the app's."""
     settings = get_settings()
-    return settings.migration_database_url or settings.database_url
+    return settings.migration_database_url
 
 
 def run_offline() -> None:
@@ -43,7 +44,18 @@ def run_offline() -> None:
 def _migrate(connection: Connection) -> None:
     _configure(connection)
     with context.begin_transaction():
+        if context.get_context()._migrations_fn.__name__ == "downgrade":
+            _refuse_unless_test(connection)
         context.run_migrations()
+
+
+def _refuse_unless_test(connection: Connection) -> None:
+    """A downgrade drops tables: only a `_test` database, or MYCEL_ALLOW_DOWNGRADE=1."""
+    database = connection.engine.url.database or ""
+    if not database.endswith("_test") and os.environ.get("MYCEL_ALLOW_DOWNGRADE") != "1":
+        raise SystemExit(
+            f"refusing to downgrade {database!r}; set MYCEL_ALLOW_DOWNGRADE=1 if meant"
+        )
 
 
 async def run_online() -> None:

@@ -6,9 +6,10 @@
 from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from mycel.core.settings_source import EnvironmentFileSource
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         frozen=True,
+        populate_by_name=True,
     )
 
     @classmethod
@@ -55,6 +57,8 @@ class Settings(BaseSettings):
     # Every model goes through the LiteLLM gateway; provider keys are read by it, not the app.
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: SecretStr | None = None
+    #: The gateway's admin key; `doctor` only checks the app does not hold it.
+    litellm_master_key: SecretStr | None = None
     #: USD per million tokens, (input, output), by gateway model name.
     model_prices_usd: dict[str, tuple[Decimal, Decimal]] = {}
     #: The models everyone may pick, each a gateway `model_name`; exactly one is the default.
@@ -130,17 +134,59 @@ class Settings(BaseSettings):
     metrics_host: str = "127.0.0.1"
     metrics_port: int = 9100
 
-    #: The app's connection (`mycel_app` in deployments: no DDL rights).
-    database_url: str = "postgresql://mycel:mycel@localhost:5433/mycel"
-    #: The schema owner for migrations; unset falls back to `database_url`.
-    migration_database_url: str | None = None
-    #: `mycel_app`'s password; unset, the role is not created.
+    #: Each store from parts: the password is written once, the URL is built from it.
+    postgres_host: str = "localhost"
+    postgres_port: int = 5433
+    postgres_user: str = "mycel"
+    postgres_password: SecretStr = SecretStr("mycel")
+    postgres_db: str = "mycel"
+    #: `mycel_app`'s password; set, the app connects as that role (rows only, no DDL).
     mycel_app_password: SecretStr | None = None
+    #: Overrides for a store reached some other way; empty builds them from the parts.
+    database_url_override: str = Field("", alias="DATABASE_URL")
+    migration_database_url_override: str = Field("", alias="MIGRATION_DATABASE_URL")
     #: Per process, so the real ceiling is this times the process count.
     db_pool_size: int = 5
     #: Extra connections opened under a burst, closed when idle.
     db_max_overflow: int = 5
-    rabbitmq_url: str = "amqp://mycel:mycel@localhost:5672/"
+    rabbitmq_host: str = "localhost"
+    rabbitmq_port: int = 5672
+    rabbitmq_user: str = "mycel"
+    rabbitmq_password: SecretStr = SecretStr("mycel")
+    rabbitmq_url_override: str = Field("", alias="RABBITMQ_URL")
+
+    @property
+    def migration_database_url(self) -> str:
+        """The schema owner: migrations create and alter tables."""
+        return (
+            self.migration_database_url_override
+            or self.database_url_override
+            or self._postgres(self.postgres_user, self.postgres_password)
+        )
+
+    @property
+    def database_url(self) -> str:
+        """The app's connection: `mycel_app` when its password is set, else the owner."""
+        if self.database_url_override:
+            return self.database_url_override
+        if self.mycel_app_password is not None:
+            return self._postgres("mycel_app", self.mycel_app_password)
+        return self._postgres(self.postgres_user, self.postgres_password)
+
+    @property
+    def rabbitmq_url(self) -> str:
+        if self.rabbitmq_url_override:
+            return self.rabbitmq_url_override
+        password = quote(self.rabbitmq_password.get_secret_value(), safe="")
+        return f"amqp://{self.rabbitmq_user}:{password}@{self.rabbitmq_host}:{self.rabbitmq_port}/"
+
+    def _postgres(self, user: str, password: SecretStr) -> str:
+        secret = quote(password.get_secret_value(), safe="")
+        return (
+            f"postgresql://{user}:{secret}@{self.postgres_host}:{self.postgres_port}"
+            f"/{self.postgres_db}"
+        )
+
     #: In-flight state (results, budgets, event streams), on a `noeviction` server.
     redis_url: str = "redis://localhost:6379/0"
     #: Evictable cache (answers, access tokens), on its own `allkeys-lru` server.

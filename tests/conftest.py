@@ -9,7 +9,6 @@ from urllib.parse import urlsplit, urlunsplit
 
 import asyncpg
 import pytest
-from dotenv import dotenv_values
 from pydantic_ai import models
 
 from mycel.core.config import Settings, get_settings
@@ -45,16 +44,8 @@ async def _create_if_missing(dsn: str) -> None:
 
 def _resolve_test_dsn() -> str | None:
     """The suite's own database, beside the developer's — never the developer's."""
-    # The owner, not the app role: the suite runs DDL.
-    env = dotenv_values(".env")
-    dsn = (
-        os.environ.get("MIGRATION_DATABASE_URL")
-        or env.get("MIGRATION_DATABASE_URL")
-        or os.environ.get("DATABASE_URL")
-        or env.get("DATABASE_URL")
-    )
-    if not dsn:
-        return None
+    # The owner, not the app role: the suite runs DDL. Built the same way the app builds it.
+    dsn = Settings().migration_database_url
 
     name = _database_of(dsn)
     test_dsn = dsn if name.endswith(TEST_DB_SUFFIX) else _with_database(dsn, name + TEST_DB_SUFFIX)
@@ -66,12 +57,18 @@ def _resolve_test_dsn() -> str | None:
 
 
 _TEST_DSN = _resolve_test_dsn()
-os.environ.pop("MIGRATION_DATABASE_URL", None)
 os.environ.pop("MYCEL_APP_PASSWORD", None)
 if _TEST_DSN:
+    assert _database_of(_TEST_DSN).endswith(TEST_DB_SUFFIX), (
+        "tests must never reach a real database"
+    )
+    # Both: the app and alembic each read one, and neither may fall back to the real one.
     os.environ["DATABASE_URL"] = _TEST_DSN
+    os.environ["MIGRATION_DATABASE_URL"] = _TEST_DSN
 else:
-    os.environ.pop("DATABASE_URL", None)
+    os.environ["DATABASE_URL"] = os.environ["MIGRATION_DATABASE_URL"] = (
+        "postgresql://unset/none_test"
+    )
 
 # Variables that would otherwise leak a developer's real environment into the tests. A
 _LEAKY_PREFIXES = ("MYCEL_", "GEMINI_", "OTEL_", "LOG_")

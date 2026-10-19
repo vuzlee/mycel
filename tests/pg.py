@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from mycel.core.config import get_settings
 from mycel.etl.normalize import JIRA
 from mycel.infra.postgres.engine import async_dsn
 from mycel.infra.postgres.repositories.accounts import AccountRepository
@@ -43,6 +44,8 @@ async def _drop(conn: Any) -> None:
 @pytest.fixture
 async def alembic() -> AsyncIterator[Config]:
     """Alembic against an empty database, whatever the last run left behind."""
+    assert DSN.rsplit("/", 1)[-1].endswith("_test"), f"refusing to drop schemas in {DSN!r}"
+    assert get_settings().migration_database_url == DSN, "alembic would migrate another database"
     engine = create_async_engine(async_dsn(DSN))
     async with engine.begin() as conn:
         await _drop(conn)

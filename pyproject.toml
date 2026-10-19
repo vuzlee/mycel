@@ -90,6 +90,7 @@ known-first-party = ["mycel", "evals", "tests"]
 python_version = "3.11"
 strict = true
 files = ["src", "evals", "tests"]
+plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -121,3 +122,7 @@ exclude_also = [
 # A floor: raise it when coverage climbs, never lower it to pass.
 fail_under = 70
 show_missing = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = false
+init_typed = false

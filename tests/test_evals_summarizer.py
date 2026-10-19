@@ -12,7 +12,7 @@ GOLDEN = Path(__file__).parent.parent / "evals" / "summarizer" / "golden"
 
 def _summary(**kwargs: object) -> ProgressSummary:
     defaults: dict[str, object] = {"period": "14-20 September 2026", "headline": "A week."}
-    return ProgressSummary(**{**defaults, **kwargs})  # type: ignore[arg-type]
+    return ProgressSummary(**{**defaults, **kwargs})
 
 
 def _failed(case: Case, summary: ProgressSummary) -> set[str]:

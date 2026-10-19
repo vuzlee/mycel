@@ -59,6 +59,9 @@ without externalStores.host. Usage: include "mycel.env" (dict "ctx" . "metrics" 
 {{- define "mycel.env" -}}
 {{- $host := required "externalStores.host must name where the stores run" .ctx.Values.externalStores.host -}}
 env:
+  - {name: POSTGRES_HOST, value: {{ $host | quote }}}
+  - {name: POSTGRES_PORT, value: "5433"}
+  - {name: RABBITMQ_HOST, value: {{ $host | quote }}}
   - {name: QDRANT_URL, value: {{ printf "http://%s:6333" $host | quote }}}
   - {name: S3_ENDPOINT_URL, value: {{ printf "http://%s:9000" $host | quote }}}
   - {name: LITELLM_BASE_URL, value: {{ printf "http://%s:4000" $host | quote }}}
