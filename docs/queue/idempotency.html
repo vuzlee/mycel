@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Idempotency · Queue · Mycel handbook</title>
+<link rel="stylesheet" href="../handbook.css">
+<style>
+  .story { display: grid; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .story h3 { margin: 0; font-size: 15px; }
+  .story .steps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13.5px; }
+  .story .steps .arrow { color: var(--ink-soft); }
+  .story .end { font-size: 14px; }
+  .guard { display: grid; grid-template-columns: 110px 1fr 1fr; gap: 6px 14px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--ground); margin-bottom: 8px; font-size: 14px; }
+  .guard b { font: 600 13px var(--mono); color: var(--accent); }
+  .guard small { color: var(--ink-soft); }
+  @media (max-width: 640px) { .guard { grid-template-columns: 1fr; } }
+
+  /* figures break out of the 880px text column, up to 1180px */
+  .wide { container-type: inline-size; margin-inline: calc(50% - min(50vw - 16px, 590px)); padding: 10px; }
+  /* hover labels near the right edge open leftwards, so the frame never clips them */
+  .hld > .card:nth-child(7):hover::after, .hld > .card:last-child:hover::after, .zone > .card:last-child:hover::after { left: auto; right: 0; transform: none; }
+  .wide { padding-bottom: 30px; }
+  /* icons */
+  .ic { width: 30px; height: 30px; color: var(--accent); }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 98px; padding: 10px 10px 8px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); text-align: center; }
+  .card b { font-size: 13.5px; }
+  .card small { font-size: 11.5px; color: var(--ink-soft); line-height: 1.3; }
+  .card.key { border-color: var(--accent); background: var(--accent-soft); }
+  .card.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .card.bad .ic { color: var(--bad); }
+  .card.ok .ic { color: var(--ok); }
+  .pool { display: grid; grid-auto-flow: column; gap: 4px; }
+  .pool .ic { width: 22px; height: 22px; }
+
+  /* connectors: a line with a label above and an arrowhead */
+  .cn { position: relative; align-self: center; justify-self: stretch; min-width: 78px; height: 2px; background: var(--ink-soft); margin: 0 6px; }
+  .cn span { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); white-space: nowrap; font: 11.5px var(--mono); color: var(--ink-soft); }
+  .cn::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left-color: var(--ink-soft); border-right: 0; }
+  .cn.l::after { right: auto; left: -2px; border-left: 0; border-right: 6px solid var(--ink-soft); }
+  .cn.v { justify-self: center; min-width: 0; width: 2px; height: 44px; min-width: 0; margin: 4px 0; }
+  .cn.v span { left: 10px; bottom: 50%; transform: translateY(50%); }
+  .cn.v::after { right: -5px; top: auto; bottom: -2px; border: 6px solid transparent; border-top-color: var(--ink-soft); border-bottom: 0; }
+  .cn.v.up::after { bottom: auto; top: -2px; border-top: 0; border-bottom: 6px solid var(--ink-soft); }
+
+  /* HLD */
+  .hld { display: grid; grid-template-columns: auto minmax(70px, 150px) auto minmax(70px, 150px) auto minmax(70px, 150px) auto; justify-content: center; width: 100%; align-items: center; justify-items: center; row-gap: 6px; min-width: max-content; padding: 6px 140px 34px; box-sizing: border-box; }
+  .zone { grid-column: 3 / 8; grid-row: 3; justify-self: stretch; display: grid; grid-template-columns: subgrid; align-items: center; justify-items: center; padding: 22px 0 10px; border: 1.5px dashed var(--accent); border-radius: 14px; position: relative; }
+  .zone > em { position: absolute; top: 4px; left: 12px; font: 600 11.5px var(--mono); font-style: normal; color: var(--accent); }
+
+  /* timeline (problem) */
+  .tl { padding-top: 22px; display: grid; grid-template-columns: 92px repeat(10, 1fr); row-gap: 10px; min-width: 620px; position: relative; padding-bottom: 26px; }
+  .tl .who { grid-column: 1; align-self: center; font: 600 13px var(--font); }
+  .bar { align-self: center; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--ink); white-space: nowrap; overflow: hidden; }
+  .bar.bad { border-color: var(--bad); background: var(--bad-soft); }
+  .bar.dead { border-style: dashed; color: var(--bad); }
+  .tl .cut { grid-row: 1 / 5; margin-top: -18px; grid-column: 6; justify-self: start; border-left: 2px dashed var(--warn); position: relative; }
+  .tl .cut span { position: absolute; top: -2px; left: 6px; font: 600 11.5px var(--mono); color: var(--warn); white-space: nowrap; }
+  .tl .axis { grid-column: 2 / -1; grid-row: 4; height: 2px; background: var(--ink-soft); position: relative; }
+  .tl .axis::after { content: "time"; position: absolute; right: 0; top: 6px; font: 11.5px var(--mono); color: var(--ink-soft); }
+  .alarm { margin-top: 12px; padding: 10px 14px; border: 1.5px solid var(--bad); border-radius: 10px; background: var(--bad-soft); color: var(--bad); font-weight: 600; text-align: center; }
+
+  /* LLD sequence: lifelines drawn by a background stripe per lane */
+  .seq { --w: max(124px, calc((100cqw - 48px) / 5)); display: grid; grid-template-columns: 28px repeat(5, var(--w)); width: max-content;
+         background: linear-gradient(to right, transparent calc(var(--w) / 2 - 1px), var(--line) calc(var(--w) / 2 - 1px), var(--line) calc(var(--w) / 2 + 1px), transparent calc(var(--w) / 2 + 1px)) 28px 0 / var(--w) 100% repeat-y;
+         background-repeat: repeat-x; }
+  .seq > * { min-height: 40px; }
+  .seq .lane { position: relative; z-index: 1; margin: 0 6px 18px; padding: 8px 4px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; }
+  .seq .lane .ic { width: 22px; height: 22px; }
+  .seq .lane b { font-size: 13px; }
+  .seq .lane.q { border-color: #c98bd8; } .seq .lane.w { border-color: var(--accent); } .seq .lane.r { border-color: var(--bad); } .seq .lane.p { border-color: #5aa3c9; } .seq .lane.llm { border-color: var(--ok); }
+  .seq .n { grid-column: 1; align-self: end; margin-bottom: 4px; font: 600 11.5px var(--mono); color: var(--accent); }
+  .seq .m { position: relative; align-self: end; margin: 0 calc(var(--w) / 2) 10px; border-top: 2px solid var(--ink); text-align: center; }
+  .seq .m span { position: relative; top: -24px; display: inline-block; padding: 0 6px; background: var(--surface); font: 12px var(--mono); white-space: nowrap; }
+  .seq .m::after { content: ""; position: absolute; top: -6px; border: 5px solid transparent; }
+  .seq .m.r::after { right: -6px; border-left: 7px solid var(--ink); }
+  .seq .m.l::after { left: -6px; border-right: 7px solid var(--ink); }
+  .seq .m.back { border-top: 2px dashed var(--ink-soft); }
+  .seq .m.back.l::after { border-right-color: var(--ink-soft); }
+  .seq .m.warn span { color: var(--warn); font-weight: 600; }
+  .seq .m.ok span { color: var(--ok); font-weight: 600; }
+  .seq .sep { grid-column: 2 / -1; align-self: center; position: relative; z-index: 1; margin: 10px 0 22px; padding: 8px; text-align: center; font-weight: 600; font-size: 13.5px; border: 1.5px solid var(--warn); border-radius: 6px; background: var(--warn-soft); }
+  .uml { display: grid; grid-template-columns: repeat(3, minmax(200px, 1fr)); gap: 10px 16px; align-items: start; }
+  .uml .row-l { grid-column: 1 / -1; font: 600 11.5px var(--mono); color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 6px; }
+  .cls { border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); font: 12px var(--mono); }
+  .cls > b { display: block; border-radius: 9px 9px 0 0; padding: 6px 10px; background: var(--accent-soft); color: var(--accent); font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  .cls > b small { display: block; color: var(--ink-soft); font-weight: 400; }
+  .cls ul { list-style: none; margin: 0; padding: 6px 10px; }
+  .cls li { padding: 1px 0; }
+  .cls li i { font-style: normal; color: var(--ink-soft); }
+  .cls .use { border-top: 1px solid var(--line); color: var(--ink-soft); }
+  .cls.key { border-color: var(--accent); }
+  .tree { font: 13px/1.9 var(--mono); padding: 4px 10px; }
+  .tree div { white-space: nowrap; }
+  .tree .d { color: var(--ink-soft); }
+  .tree .own { color: var(--accent); font-weight: 600; }
+  .tree em { font: 12px var(--font); font-style: normal; color: var(--ink-soft); margin-left: 10px; }
+  .cd { display: grid; min-width: max-content; gap: 0; align-items: stretch; padding: 4px 4px 34px; box-sizing: border-box; width: max-content; margin: 0 auto;
+        grid-template-columns: 230px 110px 250px 110px 230px;
+        grid-template-areas: "con r1 han r2 wrk" "r3 . . . r4" "del . clm r5 cht" ". . r7 . r6" ". . exc . rep" ". . . . r8" ". . . . trn";
+  }
+  .cd .cls > b { text-align: center; }
+  .cd .cls > b small { font-style: italic; }
+  .cd .cls.exc { border-style: dashed; }
+  .rel { position: relative; display: flex; align-items: center; justify-content: center; font: 11.5px var(--mono); color: var(--ink-soft); }
+  .rel.h { align-self: center; height: 2px; background: var(--ink-soft); margin-top: 24px; }
+  .rel.h span { position: absolute; bottom: 6px; white-space: nowrap; }
+  .rel.v { justify-self: center; width: 2px; min-height: 48px; background: var(--ink-soft); }
+  .rel.v span { position: absolute; left: 10px; white-space: nowrap; }
+  .rel.v.dash { background: none; border-left: 2px dashed var(--ink-soft); }
+  .cd .cls { align-self: stretch; }
+  .cd .cls:hover::after { top: calc(100% + 4px); }
+  .cd > .cls:nth-child(5):hover::after, .cd > .cls[style*="clm"]:hover::after, .cd > .cls[style*="cht"]:hover::after, .cd > .cls[style*="rep"]:hover::after, .cd > .cls[style*="trn"]:hover::after { left: auto; right: 0; transform: none; }
+  .rel.h::after { content: ""; position: absolute; right: -1px; top: -5px; border: 6px solid transparent; border-left: 8px solid var(--ink-soft); border-right: 0; }
+  .rel.h.l::after { right: auto; left: -1px; border-left: 0; border-right: 8px solid var(--ink-soft); }
+  .rel.v::after { content: ""; position: absolute; bottom: -1px; left: -5px; border: 6px solid transparent; border-top: 8px solid var(--ink-soft); border-bottom: 0; }
+  .rel.v.dash::after { left: -7px; }
+</style>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></symbol>
+  <symbol id="i-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="3" width="16" height="6" rx="1.5"/><rect x="4" y="11" width="16" height="6" rx="1.5"/><circle cx="16.5" cy="6" r="1"/><circle cx="16.5" cy="14" r="1"/><path d="M12 17v4"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="5" rx="7" ry="2.6"/><path d="M5 5v14c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V5"/><path d="M5 12c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6"/></symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="7" width="20" height="10" rx="5"/><rect x="5" y="9.5" width="3.5" height="5" rx=".8"/><rect x="10" y="9.5" width="3.5" height="5" rx=".8"/><rect x="15" y="9.5" width="3.5" height="5" rx=".8"/></symbol>
+  <symbol id="i-worker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
+  <symbol id="i-redis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></symbol>
+  <symbol id="i-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></symbol>
+</svg>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Queue / Idempotency</span></nav>
+<main>
+
+<h1>Idempotency: a job delivered twice is answered once</h1>
+<p class="lede">The queue may hand the same question to a worker more than once. Each extra run costs a model bill.</p>
+
+<nav class="toc">
+  <a href="#problem">01 Problem</a><a href="#hld">02 Components</a><a href="#normal">03 Inside the worker</a><a href="#wrong">04 When things go wrong</a>
+  <a href="#guards">05 Four safeguards</a><a href="#promise">06 Guarantees and limits</a><a href="#impl">Implementation</a>
+</nav>
+
+<h2 id="problem">01 · The problem</h2>
+<p class="purpose">Without safeguards: worker A dies mid-answer, the queue hands the same job to worker B.</p>
+<div class="table-wrap wide"><div class="tl">
+  <div class="who" style="grid-row:1">Queue</div><div class="bar" style="grid-row:1;grid-column:2/4">job 42</div><div class="bar bad" style="grid-row:1;grid-column:7/9">job 42 again</div>
+  <div class="who" style="grid-row:2">Worker A</div><div class="bar" style="grid-row:2;grid-column:2/6">calling the model…</div><div class="bar dead" style="grid-row:2;grid-column:6/8">✕ dies</div>
+  <div class="who" style="grid-row:3">Worker B</div><div class="bar bad" style="grid-row:3;grid-column:8/12">calls the model again</div>
+  <div class="cut"><span>no ack → redelivered</span></div>
+  <div class="axis"></div>
+</div></div>
+<div class="alarm">Same question answered twice → two model bills, two answers streamed into one chat</div>
+<p class="insight"><b>Key:</b> the queue (RabbitMQ) promises <i>at least once</i>, never <i>exactly once</i>. The worker must cope with repeats.</p>
+
+<h2 id="hld">02 · Components (HLD)</h2>
+<p class="purpose">Who takes part. Hover a box for its file.</p>
+<div class="table-wrap wide"><div class="hld">
+  <div class="card" data-path="web/src/pages/Home.tsx"><svg class="ic"><use href="#i-user"/></svg><b>User</b><small>asks a question</small></div>
+  <div class="cn"><span>POST /chat</span></div>
+  <div class="card" data-path="src/mycel/services/enqueue.py"><svg class="ic"><use href="#i-api"/></svg><b>API</b><small>gives the job an id</small></div>
+  <div class="cn"><span>INSERT outbox</span></div>
+  <div class="card" data-path="src/mycel/infra/postgres/repositories/outbox.py"><svg class="ic"><use href="#i-db"/></svg><b>Outbox</b><small>Postgres table</small></div>
+  <div class="cn"><span>publish</span></div>
+  <div class="card" data-path="src/mycel/queue/topology.py"><svg class="ic"><use href="#i-queue"/></svg><b>Queue</b><small>RabbitMQ · at least once</small></div>
+
+  <div style="grid-column:7"><div class="cn v"><span>deliver</span></div></div>
+
+  <div class="zone"><em>worker side · the safeguards live here</em>
+    <div class="card" data-path="src/mycel/domains/chat.py"><svg class="ic" style="color:var(--ok)"><use href="#i-model"/></svg><b>Model</b><small>LLM · costs money</small></div>
+    <div class="cn l"><span>prompt</span></div>
+    <div class="card" data-path="src/mycel/infra/postgres/repositories/conversations.py"><svg class="ic" style="color:#5aa3c9"><use href="#i-db"/></svg><b>Postgres turn</b><small>one row per job id</small></div>
+    <div class="cn l"><span>DONE? · UPSERT</span></div>
+    <div class="card key" data-path="src/mycel/queue/consumer.py"><div class="pool"><svg class="ic"><use href="#i-worker"/></svg><svg class="ic"><use href="#i-worker"/></svg><svg class="ic"><use href="#i-worker"/></svg></div><b>Worker pool</b><small>any worker may get any job</small></div>
+  </div>
+
+  <div style="grid-column:7"><div class="cn v"><span style="left:auto;right:10px">claim · count</span></div></div>
+  <div class="card" style="grid-column:7" data-path="src/mycel/infra/redis/claims.py"><svg class="ic" style="color:var(--bad)"><use href="#i-redis"/></svg><b>Redis</b><small>claim · delivery count · result</small></div>
+</div></div>
+<div class="table-wrap" style="margin-top:12px"><table>
+  <tr><th>Component</th><th>Role here</th><th>Safeguard it holds</th></tr>
+  <tr><td>User</td><td>asks once, polls for the answer</td><td>—</td></tr>
+  <tr><td>API</td><td>gives the job its id</td><td>the id every check keys on</td></tr>
+  <tr><td>Outbox</td><td>keeps the job until it reaches the queue</td><td>— (see <a href="outbox.html">Outbox</a>)</td></tr>
+  <tr><td>Queue</td><td>hands the job to a worker; resends if no ack</td><td>— it is the source of repeats</td></tr>
+  <tr><td><b>Worker pool</b></td><td>runs the job, then acks</td><td>runs all <a href="#guards">four safeguards</a></td></tr>
+  <tr><td>Redis</td><td>short-lived state, shared by all workers</td><td>stores <a href="#guards">COUNT · LOCK</a></td></tr>
+  <tr><td>Postgres turn</td><td>the saved answer, kept</td><td>stores <a href="#guards">DONE? · ONE ROW</a></td></tr>
+  <tr><td>Model</td><td>writes the answer; the only step that costs money</td><td>— what the others protect</td></tr>
+</table></div>
+<p class="insight"><b>Key:</b> the queue cannot tell a repeat from a new job. The worker checks Redis and Postgres before it pays for a model call.</p>
+
+<h2 id="normal">03 · Inside the worker (LLD)</h2>
+<p class="purpose">Three views, outside in: <a href="#source">source</a> for where the files sit, <a href="#classes">class diagram</a> for who calls whom, <a href="#seq">sequence</a> for the order of calls.</p>
+<h3 id="source">3a · Source layout</h3>
+<p class="purpose">Where the files sit. Highlighted = used on this page.</p>
+<div class="table-wrap"><div class="tree">
+  <div class="d">src/mycel/</div>
+  <div class="d">├── queue/<em>talks to RabbitMQ</em></div>
+  <div>│   ├── <span class="own" data-path="src/mycel/queue/consumer.py" tabindex="0">consumer.py</span><em>receive · COUNT · ack</em></div>
+  <div>│   ├── <span class="own" data-path="src/mycel/queue/handler.py" tabindex="0">handler.py</span><em>what the consumer needs from the app</em></div>
+  <div>│   ├── <span data-path="src/mycel/queue/retry.py" tabindex="0">retry.py</span><em>retry delay or dead-letter</em></div>
+  <div>│   └── <span data-path="src/mycel/queue/topology.py" tabindex="0">topology.py</span><em>MAX_ATTEMPTS, delays</em></div>
+  <div class="d">├── domains/<em>what each job kind does</em></div>
+  <div>│   └── <span class="own" data-path="src/mycel/domains/chat.py" tabindex="0">chat.py</span><em>DONE? · LOCK · model · save</em></div>
+  <div class="d">├── infra/redis/</div>
+  <div>│   ├── <span class="own" data-path="src/mycel/infra/redis/claims.py" tabindex="0">claims.py</span><em>LOCK</em></div>
+  <div>│   ├── <span class="own" data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">deliveries.py</span><em>COUNT</em></div>
+  <div>│   └── <span data-path="src/mycel/infra/redis/results.py" tabindex="0">results.py</span><em>running / done, for polling</em></div>
+  <div class="d">├── infra/postgres/repositories/</div>
+  <div>│   └── <span class="own" data-path="src/mycel/infra/postgres/repositories/conversations.py" tabindex="0">conversations.py</span><em>DONE? lookup · ONE ROW upsert</em></div>
+  <div>└── <span data-path="src/mycel/worker.py" tabindex="0">worker.py</span><em>wires chat.run into a Handler</em></div>
+</div></div>
+
+<h3 id="classes">3b · Class diagram</h3>
+<p class="purpose">UML view of the worker side. Box = class or module: name, fields, methods. Line = relation, label says how.</p>
+<div class="table-wrap wide"><div class="cd">
+  <div class="cls key" style="grid-area:con" data-path="src/mycel/queue/consumer.py"><b><small>«module»</small>consumer</b>
+    <ul><li>PREFETCH = 2</li></ul>
+    <ul><li>+ handle(message, dlx, jobs)</li><li>+ run_worker(jobs, stop)</li></ul></div>
+  <div class="rel h" style="grid-area:r1"><span>uses</span></div>
+  <div class="cls" style="grid-area:han" data-path="src/mycel/queue/handler.py"><b><small>«dataclass»</small>Handler</b>
+    <ul><li>+ run: Job → None</li><li>+ record_failure: Job, str → None</li><li>+ final: errors</li><li>+ transient: errors</li></ul>
+    </div>
+  <div class="rel h l" style="grid-area:r2"><span>built by</span></div>
+  <div class="cls" style="grid-area:wrk" data-path="src/mycel/worker.py"><b><small>«module»</small>worker</b>
+    <ul><li>HANDLER: Handler</li><li>TRANSIENT ∋ AlreadyRunning</li></ul>
+    <ul><li>+ run(job) <i>dispatch by kind</i></li></ul></div>
+
+  <div class="rel v" style="grid-area:r3"><span>count</span></div>
+  <div class="rel v" style="grid-area:r4"><span>run → chat.run</span></div>
+
+  <div class="cls" style="grid-area:del" data-path="src/mycel/infra/redis/deliveries.py"><b><small>«module» Redis</small>deliveries</b>
+    <ul><li>TTL_SECONDS = 24 h</li></ul>
+    <ul><li>+ count(job_id): int</li></ul></div>
+  <div class="cls key" style="grid-area:cht" data-path="src/mycel/domains/chat.py"><b><small>«module»</small>chat</b>
+    
+    <ul><li>+ run(job)</li><li>− _prepare(job) <i>DONE?</i></li><li>− _finish(job, answer, …)</li><li>+ record_failure(job, error)</li></ul></div>
+  <div class="rel h l" style="grid-area:r5"><span>holding</span></div>
+  <div class="cls key" style="grid-area:clm" data-path="src/mycel/infra/redis/claims.py"><b><small>«module» Redis</small>claims</b>
+    <ul><li>TTL_SECONDS = 25</li><li>RENEW_SECONDS = 8</li></ul>
+    <ul><li>+ holding(job_id) <i>async ctx</i></li><li>− _renew(name, token)</li></ul></div>
+
+  <div class="rel v" style="grid-area:r6"><span>find_turn · upsert_turn</span></div>
+  <div class="rel v dash" style="grid-area:r7"><span>raises</span></div>
+
+  <div class="cls" style="grid-area:rep" data-path="src/mycel/infra/postgres/repositories/conversations.py"><b><small>«repository» Postgres</small>ConversationRepository</b>
+    <ul><li>− _session</li></ul>
+    <ul><li>+ turn_by_job_id(job_id): TurnRow?</li><li>+ upsert_turn(…, job_id, …)</li></ul></div>
+  <div class="rel v" style="grid-area:r8"><span>writes</span></div>
+  <div class="cls" style="grid-area:trn" data-path="src/mycel/infra/postgres/models/app.py"><b><small>«table»</small>Turn</b>
+    <ul><li>job_id <i>unique · uq_turn_job_id</i></li><li>status · answer · spent_usd</li></ul>
+    </div>
+  <div class="cls exc" style="grid-area:exc" data-path="src/mycel/infra/redis/claims.py"><b><small>«exception»</small>AlreadyRunning</b>
+    <ul><li><i>extends Exception</i></li></ul>
+    <ul><li><i>retried as transient</i></li></ul></div>
+</div></div>
+<p class="insight"><b>Key:</b> the consumer only sees <code>Handler</code>; <code>worker</code> plugs <code>chat.run</code> into it. Every safeguard after COUNT lives under <code>chat</code>.</p>
+
+<h3 id="seq">3c · Sequence</h3>
+<p class="purpose">One job, then the same job delivered again. Solid = call, dashed = reply, amber = a safeguard.</p>
+<div class="table-wrap wide"><div class="seq">
+  <div></div>
+  <div class="lane q" data-path="src/mycel/queue/topology.py"><svg class="ic"><use href="#i-queue"/></svg><b>Queue</b></div>
+  <div class="lane w" data-path="src/mycel/queue/consumer.py"><svg class="ic"><use href="#i-worker"/></svg><b>Worker</b></div>
+  <div class="lane r" data-path="src/mycel/infra/redis/claims.py"><svg class="ic"><use href="#i-redis"/></svg><b>Redis</b></div>
+  <div class="lane p" data-path="src/mycel/infra/postgres/repositories/conversations.py"><svg class="ic"><use href="#i-db"/></svg><b>Postgres</b></div>
+  <div class="lane llm" data-path="src/mycel/domains/chat.py"><svg class="ic"><use href="#i-model"/></svg><b>Model</b></div>
+
+  <div class="n">1</div><div class="m r" style="grid-column:2/4"><span>deliver job 42</span></div>
+  <div class="n">2</div><div class="m r" style="grid-column:3/5"><span>result = running</span></div>
+  <div class="n">3</div><div class="m r warn" style="grid-column:3/6"><span data-path="src/mycel/domains/chat.py" tabindex="0">DONE? turn 42</span></div>
+  <div class="n"></div><div class="m l back" style="grid-column:3/6"><span>not found</span></div>
+  <div class="n">4</div><div class="m r warn" style="grid-column:3/5"><span data-path="src/mycel/infra/redis/claims.py" tabindex="0">LOCK: SET claim NX EX 25</span></div>
+  <div class="n">5</div><div class="m r" style="grid-column:3/7"><span>prompt</span></div>
+  <div class="n"></div><div class="m r back" style="grid-column:3/5"><span>renew claim every 8 s</span></div>
+  <div class="n"></div><div class="m l back" style="grid-column:3/7"><span>answer</span></div>
+  <div class="n">6</div><div class="m r" style="grid-column:3/5"><span>result = done</span></div>
+  <div class="n">7</div><div class="m r warn" style="grid-column:3/6"><span data-path="src/mycel/infra/postgres/repositories/conversations.py" tabindex="0">ONE ROW: UPSERT turn 42</span></div>
+  <div class="n">8</div><div class="m r" style="grid-column:3/5"><span>release claim</span></div>
+  <div class="n">9</div><div class="m l ok" style="grid-column:2/4"><span>ack</span></div>
+
+  <div class="sep">Same job delivered again (lost ack, crash after save)</div>
+
+  <div class="n">1</div><div class="m r" style="grid-column:2/4"><span>deliver job 42 · redelivered</span></div>
+  <div class="n">2</div><div class="m r warn" style="grid-column:3/5"><span data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">COUNT: INCR → 2 ≤ 4</span></div>
+  <div class="n">3</div><div class="m r warn" style="grid-column:3/6"><span>DONE? turn 42</span></div>
+  <div class="n"></div><div class="m l back ok" style="grid-column:3/6"><span>found · status done</span></div>
+  <div class="n">4</div><div class="m r" style="grid-column:3/5"><span>re-store result (no model)</span></div>
+  <div class="n">5</div><div class="m l ok" style="grid-column:2/4"><span>ack</span></div>
+
+  <div style="grid-column:1"></div>
+  <div class="lane q"><b>Queue</b></div><div class="lane w"><b>Worker</b></div><div class="lane r"><b>Redis</b></div><div class="lane p"><b>Postgres</b></div><div class="lane llm"><b>Model</b></div>
+</div></div>
+<div class="table-wrap" style="margin-top:12px"><table>
+  <tr><th>Step</th><th>What it does</th><th>Why</th></tr>
+  <tr><td>1 deliver</td><td>queue hands job 42 to a worker</td><td>start</td></tr>
+  <tr><td>2 running</td><td>Redis result says "running"</td><td>the user's poll shows progress</td></tr>
+  <tr><td>3 DONE?</td><td>look up the turn row for job 42</td><td>a saved answer is reused, not paid for again</td></tr>
+  <tr><td>4 LOCK</td><td>Redis key, set only if absent, expires in 25 s</td><td>a second worker backs off while this one runs</td></tr>
+  <tr><td>5 prompt</td><td>call the model; renew the lock every 8 s</td><td>the costly step; renewal covers long answers</td></tr>
+  <tr><td>6 done</td><td>Redis result holds the answer</td><td>the user's poll gets it</td></tr>
+  <tr><td>7 ONE ROW</td><td>insert or update the turn row by job id</td><td>a repeat never makes a second row</td></tr>
+  <tr><td>8 release</td><td>delete the lock, only if still ours</td><td>never frees another worker's lock</td></tr>
+  <tr><td>9 ack</td><td>tell the queue it is done</td><td>last, so any crash before it brings the job back</td></tr>
+  <tr><td>repeat · COUNT</td><td>count deliveries of a redelivered job</td><td>over 4 → dead-letter queue (story D)</td></tr>
+</table></div>
+<p class="insight"><b>Key:</b> ack comes last; any crash before it brings the job back. DONE? runs <i>before</i> LOCK — that order is the narrow race in section 06.</p>
+
+<h2 id="wrong">04 · When things go wrong</h2>
+<p class="purpose">Four failures the code handles. Each row: what breaks, which step from 03 catches it, what the user gets.</p>
+<div class="table-wrap"><table>
+  <tr><th></th><th>What happened</th><th>What the next worker checks</th><th>Result</th></tr>
+  <tr><td><b>A</b></td><td>queue resends job 42 while worker A is still on it</td><td>DONE? no → LOCK held by A → back off, retry in 5 s → later DONE? yes</td><td><span class="chip ok">1 model run</span></td></tr>
+  <tr><td><b>B</b></td><td>A saved the answer, then died before ack</td><td>COUNT 2 ≤ 4 → DONE? yes → re-store result, ack</td><td><span class="chip ok">1 model run</span> user sees the saved answer</td></tr>
+  <tr><td><b>C</b></td><td>A died while the model was answering, nothing saved</td><td>lock expires ≤ 25 s → DONE? no → LOCK free → calls the model</td><td><span class="chip warn">2 model runs</span> spend carries over, money limit holds</td></tr>
+  <tr><td><b>D</b></td><td>the job itself crashes every worker</td><td>COUNT rises each time → over 4</td><td><span class="chip bad">parked</span> dead-letter queue, user sees "failed"</td></tr>
+</table></div>
+<p class="insight"><b>Key:</b> C is the one case where the model runs twice: nothing was saved, so there is nothing to reuse.</p>
+
+<h2 id="guards">05 · The four safeguards</h2>
+<p class="purpose">All four run inside the worker, in the order shown in the 02 table. They are not four ways to stop duplicates: each answers a different question.</p>
+<div class="guard" data-path="src/mycel/infra/redis/deliveries.py"><b>1 COUNT</b><span>Has this job crashed workers too often?</span><small>stops D · a poison job looping forever</small></div>
+<div class="guard" data-path="src/mycel/domains/chat.py"><b>2 DONE?</b><span>Has this job been answered?</span><small>stops B · reuses a saved answer</small></div>
+<div class="guard" data-path="src/mycel/infra/redis/claims.py"><b>3 LOCK</b><span>Is someone answering it right now?</span><small>stops A · two workers at once</small></div>
+<div class="guard" data-path="src/mycel/infra/postgres/repositories/conversations.py"><b>4 ONE ROW</b><span>If two writes happen, where do they go?</span><small>one row per job id; last write wins. Does not stop a model call</small></div>
+
+<h2 id="promise">06 · Guarantees and limits</h2>
+<div class="cols">
+  <div class="col ok"><h3>Guaranteed</h3><ul>
+    <li>A saved answer is not recomputed.</li>
+    <li>A repeat never creates a second turn row.</li>
+    <li>A job that keeps killing workers stops after 4 deliveries.</li>
+    <li>A worker only renews or releases its own claim.</li>
+  </ul></div>
+  <div class="col bad"><h3>Not guaranteed</h3><ul>
+    <li><b>Exactly once.</b> A crash before save (story C) runs the model again.</li>
+    <li>DONE? is checked <i>before</i> the claim. If A saves and releases between B's check and B's claim, B runs again.</li>
+    <li>A lost claim (Redis unreachable &gt; 25 s) only logs a warning; the work goes on, and a second worker may start. No fencing token guards the save.</li>
+  </ul></div>
+</div>
+<p class="insight"><b>Key:</b> the model is called twice only when no answer was saved in time, or in the two narrow races above.</p>
+
+<h2 id="impl">Implementation</h2>
+<details><summary>Numbers</summary>
+<div class="table-wrap"><table>
+  <tr><th>Value</th><th>Meaning</th></tr>
+  <tr><td>claim TTL 25 s</td><td>under the second retry delay (30 s), so a dead worker's claim is gone before it matters</td></tr>
+  <tr><td>renew every 8 s</td><td>a live worker keeps its claim for any length of model call</td></tr>
+  <tr><td>retry delays 5 s · 30 s · 120 s</td><td>MAX_ATTEMPTS = 4</td></tr>
+  <tr><td>delivery count TTL 24 h</td><td>outlives every retry delay</td></tr>
+</table></div>
+</details>
+<details><summary>Vocabulary</summary>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>ack</td><td>"done, delete the message"</td><td><span class="src" data-path="src/mycel/queue/consumer.py" tabindex="0">queue/consumer.py</span></td></tr>
+  <tr><td>redelivered</td><td>flag: sent before, never acked</td><td><span class="src" data-path="src/mycel/queue/consumer.py" tabindex="0">queue/consumer.py</span></td></tr>
+  <tr><td>claim</td><td>short Redis key: who works on a job</td><td><span class="src" data-path="src/mycel/infra/redis/claims.py" tabindex="0">infra/redis/claims.py</span></td></tr>
+  <tr><td>AlreadyRunning</td><td>claim taken; treated as transient, retried</td><td><span class="src" data-path="src/mycel/worker.py" tabindex="0">worker.py</span></td></tr>
+  <tr><td>delivery count</td><td>how often the queue resent a job</td><td><span class="src" data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">infra/redis/deliveries.py</span></td></tr>
+  <tr><td>uq_turn_job_id</td><td>one turn row per job id</td><td><span class="src" data-path="src/mycel/infra/postgres/repositories/conversations.py" tabindex="0">repositories/conversations.py</span></td></tr>
+</table></div>
+</details>
+<details><summary>Tests</summary>
+<ul>
+  <li>tests/test_claims.py — held until the block ends · dead worker frees the job before the retry · running job keeps renewing · late release does not free another's claim · a copy of a running job is retried, not run</li>
+  <li>tests/test_queue.py — a first redelivery still runs · a job that kills its worker is parked · an attempt starts from what the job already spent</li>
+</ul>
+</details>
+<details><summary>Built in</summary>
+<ul><li>MYC-135 — delivery count parks a poison job</li><li>083 — duplicate delivery re-stores the result and takes a claim</li><li>after 083 — claim made short and renewed</li></ul>
+</details>
+
+<h2>Owns</h2>
+<ul class="owns">
+  <li><span class="src" data-path="src/mycel/infra/redis/claims.py" tabindex="0">src/mycel/infra/redis/claims.py</span></li>
+  <li><span class="src" data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">src/mycel/infra/redis/deliveries.py</span></li>
+</ul>
+
+<div class="related">
+  <a href="outbox.html">Outbox: how the job enters the queue</a><a href="retry-dlq-replay.html">Retries and the dead-letter queue</a><a href="worker-shutdown.html">Stopping a worker</a><a href="../agents/budget-limits.html">Money limits</a>
+</div>
+
+</main>
+</body>
+</html>

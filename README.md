@@ -92,7 +92,7 @@ More in [deploy/](deploy/README.md).
 
 Open <http://localhost:8000/app> (or <http://mycel.local/app> on k8s) and sign in with
 Google or an emailed code. First-time setup — the Jira service account and the OAuth
-apps — is in [docs/setup.md](docs/setup.md). Stop with `scripts/stack.sh <mode> down`.
+apps — is in [docs/operate/setup.md](docs/operate/setup.md). Stop with `scripts/stack.sh <mode> down`.
 
 ## Development
 
@@ -102,7 +102,7 @@ cd web && npm run lint && npm test && npm run build   # frontend
 ```
 
 Answer quality is scored separately, see [evals](evals/README.md).
-Design notes: [architecture](docs/architecture.html) · [database](docs/database.html).
+Design notes: [handbook](docs/index.html) · [architecture](docs/overview/architecture.html) · [database](docs/overview/database.html).
 
 ## License
 
