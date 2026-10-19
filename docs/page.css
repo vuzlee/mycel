@@ -822,3 +822,6 @@ svg .hv:hover rect, svg .hv:focus rect { stroke: var(--accent); stroke-width: 1.
 details { margin-top: 1.6rem; }
 details summary { cursor: pointer; font: 600 13px var(--mono); color: var(--ink-soft); }
 details .tbl { margin-top: 0.8rem; }
+.tipfig { position: relative; }
+.tip { position: absolute; z-index: 10; max-width: 300px; padding: 8px 12px; border-radius: 8px; background: var(--ink); color: var(--ground); font: 12.5px/1.45 var(--sans); pointer-events: none; opacity: 0; transition: opacity .12s; }
+.tip.on { opacity: 1; }
