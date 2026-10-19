@@ -844,3 +844,11 @@ svg [data-path]:hover::after { content: none; }
 .tcard td + td { color: var(--ink-soft); }
 .tcard td b { color: var(--bronze); font-weight: 600; }
 .tcard td { white-space: nowrap; } .tcard td:first-child { width: 100%; }
+.schema { margin: 1.4rem 0 0.4rem; }
+.sch { margin: 0 0 0.7rem; padding-bottom: 6px; font: 600 15px var(--mono); border-bottom: 2px solid var(--ink-faint); }
+.sch span { margin-left: 10px; font: 400 13px var(--sans); color: var(--ink-soft); }
+.sch.t-gold { color: var(--gold); border-color: var(--gold); }
+.sch.t-bronze { color: var(--bronze); border-color: var(--bronze); }
+.sch.t-app { color: var(--ink); }
+.sch-sub { margin: 0.8rem 0 0.5rem; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.sch-note { margin: 0; font-size: 13px; color: var(--ink-soft); }
