@@ -1,0 +1,43 @@
+title: "Dashboard: the page asks for projects and the board; the API checks access, gathers gold and returns totals"
+page:
+  eyebrow: Flow
+  title: Dashboard
+  lede: ["Estimate vs spent, late items and breakdowns for one project", "Read from gold, only projects you may browse"]
+lanes: [browser, api, services, stores]
+boxes:
+  - {id: page,    lane: browser,  col: 0, file: web/src/pages/dashboard/index.tsx,        label: dashboard/index.tsx,   role: "lays out the panels"}
+  - {id: hook,    lane: browser,  col: 1, file: web/src/pages/dashboard/useDashboard.ts,  label: useDashboard.ts,       role: "refresh every 30 s"}
+  - {id: apits,   lane: browser,  col: 2, file: web/src/api.ts,                           label: web/src/api.ts,        role: "fetch, 401 → sign in"}
+  - {id: rdash,   lane: api,      col: 2, file: src/mycel/api/routes/dashboard.py,        label: routes/dashboard.py,   role: "GET /dashboard"}
+  - {id: rproj,   lane: api,      col: 3, file: src/mycel/api/routes/projects.py,         label: routes/projects.py,    role: "GET /projects"}
+  - {id: sgate,   lane: services, col: 2, file: src/mycel/services/dashboards.py,         label: services/dashboards.py, role: "access check"}
+  - {id: perm,    lane: services, col: 3, file: src/mycel/services/permission.py,         label: services/permission.py, role: "may this person read it?"}
+  - {id: sbuild,  lane: services, col: 1, file: src/mycel/services/dashboard.py,          label: services/dashboard.py, role: "builds the numbers", hot: true}
+  - {id: gather,  lane: services, col: 0, file: src/mycel/services/gather.py,             label: services/gather.py,    role: "items, totals, late"}
+  - {id: gold,    lane: stores,   col: 0, file: src/mycel/infra/postgres/repositories/gold.py,       label: "Postgres · gold",   role: "work items"}
+  - {id: stats,   lane: stores,   col: 1, file: src/mycel/infra/postgres/repositories/gold_stats.py, label: gold_stats.py,      role: "counts, effort, sprints"}
+edges:
+  - {from: page,   to: hook,   step: 1, kind: calls,  text: "useDashboard()",   label: "use"}
+  - {from: hook,   to: apits,  step: 2, kind: calls,  text: "fetchDashboard(",  label: "fetch"}
+  - {from: apits,  to: rdash,  step: 3, kind: http,   text: "/dashboard",       label: "GET"}
+  - {from: apits,  to: rproj,           kind: http,   text: "/projects",        label: "projects", exit: 0.3, via: [[2.3, 0.5], [3, 0.5]]}
+  - {from: rdash,  to: sgate,  step: 4, kind: import, label: "get"}
+  - {from: sgate,  to: perm,   step: 5, kind: import, label: "require"}
+  - {from: sgate,  to: sbuild, step: 6, kind: import, label: "build"}
+  - {from: sbuild, to: gather, step: 7, kind: import, label: "gather"}
+  - {from: gather, to: gold,   step: 8, kind: import, label: "items"}
+  - {from: gather, to: stats,          kind: import, label: "counts", exit: 0.3, via: [[0.3, 2.5], [1, 2.5]]}
+notes:
+  - ["window", "`?days=` 1–90, default 7"]
+  - ["shows", "estimate vs spent per person · late items · status, priority, kind, sprint, epics"]
+  - ["cache", "none on the server; the browser refreshes every 30 s"]
+  - ["limit", "at most 300 items in the window; older ones dropped and counted"]
+  - ["web shell", "`web/src/main.tsx` routes · `context/auth.tsx` who is signed in · `components/Sidebar.tsx`"]
+failures:
+  - ["project not readable, or signed out", "403 not your project", "src/mycel/api/routes/dashboard.py"]
+  - ["`days` outside 1–90", "422", "src/mycel/api/routes/dashboard.py"]
+  - ["session expired", "back to sign in", "web/src/api.ts"]
+  - ["no projects", "the picker says no projects yet", "web/src/pages/dashboard/useDashboard.ts"]
+related:
+  - [Database, ../overview/database.html]
+  - [Jira sync, jira-sync.html]

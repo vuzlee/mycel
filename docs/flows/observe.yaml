@@ -1,0 +1,39 @@
+title: "Trace and metrics: spans to Langfuse, /metrics to Prometheus and Grafana, run events to the browser, doctor for health"
+page:
+  eyebrow: Flow
+  title: Traces, metrics, events
+  lede: ["Where to look when an answer is slow, costly or wrong", "Four outputs: traces, metrics, live events, doctor"]
+lanes: [process, observe, carry, look]
+boxes:
+  - {id: life,    lane: process, col: 0, file: src/mycel/lifecycle.py,                        label: mycel/lifecycle.py,   role: "starts each process"}
+  - {id: chat,    lane: process, col: 2, file: src/mycel/domains/chat.py,                     label: domains/chat.py,      role: "a turn publishes steps"}
+  - {id: tracing, lane: observe, col: 0, file: src/mycel/observability/tracing.py,            label: tracing.py,           role: "spans out by OTLP"}
+  - {id: mserver, lane: observe, col: 1, file: src/mycel/observability/metrics_server.py,     label: metrics_server.py,    role: "/metrics per process"}
+  - {id: channel, lane: observe, col: 2, file: src/mycel/events/channel.py,                   label: events/channel.py,    role: "what a run publishes"}
+  - {id: streams, lane: carry,   col: 2, file: src/mycel/infra/redis/streams.py,              label: "Redis stream",       role: "events per job"}
+  - {id: sse,     lane: carry,   col: 3, file: src/mycel/api/routes/events.py,                label: routes/events.py,     role: "SSE to the browser"}
+  - {id: prom,    lane: look,    col: 1, file: deploy/monitoring/prometheus.yaml,             label: Prometheus,           role: "scrapes 9100–9103"}
+  - {id: grafana, lane: look,    col: 2, file: deploy/helm/mycel/files/datasources.yaml,      label: Grafana,              role: "charts from Prometheus"}
+  - {id: doctor,  lane: look,    col: 3, file: src/mycel/doctor/probes.py,                    label: doctor/probes.py,     role: "is each part up?", hot: true}
+edges:
+  - {from: life,    to: tracing, step: 1, kind: import, label: "setup"}
+  - {from: life,    to: mserver, step: 2, kind: import, label: "serve"}
+  - {from: prom,    to: mserver, step: 3, kind: http,   text: "/metrics", label: "scrape"}
+  - {from: grafana, to: prom,             kind: calls,  text: "type: prometheus", label: "query"}
+  - {from: chat,    to: channel, step: 4, kind: import, label: "publish"}
+  - {from: chat,    to: streams,          kind: import, label: "XADD", exit: 0.4, via: [[2.4, 0.5], [2.6, 0.5], [2.6, 2]]}
+  - {from: sse,     to: streams, step: 5, kind: import, label: "read"}
+notes:
+  - ["traces", "Langfuse: one trace per turn, a span per model and tool call; text redacted"]
+  - ["metrics", "`/metrics`: worker 9100 · scheduler 9101 · ingest 9102 · api 9103"]
+  - ["live events", "Redis `events:<job>` → `GET /chat/{job}/events`, resumes from Last-Event-ID"]
+  - ["health", "`scripts/stack.sh doctor` — every store, the gateway, plugins, settings"]
+  - ["slow or costly answer", "Langfuse for steps and tokens; turn row for `spent_usd`, `duration_ms`"]
+failures:
+  - ["tracing on, Langfuse keys missing", "process does not start", "src/mycel/observability/tracing.py"]
+  - ["exporting spans fails", "dropped quietly; the turn goes on", "src/mycel/observability/tracing.py"]
+  - ["stream gone after the run", "one final frame, then closed", "src/mycel/api/routes/events.py"]
+  - ["a doctor probe hangs", "stopped after 3–15 s, shown broken", "src/mycel/doctor/probes.py"]
+related:
+  - [Architecture, ../overview/architecture.html]
+  - [Model and cost, model-cost.html]

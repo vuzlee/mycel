@@ -1,0 +1,42 @@
+title: "Model and cost: a turn picks a host or own model, every call is priced, the job stops at its ceiling"
+page:
+  eyebrow: Flow
+  title: Model and cost
+  lede: ["Each turn picks one model: a host model or the person's own", "Every call is priced; a job stops at $0.50"]
+lanes: [model, turn, stores]
+boxes:
+  - {id: svcmodels, lane: model,  col: 0, file: src/mycel/services/models.py,              label: services/models.py,     role: "host models, person's picks"}
+  - {id: source,    lane: model,  col: 1, file: src/mycel/agents/core/model_source.py,     label: core/model_source.py,   role: "host or own; prices usage"}
+  - {id: builder,   lane: model,  col: 2, file: src/mycel/agents/core/model_builder.py,    label: core/model_builder.py,  role: "the client to call"}
+  - {id: litellm,   lane: model,  col: 3, file: config/litellm/config.yaml,                label: "LiteLLM gateway",      role: "host models, $10 key"}
+  - {id: chatmodel, lane: turn,   col: 0, file: src/mycel/domains/chat_model.py,           label: domains/chat_model.py,  role: "model ref → model"}
+  - {id: chat,      lane: turn,   col: 1, file: src/mycel/domains/chat.py,                 label: domains/chat.py,        role: "runs one turn", hot: true}
+  - {id: runner,    lane: turn,   col: 2, file: src/mycel/agents/core/runner.py,           label: core/runner.py,         role: "runs, charges each call"}
+  - {id: budget,    lane: turn,   col: 3, file: src/mycel/llm/budget.py,                   label: llm/budget.py,          role: "ceiling, token cap"}
+  - {id: rbudget,   lane: stores, col: 0, file: src/mycel/infra/redis/budgets.py,          label: "Redis · budget",       role: "spend across retries"}
+  - {id: conv,      lane: stores, col: 1, file: src/mycel/infra/postgres/repositories/conversations.py, label: "Postgres · turn", role: "spent_usd, tokens"}
+edges:
+  - {from: chat,      to: chatmodel, step: 1, kind: import, label: "pick"}
+  - {from: chatmodel, to: svcmodels,          kind: calls,  text: "models.gateway_name(", label: "host name"}
+  - {from: chatmodel, to: source,    step: 2, kind: import, label: "host or own", exit: 0.3, enter: -0.3}
+  - {from: source,    to: builder,   step: 3, kind: import, label: "build"}
+  - {from: builder,   to: litellm,   step: 4, kind: calls,  text: "LiteLLMProvider(", label: "call"}
+  - {from: chat,      to: rbudget,   step: 5, kind: calls,  text: "budgets.load(", label: "load budget", exit: -0.3, via: [[0.7, 1.5], [0, 1.5]]}
+  - {from: chat,      to: runner,    step: 6, kind: calls,  text: "runner.run(", label: "run"}
+  - {from: runner,    to: budget,    step: 7, kind: import, label: "charge"}
+  - {from: chat,      to: conv,      step: 8, kind: import, label: "save spend"}
+notes:
+  - ["job ceiling", "`job_ceiling_usd` = $0.50, kept in Redis across retries"]
+  - ["token cap", "`total_tokens_limit` per agent → `UsageLimits`"]
+  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens"]
+  - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
+  - ["own models", "called direct, priced by the same table, not capped by the gateway"]
+failures:
+  - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
+  - ["ceiling reached mid-run", "run stops as overdrawn", "src/mycel/agents/core/runner.py"]
+  - ["unknown model ref", "config error", "src/mycel/domains/chat_model.py"]
+  - ["model has no price", "spend not added — no cap applies", "src/mycel/llm/budget.py"]
+  - ["gateway key over $10", "gateway refuses; the turn fails", "scripts/ops/gateway-key.sh"]
+related:
+  - [Own model, own-model.html]
+  - [Config, ../overview/config.html]
