@@ -3,7 +3,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Idempotency · Queue · Mycel handbook</title>
-<link rel="stylesheet" href="../handbook.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="../queue/deep.css">
 <style>
   .story { display: grid; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
   .story h3 { margin: 0; font-size: 15px; }
@@ -125,7 +128,7 @@
   <symbol id="i-redis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></symbol>
   <symbol id="i-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></symbol>
 </svg>
-<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Queue / Idempotency</span></nav>
+<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
 <main>
 
 <h1>Idempotency: a job delivered twice is answered once</h1>
@@ -374,7 +377,7 @@
 </ul>
 
 <div class="related">
-  <a href="outbox.html">Outbox: how the job enters the queue</a><a href="retry-dlq-replay.html">Retries and the dead-letter queue</a><a href="worker-shutdown.html">Stopping a worker</a><a href="../agents/budget-limits.html">Money limits</a>
+  <a href="outbox.html">Outbox: how the job enters the queue</a><a href="../flows/job-failures.html">Retries and the dead-letter queue</a><a href="../flows/job-failures.html">Stopping a worker</a><a href="../overview/config.html">Money limits</a>
 </div>
 
 </main>

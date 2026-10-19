@@ -1,0 +1,51 @@
+title: "Job failures: outbox and relay, delivery, final versus transient errors, retry queues, dead-letter, replay"
+page:
+  eyebrow: Flow
+  title: When a job fails
+  lede: ["A job is never lost: written with its row, retried, or parked", "Parked jobs go back with one command"]
+lanes: [request, broker, worker, ops]
+boxes:
+  - {id: enq,      lane: request, col: 0, file: src/mycel/services/enqueue.py,                   label: services/enqueue.py,    role: "outbox row, then publish"}
+  - {id: outbox,   lane: request, col: 1, file: src/mycel/infra/postgres/repositories/outbox.py, label: "Postgres · outbox",    role: "job, same transaction"}
+  - {id: runner,   lane: request, col: 2, file: src/mycel/scheduler/runner.py,                   label: scheduler/runner.py,    role: "relay every 5 s"}
+  - {id: producer, lane: broker,  col: 0, file: src/mycel/queue/producer.py,                     label: queue/producer.py,      role: "publish, confirmed"}
+  - {id: topo,     lane: broker,  col: 1, file: src/mycel/queue/topology.py,                     label: queue/topology.py,      role: "jobs · jobs.retry · jobs.dlq"}
+  - {id: retry,    lane: broker,  col: 2, file: src/mycel/queue/retry.py,                        label: queue/retry.py,         role: "5 s → 30 s → 2 m → dlq"}
+  - {id: consumer, lane: worker,  col: 0, file: src/mycel/queue/consumer.py,                     label: queue/consumer.py,      role: "run, then ack or reject", hot: true}
+  - {id: worker,   lane: worker,  col: 1, file: src/mycel/worker.py,                             label: worker.py,              role: "FINAL or TRANSIENT"}
+  - {id: chat,     lane: worker,  col: 2, file: src/mycel/domains/chat.py,                       label: domains/chat.py,        role: "marks the turn failed"}
+  - {id: claims,   lane: worker,  col: 3, file: src/mycel/infra/redis/claims.py,                 label: "Redis · claim",        role: "one run per job"}
+  - {id: replaysh, lane: ops,     col: 0, file: scripts/ops/replay.sh,                           label: ops/replay.sh,          role: "you run it"}
+  - {id: replay,   lane: ops,     col: 1, file: src/mycel/queue/replay.py,                       label: queue/replay.py,        role: "dlq → back to jobs"}
+edges:
+  - {from: enq,      to: outbox,   step: 1, kind: import, label: "row"}
+  - {from: enq,      to: producer, step: 2, kind: import, label: "publish"}
+  - {from: runner,   to: enq,               kind: import, label: "relay unsent", exit: -0.3, via: [[1.7, 0.5], [0.3, 0.5]], enter: 0.3}
+  - {from: producer, to: consumer, step: 3, kind: queue,  text: "topology.QUEUE", label: "deliver"}
+  - {from: consumer, to: worker,   step: 4, kind: calls,  text: "jobs.run(job)",  label: "run"}
+  - {from: worker,   to: chat,              kind: import, label: "chat.run"}
+  - {from: chat,     to: claims,            kind: import, label: "claim"}
+  - {from: consumer, to: retry,    step: 5, kind: import, label: "reject", exit: 0.3, via: [[0.3, 1.5], [2, 1.5]]}
+  - {from: retry,    to: topo,              kind: import, label: "which queue"}
+  - {from: replaysh, to: replay,   step: 6, kind: calls,  text: "mycel.queue.replay", label: "dlq name, N"}
+  - {from: replay,   to: topo,              kind: import, label: "back to jobs", via: [[1, 2.5], [0.5, 2.5], [0.5, 1]], enter: -0.5}
+notes:
+  - ["retry", "transient errors: 5 s → 30 s → 2 min, then parked"]
+  - ["final errors", "budget, unknown job, model refused, loop stopped → parked at once"]
+  - ["worker died", "the queue delivers again; after 4 deliveries it is parked"]
+  - ["run once", "a chat job claims its id in Redis; a second copy waits"]
+  - ["see parked jobs", "`scripts/stack.sh replay`"]
+  - ["send them back", "`scripts/stack.sh replay jobs.dlq 100`"]
+failures:
+  - ["publish fails after commit", "row stays unsent; relay sends it in ~10 s", "src/mycel/services/enqueue.py"]
+  - ["relay sent it but could not mark it", "sent twice; chat's claim stops a double answer", "src/mycel/domains/chat.py"]
+  - ["message body unreadable", "parked at once", "src/mycel/queue/consumer.py"]
+  - ["unexpected error (a bug)", "recorded and parked, no retry", "src/mycel/queue/consumer.py"]
+  - ["broker or Postgres down while failing", "message returned to the queue", "src/mycel/queue/consumer.py"]
+  - ["what \"failed\" means", "chat: the turn shows failed · ingest: the document shows failed · others: nothing", "src/mycel/worker.py"]
+related:
+  - [Outbox in depth, ../queue/outbox.html]
+  - [Run once in depth, ../queue/idempotency.html]
+  - [Architecture, ../overview/architecture.html]
+  - [Upload a document, upload.html]
+  - [Jira sync, jira-sync.html]

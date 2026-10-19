@@ -80,7 +80,7 @@ def seen(edge: dict[str, Any], boxes: dict[str, Any]) -> bool:
 
 
 def check(spec: dict[str, Any]) -> list[str]:
-    """Every missing file and every edge the code does not show."""
+    """Every missing file, every edge the code does not show, every layout clash."""
     boxes = {b["id"]: b for b in spec["boxes"]}
     misses = [
         f"box {b['id']}: no file {b['file']}"
@@ -93,7 +93,7 @@ def check(spec: dict[str, Any]) -> list[str]:
             misses.append(
                 f"edge {e['from']}→{e['to']} ({e.get('kind', 'import')}): not seen in code"
             )
-    return misses
+    return misses + layout_misses(spec)
 
 
 def X(c: float) -> float:
@@ -123,11 +123,14 @@ def on_edge(box: dict[str, Any], centre: Point, toward_pt: Point) -> Point:
 
 def route(e: dict[str, Any], a: dict[str, Any], b: dict[str, Any]) -> list[Point]:
     """The polyline from box a to box b, square corners only."""
-    grid = [
-        (a["col"] + e.get("exit", 0), a["row"]),
-        *map(tuple, e.get("via", [])),
-        (b["col"] + e.get("enter", 0), b["row"]),
-    ]
+    start = (a["col"] + e.get("exit", 0), a["row"])
+    stop = (b["col"] + e.get("enter", 0), b["row"])
+    via = [tuple(v) for v in e.get("via", [])]
+    if not via and start[0] != stop[0] and start[1] != stop[1]:
+        # down to the gap just before the target row, across, then into the target
+        gap = stop[1] - 0.5 if stop[1] > start[1] else stop[1] + 0.5
+        via = [(start[0], gap), (stop[0], gap)]
+    grid = [start, *via, stop]
     pts = [(X(c), Y(r)) for c, r in grid]
     for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
         if x1 != x2 and y1 != y2:
@@ -200,6 +203,80 @@ def edge_label(e: dict[str, Any], x: float, y: float) -> str:
     return out + text(x, y, e.get("label", "") + ("" if e["_seen"] else " · assumed"))
 
 
+LABEL_H, CHAR_W = 11, 5.6
+
+
+def label_box(e: dict[str, Any], x: float, y: float) -> tuple[float, float, float, float]:
+    """The area a label covers: (x1, y1, x2, y2)."""
+    lead = 18 if e.get("step") else 0
+    w = lead + CHAR_W * len(e.get("label", "") + ("" if e["_seen"] else " · assumed"))
+    return x, y - LABEL_H + 2, x + w, y + 3
+
+
+def overlaps(a: tuple[float, ...], b: tuple[float, ...]) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+def place_labels(
+    spec: dict[str, Any], boxes: dict[str, Any], routes: list[list[Point]]
+) -> list[Point]:
+    """A spot per label: the default, else the first nearby spot clear of boxes and labels."""
+    rect = [(b["x"], b["y"], b["x"] + BOX_W, b["y"] + BOX_H) for b in boxes.values()]
+    taken: list[tuple[float, float, float, float]] = []
+    spots = []
+    for e, pts in zip(spec["edges"], routes, strict=True):
+        x0, y0 = label_spot(e, pts)
+        tries = (
+            [(x0, y0)]
+            if "label_at" in e
+            else [
+                (x0 + dx, y0 + dy)
+                for dy in (0, 12, -12, 24, -24, 36)
+                for dx in (0, 30, -30, 60, -60, 90)
+            ]
+        )
+        for x, y in tries:
+            lb = label_box(e, x, y)
+            if not any(overlaps(lb, r) for r in rect) and not any(overlaps(lb, t) for t in taken):
+                break
+        else:
+            x, y = x0, y0
+        taken.append(label_box(e, x, y))
+        spots.append((x, y))
+    return spots
+
+
+def layout_misses(spec: dict[str, Any]) -> list[str]:
+    """Edges through an unrelated box, labels over a box or another label."""
+    lanes = spec["lanes"]
+    boxes = {b["id"]: b for b in spec["boxes"]}
+    for b in spec["boxes"]:
+        b["row"] = lanes.index(b["lane"])
+        b["x"], b["y"] = X(b["col"]) - BOX_W / 2, Y(b["row"]) - BOX_H / 2
+    rect = {i: (b["x"], b["y"], b["x"] + BOX_W, b["y"] + BOX_H) for i, b in boxes.items()}
+    misses, placed = [], []
+    routes = [route(e, boxes[e["from"]], boxes[e["to"]]) for e in spec["edges"]]
+    spots = place_labels(spec, boxes, routes)
+    for e, pts, spot in zip(spec["edges"], routes, spots, strict=True):
+        name = f"{e['from']}→{e['to']}"
+        for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
+            seg = (min(x1, x2) - 0.5, min(y1, y2) - 0.5, max(x1, x2) + 0.5, max(y1, y2) + 0.5)
+            for i, r in rect.items():
+                if i not in (e["from"], e["to"]) and overlaps(
+                    seg, (r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1)
+                ):
+                    misses.append(f"edge {name} crosses box {i}")
+        lb = label_box(e, *spot)
+        for i, r in rect.items():
+            if overlaps(lb, r):
+                misses.append(f"label of {name} sits on box {i}")
+        for other, ob in placed:
+            if overlaps(lb, ob):
+                misses.append(f"label of {name} sits on label of {other}")
+        placed.append((name, lb))
+    return sorted(set(misses))
+
+
 def draw(spec: dict[str, Any]) -> str:
     """The figure as one inline SVG."""
     lanes = spec["lanes"]
@@ -211,11 +288,11 @@ def draw(spec: dict[str, Any]) -> str:
     height = TOP + len(lanes) * ROW_H
 
     paths, labels = [], []
-    for e in spec["edges"]:
-        pts = route(e, boxes[e["from"]], boxes[e["to"]])
+    routes = [route(e, boxes[e["from"]], boxes[e["to"]]) for e in spec["edges"]]
+    for e, pts, spot in zip(spec["edges"], routes, place_labels(spec, boxes, routes), strict=True):
         dash = "" if e["_seen"] else ' stroke-dasharray="4 3"'
         paths.append('<path d="M ' + " L ".join(f"{x:.0f} {y:.0f}" for x, y in pts) + f'"{dash}/>')
-        labels.append(edge_label(e, *label_spot(e, pts)))
+        labels.append(edge_label(e, *spot))
 
     lane_names = "".join(
         text(LANE_X, Y(i) + 3, lane.upper(), extra=' text-anchor="end" letter-spacing="1.2"')

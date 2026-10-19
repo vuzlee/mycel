@@ -852,3 +852,10 @@ svg [data-path]:hover::after { content: none; }
 .sch.t-app { color: var(--ink); }
 .sch-sub { margin: 0.8rem 0 0.5rem; font: 600 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
 .sch-note { margin: 0; font-size: 13px; color: var(--ink-soft); }
+/* ---------- Top nav, file links ---------- */
+.topnav { position: sticky; top: 0; z-index: 20; display: flex; gap: 18px; padding: 10px max(16px, calc(50% - 520px)); background: var(--ground); border-bottom: 1px solid var(--line); font: 500 12.5px var(--mono); }
+.topnav a { color: var(--ink-soft); text-decoration: none; }
+.topnav a:hover { color: var(--accent); }
+a.file { font: 12px var(--mono); color: var(--accent); text-decoration: none; }
+a.file:hover { text-decoration: underline; }
+svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }

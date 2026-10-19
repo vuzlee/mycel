@@ -1,0 +1,52 @@
+title: "Jira sync: every 15 min, each project read on one connected person's token, raw into bronze, cleaned into gold, then embedded"
+page:
+  eyebrow: Flow
+  title: Jira sync
+  lede: ["Every 15 minutes, and right after someone connects", "Each project is read on one connected person's token"]
+lanes: [timer, plugin, jira, pipeline, stores, search]
+boxes:
+  - {id: runner,   lane: timer,    col: 0, file: src/mycel/scheduler/runner.py,          label: scheduler/runner.py,   role: "every 15 min, one lock"}
+  - {id: dsync,    lane: timer,    col: 1, file: src/mycel/domains/sync.py,              label: domains/sync.py,       role: "on connect: a SYNC job"}
+  - {id: plugin,   lane: plugin,   col: 0, file: src/mycel/plugins/jira/plugin.py,       label: jira/plugin.py,        role: "sync()"}
+  - {id: jsync,    lane: plugin,   col: 1, file: src/mycel/plugins/jira/sync.py,         label: jira/sync.py,          role: "one run, start to end", hot: true}
+  - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,       label: jira/access.py,        role: "who reads which project"}
+  - {id: oauth,    lane: plugin,   col: 3, file: src/mycel/plugins/jira/oauth.py,        label: jira/oauth.py,         role: "each reader's token"}
+  - {id: srcjira,  lane: jira,     col: 2, file: src/mycel/sources/jira.py,              label: sources/jira.py,       role: "Jira REST: search, hours"}
+  - {id: fetch,    lane: pipeline, col: 1, file: src/mycel/services/fetch.py,            label: services/fetch.py,     role: "changed since last run"}
+  - {id: transform,lane: pipeline, col: 2, file: src/mycel/services/transform.py,        label: services/transform.py, role: "bronze → silver → gold"}
+  - {id: bronze,   lane: stores,   col: 1, file: src/mycel/infra/postgres/repositories/bronze.py, label: "Postgres · bronze", role: "raw, as Jira sent it"}
+  - {id: gold,     lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/gold.py,   label: "Postgres · gold",   role: "what agents read", hot: true}
+  - {id: index,    lane: search,   col: 2, file: src/mycel/domains/index.py,             label: domains/index.py,      role: "INDEX_GOLD job: embed"}
+  - {id: qdrant,   lane: search,   col: 3, file: src/mycel/infra/vectors/indexer.py,     label: Qdrant,                role: "gold, searchable"}
+edges:
+  - {from: runner,    to: plugin,    step: 1, kind: calls,  text: "p.sync",          label: "tick"}
+  - {from: dsync,     to: plugin,             kind: calls,  text: "plugin.sync()",   label: "or: SYNC job", exit: -0.3, via: [[0.7, 0.5], [0.3, 0.5]], enter: 0.3}
+  - {from: plugin,    to: jsync,     step: 2, kind: import, label: "run"}
+  - {from: jsync,     to: access,    step: 3, kind: import, label: "refresh access"}
+  - {from: jsync,     to: oauth,              kind: import, label: "tokens", via: [[1.3, 0.5], [3, 0.5]], exit: 0.3}
+  - {from: access,    to: srcjira,            kind: import, label: "projects"}
+  - {from: jsync,     to: fetch,     step: 4, kind: import, label: "projects, since"}
+  - {from: fetch,     to: srcjira,            kind: import, label: "JQL search", exit: 0.3, enter: -0.3}
+  - {from: fetch,     to: bronze,    step: 5, kind: import, label: "raw payloads"}
+  - {from: jsync,     to: transform, step: 6, kind: import, label: "changed keys", exit: 0.15, via: [[1.15, 1.5], [1.6, 1.5], [1.6, 3]]}
+  - {from: transform, to: gold,      step: 7, kind: import, label: "upsert"}
+  - {from: index,     to: gold,      step: 8, kind: import, label: "read gold", reverse: true}
+  - {from: index,     to: qdrant,    step: 9, kind: calls,  text: "indexer",  label: "embed"}
+notes:
+  - ["who reads", "each project once, by the first connected person who may browse it"]
+  - ["what is read", "only issues changed since the last run (the newest `fetched_at`)"]
+  - ["one at a time", "Postgres lock `sync:jira`; a second run is skipped"]
+  - ["re-read everything", "`scripts/stack.sh sync --refetch`"]
+failures:
+  - ["a reader's token fails", "skipped — their projects wait for the next run", "src/mycel/plugins/jira/sync.py"]
+  - ["a person's access read fails", "their access is cleared until the next run", "src/mycel/plugins/jira/access.py"]
+  - ["Jira says 429", "3 tries with Retry-After", "src/mycel/sources/jira_http.py"]
+  - ["Jira times out or 5xx", "the whole run stops; error recorded", "src/mycel/plugins/jira/sync.py"]
+  - ["run stops after bronze was written", "those issues stay in bronze until `--refetch`", "src/mycel/services/fetch.py"]
+  - ["a row fails the checks", "nothing reaches gold this run", "src/mycel/services/transform.py"]
+  - ["SYNC job fails in the worker", "parked in the dead-letter queue, no retry", "src/mycel/worker.py"]
+  - ["no ingest worker running", "the embed job waits in its queue", "src/mycel/domains/index.py"]
+related:
+  - [Connect an account, connect.html]
+  - [Database, ../overview/database.html]
+  - [Job failures, job-failures.html]

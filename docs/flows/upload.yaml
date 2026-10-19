@@ -1,0 +1,50 @@
+title: "Upload a document: saved to MinIO, queued, parsed and embedded by the ingest worker, then searchable"
+page:
+  eyebrow: Flow
+  title: Upload a document
+  lede: ["A file becomes searchable pieces", "Slow work runs on the ingest worker, one at a time"]
+lanes: [browser, api, queue, worker, stores]
+boxes:
+  - {id: ui,      lane: browser, col: 0, file: web/src/components/knowledge/Documents.tsx,     label: knowledge/Documents.tsx,  role: "upload button, 2 MB check"}
+  - {id: apits,   lane: browser, col: 1, file: web/src/api.ts,                                 label: web/src/api.ts,           role: "posts the file"}
+  - {id: live,    lane: browser, col: 3, file: web/src/hooks/useDocuments.ts,                  label: hooks/useDocuments.ts,    role: "live list"}
+  - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/documents.py,              label: routes/documents.py,      role: "upload, status stream"}
+  - {id: svc,     lane: api,     col: 2, file: src/mycel/services/documents.py,                label: services/documents.py,    role: "checks, save, queue", hot: true}
+  - {id: enq,     lane: queue,   col: 2, file: src/mycel/services/enqueue.py,                  label: services/enqueue.py,      role: "INGEST job"}
+  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker.py,                            label: "worker.py --queue ingest", role: "one at a time"}
+  - {id: ingest,  lane: worker,  col: 2, file: src/mycel/domains/ingest.py,                    label: domains/ingest.py,        role: "parse, chunk, embed", hot: true}
+  - {id: files,   lane: stores,  col: 0, file: src/mycel/infra/objects/files.py,               label: "MinIO",                  role: "the original file"}
+  - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document, chunk", role: "status, pieces"}
+  - {id: qdrant,  lane: stores,  col: 2, file: src/mycel/infra/vectors/documents.py,           label: Qdrant,                   role: "vectors for search"}
+  - {id: events,  lane: stores,  col: 3, file: src/mycel/infra/redis/document_events.py,       label: "Redis · changed",        role: "tells the page"}
+edges:
+  - {from: ui,     to: apits,  step: 1, kind: calls,  text: "uploadDocument(file)", label: "file"}
+  - {from: apits,  to: route,  step: 2, kind: http,   text: '"/documents"',        label: "POST /documents"}
+  - {from: route,  to: svc,    step: 3, kind: import, label: "bytes"}
+  - {from: svc,    to: enq,    step: 4, kind: calls,  text: "enqueue.ingest_job(", label: "job"}
+  - {from: svc,    to: files,           kind: import, label: "save file", exit: -0.3, via: [[1.7, 1.5], [0, 1.5]]}
+  - {from: enq,    to: worker, step: 5, kind: queue,  text: "JobKind",             label: "ingest queue", via: [[2.3, 2.5], [3, 2.5]], exit: 0.3}
+  - {from: worker, to: ingest, step: 6, kind: calls,  text: 'JobKind.INGEST: (ingest, "run")', label: "run"}
+  - {from: ingest, to: files,           kind: import, label: "download", exit: -0.3, via: [[1.7, 3.5], [0.2, 3.5]], enter: 0.2}
+  - {from: ingest, to: qdrant, step: 7, kind: import, label: "vectors"}
+  - {from: ingest, to: repo,   step: 8, kind: import, label: "chunks, ready", exit: -0.15, via: [[1.85, 3.6], [1, 3.6]]}
+  - {from: ingest, to: events,          kind: import, label: "changed", exit: 0.3}
+  - {from: live,   to: route,           kind: http,   text: "/documents/status",   label: "SSE", via: [[3, 0.5], [1.3, 0.5]], enter: 0.3}
+notes:
+  - ["accepted", "PDF, DOCX, Markdown · up to 2 MB · checked by its bytes, not its name"]
+  - ["limits", "200 documents per person · 5 processing at once"]
+  - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]
+  - ["stuck", "watchdog every 60 s: parsing longer than 10 min → failed"]
+failures:
+  - ["over 2 MB", "refused in the browser; 413 at the server", "src/mycel/services/documents.py"]
+  - ["empty or unknown type", "422 / 415", "src/mycel/services/documents.py"]
+  - ["same file again", "409 Already uploaded", "src/mycel/services/documents.py"]
+  - ["too many documents / processing", "409 / 429", "src/mycel/services/documents.py"]
+  - ["publish fails after save", "relay sends it within seconds", "src/mycel/services/enqueue.py"]
+  - ["cannot parse, no text", "status failed, reason saved", "src/mycel/domains/ingest.py"]
+  - ["a store is down", "retried; failed only on the last try", "src/mycel/queue/consumer.py"]
+  - ["worker died mid-parse", "watchdog marks it failed after 10 min", "src/mycel/domains/ingest.py"]
+related:
+  - [Job failures, job-failures.html]
+  - [Database, ../overview/database.html]
+  - [Architecture, ../overview/architecture.html]

@@ -1,0 +1,51 @@
+title: "Connect an account: Settings → provider consent → callback → sealed token saved; Jira also reads access and queues a sync"
+page:
+  eyebrow: Flow
+  title: Connect an account
+  lede: ["Each person connects their own Jira or Google", "The same routes serve every plugin"]
+lanes: [browser, api, plugin, provider, store]
+boxes:
+  - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
+  - {id: apits,    lane: browser,  col: 1, file: web/src/api.ts,                                    label: web/src/api.ts,          role: "goes to /auth/{key}/start"}
+  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start, callback"}
+  - {id: registry, lane: api,      col: 0, file: src/mycel/plugins/registry.py,                     label: plugins/registry.py,     role: "plugin by key"}
+  - {id: jplugin,  lane: plugin,   col: 1, file: src/mycel/plugins/jira/plugin.py,                  label: jira/plugin.py,          role: "connect → access → sync", hot: true}
+  - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,                  label: jira/access.py,          role: "which projects readable"}
+  - {id: enqueue,  lane: plugin,   col: 3, file: src/mycel/services/enqueue.py,                     label: services/enqueue.py,     role: "queues a sync"}
+  - {id: soauth,   lane: provider, col: 0, file: src/mycel/services/oauth.py,                       label: services/oauth.py,       role: "one-time state"}
+  - {id: joauth,   lane: provider, col: 1, file: src/mycel/plugins/jira/oauth.py,                   label: jira/oauth.py,           role: "Atlassian consent, token"}
+  - {id: tokens,   lane: provider, col: 2, file: src/mycel/services/tokens.py,                      label: services/tokens.py,      role: "encrypts the token"}
+  - {id: redis,    lane: store,    col: 0, file: src/mycel/infra/redis/client.py,                   label: Redis,                   role: "state, 10 min"}
+  - {id: accounts, lane: store,    col: 1, file: src/mycel/infra/postgres/repositories/accounts.py, label: "Postgres · jira_account", role: "account, project access"}
+edges:
+  - {from: panel,    to: apits,    step: 1, kind: calls,  text: "connectPlugin(plugin.key)", label: "click"}
+  - {from: apits,    to: routes,   step: 2, kind: http,   text: "/start",                    label: "GET start"}
+  - {from: routes,   to: registry, step: 3, kind: calls,  text: "registry.get(key)",         label: "find"}
+  - {from: routes,   to: jplugin,  step: 4, kind: calls,  text: "plugin.connect(",           label: "callback: code"}
+  - {from: jplugin,  to: joauth,   step: 5, kind: calls,  text: "oauth.connect(",            label: "exchange code"}
+  - {from: joauth,   to: soauth,            kind: calls,  text: "JIRA.owner_of(",            label: "state"}
+  - {from: soauth,   to: redis,             kind: calls,  text: "_state_key(",               label: "GETDEL"}
+  - {from: joauth,   to: tokens,            kind: calls,  text: "seal(grant.refresh_token)", label: "encrypt"}
+  - {from: joauth,   to: accounts, step: 6, kind: calls,  text: "repo.upsert_jira_account(", label: "save account"}
+  - {from: jplugin,  to: access,   step: 7, kind: calls,  text: "access.refresh(user_id)",   label: "projects"}
+  - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
+notes:
+  - ["routes", "`/auth/{key}/start` · `/auth/{key}/callback` · `DELETE /auth/{key}` · `GET /auth/plugins`"]
+  - ["state", "Redis, 10 min, used once; only the account that started may finish"]
+  - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]
+  - ["Google", "same path without steps 7–8; its tools go to the researcher"]
+  - ["back to the page", "`/app/home?jira=connected` or `?jira_error=…`"]
+failures:
+  - ["unknown plugin", "404", "src/mycel/api/routes/connections.py"]
+  - ["client id/secret or encryption key not set", "503", "src/mycel/services/oauth.py"]
+  - ["cancelled at the provider", "`?jira_error=cancelled`", "src/mycel/api/routes/connections.py"]
+  - ["state expired or another account's", "`?jira_error=failed`", "src/mycel/services/oauth.py"]
+  - ["no refresh token returned", "failed, with a hint", "src/mycel/services/oauth.py"]
+  - ["Atlassian account sees no Jira site", "failed", "src/mycel/plugins/jira/oauth.py"]
+  - ["project read fails right after", "access empty; connect still succeeds", "src/mycel/plugins/jira/access.py"]
+  - ["queueing the sync fails", "account saved, but the page says failed", "src/mycel/plugins/jira/plugin.py"]
+  - ["later: grant revoked", "tools say \"connect it again\"", "src/mycel/services/oauth.py"]
+related:
+  - [Jira sync, jira-sync.html]
+  - [Add a plugin, ../change/add-plugin.html]
+  - [Sign in, sign-in.html]

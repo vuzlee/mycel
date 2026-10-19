@@ -1,0 +1,24 @@
+page:
+  eyebrow: Change
+  title: Add a column to gold
+  lede: ["Silver and gold must keep the same columns", "Old rows stay empty until a refetch"]
+steps:
+  - ["1", "src/mycel/infra/postgres/models/gold.py", "add the `mapped_column` to `WorkItem`"]
+  - ["2", "src/mycel/infra/postgres/models/jira.py", "the same column on `SilverWorkItem`"]
+  - ["3", "src/mycel/infra/postgres/repositories/gold.py", "add the field to `WorkItemRow` and to `to_row()` (listed by hand)"]
+  - ["4", "migrations/versions/0010_work_item_priority.py", "copy this pattern into a new `00NN_…py`: one loop over silver and gold"]
+  - ["5", "src/mycel/sources/jira.py", "if it comes from Jira: add it to `FIELDS`"]
+  - ["6", "src/mycel/etl/normalize.py", "set it in `from_jira_issue()` — no defaults, a missing one fails"]
+  - ["7", "src/mycel/agents/prompts/analyst.py", "add it to the gold schema the analyst reads"]
+  - ["8", "src/mycel/api/routes/dashboard.py", "if the dashboard shows it: `ItemResponse`, then `web/src/api.ts` and the page"]
+  - ["9", "scripts/ops/sync.sh", "run `scripts/stack.sh sync --refetch` to fill old rows"]
+  - ["test", "tests/pg.py", "the `_item` fixture; `tests/test_pg_schema.py` compares models with migrations"]
+mistakes:
+  - ["silver and gold differ", "silver reads fail with `TypeError`"]
+  - ["forgot `to_row()`", "every gold read drops the value"]
+  - ["no refetch", "the column stays empty for old issues"]
+  - ["prompt not updated", "the analyst never uses it (as with `priority` and `sprint_*` today)"]
+  - ["not in the indexer", "not searchable; `infra/vectors/indexer.py`"]
+related:
+  - [Database, ../overview/database.html]
+  - [Jira sync, ../flows/jira-sync.html]

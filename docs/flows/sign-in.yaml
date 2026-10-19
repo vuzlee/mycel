@@ -1,0 +1,52 @@
+title: "Sign in: Google, or a six-digit code by mail; both end in a 14-day session cookie"
+page:
+  eyebrow: Flow
+  title: Sign in
+  lede: ["Two ways in: Google, or a code sent by mail", "Both end in a session cookie, 14 days"]
+lanes: [browser, api, services, stores]
+boxes:
+  - {id: login,  lane: browser,  col: 0, file: web/src/pages/Login.tsx,                           label: pages/Login.tsx,           role: "Google button, email box"}
+  - {id: apits,  lane: browser,  col: 1, file: web/src/api.ts,                                    label: web/src/api.ts,            role: "calls /auth routes"}
+  - {id: conn,   lane: api,      col: 0, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "Google comes back here"}
+  - {id: route,  lane: api,      col: 1, file: src/mycel/api/routes/auth.py,                      label: api/routes/auth.py,        role: "sign-in routes, sets cookie"}
+  - {id: deps,   lane: api,      col: 3, file: src/mycel/api/dependencies.py,                     label: api/dependencies.py,       role: "cookie → who is asking"}
+  - {id: gsign,  lane: services, col: 0, file: src/mycel/services/google_signin.py,               label: services/google_signin.py, role: "checks Google's answer"}
+  - {id: scode,  lane: services, col: 1, file: src/mycel/services/signin_code.py,                 label: services/signin_code.py,   role: "6-digit code, 10 min"}
+  - {id: sauth,  lane: services, col: 2, file: src/mycel/services/auth.py,                        label: services/auth.py,          role: "account, session", hot: true}
+  - {id: smtp,   lane: stores,   col: 0, file: src/mycel/infra/smtp.py,                           label: infra/smtp.py,             role: "sends the code mail"}
+  - {id: redis,  lane: stores,   col: 1, file: src/mycel/infra/redis/client.py,                   label: Redis,                     role: "code hash, Google state"}
+  - {id: idrepo, lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/identity.py, label: "Postgres · user, session", role: "who, and their cookie"}
+edges:
+  - {from: login, to: apits,  step: 1, kind: calls,  text: "requestCode(email)",            label: "email"}
+  - {from: apits, to: route,  step: 2, kind: http,   text: "/code",                         label: "POST /auth/code"}
+  - {from: route, to: scode,  step: 3, kind: calls,  text: "signin_code.issue(body.email)", label: "make code"}
+  - {from: scode, to: redis,           kind: calls,  text: "_code_key(email)",              label: "hash"}
+  - {from: scode, to: smtp,            kind: import, label: "mail", exit: -0.3}
+  - {from: route, to: gsign,           kind: calls,  text: "google_signin.start(",          label: "or Google", exit: -0.3}
+  - {from: conn,  to: route,  step: 4, kind: calls,  text: "finish_google_signin(",         label: "back"}
+  - {from: route, to: sauth,  step: 5, kind: calls,  text: "auth.account_for(",             label: "find or create", exit: 0.3, enter: -0.2}
+  - {from: sauth, to: idrepo, step: 6, kind: calls,  text: "create_session(",               label: "session row"}
+  - {from: deps,  to: sauth,  step: 7, kind: calls,  text: "session_user(",                 label: "each request", enter: 0.2}
+notes:
+  - ["session cookie", "`mycel_session` · 14 days · httponly · samesite=lax · secure outside dev"]
+  - ["renewed?", "no — it ends 14 days after sign-in, however often it is used"]
+  - ["who may sign up", "`REGISTRATION_ALLOWED_DOMAINS`; empty = anyone"]
+  - ["rate limit", "5 code requests, 10 tries a minute, per IP"]
+  - ["Google asks for", "`openid email` only"]
+failures:
+  - ["Google client not set", "503 on start", "src/mycel/api/routes/auth.py"]
+  - ["cancelled at Google", "back to login, `error=cancelled`", "src/mycel/api/routes/auth.py"]
+  - ["Google answer fails a check (state, nonce, signature)", "`error=refused`", "src/mycel/services/google_signin.py"]
+  - ["new account, domain not allowed", "`error=refused`", "src/mycel/services/auth.py"]
+  - ["existing account, domain removed later", "Google still lets them in; the code does not", "src/mycel/services/auth.py"]
+  - ["SMTP not set", "503 on code request", "src/mycel/api/routes/auth.py"]
+  - ["domain not allowed (code)", "202 anyway, no mail sent", "src/mycel/services/signin_code.py"]
+  - ["mail fails to send", "logged; page still says check your mail", "src/mycel/services/signin_code.py"]
+  - ["wrong code", "400; after 5 tries the code is deleted", "src/mycel/services/signin_code.py"]
+  - ["code older than 10 min", "400 expired", "src/mycel/services/signin_code.py"]
+  - ["too many requests", "429 with Retry-After", "src/mycel/api/limits.py"]
+  - ["session expired", "row deleted, 401, page goes to login", "src/mycel/services/auth.py"]
+related:
+  - [Connect an account, connect.html]
+  - [Architecture, ../overview/architecture.html]
+  - [Database, ../overview/database.html]

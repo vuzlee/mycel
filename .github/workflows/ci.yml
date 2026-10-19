@@ -47,6 +47,12 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
+      # Handbook figures are checked against the code; a miss warns, it does not fail the build.
+      - name: Handbook
+        continue-on-error: true
+        working-directory: docs/tools
+        run: uv run python check.py
+
       # Nothing else runs the shell scripts, so a broken one reaches main unseen.
       - name: Scripts parse
         run: for f in scripts/*.sh scripts/*/*.sh; do bash -n "$f" || exit 1; done

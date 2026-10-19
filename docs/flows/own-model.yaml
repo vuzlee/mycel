@@ -1,0 +1,46 @@
+title: "Own model: a person adds an endpoint and keys; they are checked and encrypted; at chat time the call goes straight to that endpoint"
+page:
+  eyebrow: Flow
+  title: Use your own model
+  lede: ["A person adds their own endpoint and keys", "Calls go straight to it, not through the gateway"]
+lanes: [browser, api, worker, chat, stores]
+boxes:
+  - {id: panel,   lane: browser, col: 0, file: web/src/components/panels/OwnModels.tsx,        label: panels/OwnModels.tsx,     role: "add model, test keys"}
+  - {id: apits,   lane: browser, col: 1, file: web/src/api.ts,                                 label: web/src/api.ts,           role: "/models/own requests"}
+  - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/models.py,                 label: routes/models.py,         role: "own model routes"}
+  - {id: svc,     lane: api,     col: 2, file: src/mycel/services/own_models.py,               label: services/own_models.py,   role: "check, encrypt, save", hot: true}
+  - {id: guard,   lane: api,     col: 3, file: src/mycel/services/url_guard.py,                label: services/url_guard.py,    role: "no private addresses"}
+  - {id: keyck,   lane: worker,  col: 2, file: src/mycel/domains/key_check.py,                 label: domains/key_check.py,     role: "tests each key"}
+  - {id: cmodel,  lane: chat,    col: 2, file: src/mycel/domains/chat_model.py,                label: domains/chat_model.py,    role: "picks the model for a turn"}
+  - {id: source,  lane: chat,    col: 3, file: src/mycel/agents/core/model_source.py,          label: core/model_source.py,     role: "own model: direct call"}
+  - {id: rot,     lane: chat,    col: 4, file: src/mycel/agents/core/model_builder.py,         label: core/model_builder.py,    role: "one client per key; next on 429"}
+  - {id: repo,    lane: stores,  col: 2, file: src/mycel/infra/postgres/repositories/own_models.py, label: "Postgres · own_model", role: "URL, encrypted keys"}
+  - {id: redisk,  lane: stores,  col: 4, file: src/mycel/infra/redis/key_rotation.py,          label: "Redis · key order",      role: "which key next"}
+edges:
+  - {from: panel,  to: apits,  step: 1, kind: calls,  text: "addOwnModel(",         label: "URL, model, keys"}
+  - {from: apits,  to: route,  step: 2, kind: http,   text: "/own",                 label: "POST /models/own"}
+  - {from: route,  to: svc,    step: 3, kind: import, label: "fields"}
+  - {from: svc,    to: guard,           kind: import, label: "check URL"}
+  - {from: svc,    to: repo,   step: 4, kind: import, label: "save, keys encrypted", exit: 0.3, via: [[2.3, 1.5], [2.5, 1.5], [2.5, 3.6], [2.3, 3.6]], enter: 0.3}
+  - {from: svc,    to: keyck,  step: 5, kind: calls,  text: "key_check_job(",       label: "Test: a job"}
+  - {from: keyck,  to: cmodel,          kind: import, label: "test_keys"}
+  - {from: cmodel, to: repo,   step: 6, kind: import, label: "at chat time"}
+  - {from: cmodel, to: source, step: 7, kind: calls,  text: "OwnModel(",            label: "own source"}
+  - {from: source, to: rot,    step: 8, kind: import, label: "build"}
+  - {from: source, to: redisk,          kind: import, label: "cool a failed key", exit: 0.3, via: [[3.3, 3.5], [4, 3.5]]}
+notes:
+  - ["limits", "10 models per person · 1–5 keys each · 6 key tests a minute"]
+  - ["URL", "https only (plain http only for allowed LAN hosts) · no private or internal address · checked on save and before every call"]
+  - ["keys", "encrypted with `TOKEN_ENCRYPTION_KEY` · only the last 4 characters are shown"]
+  - ["key order", "a key that gets 401/402/403/429 is set aside; the next key is tried"]
+  - ["cost cap", "none — own model calls bypass the gateway's budget"]
+failures:
+  - ["blocked URL (private, internal, plain http)", "422 on save; refused at chat time", "src/mycel/services/url_guard.py"]
+  - ["no key, or more than 5", "422", "src/mycel/services/own_models.py"]
+  - ["a key fails the test", "that key shows not ok, with why", "src/mycel/domains/chat_model.py"]
+  - ["a key runs out mid-chat", "next key tried", "src/mycel/agents/core/rotating.py"]
+  - ["every key fails", "quota → retried later; auth → the turn fails", "src/mycel/agents/core/rotating.py"]
+  - ["encryption key changed", "stored keys cannot be read", "src/mycel/services/tokens.py"]
+related:
+  - [Architecture, ../overview/architecture.html]
+  - [Config, ../overview/config.html]

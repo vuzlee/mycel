@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Add tool · Change · Mycel handbook</title>
-<link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Change</nav>
-<main>
-  <h1>Add tool</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li>(cross-cutting: owns no file)</li>
-  </ul>
-</main>
-</body>
-</html>
+<title>Add a tool to the analyst · Mycel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="../page.css">
+
+<body>
+<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
+<div class="page">
+<header class="hero"><p class="eyebrow">Change</p><h1>Add a tool to the analyst</h1><div class="hero-lede"><ul class="bul"><li>A tool is a function the model may call</li><li>Six files, in this order</li></ul></div></header>
+<section>
+<h3 class="tbl-title">Files to change, in order</h3><table class="tbl"><thead><tr><th>#</th><th>File</th><th>Do</th></tr></thead><tbody><tr><td class="who">1</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/tools/work.py">agents/tools/work.py</a></td><td>add <code>@toolset.tool(name=…)</code> inside <code>build_toolset()</code>; a new module copies <code>compute.py</code></td></tr><tr><td class="who">2</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/guards.py">agents/core/guards.py</a></td><td>call <code>guard_repeat(ctx, …)</code> first in the tool; raise <code>ModelRetry</code> for bad input</td></tr><tr><td class="who">3</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/analyst.py">agents/specialists/analyst.py</a></td><td>add the toolset in <code>toolsets()</code>; a ready-made answer also goes in <code>READY_READS</code> (work.py)</td></tr><tr><td class="who">4</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/prompts/analyst.py">agents/prompts/analyst.py</a></td><td>tell the model when to use it</td></tr><tr><td class="who">5</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/agents/analyst.yaml">config/agents/analyst.yaml</a></td><td>raise <code>tool_calls_limit</code> if needed — and the &quot;twelve queries&quot; line in the prompt</td></tr><tr><td class="who">6</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/web/src/lib/toolLabel.ts">web/src/lib/toolLabel.ts</a></td><td>a label for the live step, else it shows &quot;Running my tool&quot;</td></tr><tr><td class="who">test</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/tests/test_work_tools.py">tests/test_work_tools.py</a></td><td>behaviour; chip in <code>tests/test_chips.py</code>; ready read in <code>tests/test_analyst.py</code></td></tr></tbody></table>
+<h3 class="tbl-title">Easy to get wrong</h3><table class="tbl"><thead><tr><th>Mistake</th><th>Result</th></tr></thead><tbody><tr><td class="who">toolset made without <code>opens(Chip…)</code></td><td>never offered once the person picks sources</td></tr><tr><td class="who">chip set per tool, not per toolset</td><td>chips apply to the whole toolset</td></tr><tr><td class="who">ready read missing from <code>READY_READS</code></td><td><code>run_sql</code> stays open; the model checks the answer again</td></tr><tr><td class="who"><code>ValueError</code> instead of <code>ModelRetry</code></td><td>the model gets no readable error</td></tr><tr><td class="who">limit raised, prompt not</td><td>the model still believes it has twelve queries</td></tr></tbody></table>
+</section>
+<footer><span><a href="add-plugin.html">Add a plugin</a> · <a href="../overview/architecture.html">Architecture</a></span><span class="mono">docs/change/add-tool.yaml</span></footer>
+</div><script src="../tip.js"></script></body>

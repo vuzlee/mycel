@@ -1,0 +1,20 @@
+page:
+  eyebrow: Change
+  title: Add a plugin
+  lede: ["A provider each person connects, e.g. GitHub", "One folder and one registry line"]
+steps:
+  - ["1", "src/mycel/core/config.py", "`<key>_client_id`, `<key>_client_secret`; a line in `.env.example`"]
+  - ["2", "src/mycel/plugins/jira/oauth.py", "copy into `plugins/<key>/oauth.py`: an `OAuthProvider`, connect, token_for"]
+  - ["3", "src/mycel/infra/postgres/repositories/accounts.py", "an account table and a migration: the sealed refresh token per person"]
+  - ["4", "src/mycel/plugins/jira/plugin.py", "copy into `plugins/<key>/plugin.py`: every `Plugin` member, then `PLUGIN = …()`"]
+  - ["5", "src/mycel/plugins/registry.py", "add it to `PLUGINS`"]
+  - ["6", "web/src/components/panels/Connections.tsx", "optional: an icon in `ICONS`"]
+  - ["test", "tests/test_plugin_tools.py", "no client → no tools; `/auth/plugins` lists it (`tests/test_auth.py`)"]
+mistakes:
+  - ["tool module imported at the top of `plugin.py`", "`tests/test_layers.py` fails: api would import agents"]
+  - ["key named `me`, `methods` or `plugins`", "an existing `/auth` route answers instead"]
+  - ["a shared token in `.env` for the sync", "against the design: every read is on a person's own grant"]
+  - ["callback not registered at the provider", "consent ends on the provider's error page"]
+related:
+  - [Connect an account, ../flows/connect.html]
+  - [Add a tool, add-tool.html]

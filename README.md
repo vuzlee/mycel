@@ -102,7 +102,7 @@ cd web && npm run lint && npm test && npm run build   # frontend
 ```
 
 Answer quality is scored separately, see [evals](evals/README.md).
-Design notes: [handbook](docs/index.html) · [architecture](docs/overview/architecture.html) · [database](docs/overview/database.html).
+Handbook: [docs/index.html](docs/index.html) — one figure per flow, checked against the code (`docs/tools/check.py`).
 
 ## License
 

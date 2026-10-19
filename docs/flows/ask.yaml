@@ -24,7 +24,7 @@ edges:
   - {from: svc,      to: enq,      step: 3, kind: import, label: job}
   - {from: enq,      to: rmq,               kind: import, label: publish}
   - {from: rmq,      to: worker,   step: 4, kind: queue,  text: topology.QUEUE, label: deliver}
-  - {from: worker,   to: domain,            kind: calls,  text: jobs.run, label: "RUNS[kind]", label_at: [1.62, 2.72]}
+  - {from: worker,   to: domain,            kind: calls,  text: jobs.run, label: "RUNS[kind]"}
   - {from: domain,   to: orch,     step: 5, kind: import, label: run}
   - {from: orch,     to: delegate, step: 6, kind: import, label: delegate}
   - {from: delegate, to: analyst,           kind: import, label: run}

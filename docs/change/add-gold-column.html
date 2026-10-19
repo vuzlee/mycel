@@ -1,18 +1,19 @@
 <!doctype html>
-<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Add gold column · Change · Mycel handbook</title>
-<link rel="stylesheet" href="../handbook.css">
-<body data-status="stub">
-<nav class="top"><a href="../index.html">Mycel handbook</a> · Change</nav>
-<main>
-  <h1>Add gold column</h1>
-  <p class="stub">Not written yet.</p>
-  <h2>Owns</h2>
-  <ul class="owns">
-    <li>(cross-cutting: owns no file)</li>
-  </ul>
-</main>
-</body>
-</html>
+<title>Add a column to gold · Mycel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="../page.css">
+
+<body>
+<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
+<div class="page">
+<header class="hero"><p class="eyebrow">Change</p><h1>Add a column to gold</h1><div class="hero-lede"><ul class="bul"><li>Silver and gold must keep the same columns</li><li>Old rows stay empty until a refetch</li></ul></div></header>
+<section>
+<h3 class="tbl-title">Files to change, in order</h3><table class="tbl"><thead><tr><th>#</th><th>File</th><th>Do</th></tr></thead><tbody><tr><td class="who">1</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/gold.py">infra/postgres/models/gold.py</a></td><td>add the <code>mapped_column</code> to <code>WorkItem</code></td></tr><tr><td class="who">2</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/jira.py">infra/postgres/models/jira.py</a></td><td>the same column on <code>SilverWorkItem</code></td></tr><tr><td class="who">3</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/repositories/gold.py">infra/postgres/repositories/gold.py</a></td><td>add the field to <code>WorkItemRow</code> and to <code>to_row()</code> (listed by hand)</td></tr><tr><td class="who">4</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/migrations/versions/0010_work_item_priority.py">migrations/versions/0010_work_item_priority.py</a></td><td>copy this pattern into a new <code>00NN_…py</code>: one loop over silver and gold</td></tr><tr><td class="who">5</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/sources/jira.py">sources/jira.py</a></td><td>if it comes from Jira: add it to <code>FIELDS</code></td></tr><tr><td class="who">6</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td><td>set it in <code>from_jira_issue()</code> — no defaults, a missing one fails</td></tr><tr><td class="who">7</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/prompts/analyst.py">agents/prompts/analyst.py</a></td><td>add it to the gold schema the analyst reads</td></tr><tr><td class="who">8</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/dashboard.py">api/routes/dashboard.py</a></td><td>if the dashboard shows it: <code>ItemResponse</code>, then <code>web/src/api.ts</code> and the page</td></tr><tr><td class="who">9</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/ops/sync.sh">scripts/ops/sync.sh</a></td><td>run <code>scripts/stack.sh sync --refetch</code> to fill old rows</td></tr><tr><td class="who">test</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/tests/pg.py">tests/pg.py</a></td><td>the <code>_item</code> fixture; <code>tests/test_pg_schema.py</code> compares models with migrations</td></tr></tbody></table>
+<h3 class="tbl-title">Easy to get wrong</h3><table class="tbl"><thead><tr><th>Mistake</th><th>Result</th></tr></thead><tbody><tr><td class="who">silver and gold differ</td><td>silver reads fail with <code>TypeError</code></td></tr><tr><td class="who">forgot <code>to_row()</code></td><td>every gold read drops the value</td></tr><tr><td class="who">no refetch</td><td>the column stays empty for old issues</td></tr><tr><td class="who">prompt not updated</td><td>the analyst never uses it (as with <code>priority</code> and <code>sprint_*</code> today)</td></tr><tr><td class="who">not in the indexer</td><td>not searchable; <code>infra/vectors/indexer.py</code></td></tr></tbody></table>
+</section>
+<footer><span><a href="../overview/database.html">Database</a> · <a href="../flows/jira-sync.html">Jira sync</a></span><span class="mono">docs/change/add-gold-column.yaml</span></footer>
+</div><script src="../tip.js"></script></body>
