@@ -79,8 +79,6 @@ PAGES: dict[str, list[str]] = {
     "flows/connect-accounts": [
         "src/mycel/api/routes/connections.py",
         "src/mycel/services/oauth.py",
-        "src/mycel/services/google_oauth.py",
-        "src/mycel/services/jira_oauth.py",
         "src/mycel/services/access_tokens.py",
         "src/mycel/infra/redis/access_tokens.py",
         "src/mycel/services/tokens.py",
@@ -255,6 +253,7 @@ PAGES: dict[str, list[str]] = {
     ],
     "data/sync-scheduler-locks": [
         "src/mycel/domains/sync.py",
+        "src/mycel/plugins/jira/sync.py",
         "src/mycel/scheduler/runner.py",
         "src/mycel/scheduler/__init__.py",
         "src/mycel/infra/postgres/locks.py",
@@ -300,6 +299,17 @@ PAGES: dict[str, list[str]] = {
         "src/mycel/api/__init__.py",
         "src/mycel/api/dependencies.py",
         "src/mycel/services/__init__.py",
+    ],
+    "platform/plugins": [
+        "src/mycel/plugins/__init__.py",
+        "src/mycel/plugins/base.py",
+        "src/mycel/plugins/registry.py",
+        "src/mycel/plugins/google/__init__.py",
+        "src/mycel/plugins/google/oauth.py",
+        "src/mycel/plugins/google/plugin.py",
+        "src/mycel/plugins/jira/__init__.py",
+        "src/mycel/plugins/jira/oauth.py",
+        "src/mycel/plugins/jira/plugin.py",
     ],
     "platform/caching": [
         "src/mycel/domains/chat_cache.py",
@@ -402,6 +412,7 @@ PAGES: dict[str, list[str]] = {
     ],
     "change/add-agent": [],
     "change/add-data-source": [],
+    "change/add-plugin": [],
     "change/add-gold-column": [],
     "change/add-host-model": [],
     "change/add-route": [],

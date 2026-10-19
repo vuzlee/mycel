@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a plugin · Change · Mycel handbook</title>
+<link rel="stylesheet" href="../handbook.css">
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Change / Add a plugin</span></nav>
+<main>
+
+<h1>Add a plugin</h1>
+<p class="lede">A new provider each person connects (e.g. GitHub): one folder and one registry line.</p>
+
+<nav class="toc"><a href="#files">01 Files in order</a><a href="#check">02 Checklist</a><a href="#tests">03 Tests</a><a href="#mistakes">04 Common mistakes</a></nav>
+
+<h2 id="files">01 · Files to touch, in order</h2>
+<figure class="fig"><div class="spine">
+  <div class="node" data-path="src/mycel/core/config.py"><b>1 · Settings</b><small><code>&lt;key&gt;_client_id</code>, <code>&lt;key&gt;_client_secret</code> + a line in <code>.env.example</code></small></div>
+  <div class="down">client</div>
+  <div class="node" data-path="src/mycel/plugins/jira/oauth.py"><b>2 · plugins/&lt;key&gt;/oauth.py</b><small>an <code>OAuthProvider</code>; connect, connected, disconnect, token_for</small></div>
+  <div class="down">tokens</div>
+  <div class="node" data-path="src/mycel/infra/postgres/repositories/accounts.py"><b>3 · An account table + migration</b><small>sealed refresh token per user</small></div>
+  <div class="down">rows</div>
+  <div class="node key" data-path="src/mycel/plugins/jira/plugin.py"><b>4 · plugins/&lt;key&gt;/plugin.py</b><small>implement every <code>Plugin</code> member; <code>PLUGIN = ...()</code></small></div>
+  <div class="down">one line</div>
+  <div class="node key" data-path="src/mycel/plugins/registry.py"><b>5 · registry.py</b><small>add it to <code>PLUGINS</code></small></div>
+  <div class="down">icon</div>
+  <div class="node" data-path="web/src/components/panels/Connections.tsx"><b>6 · Connections.tsx</b><small>optional: an icon in <code>ICONS</code></small></div>
+</div></figure>
+
+<h2 id="check">02 · Checklist</h2>
+<ul>
+  <li>Register the callback <code>&lt;PUBLIC_BASE_URL&gt;/auth/&lt;key&gt;/callback</code> at the provider.</li>
+  <li><code>toolsets(role)</code> returns <code>[]</code> when not <code>configured()</code>; import tool modules inside it.</li>
+  <li>Tools carry chip metadata (<code>opens(...)</code>), or the chip filter hides them.</li>
+  <li><code>syncs = False</code> unless data is copied; then <code>sync()</code> reads on people's tokens only.</li>
+  <li><code>probe()</code> raises on a broken state; returns one line otherwise.</li>
+  <li>Add the setup steps to <code>docs/operate/setup.md</code>.</li>
+</ul>
+
+<h2 id="tests">03 · Tests to add</h2>
+<ul>
+  <li>Unconfigured → no toolsets (see <code>tests/test_plugin_tools.py</code>).</li>
+  <li><code>/auth/plugins</code> lists the new key (<code>tests/test_auth.py</code>).</li>
+  <li>If it syncs: a revoked token is skipped (<code>tests/test_sync_readers.py</code>).</li>
+</ul>
+
+<h2 id="mistakes">04 · Common mistakes</h2>
+<div class="table-wrap"><table>
+  <tr><th>Mistake</th><th>Result</th></tr>
+  <tr><td>Importing a tool module at the top of <code>plugin.py</code></td><td><code>test_layers</code> fails: api would import agents</td></tr>
+  <tr><td>A key <code>me</code>, <code>methods</code> or <code>plugins</code></td><td>shadowed by an existing <code>/auth</code> route</td></tr>
+  <tr><td>A shared host token in <code>.env</code> for the sync</td><td>against the design: every read is on a person's grant</td></tr>
+</table></div>
+
+<h2>Related</h2>
+<div class="related"><a href="../platform/plugins.html">Plugins</a><a href="add-tool.html">Add a tool</a><a href="add-setting.html">Add a setting</a></div>
+
+</main>
+</body>
+</html>

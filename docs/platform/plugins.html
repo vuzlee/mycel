@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plugins · Platform · Mycel handbook</title>
+<link rel="stylesheet" href="../handbook.css">
+<style>
+  .core { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 10px; min-width: 640px; }
+  .bus { grid-column: 1 / -1; padding: 10px; border: 1.5px solid var(--accent); border-radius: 10px; background: var(--accent-soft); text-align: center; font-weight: 600; }
+  .bus small { display: block; font: 12px var(--mono); color: var(--ink-soft); font-weight: 400; }
+  .down2 { grid-column: 1 / -1; text-align: center; font: 11.5px var(--mono); color: var(--ink-soft); }
+  .pk { grid-column: span 2; display: grid; gap: 6px; padding: 10px; border: 1.5px dashed var(--line); border-radius: 12px; }
+  .pk > em { font: 600 12px var(--mono); font-style: normal; color: var(--accent); }
+  .pk .node { max-width: none; }
+</style>
+<body>
+<nav class="top"><a href="../index.html">Mycel handbook</a> <span class="here">/ Platform / Plugins</span></nav>
+<main>
+
+<h1>Plugins: each person connects their own Jira and Google</h1>
+<p class="lede">One interface per provider. Core loops a list; it never names Jira or Google.</p>
+
+<nav class="toc">
+  <a href="#without">01 Without it</a><a href="#how">02 How it works</a><a href="#iface">03 The interface</a>
+  <a href="#wrong">04 When things go wrong</a><a href="#promise">05 Guarantees</a><a href="#vocab">Vocabulary</a>
+</nav>
+
+<h2 id="without">01 · Without it</h2>
+<p class="purpose">Before batch 106, a provider reached into every layer by name.</p>
+<figure class="fig">
+  <div class="flow">
+    <div class="node bad"><b>New provider</b><small>e.g. GitHub</small></div>
+    <div class="lk"><span>touch</span></div>
+    <div class="node bad"><b>~15 modules</b><small>routes, scheduler, worker, doctor, specialists, web panel</small></div>
+    <div class="lk"><span>and</span></div>
+    <div class="node bad"><b>a shared account in .env</b><small>the host held a Jira identity for the sync</small></div>
+  </div>
+</figure>
+
+<h2 id="how">02 · How it works</h2>
+<p class="purpose">Every core caller asks the registry; each provider is one folder.</p>
+<figure class="fig">
+  <div class="core">
+    <div class="node" data-path="src/mycel/api/routes/connections.py"><b>Routes</b><small>/auth/plugins, /auth/{key}/start|callback, DELETE</small></div>
+    <div class="node" data-path="src/mycel/agents/specialists/analyst.py"><b>Specialists</b><small>registry.toolsets(role)</small></div>
+    <div class="node" data-path="src/mycel/scheduler/runner.py"><b>Scheduler · worker</b><small>a timer and a SYNC job per plugin that syncs</small></div>
+    <div class="node" data-path="src/mycel/doctor/__init__.py"><b>Doctor</b><small>PLUGINS group: one probe each</small></div>
+    <div class="down2">▾ ask by key or loop ▾</div>
+    <div class="bus" data-path="src/mycel/plugins/registry.py">registry<small>PLUGINS = (GOOGLE, JIRA) · get(key) · toolsets(role)</small></div>
+    <div class="down2">▾ each implements Plugin ▾</div>
+    <div class="pk"><em>plugins/google/</em>
+      <div class="node" data-path="src/mycel/plugins/google/plugin.py"><b>Google</b><small>syncs = False · tools for the researcher</small></div>
+      <div class="node" data-path="src/mycel/plugins/google/oauth.py"><b>oauth</b><small>consent, refresh, revoke</small></div>
+      <div class="node" data-path="src/mycel/plugins/google/calendar.py"><b>calendar · mail</b><small>read live per question</small></div>
+    </div>
+    <div class="pk"><em>plugins/jira/</em>
+      <div class="node" data-path="src/mycel/plugins/jira/plugin.py"><b>Jira</b><small>syncs = True · tools for the analyst</small></div>
+      <div class="node" data-path="src/mycel/plugins/jira/oauth.py"><b>oauth</b><small>consent, rotating refresh, cloud id</small></div>
+      <div class="node" data-path="src/mycel/plugins/jira/sync.py"><b>sync · tools · writes</b><small>each project read on one person's token</small></div>
+    </div>
+  </div>
+</figure>
+<p class="insight"><b>Key insight:</b> tool modules load inside <code>toolsets()</code>, so <code>api</code> imports plugins without importing <code>agents</code> (<code>tests/test_layers.py</code>).</p>
+
+<h2 id="iface">03 · The interface</h2>
+<div class="table-wrap"><table>
+  <tr><th>Member</th><th>Called by</th><th>Google</th><th>Jira</th></tr>
+  <tr><td><code>key</code>, <code>name</code>, <code>offers</code></td><td>routes, web card</td><td>google</td><td>jira</td></tr>
+  <tr><td><code>configured(settings)</code></td><td>routes, doctor, toolsets</td><td colspan="2">its client id + secret + <code>TOKEN_ENCRYPTION_KEY</code></td></tr>
+  <tr><td><code>consent_url</code>, <code>connect</code></td><td>/start, /callback</td><td>keeps the grant</td><td>keeps it, reads access, queues a sync</td></tr>
+  <tr><td><code>status(user)</code></td><td>GET /auth/plugins</td><td>email</td><td>display name, projects</td></tr>
+  <tr><td><code>disconnect</code></td><td>DELETE /auth/{key}</td><td>revokes at Google</td><td>drops the row and access</td></tr>
+  <tr><td><code>syncs</code>, <code>sync()</code></td><td>scheduler, worker</td><td>no</td><td>fetch → transform → index job</td></tr>
+  <tr><td><code>probe()</code></td><td>doctor</td><td>ready line</td><td>people connected, last sync</td></tr>
+  <tr><td><code>toolsets(role)</code></td><td>analyst, researcher</td><td>researcher: mail, calendar</td><td>analyst: live reads, writes</td></tr>
+</table></div>
+<details><summary>Details</summary>
+  <ul>
+    <li>Callback paths are unchanged (<code>/auth/google/callback</code>, <code>/auth/jira/callback</code>): no re-registration at the providers.</li>
+    <li>Google sign-in shares the Google callback; <code>google_signin.is_signin(state)</code> tells them apart. Sign-in is identity, not a plugin.</li>
+    <li><code>auth.router</code> is included first, so <code>/auth/me</code> and <code>/auth/methods</code> win over <code>/auth/{key}</code>.</li>
+    <li>Tests: <code>test_plugin_tools.py</code>, <code>test_sync_job.py</code>, <code>test_sync_readers.py</code>, <code>test_auth.py</code>.</li>
+  </ul>
+</details>
+
+<h2 id="wrong">04 · When things go wrong</h2>
+<div class="branches">
+  <div class="branch"><div class="when">No OAuth client set</div><div class="then"><span class="chip">card: not set up</span><span class="arrow">→</span><span class="chip">no tools offered</span><span class="arrow">→</span><span class="chip">doctor OFF</span></div></div>
+  <div class="branch"><div class="when">Unknown key</div><div class="then"><span class="chip bad">404</span></div></div>
+  <div class="branch"><div class="when">A token revoked mid-sync</div><div class="then"><span class="chip warn">that reader skipped</span><span class="arrow">→</span><span class="chip ok">others still sync</span></div></div>
+  <div class="branch"><div class="when">Sync already running</div><div class="then"><span class="chip">lock sync:{key} held</span><span class="arrow">→</span><span class="chip ok">request covered, not run twice</span></div></div>
+  <div class="branch"><div class="when">A SYNC job names no syncing plugin</div><div class="then"><span class="chip warn">logged, dropped</span></div></div>
+</div>
+
+<h2 id="promise">05 · Guaranteed / not guaranteed</h2>
+<div class="cols">
+  <div class="col ok"><h3>Guaranteed</h3><ul>
+    <li>Every provider's data is read on a person's own grant</li>
+    <li>One sync per plugin at a time</li>
+    <li>A plugin with no client offers no tool</li>
+  </ul></div>
+  <div class="col bad"><h3>Not guaranteed</h3><ul>
+    <li>A Jira project nobody connected can browse is never synced</li>
+    <li>The interface fits a third provider unchanged: it was drawn from two</li>
+  </ul></div>
+</div>
+
+<h2 id="vocab">Vocabulary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Plain meaning</th><th>File</th></tr>
+  <tr><td>Plugin</td><td>one provider behind one interface</td><td><span class="src" data-path="src/mycel/plugins/base.py" tabindex="0">plugins/base.py</span></td></tr>
+  <tr><td>Registry</td><td>the list core loops</td><td><span class="src" data-path="src/mycel/plugins/registry.py" tabindex="0">plugins/registry.py</span></td></tr>
+  <tr><td>Role</td><td>which specialist a toolset is for</td><td><span class="src" data-path="src/mycel/plugins/base.py" tabindex="0">plugins/base.py</span></td></tr>
+  <tr><td>Reader</td><td>the person whose token reads a project</td><td><span class="src" data-path="src/mycel/plugins/jira/sync.py" tabindex="0">plugins/jira/sync.py</span></td></tr>
+</table></div>
+
+<h2>Built in</h2>
+<p>104 (sync on each person's token) · 106 (interface, registry, routes) · 107 (tools) · 108 (sync, scheduler, doctor).</p>
+
+<h2>Related</h2>
+<div class="related"><a href="../change/add-plugin.html">Add a plugin</a><a href="../flows/connect-accounts.html">Connect accounts</a><a href="../data/sync-scheduler-locks.html">Sync and locks</a></div>
+
+</main>
+</body>
+</html>

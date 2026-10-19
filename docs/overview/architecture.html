@@ -1040,7 +1040,7 @@ footer {
           <rect x="640" y="202" width="128" height="36" rx="2"
                 fill="var(--ground)" stroke="var(--accent)" stroke-width="1.3"/>
           <text x="650" y="217" font-family="var(--mono)" font-size="10"
-                fill="var(--accent)">domains/sync.py</text>
+                fill="var(--accent)">plugins/jira/sync.py</text>
           <text x="650" y="231" font-family="var(--sans)" font-size="9.5"
                 fill="var(--ink-faint)">business chain</text>
           <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none"
@@ -1193,7 +1193,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       is a <em>link</em>. <code>domains/chat.py</code> queues the question through
       <code>enqueue</code>, then the worker runs the orchestrator and stores the answer in
       <code>app.turn</code>.
-      <code>domains/sync.py</code> calls <code>fetch</code> →
+      <code>plugins/jira/sync.py</code> calls <code>fetch</code> →
       <code>transform</code> → <code>check</code>. Services are reused by both;
       a service itself does not know which chain it is in.
     </p>
@@ -1882,7 +1882,7 @@ The domains built are <code>chat</code>, <code>knowledge</code>, <code>ingest</c
       <article class="op">
         <span class="op-svc">scheduler</span>
         <span class="op-role">The clock</span>
-        <p>A tick every 15 minutes, calling <code>domains/sync.py</code> directly &mdash; no HTTP, no queue. Always one replica, <code>Recreate</code>: two of them fire every schedule twice.</p>
+        <p>A tick every 15 minutes, calling each plugin's <code>sync()</code> directly &mdash; no HTTP, no queue. Always one replica, <code>Recreate</code>: two of them fire every schedule twice.</p>
       </article>
       <article class="op">
         <span class="op-svc">api</span>
