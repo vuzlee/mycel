@@ -10,6 +10,7 @@ import {
   fetchOwnPresets,
   startKeyCheck,
 } from "../../api";
+import { Confirm } from "../Dialogs";
 import { Close, Plus, Spinner, Trash } from "../icons";
 
 export const OWN_KEY = ["models", "own"];
@@ -68,6 +69,7 @@ export function OwnActions({
       onChange();
     },
   });
+  const [asking, setAsking] = useState(false);
   return (
     <>
       <button className="link" disabled={check.running} onClick={check.run}>
@@ -81,12 +83,23 @@ export function OwnActions({
         className="icon-button danger"
         aria-label={`Delete ${model.label}`}
         title={remove.error?.message ?? "Delete, with its keys"}
-        onClick={() => {
-          if (window.confirm(`Delete ${model.label} and its keys?`)) remove.mutate(model.id);
-        }}
+        onClick={() => setAsking(true)}
       >
         <Trash />
       </button>
+      {asking && (
+        <Confirm
+          title={`Delete ${model.label}?`}
+          body="The model and all its keys go. Chats already answered stay."
+          action="Delete"
+          danger
+          onConfirm={() => {
+            setAsking(false);
+            remove.mutate(model.id);
+          }}
+          onCancel={() => setAsking(false)}
+        />
+      )}
     </>
   );
 }
@@ -102,6 +115,7 @@ export function KeyChips({ model, check }: { model: OwnModel; check: KeyCheckRun
   const tested = model.key_hints.filter((h) => check.checks.has(h));
   const working = tested.filter((h) => check.checks.get(h)?.ok).length;
   const failure = drop.error ?? check.error;
+  const [asking, setAsking] = useState<number | null>(null);
 
   return (
     <div className="key-row">
@@ -121,9 +135,7 @@ export function KeyChips({ model, check }: { model: OwnModel; check: KeyCheckRun
                   aria-label={`Remove key ${h}`}
                   title="Remove this key"
                   disabled={drop.isPending}
-                  onClick={() => {
-                    if (window.confirm(`Remove key ${h}?`)) drop.mutate(i);
-                  }}
+                  onClick={() => setAsking(i)}
                 >
                   <Close size={11} />
                 </button>
@@ -132,6 +144,19 @@ export function KeyChips({ model, check }: { model: OwnModel; check: KeyCheckRun
           );
         })}
       </ul>
+      {asking !== null && (
+        <Confirm
+          title={`Remove key ${model.key_hints[asking]}?`}
+          body="Runs stop using it. You can add it again later."
+          action="Remove"
+          danger
+          onConfirm={() => {
+            drop.mutate(asking);
+            setAsking(null);
+          }}
+          onCancel={() => setAsking(null)}
+        />
+      )}
       {tested.length > 0 && !check.running && (
         <span className="key-summary" data-all={working === tested.length}>
           {working === tested.length

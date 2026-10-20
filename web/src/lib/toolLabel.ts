@@ -29,7 +29,7 @@ const LABELS: Record<string, Describe> = {
   confirm_jira_write: () => "Writing to Jira",
 
   // Elsewhere.
-  web_search: (a) => withDetail("Searching the web", text(a.query)),
+  web_search: (a) => withDetail("Searching the web", searches(a)),
   read_mail: () => "Reading the mailbox",
   read_events: () => "Reading the calendar",
   draft_event: (a) => withDetail("Drafting an event", text(a.summary)),
@@ -93,4 +93,9 @@ function parse(raw: string): Args {
   } catch {
     return {};
   }
+}
+
+/** A batch reads as its queries joined; a turn stored before batching still has `query`. */
+function searches(a: Args): string {
+  return Array.isArray(a.queries) ? a.queries.map(text).filter(Boolean).join(" · ") : text(a.query);
 }

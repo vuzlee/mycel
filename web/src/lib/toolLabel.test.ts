@@ -20,6 +20,16 @@ describe("labelFor", () => {
     );
   });
 
+  it("lists every query of a batched web search", () => {
+    expect(labelFor("web_search", '{"queries": ["ai news", "openai"]}')).toBe(
+      "Searching the web · ai news · openai",
+    );
+  });
+
+  it("still reads a web search stored before batching", () => {
+    expect(labelFor("web_search", '{"query": "ai news"}')).toBe("Searching the web · ai news");
+  });
+
   it("hides the structured answer an agent hands back", () => {
     expect(labelFor("final_result", '{"headline": "157 tickets closed"}')).toBe("Writing up");
   });
