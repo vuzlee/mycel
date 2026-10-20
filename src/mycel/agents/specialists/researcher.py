@@ -1,13 +1,10 @@
 """Agent that reads the web, mail, calendar and documents, and cites every claim."""
 
-from datetime import datetime
-
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, ModelRetry, RunContext
+from pydantic_ai import ModelRetry, RunContext
 from pydantic_ai.toolsets import AbstractToolset
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.prompts import load
 from mycel.agents.tools import rag_search, web_search
@@ -65,19 +62,6 @@ class Researcher(BaseAgent[Research]):
     name = "researcher"
     instructions = load("researcher")
     output_type = Research
-
-    @classmethod
-    def build(cls, settings: AgentSettings | None = None) -> Agent[MycelDeps, Research]:
-        agent = super().build(settings)
-
-        @agent.instructions
-        def now(ctx: RunContext[MycelDeps]) -> str:
-            # "Now" and "tonight" need a clock, in the asker's zone; without one the model
-            # guesses a date.
-            at = datetime.now(ctx.deps.tz)
-            return f"It is {at:%A %d %B %Y, %H:%M} in {ctx.deps.tz.key}, the asker's time zone."
-
-        return agent
 
     @classmethod
     def toolsets(cls) -> list[AbstractToolset[MycelDeps]]:

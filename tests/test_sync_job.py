@@ -71,3 +71,28 @@ async def test_connecting_jira_refreshes_access_and_queues_a_sync(
     monkeypatch.setattr(enqueue, "queue", queue)
     await JIRA.connect("state", "code", 7)
     assert seen == ["connect", ("refresh", 7), JobKind.SYNC]
+
+
+def test_a_jira_hiccup_is_retried_not_parked() -> None:
+    """A timeout or 5xx from Jira may pass in a minute; the SYNC job must be retried."""
+    from mycel.sources import SourceError
+
+    assert issubclass(SourceError, worker.TRANSIENT)
+
+
+async def test_a_failed_follow_up_does_not_fail_the_connect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The account is saved; a sync that could not be queued is the timer's job, not an error."""
+
+    async def connect(*_: object) -> None: ...
+
+    async def refresh(user_id: int) -> None: ...
+
+    async def queue(job: Job) -> None:
+        raise OSError("database went away")
+
+    monkeypatch.setattr(jira_oauth, "connect", connect)
+    monkeypatch.setattr(access, "refresh", refresh)
+    monkeypatch.setattr(enqueue, "queue", queue)
+    await JIRA.connect("state", "code", 7)

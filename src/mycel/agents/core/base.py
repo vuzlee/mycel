@@ -7,10 +7,14 @@ from abc import ABC
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import ProcessHistory
 
 from mycel.agents.core.chips import allowed
+from mycel.agents.core.compact import compact
 from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.history import shrink_old_results
+from mycel.agents.core.prompt_parts import PromptParts
 from mycel.mcp.clients import build_toolsets
 
 if TYPE_CHECKING:
@@ -71,6 +75,11 @@ class BaseAgent(ABC, Generic[OutputT]):
             instructions=cls.instructions,
             retries=cfg.tool_retries,
             name=cls.name,
+            capabilities=[
+                ProcessHistory(shrink_old_results),
+                ProcessHistory(compact),
+                PromptParts(),
+            ],
             # A tool outside the turn's chips is never sent to the model.
             toolsets=[
                 ts.filtered(allowed)

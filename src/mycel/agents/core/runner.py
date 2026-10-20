@@ -6,6 +6,7 @@ are recorded once, by the caller. `iter()` rather than `run()` so a run stopped 
 still reports what it spent.
 """
 
+from datetime import datetime
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic_ai import Agent
@@ -21,6 +22,7 @@ from mycel.observability.metrics import tokens_spent_total
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from zoneinfo import ZoneInfo
 
     from pydantic_ai import RunContext
     from pydantic_ai.agent import AgentRun
@@ -120,6 +122,15 @@ async def delegate(
     return await _iterate(agent, prompt, ctx.deps, cfg, limits, ctx.usage, ctx.tool_call_id)
 
 
+def dated(prompt: str, tz: "ZoneInfo") -> str:
+    """The prompt as the model gets it: the date first, where a small model cannot miss it.
+
+    In the system prompt a weak model let its training year win; only the model sees this,
+    events and history keep the prompt as asked.
+    """
+    return f"[Today is {datetime.now(tz):%A %d %B %Y, %H:%M} in {tz.key}.]\n\n{prompt}"
+
+
 async def _iterate(
     agent: "Agent[MycelDeps, OutputT]",
     prompt: str,
@@ -135,7 +146,7 @@ async def _iterate(
     async with source.open(cfg, deps.job_id) as model:
         with translate_agent_errors(source.label):
             async with agent.iter(
-                prompt, deps=deps, model=model, usage=usage, usage_limits=limits
+                dated(prompt, deps.tz), deps=deps, model=model, usage=usage, usage_limits=limits
             ) as agent_run:
                 try:
                     await emitter.emit(RUN_STARTED, prompt=prompt)

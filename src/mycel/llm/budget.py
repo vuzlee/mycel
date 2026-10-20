@@ -116,7 +116,12 @@ def own_price(model_id: str, api_base: str, usage: "RunUsage") -> Decimal | None
 
     try:
         found = calc_price(
-            Usage(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens),
+            # A cache hit is priced at the provider's cache rate, a tenth of input on Gemini.
+            Usage(
+                input_tokens=usage.input_tokens,
+                cache_read_tokens=usage.cache_read_tokens,
+                output_tokens=usage.output_tokens,
+            ),
             model_ref=model_id,
             provider_api_url=api_base,
         )

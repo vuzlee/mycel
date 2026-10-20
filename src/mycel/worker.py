@@ -32,6 +32,7 @@ from mycel.llm.budget import BudgetExceeded
 from mycel.queue import consumer, topology
 from mycel.queue.handler import Handler
 from mycel.queue.job import INGEST_KINDS, Job, JobKind
+from mycel.sources import SourceError
 
 
 class UnknownJob(Exception):
@@ -67,6 +68,9 @@ TRANSIENT: tuple[type[Exception], ...] = (
     ResponseHandlingException,
     botocore.exceptions.ConnectionError,
     botocore.exceptions.HTTPClientError,
+    # A provider timeout, 5xx or rate limit; a 4xx refusal also lands here and is parked
+    # once the retries run out.
+    SourceError,
 )
 
 

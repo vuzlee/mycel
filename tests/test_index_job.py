@@ -26,6 +26,17 @@ async def _empty() -> dict[int, frozenset[str]]:
     return {}
 
 
+async def _none() -> None:
+    return None
+
+
+class _NoBronze:
+    def __init__(self, session: object) -> None: ...
+
+    async def keys_fetched_since(self, since: object) -> list[str]:
+        return []
+
+
 async def test_a_sync_queues_one_index_job_and_embeds_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -55,6 +66,8 @@ async def test_a_sync_queues_one_index_job_and_embeds_nothing(
     monkeypatch.setattr(sync, "_fetch_all", fetched)
     monkeypatch.setattr(sync, "transform", transformed)
     monkeypatch.setattr(sync, "_record", nothing)
+    monkeypatch.setattr(sync, "_last_success", _none)
+    monkeypatch.setattr(sync, "BronzeRepository", _NoBronze)
     monkeypatch.setattr(access, "refresh_everyone", lambda: _empty())
     monkeypatch.setattr(enqueue, "stage", stage)
     monkeypatch.setattr(enqueue, "send", send)

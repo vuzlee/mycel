@@ -202,6 +202,19 @@ class TestTheAccountBehindASignIn:
             await auth.account_for(session, "o@elsewhere.org")
         assert (await auth.account_for(session, "o@example.com")).id
 
+    async def test_removing_a_domain_locks_its_existing_accounts_out(
+        self, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An account made while the domain was allowed must not outlive the allowlist."""
+        await auth.account_for(session, "o@elsewhere.org", "g-old")
+        monkeypatch.setenv("REGISTRATION_ALLOWED_DOMAINS", "example.com")
+        get_settings.cache_clear()
+
+        with pytest.raises(auth.AuthError):
+            await auth.account_for(session, "o@elsewhere.org", "g-old")
+        with pytest.raises(auth.AuthError):
+            await auth.account_for(session, "o@elsewhere.org")
+
 
 class TestTheEmailedCode:
     async def test_the_right_code_works_once(self, redis: CodeRedis) -> None:
@@ -372,6 +385,13 @@ class TestOverHttp:
         assert me.status_code == 200
         assert me.json()["email"] == "k@example.com"
 
+    def test_loading_the_app_extends_the_cookie(self, client: TestClient, redis: CodeRedis) -> None:
+        """The browser drops a cookie at its max-age; each page load sets it again."""
+        self.sign_in(client)
+
+        cookie = client.get("/auth/me").headers.get("set-cookie", "")
+        assert "mycel_session=" in cookie and "Max-Age=1209600" in cookie
+
     def test_asking_for_a_code_mails_it(
         self, client: TestClient, redis: CodeRedis, mailbox: list[tuple[str, str]]
     ) -> None:
@@ -505,6 +525,18 @@ class TestSessions:
             assert await auth.session_user(session, token) == user
 
         assert touched == []
+
+    async def test_a_session_in_use_does_not_expire(self, session: AsyncSession) -> None:
+        """Using it pushes the end out again; only 14 idle days end it."""
+        user = await auth.account_for(session, "active@example.com")
+        soon = datetime.now(UTC) + timedelta(hours=1)
+        await IdentityRepository(session).create_session("active-token", user.id, soon)
+        long_ago = datetime.now(UTC) - timedelta(days=1)
+        await IdentityRepository(session).touch_session("active-token", long_ago)
+
+        assert await auth.session_user(session, "active-token") == user
+        row = await IdentityRepository(session).session_by_id("active-token")
+        assert row is not None and row.expires_at > datetime.now(UTC) + timedelta(days=13)
 
     async def test_an_expired_session_reads_as_gone(self, session: AsyncSession) -> None:
         """Expiry is enforced on read, not by the database."""

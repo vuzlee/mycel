@@ -1,6 +1,6 @@
 """Postgres: layers."""
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import text
@@ -336,3 +336,21 @@ class TestTheTransform:
         assert await transform(session) == TransformResult(
             silver_items=0, silver_worklogs=0, items=0, worklogs=0
         )
+
+
+@needs_postgres
+class TestLeftInBronze:
+    """A sync that died after bronze must not strand those issues: the next run lifts them."""
+
+    async def test_keys_written_since_the_last_good_sync_are_found(
+        self, session: AsyncSession
+    ) -> None:
+        repo = BronzeRepository(session)
+        await repo.save_issues([_payload("MYC-7")])
+        await session.flush()
+        before = datetime.now(UTC) - timedelta(minutes=1)
+        later = datetime.now(UTC) + timedelta(minutes=1)
+
+        assert await repo.keys_fetched_since(before) == ["MYC-7"]
+        assert await repo.keys_fetched_since(later) == []
+        assert await repo.keys_fetched_since(None) == ["MYC-7"]

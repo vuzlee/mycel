@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 from mycel.core.config import Settings, get_settings
+from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.accounts import AccountRepository
 from mycel.infra.postgres.session import session_scope
@@ -15,6 +16,9 @@ if TYPE_CHECKING:
     from pydantic_ai.toolsets import AbstractToolset
 
     from mycel.agents.core.deps import MycelDeps
+
+
+log = get_logger(__name__)
 
 
 class Jira:
@@ -33,7 +37,11 @@ class Jira:
         """Connect, then read access and queue a sync so the board fills without the timer."""
         await oauth.connect(state, code, user_id)
         await access.refresh(user_id)
-        await enqueue.queue(enqueue.sync_job(self.key))
+        try:
+            await enqueue.queue(enqueue.sync_job(self.key))
+        except Exception:
+            # The account is saved; the next timer tick syncs it. The page must not say "failed".
+            log.warning("could not queue the first sync", extra={"user_id": user_id}, exc_info=True)
 
     async def status(self, user: Principal) -> Status:
         if not self.configured():

@@ -81,11 +81,14 @@ class IdentityRepository:
         ).first()
         return None if found is None else (_session(found[0]), _user(found[1]))
 
-    async def touch_session(self, token: str, at: datetime) -> None:
-        """Record that the session was used. A missing row is not an error."""
-        await self._session.execute(
-            update(Session).where(Session.id == token).values(last_seen_at=at)
-        )
+    async def touch_session(
+        self, token: str, at: datetime, expires_at: datetime | None = None
+    ) -> None:
+        """Record that the session was used, and push its end out. A missing row is not an error."""
+        values: dict[str, datetime] = {"last_seen_at": at}
+        if expires_at is not None:
+            values["expires_at"] = expires_at
+        await self._session.execute(update(Session).where(Session.id == token).values(**values))
 
     async def delete_session(self, token: str) -> None:
         await self._session.execute(delete(Session).where(Session.id == token))

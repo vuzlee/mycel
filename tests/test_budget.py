@@ -6,7 +6,7 @@ import pytest
 from pydantic_ai.usage import RunUsage
 
 from mycel.agents.core.config import AgentSettings
-from mycel.llm.budget import BudgetExceeded, JobBudget
+from mycel.llm.budget import BudgetExceeded, JobBudget, own_price
 
 
 def _usage(cost: str | None = "0.10", tokens: int = 100) -> RunUsage:
@@ -119,3 +119,17 @@ class TestPricingFromTheTable:
         b = JobBudget("j", Decimal("0.50"))
         with pytest.raises(BudgetExceeded):
             b.record(_usage(None, tokens=100), fallback_cost=Decimal("0.60"))
+
+
+class TestOwnPrice:
+    def test_a_cache_hit_costs_less_than_fresh_input(self) -> None:
+        """Gemini reads cached tokens at a tenth of input; counting them as input overstates."""
+        base = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        fresh = own_price("gemini-3.5-flash-lite", base, RunUsage(input_tokens=1_000_000))
+        cached = own_price(
+            "gemini-3.5-flash-lite",
+            base,
+            RunUsage(input_tokens=1_000_000, cache_read_tokens=800_000),
+        )
+        assert fresh is not None and cached is not None
+        assert cached < fresh

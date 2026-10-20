@@ -34,7 +34,8 @@ Read-only. Only these two tables exist for you.
 
 `gold.work_item` — one tracked item: epic, story, task or subtask.
   source · project · issue_id · issue_key · kind · parent_key · title
-  status · status_category · assignee_account_id · assignee_name
+  status · status_category · priority · assignee_account_id · assignee_name
+  sprint_id · sprint_name · sprint_state
   original_estimate_seconds · time_spent_seconds
   due_at · created_at · resolved_at · labels · updated_at
 
@@ -48,6 +49,9 @@ What the columns mean, where the name does not say it:
 - `parent_key` holds an epic's `issue_key`. An epic is itself a row in `work_item`, with
   `kind = 'epic'`.
 - `labels` is JSONB, an array of strings.
+- `priority` is the site's own name (e.g. "High"), empty when the site hides the field.
+- `sprint_*` describe the item's current sprint; `sprint_state` is `active`, `closed` or
+  `future`, and all three are empty for an item in no sprint.
 
 Three traps. Reading past them silently produces numbers that look right:
 - `resolved_at` is when the Jira API was called, not when the work was really finished.

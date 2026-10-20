@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository
+from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.observability.metrics import records_written, sync_duration_seconds
 from mycel.plugins.jira import access
@@ -42,9 +43,12 @@ async def sync_jira(since: datetime | None = UNSET) -> SyncResult:
     started = time.monotonic()
     try:
         access_now = await access.refresh_everyone()
+        last_good = await _last_success()
         fetched = await _fetch_all(readers(access_now), since)
         async with session_scope() as session:
-            result = await transform(session, keys=fetched.keys)
+            # Also what an earlier, failed run left in bronze: its watermark is already past it.
+            left = await BronzeRepository(session).keys_fetched_since(last_good)
+            result = await transform(session, keys=sorted({*fetched.keys, *left}))
     except Exception as exc:
         await _record(error=str(exc) or type(exc).__name__)
         raise
@@ -107,6 +111,12 @@ async def _fetch_all(plan: Mapping[int, list[str]], since: datetime | None) -> F
             one = await fetch_jira(session, Auth(token, cloud_id), projects, since)
         issues, worklogs, keys = issues + one.issues, worklogs + one.worklogs, keys + one.keys
     return FetchResult(issues=issues, worklogs=worklogs, keys=keys)
+
+
+async def _last_success() -> datetime | None:
+    """When a sync last reached gold; None before the first one."""
+    async with session_scope() as session:
+        return (await AccountRepository(session).sync_state()).last_success_at
 
 
 async def _record(error: str | None = None) -> None:

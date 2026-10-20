@@ -149,14 +149,24 @@ async def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(user: CurrentUser) -> UserResponse:
-    """Who the cookie belongs to. The call the UI makes on load to decide what to show."""
+async def get_me(
+    user: CurrentUser,
+    response: Response,
+    mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
+) -> UserResponse:
+    """Who the cookie belongs to; called on every page load, so it also extends the cookie."""
+    if mycel_session:
+        _set_session_cookie(response, mycel_session)
     return UserResponse(id=user.id, email=user.email)
 
 
 async def _issue_cookie(session: AsyncSession, response: Response, user_id: int) -> None:
     """Open a session and attach it to the response."""
-    token = await auth.open_session(session, user_id)
+    _set_session_cookie(response, await auth.open_session(session, user_id))
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    """The session cookie, alive as long as the session row: 14 days from now."""
     response.set_cookie(
         SESSION_COOKIE,
         token,

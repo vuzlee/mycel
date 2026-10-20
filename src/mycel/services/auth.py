@@ -18,7 +18,7 @@ log = get_logger(__name__)
 #: How stale `last_seen_at` may be before a request writes it again.
 TOUCH_EVERY = timedelta(minutes=1)
 
-#: How long a session lives without being renewed.
+#: How long a session lives unused; each use (at most once a minute) starts it again.
 SESSION_TTL = timedelta(days=14)
 
 #: Bytes of entropy in a session token.
@@ -41,6 +41,8 @@ async def account_for(
     linked to it, so a person who signed up with a code keeps their history on Google.
     """
     email = normalize(email)
+    # Every sign-in, not only the first: removing a domain must lock its accounts out too.
+    check_allowed(email)
     repo = IdentityRepository(session)
     if google_sub is not None:
         found = await repo.user_by_google_sub(google_sub)
@@ -53,7 +55,6 @@ async def account_for(
             await repo.link_google(found.id, google_sub)
         return _principal(found)
 
-    check_allowed(email)
     try:
         # A savepoint: a racing first sign-in undoes only this insert, not the caller's.
         async with session.begin_nested():
@@ -93,9 +94,9 @@ async def session_user(session: AsyncSession, token: str) -> Principal | None:
         await repo.delete_session(token)
         return None
 
-    # A write per request is a write per poll; last_seen only needs minute precision.
+    # A write per request is a write per poll; minute precision is enough for both fields.
     if now - row.last_seen_at >= TOUCH_EVERY:
-        await repo.touch_session(token, now)
+        await repo.touch_session(token, now, now + SESSION_TTL)
     return _principal(user)
 
 

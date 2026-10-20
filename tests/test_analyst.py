@@ -251,3 +251,17 @@ class TestARunWithAReadyAnswer:
 
     def test_closed_after_hours_by_person(self) -> None:
         assert not self._open("hours_by_person")
+
+
+def test_the_prompt_names_every_gold_column() -> None:
+    """A gold column the prompt leaves out is a column the analyst never queries."""
+    from mycel.agents.prompts.analyst import INSTRUCTIONS
+    from mycel.infra.postgres.models.gold import WorkItem, Worklog
+
+    missing = [
+        f"{table.__tablename__}.{column.name}"
+        for table in (WorkItem, Worklog)
+        for column in table.__table__.columns
+        if column.name != "id" and column.name not in INSTRUCTIONS
+    ]
+    assert missing == []

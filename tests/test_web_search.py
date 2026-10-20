@@ -1,5 +1,6 @@
 """The web search tool, against a fake Tavily."""
 
+import json
 from decimal import Decimal
 from typing import Any
 
@@ -59,12 +60,15 @@ def _deps() -> MycelDeps:
     )
 
 
-async def _search(ctx_query: str, monkeypatch: pytest.MonkeyPatch) -> Any:
+async def _search(
+    ctx_query: str, monkeypatch: pytest.MonkeyPatch, recency: str | None = None
+) -> Any:
     """Call the tool the way an agent would, through its toolset."""
     toolset = web_search.build_toolset()
     tool = toolset.tools["web_search"]
     ctx = _fake_ctx()
-    return await tool.function(ctx, ctx_query)
+    results = await tool.function(ctx, [ctx_query], recency)
+    return results[0]
 
 
 def _fake_ctx() -> Any:
@@ -75,6 +79,46 @@ def _fake_ctx() -> Any:
         messages: list[Any] = []
 
     return _Ctx()
+
+
+def _captures(sent: list[dict[str, Any]]) -> Any:
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        sent.append(json.loads(request.content))
+        return httpx2.Response(200, json={"results": []})
+
+    return _mock(handler)
+
+
+class TestRecency:
+    async def test_recency_is_sent_as_a_time_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Recent news must not depend on the model typing the right year."""
+        sent: list[dict[str, Any]] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _captures(sent))
+        await _search("ai news", monkeypatch, recency="day")
+        assert sent[0]["time_range"] == "day"
+
+    async def test_no_recency_sends_no_filter(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        sent: list[dict[str, Any]] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _captures(sent))
+        await _search("ai news", monkeypatch)
+        assert "time_range" not in sent[0]
+
+
+class TestBatch:
+    async def test_each_query_gets_its_own_result_in_order(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sent: list[dict[str, Any]] = []
+        monkeypatch.setattr(httpx2, "AsyncClient", _captures(sent))
+        tool = web_search.build_toolset().tools["web_search"]
+        results = await tool.function(_fake_ctx(), ["a", "b", "c"], "day")
+        assert [r.query for r in results] == ["a", "b", "c"]
+        assert sorted(body["query"] for body in sent) == ["a", "b", "c"]
+
+    async def test_more_than_five_queries_go_back_to_the_model(self) -> None:
+        tool = web_search.build_toolset().tools["web_search"]
+        with pytest.raises(ModelRetry):
+            await tool.function(_fake_ctx(), [str(i) for i in range(6)])
 
 
 class TestResults:

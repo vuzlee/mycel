@@ -1,6 +1,7 @@
 """Write raw provider payloads, untransformed, so later stages can be replayed."""
 
 from collections.abc import Mapping, Sequence
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -37,6 +38,13 @@ class BronzeRepository:
             if w.get("id")
         ]
         return await self._upsert(JiraWorklog, rows, "worklog_id")
+
+    async def keys_fetched_since(self, since: datetime | None) -> list[str]:
+        """Issue keys written at or after `since`; every key when there is no mark yet."""
+        query = select(JiraIssue.issue_key)
+        if since is not None:
+            query = query.where(JiraIssue.fetched_at >= since)
+        return list((await self._session.scalars(query)).all())
 
     async def issue_payloads(self, keys: Sequence[str] | None = None) -> list[dict[str, Any]]:
         """Stored issue payloads; `keys` narrows to one sync, none means all."""
