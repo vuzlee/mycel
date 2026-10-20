@@ -99,7 +99,8 @@ def stale() -> list[str]:
     for y in FLOWS:
         spec = yaml.safe_load(y.read_text())
         files = {b["file"] for b in spec.get("boxes", [])} | {r[1] for r in spec.get("steps", [])}
-        page = last_commit(y)
+        # `reviewed: <unix time>` in the YAML: someone read the newer code and the flow still holds.
+        page = max(last_commit(y), int(spec.get("reviewed", 0)))
         newer = sorted(f for f in files if "/" in f and last_commit(ROOT / f) > page)
         if newer:
             notes.append(

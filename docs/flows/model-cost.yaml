@@ -1,3 +1,4 @@
+reviewed: 1792458878   # 2026-10-20: E10 changed runner.py and budget.py (cache pricing); flow unchanged
 title: "Model and cost: a turn picks a host or own model, every call is priced, the job stops at its ceiling"
 page:
   eyebrow: Flow
@@ -28,7 +29,7 @@ edges:
 notes:
   - ["job ceiling", "`job_ceiling_usd` = $0.50, kept in Redis across retries"]
   - ["token cap", "`total_tokens_limit` per agent → `UsageLimits`"]
-  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens"]
+  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens; cached input at the provider's cache rate"]
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
   - ["own models", "called direct, priced by the same table, not capped by the gateway"]
 failures:

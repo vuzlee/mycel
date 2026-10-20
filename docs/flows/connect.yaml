@@ -44,7 +44,7 @@ failures:
   - ["no refresh token returned", "failed, with a hint", "src/mycel/services/oauth.py"]
   - ["Atlassian account sees no Jira site", "failed", "src/mycel/plugins/jira/oauth.py"]
   - ["project read fails right after", "access empty; connect still succeeds", "src/mycel/plugins/jira/access.py"]
-  - ["queueing the sync fails", "account saved, but the page says failed", "src/mycel/plugins/jira/plugin.py"]
+  - ["queueing the first sync fails", "logged; connect still succeeds; the timer syncs it", "src/mycel/plugins/jira/plugin.py"]
   - ["later: grant revoked", "tools say \"connect it again\"", "src/mycel/services/oauth.py"]
 related:
   - [Jira sync, jira-sync.html]

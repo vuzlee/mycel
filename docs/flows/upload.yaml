@@ -1,3 +1,4 @@
+reviewed: 1792458837   # 2026-10-20: code re-read after MYC-214..219 and E10; flow unchanged
 title: "Upload a document: saved to MinIO, queued, parsed and embedded by the ingest worker, then searchable"
 page:
   eyebrow: Flow

@@ -1,0 +1,35 @@
+title: "Agent context: the date goes in every prompt, searches filter by recency, old results shrink, and a run near its cap summarises itself"
+page:
+  eyebrow: Flow
+  title: What the model sees
+  lede: ["Each model request is the prompt plus the run so far", "Four steps keep it current and under the token cap"]
+lanes: [run, before each request, tools, model]
+boxes:
+  - {id: runner,  lane: run,                col: 0, file: src/mycel/agents/core/runner.py,       label: core/runner.py,        role: "today's date on the prompt", hot: true}
+  - {id: base,    lane: run,                col: 1, file: src/mycel/agents/core/base.py,         label: core/base.py,          role: "wires the steps below"}
+  - {id: history, lane: before each request, col: 0, file: src/mycel/agents/core/history.py,     label: core/history.py,       role: "old results → one line"}
+  - {id: compact, lane: before each request, col: 1, file: src/mycel/agents/core/compact.py,     label: core/compact.py,       role: "at 75% of cap: summarise"}
+  - {id: parts,   lane: before each request, col: 2, file: src/mycel/agents/core/prompt_parts.py, label: core/prompt_parts.py, role: "size of each part, traced"}
+  - {id: search,  lane: tools,              col: 1, file: src/mycel/agents/tools/web_search.py,  label: tools/web_search.py,   role: "recency: day…year"}
+  - {id: budget,  lane: tools,              col: 2, file: src/mycel/llm/budget.py,               label: llm/budget.py,         role: "token cap per turn"}
+  - {id: builder, lane: model,              col: 0, file: src/mycel/agents/core/model_source.py, label: core/model_source.py, role: "opens the model"}
+edges:
+  - {from: runner,  to: base,    step: 1, kind: calls,  text: "dated(prompt, deps.tz)", label: "dated prompt"}
+  - {from: base,    to: history, step: 2, kind: import, label: "shrink", exit: -0.3, via: [[0.7, 0.5], [0, 0.5]]}
+  - {from: base,    to: compact, step: 3, kind: import, label: "maybe summarise"}
+  - {from: base,    to: parts,            kind: import, label: "measure", exit: 0.3, via: [[1.3, 0.5], [2, 0.5]]}
+  - {from: compact, to: budget,           kind: calls,  text: "total_tokens_limit", label: "cap", exit: 0.3, via: [[1.3, 1.5], [2, 1.5]]}
+  - {from: runner,  to: builder,  step: 4, kind: import, label: "open, then request", exit: -0.45, via: [[-0.45, 3]], enter: -0.45, label_at: [-0.42, 2.45]}
+notes:
+  - ["date", "every prompt starts with today's date in the asker's zone; a small model could not miss it"]
+  - ["recency", "`web_search` sends day / week / month / year as Tavily's `time_range`"]
+  - ["old results", "results older than the last 2 rounds become one line: urls kept, text dropped"]
+  - ["compact", "past 75% of `total_tokens_limit` a model call summarises the middle of the run"]
+  - ["measured", "AI-news question: 333k tokens and a failure → 110k tokens and an answer"]
+failures:
+  - ["model ignores the date", "recency still filters by time", "src/mycel/agents/tools/web_search.py"]
+  - ["summary call fails", "the run goes on uncompacted and may hit the cap", "src/mycel/agents/core/compact.py"]
+  - ["cap reached anyway", "the run stops as runaway", "src/mycel/llm/budget.py"]
+related:
+  - [Model and cost, model-cost.html]
+  - ["Traces, metrics, events", observe.html]

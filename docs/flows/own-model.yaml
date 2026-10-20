@@ -1,3 +1,4 @@
+reviewed: 1792458837   # 2026-10-20: code re-read after MYC-214..219 and E10; flow unchanged
 title: "Own model: a person adds an endpoint and keys; they are checked and encrypted; at chat time the call goes straight to that endpoint"
 page:
   eyebrow: Flow
