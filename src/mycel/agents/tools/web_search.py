@@ -25,11 +25,20 @@ _MAX_RESULTS = 5
 #: Searches per call; enough angles for one question, few enough to keep results readable.
 _MAX_QUERIES = 5
 
+#: Per query, its own setting rather than the model's. A stalled Tavily request rarely
+#: recovers, while a fresh one usually answers in seconds, so wait briefly and resend once.
+_TIMEOUT_S = 20.0
+
 #: Tavily's "plan spent" codes, distinct from a 429 rate limit.
 _QUOTA_EXHAUSTED = (432, 433)
 
 #: Tavily's `time_range`; a filter, so "recent" never depends on the model knowing the year.
 Recency = Literal["day", "week", "month", "year"]
+
+
+class _Transient(ToolFailed):
+    """A failure that sending the same query again may not hit: a stall, a dropped
+    connection, a 5xx. A bad key or a spent plan stays a plain `ToolFailed`."""
 
 
 class Passage(BaseModel):
@@ -90,15 +99,31 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             raise ModelRetry(f"web_search takes at most {_MAX_QUERIES} queries; keep the best")
 
         year = datetime.now(ctx.deps.tz).year
-        payloads = await asyncio.gather(
-            *(_post(q, recency, timeout_s=ctx.deps.settings.timeout_s) for q in asked)
-        )
+        outcomes = await asyncio.gather(*(_attempt(q, recency) for q in asked))
+        # One stalled query should not cost the answers the others found.
+        failed = [o for o in outcomes if isinstance(o, ToolFailed)]
+        if len(failed) == len(outcomes):
+            raise failed[0]
         return [
-            _result(q, stale_year(q, recency, year), payload)
-            for q, payload in zip(asked, payloads, strict=True)
+            SearchResult(query=q, warning=f"This search failed: {o.reason}", passages=[])
+            if isinstance(o, ToolFailed)
+            else _result(q, stale_year(q, recency, year), o)
+            for q, o in zip(asked, outcomes, strict=True)
         ]
 
     return toolset
+
+
+async def _attempt(query: str, recency: Recency | None) -> dict[str, Any] | ToolFailed:
+    """One search, resent once if it stalled; its failure returned rather than raised so the
+    rest of the batch survives."""
+    try:
+        try:
+            return await _post(query, recency, timeout_s=_TIMEOUT_S)
+        except _Transient:
+            return await _post(query, recency, timeout_s=_TIMEOUT_S)
+    except ToolFailed as exc:
+        return exc
 
 
 def _result(query: str, warning: str | None, payload: dict[str, Any]) -> SearchResult:
@@ -148,9 +173,9 @@ async def _post(query: str, recency: Recency | None, timeout_s: float) -> dict[s
             timeout=timeout_s,
         )
     except httpx2.TimeoutException as exc:
-        raise ToolFailed("web_search", f"the search API did not respond in {timeout_s}s") from exc
+        raise _Transient("web_search", f"the search API did not respond in {timeout_s}s") from exc
     except httpx2.HTTPError as exc:
-        raise ToolFailed("web_search", f"could not reach the search API: {exc}") from exc
+        raise _Transient("web_search", f"could not reach the search API: {exc}") from exc
 
     _raise_for_status(response)
     return dict(response.json())
@@ -168,4 +193,5 @@ def _raise_for_status(response: "httpx2.Response") -> None:
     if response.status_code == 429:
         raise ToolFailed("web_search", "the search API is rate limiting this key")
 
-    raise ToolFailed("web_search", f"the search API returned HTTP {response.status_code}")
+    failure = _Transient if response.status_code >= 500 else ToolFailed
+    raise failure("web_search", f"the search API returned HTTP {response.status_code}")

@@ -225,3 +225,43 @@ class TestFailures:
         monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
         with pytest.raises(ToolFailed, match="could not reach"):
             await _search("anything", monkeypatch)
+
+
+async def test_a_stalled_query_keeps_the_others_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        if json.loads(request.content)["query"] == "slow":
+            raise httpx2.TimeoutException("too slow", request=request)
+        return httpx2.Response(200, json={"results": [{"url": "https://a.example", "title": "A"}]})
+
+    monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+    tool = web_search.build_toolset().tools["web_search"]
+    slow, fast = await tool.function(_fake_ctx(), ["slow", "fast"], None)
+    assert slow.passages == [] and "did not respond" in (slow.warning or "")
+    assert [p.url for p in fast.passages] == ["https://a.example"]
+
+
+async def test_a_stalled_query_is_resent_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls.append("x")
+        if len(calls) == 1:
+            raise httpx2.TimeoutException("too slow", request=request)
+        return httpx2.Response(200, json={"results": [{"url": "https://a.example"}]})
+
+    monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+    result = await _search("anything", monkeypatch)
+    assert len(calls) == 2 and [p.url for p in result.passages] == ["https://a.example"]
+
+
+async def test_a_rejected_key_is_not_resent(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        calls.append("x")
+        return httpx2.Response(401, json={})
+
+    monkeypatch.setattr(httpx2, "AsyncClient", _mock(handler))
+    with pytest.raises(ToolFailed, match="rejected"):
+        await _search("anything", monkeypatch)
+    assert len(calls) == 1
