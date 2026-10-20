@@ -1,3 +1,4 @@
+reviewed: 1792515323   # 2026-10-20: re-read after 3dee7cd and MYC-214..219; failures/notes updated
 title: "Agent context: the date goes in every prompt, searches filter by recency, old results shrink, and a run near its cap summarises itself"
 page:
   eyebrow: Flow
@@ -28,6 +29,7 @@ notes:
   - ["measured", "AI-news question: 333k tokens and a failure → 110k tokens and an answer"]
 failures:
   - ["model ignores the date", "recency still filters by time", "src/mycel/agents/tools/web_search.py"]
+  - ["a search stalls or returns 5xx", "resent once after 20 s; still failing → that query comes back empty with a warning, the others kept", "src/mycel/agents/tools/web_search.py"]
   - ["summary call fails", "the run goes on uncompacted and may hit the cap", "src/mycel/agents/core/compact.py"]
   - ["cap reached anyway", "the run stops as runaway", "src/mycel/llm/budget.py"]
 related:

@@ -1,3 +1,4 @@
+reviewed: 1792515323   # 2026-10-20: web_search batching and analyst prompt re-read; recipe unchanged
 page:
   eyebrow: Change
   title: Add a tool to the analyst

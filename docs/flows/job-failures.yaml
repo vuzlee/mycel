@@ -1,3 +1,4 @@
+reviewed: 1792515323   # 2026-10-20: re-read after 3dee7cd and MYC-214..219; failures/notes updated
 title: "Job failures: outbox and relay, delivery, final versus transient errors, retry queues, dead-letter, replay"
 page:
   eyebrow: Flow
@@ -30,7 +31,7 @@ edges:
   - {from: replaysh, to: replay,   step: 6, kind: calls,  text: "mycel.queue.replay", label: "dlq name, N"}
   - {from: replay,   to: topo,              kind: import, label: "back to jobs", via: [[1, 2.5], [0.5, 2.5], [0.5, 1]], enter: -0.5}
 notes:
-  - ["retry", "transient errors: 5 s → 30 s → 2 min, then parked"]
+  - ["retry", "transient errors (incl. a source timeout, 5xx, rate limit): 5 s → 30 s → 2 min, then parked"]
   - ["final errors", "budget, unknown job, model refused, loop stopped → parked at once"]
   - ["worker died", "the queue delivers again; after 4 deliveries it is parked"]
   - ["run once", "a chat job claims its id in Redis; a second copy waits"]

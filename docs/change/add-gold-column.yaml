@@ -1,3 +1,4 @@
+reviewed: 1792515323   # 2026-10-20: analyst prompt now names priority and sprint_*; mistake row updated
 page:
   eyebrow: Change
   title: Add a column to gold
@@ -17,7 +18,7 @@ mistakes:
   - ["silver and gold differ", "silver reads fail with `TypeError`"]
   - ["forgot `to_row()`", "every gold read drops the value"]
   - ["no refetch", "the column stays empty for old issues"]
-  - ["prompt not updated", "the analyst never uses it (as with `priority` and `sprint_*` today)"]
+  - ["prompt not updated", "the analyst never uses it; name it and say what it means"]
   - ["not in the indexer", "not searchable; `infra/vectors/indexer.py`"]
 related:
   - [Database, ../overview/database.html]
