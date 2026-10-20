@@ -1,0 +1,51 @@
+page:
+  eyebrow: Operate
+  title: First-time setup
+  lede: ["An admin does it once per deployment; each person then connects their own accounts", "`.env` holds only what hosting needs — nothing belongs to one person"]
+tables:
+  - title: 1 · Jira OAuth app, for "Connect Jira"
+    head: [Step, Where, Do]
+    rows:
+      - ["1", "developer.atlassian.com/console/myapps", "Create → OAuth 2.0 integration"]
+      - ["2", "Permissions → Jira API", "`read:jira-work`, `read:jira-user`, `write:jira-work`"]
+      - ["3", "Authorization", "callback `<PUBLIC_BASE_URL>/auth/jira/callback`"]
+      - ["4", "Settings → `.env`", "`JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`"]
+  - title: 2 · Google OAuth client, for "Connect Google"
+    head: [Step, Where, Do]
+    rows:
+      - ["1", "console.cloud.google.com", "a project; enable Google Calendar API and Gmail API"]
+      - ["2", "OAuth consent screen", "scopes `calendar.events`, `gmail.readonly`"]
+      - ["3", "Credentials → OAuth client ID → Web", "redirect `<PUBLIC_BASE_URL>/auth/google/callback`"]
+      - ["4", "`.env`", "`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`"]
+  - title: 3 · Models
+    head: [Step, Do]
+    rows:
+      - ["copy", "`config/litellm/models.example.yaml` → `config/litellm/models.yaml` (not tracked); keep the providers you have"]
+      - ["name", "each `model_name` is what `config/agents/*.yaml` asks for as `cloud:<model_name>`"]
+      - ["keys", "put the keys it names in `.env`"]
+  - title: 4 · The rest of .env
+    head: [Key, What]
+    rows:
+      - ["`TOKEN_ENCRYPTION_KEY`", "encrypts every stored refresh token; `python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"`; rotating it disconnects everyone"]
+      - ["`SMTP_HOST` · `SMTP_FROM` · `SMTP_USERNAME` · `SMTP_PASSWORD`", "sender for password-reset mail (Gmail: `smtp.gmail.com` + an app password); unset → reset is off and doctor says so"]
+      - ["`PUBLIC_BASE_URL`", "in `config/environments/`; the address people reach the app at; every callback and reset link is built from it"]
+  - title: 5 · Start and check
+    head: [Command, Does]
+    rows:
+      - ["`scripts/stack.sh dev up`", "or `compose` / `k8s`; see Run and fix it"]
+      - ["`scripts/stack.sh doctor`", "what is set, what is broken, what is off"]
+  - title: Each person, after setup
+    head: [In the app, What happens]
+    rows:
+      - ["Settings → Connect Jira", "shows exactly the projects you may browse; asked again every sync, so a lost project leaves within 15 min"]
+      - ["Settings → Connect Google", "your own calendar and mail, nobody else's"]
+      - ["not connected", "no Jira, calendar or mail; your own documents still work"]
+  - title: Not supported yet
+    head: [What, Why]
+    rows:
+      - ["Jira Server / Data Center", "only Atlassian Cloud OAuth is built; Server needs personal access tokens"]
+      - ["per-issue permissions", "Jira issue security is ignored; access is per project"]
+related:
+  - [Run and fix it, run.html]
+  - [Connect an account, ../flows/connect.html]
+  - [Config, ../overview/config.html]

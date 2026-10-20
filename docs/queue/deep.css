@@ -147,3 +147,6 @@ span.src { color: var(--accent); text-decoration: underline dotted; }
 }
 .topnav { position: sticky; top: 0; z-index: 20; display: flex; gap: 18px; padding: 10px max(16px, calc(50% - 520px)); background: var(--ground); border-bottom: 1px solid var(--line); font: 500 12.5px var(--mono); }
 .topnav a { color: var(--ink-soft); text-decoration: none; }
+.pager { display: flex; justify-content: space-between; gap: 1rem; margin: 2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); font: 500 12.5px var(--mono); }
+.pager a { color: var(--accent); text-decoration: none; }
+.pager .at { color: var(--ink-faint); }

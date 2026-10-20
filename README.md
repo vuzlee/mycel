@@ -91,8 +91,9 @@ More in [deploy/](deploy/README.md).
 </details>
 
 Open <http://localhost:8000/app> (or <http://mycel.local/app> on k8s) and sign in with
-Google or an emailed code. First-time setup — the Jira service account and the OAuth
-apps — is in [docs/operate/setup.md](docs/operate/setup.md). Stop with `scripts/stack.sh <mode> down`.
+Google or an emailed code. First time: create the Jira and Google OAuth apps, fill `.env`,
+copy `config/litellm/models.example.yaml`, then `scripts/stack.sh doctor` — steps in
+[docs/operate/setup.html](docs/operate/setup.html). Stop with `scripts/stack.sh <mode> down`.
 
 ## Development
 

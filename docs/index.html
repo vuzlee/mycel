@@ -9,62 +9,48 @@
 <body>
 <nav class="topnav"><a href="index.html">Handbook</a><a href="overview/architecture.html">Architecture</a><a href="overview/config.html">Config</a><a href="overview/database.html">Database</a></nav>
 <div class="page">
-  <header class="hero">
-    <p class="eyebrow">Mycel handbook</p>
-    <h1>Start with a question</h1>
-    <div class="hero-lede"><ul class="bul"><li>New here: read Architecture first · <a href="start-here.html">start here</a></li><li>Every figure: hover a box for its file, click to open it</li></ul></div>
-  </header>
-
-  <section>
-    <h3 class="tbl-title">How it works</h3>
-    <table class="tbl">
-      <thead><tr><th>Question</th><th>Page</th></tr></thead>
-      <tbody>
-        <tr class="tone-gold"><td class="who">What is Mycel made of?</td><td><a href="overview/architecture.html">Architecture</a></td></tr>
-        <tr><td class="who">What happens when someone asks a question?</td><td><a href="overview/architecture.html#s07">Architecture · 2.2</a></td></tr>
-        <tr><td class="who">How does someone sign in?</td><td><a href="flows/sign-in.html">Sign in</a></td></tr>
-        <tr><td class="who">How does someone connect Jira or Google?</td><td><a href="flows/connect.html">Connect an account</a></td></tr>
-        <tr><td class="who">How does Jira data get in?</td><td><a href="flows/jira-sync.html">Jira sync</a></td></tr>
-        <tr><td class="who">What happens to an uploaded document?</td><td><a href="flows/upload.html">Upload a document</a></td></tr>
-        <tr><td class="who">How does someone use their own model?</td><td><a href="flows/own-model.html">Own model</a></td></tr>
-        <tr><td class="who">A job failed or got stuck — what now?</td><td><a href="flows/job-failures.html">Job failures</a></td></tr>
-        <tr><td class="who">Which model answers, and what does it cost?</td><td><a href="flows/model-cost.html">Model and cost</a></td></tr>
-        <tr><td class="who">What does the model actually see each time?</td><td><a href="flows/agent-context.html">What the model sees</a></td></tr>
-        <tr><td class="who">An answer is slow or wrong — where do I look?</td><td><a href="flows/observe.html">Traces, metrics, events</a></td></tr>
-        <tr><td class="who">Where do the dashboard numbers come from?</td><td><a href="flows/dashboard.html">Dashboard</a></td></tr>
-        <tr><td class="who">Where is a setting, and which value wins?</td><td><a href="overview/config.html">Config</a></td></tr>
-        <tr><td class="who">Which table holds what?</td><td><a href="overview/database.html">Database</a></td></tr>
-      </tbody>
-    </table>
-
-    <h3 class="tbl-title">Changing it</h3>
-    <table class="tbl">
-      <thead><tr><th>Question</th><th>Page</th></tr></thead>
-      <tbody>
-        <tr><td class="who">Add a tool to an agent?</td><td><a href="change/add-tool.html">Add a tool</a></td></tr>
-        <tr><td class="who">Add a provider people connect?</td><td><a href="change/add-plugin.html">Add a plugin</a></td></tr>
-        <tr><td class="who">Add a column to gold?</td><td><a href="change/add-gold-column.html">Add a gold column</a></td></tr>
-      </tbody>
-    </table>
-
-    <h3 class="tbl-title">Running it</h3>
-    <table class="tbl">
-      <thead><tr><th>Question</th><th>Page</th></tr></thead>
-      <tbody>
-        <tr><td class="who">Start, stop, everyday commands?</td><td><a href="operate/run.html">Run and fix it</a></td></tr>
-        <tr><td class="who">Something is broken — what now?</td><td><a href="operate/run.html">Run and fix it · Something is wrong</a></td></tr>
-        <tr><td class="who">First-time setup?</td><td><a href="operate/setup.md">Setup</a></td></tr>
-      </tbody>
-    </table>
-
-    <details><summary>Keeping this handbook right</summary>
-      <table class="tbl"><thead><tr><th>Do</th><th>Command</th></tr></thead><tbody>
-        <tr><td class="who">check every link, file and figure edge</td><td><code>uv run python docs/tools/check.py</code></td></tr>
-        <tr><td class="who">rebuild a flow page after editing its YAML</td><td><code>uv run python docs/tools/page.py docs/flows/&lt;name&gt;.yaml</code></td></tr>
-      </tbody></table>
-    </details>
-  </section>
-
-  <footer><span>Figures are built from <code>docs/flows/*.yaml</code> and checked against the code.</span><span class="mono">docs/index.html</span></footer>
+<header class="hero"><p class="eyebrow">Mycel handbook</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read top to bottom; boxes side by side read in parallel</li><li>Data in, Model, Operate are independent; inside one, follow the arrows</li><li>Every page ends with ‹ previous · next ›; hover a box for its folders</li></ul></div></header>
+<section>
+<figure class="tipfig"><div class="tip" role="tooltip"></div>
+<div class="scroll-x"><svg class="diagram" viewBox="0 0 852 508" role="img" aria-label="Reading order: Architecture, then Config, Database, Run and Setup, then three independent branches, change recipes last"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><text x="116" y="152" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">DATA IN</text><text x="306" y="152" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">MODEL</text><text x="496" y="152" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">OPERATE</text><text x="686" y="152" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">CHANGE IT</text><path d="M381 60 V74 H191 V86" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M191 132 V140" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M191 204 V230" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M191 276 V302" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M191 348 V374" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M191 420 V446" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M381 60 V74 H381 V86" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M381 132 V140" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M381 204 V230" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M381 276 V302" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M381 60 V74 H571 V86" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M571 132 V140" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M571 204 V230" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M571 276 V302" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M571 348 V374" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><path d="M686 110 H648" fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"/><a href="overview/architecture.html" class="hv" data-tip="src/mycel/* · web/src
+1.1 · What is Mycel made of? What happens on a question?"><rect x="306" y="16" width="150" height="44" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="316" y="34" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">1.1</text><text x="316" y="50" font-family="var(--mono)" font-size="11" fill="var(--ink)">Architecture</text></a><a href="overview/config.html" class="hv" data-tip="config/ · config/environments
+1.2 · Where is a setting, and which value wins?"><rect x="116" y="88" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="106" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">1.2</text><text x="126" y="122" font-family="var(--mono)" font-size="11" fill="var(--ink)">Config</text></a><a href="overview/database.html" class="hv" data-tip="src/mycel/infra/postgres · migrations/
+1.3 · Which table holds what?"><rect x="306" y="88" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="106" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">1.3</text><text x="316" y="122" font-family="var(--mono)" font-size="11" fill="var(--ink)">Database</text></a><a href="operate/setup.html" class="hv" data-tip=".env · config/litellm · OAuth apps
+2.1 · OAuth apps, .env, models — once per deployment"><rect x="686" y="88" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="696" y="106" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">2.1</text><text x="696" y="122" font-family="var(--mono)" font-size="11" fill="var(--ink)">First-time setup</text></a><a href="operate/run.html" class="hv" data-tip="scripts/ · deploy/ · docker-compose.yml
+2.2 · Start, stop, everyday commands; something is broken"><rect x="496" y="88" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="506" y="106" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">2.2</text><text x="506" y="122" font-family="var(--mono)" font-size="11" fill="var(--ink)">Run and fix it</text></a><a href="flows/sign-in.html" class="hv" data-tip="api/routes · services · infra/redis · web/src/pages
+3.1 · How does someone sign in?"><rect x="116" y="166" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="184" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">3.1</text><text x="126" y="200" font-family="var(--mono)" font-size="11" fill="var(--ink)">Sign in</text></a><a href="flows/connect.html" class="hv" data-tip="plugins · plugins/jira · web/src/components/panels
+3.2 · How does someone connect Jira or Google?"><rect x="116" y="238" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="256" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">3.2</text><text x="126" y="272" font-family="var(--mono)" font-size="11" fill="var(--ink)">Connect an account</text></a><a href="flows/jira-sync.html" class="hv" data-tip="plugins/jira · sources · scheduler · infra/vectors
+3.3 · How does Jira data get in?"><rect x="116" y="310" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="328" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">3.3</text><text x="126" y="344" font-family="var(--mono)" font-size="11" fill="var(--ink)">Jira sync</text></a><a href="flows/upload.html" class="hv" data-tip="infra/objects · infra/vectors · web/src/components/knowledge
+3.4 · What happens to an uploaded document?"><rect x="116" y="382" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="400" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">3.4</text><text x="126" y="416" font-family="var(--mono)" font-size="11" fill="var(--ink)">Upload a document</text></a><a href="flows/dashboard.html" class="hv" data-tip="api/routes · services · web/src/pages/dashboard
+3.5 · Where do the dashboard numbers come from?"><rect x="116" y="454" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="472" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">3.5</text><text x="126" y="488" font-family="var(--mono)" font-size="11" fill="var(--ink)">Dashboard</text></a><a href="flows/model-cost.html" class="hv" data-tip="llm · agents/core · config/litellm
+4.1 · Which model answers, and what does it cost?"><rect x="306" y="166" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="184" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">4.1</text><text x="316" y="200" font-family="var(--mono)" font-size="11" fill="var(--ink)">Model and cost</text></a><a href="flows/own-model.html" class="hv" data-tip="agents/core · api/routes · web/src/components/panels
+4.2 · How does someone use their own model?"><rect x="306" y="238" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="256" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">4.2</text><text x="316" y="272" font-family="var(--mono)" font-size="11" fill="var(--ink)">Own model</text></a><a href="flows/agent-context.html" class="hv" data-tip="agents/core · agents/tools · llm
+4.3 · What does the model actually see each time?"><rect x="306" y="310" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="328" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">4.3</text><text x="316" y="344" font-family="var(--mono)" font-size="11" fill="var(--ink)">What the model sees</text></a><a href="flows/job-failures.html" class="hv" data-tip="queue · scheduler · worker.py · scripts/ops
+5.1 · A job failed or got stuck — what now?"><rect x="496" y="166" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="506" y="184" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">5.1</text><text x="506" y="200" font-family="var(--mono)" font-size="11" fill="var(--ink)">Job failures</text></a><a href="queue/outbox.html" class="hv" data-tip="queue · infra/postgres/repositories
+5.2 · Why a job is never lost between commit and publish"><rect x="496" y="238" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="506" y="256" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">5.2</text><text x="506" y="272" font-family="var(--mono)" font-size="11" fill="var(--ink)">Outbox</text></a><a href="queue/idempotency.html" class="hv" data-tip="queue · infra/redis
+5.3 · Why a job delivered twice runs once"><rect x="496" y="310" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="506" y="328" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">5.3</text><text x="506" y="344" font-family="var(--mono)" font-size="11" fill="var(--ink)">Idempotency</text></a><a href="flows/observe.html" class="hv" data-tip="observability · events · doctor · deploy/monitoring
+5.4 · An answer is slow or wrong — where do I look?"><rect x="496" y="382" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="506" y="400" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">5.4</text><text x="506" y="416" font-family="var(--mono)" font-size="10" fill="var(--ink)">Traces, metrics, events</text></a><a href="change/add-plugin.html" class="hv" data-tip="src/mycel/plugins/&lt;key&gt;/
+6.1 · Add a provider people connect"><rect x="686" y="166" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="696" y="184" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">6.1</text><text x="696" y="200" font-family="var(--mono)" font-size="11" fill="var(--ink)">Add a plugin</text></a><a href="change/add-tool.html" class="hv" data-tip="agents/specialists · agents/prompts · web/src/lib
+6.2 · Add a tool to an agent"><rect x="686" y="238" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="696" y="256" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">6.2</text><text x="696" y="272" font-family="var(--mono)" font-size="11" fill="var(--ink)">Add a tool</text></a><a href="change/add-gold-column.html" class="hv" data-tip="infra/postgres/models · migrations/ · agents/prompts
+6.3 · Add a column to gold"><rect x="686" y="310" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="696" y="328" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">6.3</text><text x="696" y="344" font-family="var(--mono)" font-size="11" fill="var(--ink)">Add a gold column</text></a></svg></div></figure>
+<nav class="pager"><span></span><a href="overview/architecture.html">Begin: Architecture ›</a></nav>
+</section>
+<section>
+<h2>Contents</h2>
+<h3 class="tbl-title">1 · Overview</h3><table class="tbl toc"><tbody><tr><td>1.1</td><td><a href="overview/architecture.html">Architecture</a></td><td>What is Mycel made of? What happens on a question?</td></tr><tr><td>1.2</td><td><a href="overview/config.html">Config</a></td><td>Where is a setting, and which value wins?</td></tr><tr><td>1.3</td><td><a href="overview/database.html">Database</a></td><td>Which table holds what?</td></tr></tbody></table>
+<h3 class="tbl-title">2 · Run it</h3><table class="tbl toc"><tbody><tr><td>2.1</td><td><a href="operate/setup.html">First-time setup</a></td><td>OAuth apps, .env, models — once per deployment</td></tr><tr><td>2.2</td><td><a href="operate/run.html">Run and fix it</a></td><td>Start, stop, everyday commands; something is broken</td></tr></tbody></table>
+<h3 class="tbl-title">3 · Data in</h3><table class="tbl toc"><tbody><tr><td>3.1</td><td><a href="flows/sign-in.html">Sign in</a></td><td>How does someone sign in?</td></tr><tr><td>3.2</td><td><a href="flows/connect.html">Connect an account</a></td><td>How does someone connect Jira or Google?</td></tr><tr><td>3.3</td><td><a href="flows/jira-sync.html">Jira sync</a></td><td>How does Jira data get in?</td></tr><tr><td>3.4</td><td><a href="flows/upload.html">Upload a document</a></td><td>What happens to an uploaded document?</td></tr><tr><td>3.5</td><td><a href="flows/dashboard.html">Dashboard</a></td><td>Where do the dashboard numbers come from?</td></tr></tbody></table>
+<h3 class="tbl-title">4 · Model</h3><table class="tbl toc"><tbody><tr><td>4.1</td><td><a href="flows/model-cost.html">Model and cost</a></td><td>Which model answers, and what does it cost?</td></tr><tr><td>4.2</td><td><a href="flows/own-model.html">Own model</a></td><td>How does someone use their own model?</td></tr><tr><td>4.3</td><td><a href="flows/agent-context.html">What the model sees</a></td><td>What does the model actually see each time?</td></tr></tbody></table>
+<h3 class="tbl-title">5 · Operate</h3><table class="tbl toc"><tbody><tr><td>5.1</td><td><a href="flows/job-failures.html">Job failures</a></td><td>A job failed or got stuck — what now?</td></tr><tr><td>5.2</td><td><a href="queue/outbox.html">Outbox</a></td><td>Why a job is never lost between commit and publish</td></tr><tr><td>5.3</td><td><a href="queue/idempotency.html">Idempotency</a></td><td>Why a job delivered twice runs once</td></tr><tr><td>5.4</td><td><a href="flows/observe.html">Traces, metrics, events</a></td><td>An answer is slow or wrong — where do I look?</td></tr></tbody></table>
+<h3 class="tbl-title">6 · Change it</h3><table class="tbl toc"><tbody><tr><td>6.1</td><td><a href="change/add-plugin.html">Add a plugin</a></td><td>Add a provider people connect</td></tr><tr><td>6.2</td><td><a href="change/add-tool.html">Add a tool</a></td><td>Add a tool to an agent</td></tr><tr><td>6.3</td><td><a href="change/add-gold-column.html">Add a gold column</a></td><td>Add a column to gold</td></tr></tbody></table>
+<details><summary>Keeping this handbook right</summary>
+<table class="tbl"><thead><tr><th>Do</th><th>Command</th></tr></thead><tbody>
+<tr><td class="who">check every link, file, figure edge and page order</td><td><code>uv run python docs/tools/check.py</code></td></tr>
+<tr><td class="who">rebuild a flow page after editing its YAML</td><td><code>uv run python docs/tools/page.py docs/flows/&lt;name&gt;.yaml</code></td></tr>
+<tr><td class="who">change the order or add a page</td><td>edit <code>docs/book.yaml</code>, then <code>uv run python docs/tools/book.py</code></td></tr>
+</tbody></table></details>
+</section>
+<footer><span>Order and figure from <code>docs/book.yaml</code>.</span><span class="mono">docs/index.html</span></footer>
 </div>
+<script src="tip.js"></script>
 </body>

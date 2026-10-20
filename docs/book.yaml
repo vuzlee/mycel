@@ -1,0 +1,36 @@
+# The handbook as a book: chapter order, the Start-here figure, prev/next on every page.
+# Rebuild: uv run python docs/tools/book.py   (check.py fails when a page is out of date)
+title: Mycel handbook
+parts:
+  - name: Overview
+    pages:
+      - [Architecture, overview/architecture.html, "What is Mycel made of? What happens on a question?", "src/mycel/* · web/src", [1, 0]]
+      - [Config, overview/config.html, "Where is a setting, and which value wins?", "config/ · config/environments", [0, 1]]
+      - [Database, overview/database.html, "Which table holds what?", "src/mycel/infra/postgres · migrations/", [1, 1]]
+  - name: Run it
+    pages:
+      - [First-time setup, operate/setup.html, "OAuth apps, .env, models — once per deployment", ".env · config/litellm · OAuth apps", [3, 1]]
+      - [Run and fix it, operate/run.html, "Start, stop, everyday commands; something is broken", "scripts/ · deploy/ · docker-compose.yml", [2, 1]]
+  - name: Data in
+    pages:
+      - [Sign in, flows/sign-in.html, "How does someone sign in?", "api/routes · services · infra/redis · web/src/pages", [0, 2]]
+      - [Connect an account, flows/connect.html, "How does someone connect Jira or Google?", "plugins · plugins/jira · web/src/components/panels", [0, 3]]
+      - [Jira sync, flows/jira-sync.html, "How does Jira data get in?", "plugins/jira · sources · scheduler · infra/vectors", [0, 4]]
+      - [Upload a document, flows/upload.html, "What happens to an uploaded document?", "infra/objects · infra/vectors · web/src/components/knowledge", [0, 5]]
+      - [Dashboard, flows/dashboard.html, "Where do the dashboard numbers come from?", "api/routes · services · web/src/pages/dashboard", [0, 6]]
+  - name: Model
+    pages:
+      - [Model and cost, flows/model-cost.html, "Which model answers, and what does it cost?", "llm · agents/core · config/litellm", [1, 2]]
+      - [Own model, flows/own-model.html, "How does someone use their own model?", "agents/core · api/routes · web/src/components/panels", [1, 3]]
+      - [What the model sees, flows/agent-context.html, "What does the model actually see each time?", "agents/core · agents/tools · llm", [1, 4]]
+  - name: Operate
+    pages:
+      - [Job failures, flows/job-failures.html, "A job failed or got stuck — what now?", "queue · scheduler · worker.py · scripts/ops", [2, 2]]
+      - [Outbox, queue/outbox.html, "Why a job is never lost between commit and publish", "queue · infra/postgres/repositories", [2, 3]]
+      - [Idempotency, queue/idempotency.html, "Why a job delivered twice runs once", "queue · infra/redis", [2, 4]]
+      - ["Traces, metrics, events", flows/observe.html, "An answer is slow or wrong — where do I look?", "observability · events · doctor · deploy/monitoring", [2, 5]]
+  - name: Change it
+    pages:
+      - [Add a plugin, change/add-plugin.html, "Add a provider people connect", "src/mycel/plugins/<key>/", [3, 2]]
+      - [Add a tool, change/add-tool.html, "Add a tool to an agent", "agents/specialists · agents/prompts · web/src/lib", [3, 3]]
+      - [Add a gold column, change/add-gold-column.html, "Add a column to gold", "infra/postgres/models · migrations/ · agents/prompts", [3, 4]]

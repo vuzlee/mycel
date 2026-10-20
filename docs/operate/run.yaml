@@ -9,7 +9,7 @@ tables:
       - ["dev", "`scripts/stack.sh dev up` · `down` · `status` · `logs <name>`", "app on your machine, stores in docker compose"]
       - ["compose", "`scripts/stack.sh compose up [monitoring]`", "everything in containers"]
       - ["k8s", "`scripts/stack.sh k8s build` · `up` · `secret`", "the Helm chart on minikube; stores stay on the host"]
-      - ["first time", "`docs/operate/setup.md`", "OAuth apps, `.env`, gateway key"]
+      - ["first time", "`docs/operate/setup.html`", "OAuth apps, `.env`, gateway key"]
   - title: Everyday commands
     head: [Command, Does]
     rows:

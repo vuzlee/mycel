@@ -862,3 +862,9 @@ svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
 /* Generated flow figures keep a readable size and scroll inside their frame on small screens. */
 .tipfig .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tipfig .scroll-x .diagram { min-width: 760px; }
+.pager { display: flex; justify-content: space-between; gap: 1rem; margin: 2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); font: 500 12.5px var(--mono); }
+.pager a { color: var(--accent); text-decoration: none; }
+.pager .at { color: var(--ink-faint); }
+.toc td:first-child { width: 3rem; color: var(--ink-faint); font-family: var(--mono); }
+.toc { width: 100%; }
+.toc td:nth-child(2) { width: 14rem; font-family: var(--mono); }

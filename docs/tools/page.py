@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from book import PAGES, pager
 from flow import ROOT, check, draw
 
 HEAD = """<!doctype html>
@@ -115,6 +116,9 @@ def build(path: Path) -> str:
             + "</details>"
         )
     out.append("</section>")
+    href = str(path.with_suffix(".html").relative_to(ROOT / "docs"))
+    if href in {h for _, (_, h, *_) in PAGES}:
+        out.append(pager(href))
     rel = " · ".join(f'<a href="{h}">{e(lbl)}</a>' for lbl, h in spec.get("related", []))
     out.append(
         f'<footer><span>{rel}</span><span class="mono">{path.relative_to(ROOT)}</span></footer>'

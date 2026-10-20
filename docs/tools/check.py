@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from book import hand_pages, index, patched
 from flow import ROOT, check, draw
 from page import build
 
@@ -54,6 +55,22 @@ def links() -> list[str]:
     return misses
 
 
+#: Where an env key must appear for a page to name it.
+ENV_HOMES = [ROOT / "src", ROOT / "config", ROOT / ".env.example"]
+
+
+def env_keys(y: Path) -> list[str]:
+    """Every `UPPER_CASE` key a page names must be read somewhere."""
+    code = "".join(
+        f.read_text(errors="ignore")
+        for h in ENV_HOMES
+        for f in ([h] if h.is_file() else h.rglob("*"))
+        if f.is_file() and f.suffix in {".py", ".yaml", ".yml", ".example", ""}
+    )
+    keys = set(re.findall(r"`<?([A-Z][A-Z0-9]*_[A-Z0-9_]+)>?`", y.read_text()))
+    return [f"no env key {k} in code" for k in sorted(keys) if k not in code]
+
+
 def flows() -> list[str]:
     misses = []
     for y in FLOWS:
@@ -64,6 +81,7 @@ def flows() -> list[str]:
         for f in named:
             if "/" in f and not (ROOT / f.split(":")[0]).exists():
                 misses.append(f"{y.name}: no file {f}")
+        misses += [f"{y.name}: {m}" for m in env_keys(y)]
         page = y.with_suffix(".html")
         if "page" in spec and (not page.exists() or page.read_text() != build(y)):
             misses.append(
@@ -78,6 +96,17 @@ def flows() -> list[str]:
             misses.append(
                 f"{page}: figure differs from {yml} — python docs/tools/flow.py docs/{yml}"
             )
+    return misses
+
+
+def book() -> list[str]:
+    """index.html and every hand-written page's pager follow docs/book.yaml."""
+    misses = []
+    if (DOCS / "index.html").read_text() != index():
+        misses.append("index.html: out of date — python docs/tools/book.py")
+    for h in hand_pages():
+        if (DOCS / h).read_text() != patched(h):
+            misses.append(f"{h}: pager out of date — python docs/tools/book.py")
     return misses
 
 
@@ -111,7 +140,7 @@ def stale() -> list[str]:
 
 
 def main() -> int:
-    misses = links() + flows()
+    misses = links() + flows() + book()
     for m in misses:
         print(m)
     for n in stale():
