@@ -19,7 +19,7 @@
 Ask your work a question in plain language. Mycel reads Jira, Gmail, Calendar and your
 documents, answers with the sources it used, and books or updates things only after you say yes.
 
-https://github.com/user-attachments/assets/c8546f73-e6a8-4aca-abb1-08c07a849eb0
+https://github.com/user-attachments/assets/f311e9a3-2ecd-4316-8d2c-ccb6e94ad7fc
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">

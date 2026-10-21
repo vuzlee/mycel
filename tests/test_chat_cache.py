@@ -58,3 +58,8 @@ def test_a_turn_that_drafted_a_write_is_not_kept() -> None:
 def test_a_turn_that_only_read_is_kept() -> None:
     steps = [{"type": "tool_called", "payload": {"tool": "hours_by_person"}}]
     assert chat_cache.keepable(steps)
+
+
+async def test_no_source_and_jira_are_kept_apart(synced: list[Any]) -> None:
+    """An answer given with Jira off is not replayed once Jira is on."""
+    assert await chat_cache.version(frozenset()) != await chat_cache.version(frozenset({Chip.JIRA}))

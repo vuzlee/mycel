@@ -28,7 +28,7 @@ from mycel.domains.chat_knowledge import (
 )
 from mycel.domains.chat_model import model_source
 from mycel.events.channel import EventChannel, RecordingChannel
-from mycel.events.event import ATTEMPT_STARTED, CHART, NOTICE, AgentEvent
+from mycel.events.event import ATTEMPT_STARTED, CHART, NOTICE, RUN_FINISHED, AgentEvent
 from mycel.infra.postgres.repositories.conversations import (
     ConversationRepository,
 )
@@ -97,6 +97,8 @@ async def run(job: Job) -> None:
                     AgentEvent(agent=Orchestrator.name, type=NOTICE, payload={"text": turn.notice})
                 )
             if await _ground(turn) or await _replay(turn):
+                # No agent ran to close the stream, so the page would wait on it forever.
+                await turn.recorder.publish(AgentEvent(agent=Orchestrator.name, type=RUN_FINISHED))
                 trace.output(turn.answer)
                 return
             answer = await _ask(turn)

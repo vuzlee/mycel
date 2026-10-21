@@ -25,7 +25,7 @@ async def version(chips: frozenset[Chip] | None) -> str | None:
     async with session_scope() as session:
         state = await AccountRepository(session).sync_state()
     synced = state.last_success_at.isoformat() if state.last_success_at else "never"
-    return f"jira:{synced}"
+    return f"{','.join(sorted(chips))}:{synced}"
 
 
 def writer(model_ref: str) -> str:

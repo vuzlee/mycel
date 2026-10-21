@@ -9,6 +9,7 @@ import pytest
 from mycel.agents.core import runner
 from mycel.core.principal import Principal
 from mycel.domains import chat
+from mycel.events.event import RUN_FINISHED
 from mycel.infra.redis import answers, budgets, citations
 from mycel.queue.job import Job, JobKind
 from mycel.services import knowledge
@@ -16,13 +17,9 @@ from mycel.services import knowledge
 pytestmark = pytest.mark.anyio
 
 
-async def _drop(event: Any) -> None:
-    pass
-
-
 @pytest.fixture
 def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    seen: dict[str, Any] = {"model": 0, "finished": [], "cached": [], "usage": []}
+    seen: dict[str, Any] = {"model": 0, "finished": [], "cached": [], "usage": [], "events": []}
 
     async def nothing(*_: Any, **__: Any) -> None: ...
 
@@ -56,8 +53,14 @@ def world(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(chat, "_who_asked", asker)
     monkeypatch.setattr(chat, "_deps", deps)
     monkeypatch.setattr(chat, "RedisEventChannel", lambda job_id: SimpleNamespace())
+
+    async def publish(event: Any) -> None:
+        seen["events"].append(event.type)
+
     monkeypatch.setattr(
-        chat, "RecordingChannel", lambda inner: SimpleNamespace(dropped=0, steps=[], publish=_drop)
+        chat,
+        "RecordingChannel",
+        lambda inner: SimpleNamespace(dropped=0, steps=[], publish=publish),
     )
     monkeypatch.setattr(chat, "search_query", query)
     monkeypatch.setattr(chat, "_finish", finish)
@@ -87,6 +90,8 @@ async def test_no_passages_is_answered_without_a_model(world: dict[str, Any]) ->
     await chat.run(_job(["knowledge"]))
     assert world["model"] == 0
     assert world["finished"] == [knowledge.NOT_FOUND]
+    # No agent ran to close the stream, so the turn closes it itself.
+    assert world["events"][-1] == RUN_FINISHED
 
 
 async def test_passages_go_to_the_model_and_the_answer_is_cached(world: dict[str, Any]) -> None:
