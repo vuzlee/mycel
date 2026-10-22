@@ -2,18 +2,20 @@ reviewed: 1792515323   # 2026-10-20: re-read after 3dee7cd and MYC-214..219; fai
 page:
   eyebrow: Change
   title: Add a plugin
-  lede: ["A provider each person connects, e.g. GitHub", "One folder and one registry line"]
+  lede: ["A provider each person connects, e.g. GitHub", "One folder: client, consent, plugin; one registry line"]
 steps:
   - ["1", "src/mycel/core/config.py", "`<key>_client_id`, `<key>_client_secret`; a line in `.env.example`"]
-  - ["2", "src/mycel/plugins/jira/oauth.py", "copy into `plugins/<key>/oauth.py`: an `OAuthProvider`, connect, token_for"]
-  - ["3", "src/mycel/infra/postgres/repositories/accounts.py", "an account table and a migration: the sealed refresh token per person"]
-  - ["4", "src/mycel/plugins/jira/plugin.py", "copy into `plugins/<key>/plugin.py`: every `Plugin` member, then `PLUGIN = …()`"]
-  - ["5", "src/mycel/plugins/registry.py", "add it to `PLUGINS`"]
-  - ["6", "web/src/components/panels/Connections.tsx", "optional: an icon in `ICONS`"]
+  - ["2", "src/mycel/plugins/jira/client.py", "`plugins/<key>/client.py`: the provider's REST calls on one person's token; raise `SourceError` / `NotWritten` from `plugins/errors.py`"]
+  - ["3", "src/mycel/plugins/jira/oauth.py", "copy into `plugins/<key>/oauth.py`: an `OAuthProvider`, connect, token_for"]
+  - ["4", "src/mycel/infra/postgres/repositories/accounts.py", "an account table and a migration: the sealed refresh token per person"]
+  - ["5", "src/mycel/plugins/jira/plugin.py", "copy into `plugins/<key>/plugin.py`: every `Plugin` member, then `PLUGIN = …()`"]
+  - ["6", "src/mycel/plugins/registry.py", "add it to `PLUGINS`"]
+  - ["7", "web/src/components/panels/Connections.tsx", "optional: an icon in `ICONS`"]
   - ["test", "tests/test_plugin_tools.py", "no client → no tools; `GET /connections` lists it (`tests/test_auth.py`)"]
 mistakes:
   - ["tool module imported at the top of `plugin.py`", "`tests/test_layers.py` fails: api would import agents"]
-  - ["key named `me`, `methods` or `plugins`", "an existing `/auth` route answers instead"]
+  - ["client imports anything but `core`, `infra.http` or `plugins/errors.py`", "`tests/test_layers.py` fails: a client only talks to the provider"]
+  - ["callback put under `/connections`", "keep it at `/auth/<key>/callback`: that is the uri the provider has registered"]
   - ["a shared token in `.env` for the sync", "against the design: every read is on a person's own grant"]
   - ["first sync queued without a try", "a broker hiccup shows \"failed\" though the account is saved; log it, the timer syncs"]
   - ["callback not registered at the provider", "consent ends on the provider's error page"]

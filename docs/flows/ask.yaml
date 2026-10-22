@@ -1,7 +1,7 @@
 title: "One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"
 lanes: [user, api, queue, worker, agents, tools, stores]
 boxes:
-  - {id: web,      lane: user,   col: 0, file: web/src/api/work.ts,                               label: web/src/api/work.ts,        role: "Lan types the question"}
+  - {id: web,      lane: user,   col: 0, file: web/src/api/work.ts,                               label: api/work.ts,          role: "Lan types the question"}
   - {id: stream,   lane: user,   col: 4, file: web/src/hooks/useJobStream.ts,                label: hooks/useJobStream.ts, role: "shows each step live"}
   - {id: route,    lane: api,    col: 0, file: src/mycel/api/routes/chat.py,                 label: api/routes/chat.py,    role: "POST /chat → 202 + job id"}
   - {id: svc,      lane: api,    col: 1, file: src/mycel/services/chat.py,                   label: services/chat.py,      role: "save turn, make the job"}

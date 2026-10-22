@@ -32,6 +32,8 @@ EXPLAINED = {
     "src/mycel/agents": "overview/architecture.html",
     "src/mycel/mcp": "change/add-tool.html",
     "web/src/components": "overview/architecture.html",
+    "web/src": "overview/architecture.html",
+    "web/src/components/home": "overview/architecture.html",
     # Dev-machine helpers, never imported by the app.
     "src/mycel/devtools": "operate/run.html",
 }

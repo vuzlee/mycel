@@ -1,3 +1,4 @@
+reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); flow unchanged
 title: "Trace and metrics: spans to Langfuse, /metrics to Prometheus and Grafana, run events to the browser, doctor for health"
 page:
   eyebrow: Flow

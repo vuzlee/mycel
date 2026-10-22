@@ -38,6 +38,7 @@ notes:
   - ["what is read", "only issues changed since the last run (the newest `fetched_at`)"]
   - ["one at a time", "Postgres lock `sync:jira`; a second run is skipped"]
   - ["re-read everything", "`scripts/stack.sh sync --refetch`"]
+  - ["where the code sits", "talking to Jira is `plugins/jira/` (client, fetch); the steps on rows are `etl/` (transform, checks)"]
 failures:
   - ["a reader's token fails", "skipped — their projects wait for the next run", "src/mycel/plugins/jira/sync.py"]
   - ["a person's access read fails", "their access is cleared until the next run", "src/mycel/plugins/jira/access.py"]

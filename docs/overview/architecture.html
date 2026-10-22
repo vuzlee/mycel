@@ -102,7 +102,7 @@
           <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/client.py" class="hv" data-path="src/mycel/plugins/jira/client.py" data-tip="plugins/jira/client.py&#10;provider HTTP client"><text x="234" y="110" font-family="var(--mono)" font-size="12.5"
                 fill="var(--bronze)">plugins/</text></a>
           <text x="234" y="130" font-family="var(--sans)" font-size="11.5"
-                fill="var(--ink-soft)">pull in, no processing</text>
+                fill="var(--ink-soft)">clients pull raw, no processing</text>
 
           <!-- sources -> bronze -->
           <path d="M 318 150 L 318 196" stroke="var(--bronze)" stroke-width="1.4"
@@ -268,7 +268,7 @@
         <div class="layer-name">bronze</div>
         <p>The original payload, untouched. Append only — never edited, never deleted.</p>
         <dl>
-          <dt>written by</dt><dd>plugins/<dd>sources/</dd>lt;provider<dd>sources/</dd>gt;/</dd>
+          <dt>written by</dt><dd>plugins/&lt;provider&gt;/</dd>
           <dt>read by</dt><dd>etl/</dd>
           <dt>type</dt><dd>JSONB + metadata</dd>
         </dl>
@@ -551,7 +551,7 @@
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x"><svg class="diagram" viewBox="0 0 1042 576" role="img" aria-label="One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><text x="104" y="41" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">USER</text><text x="104" y="121" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">API</text><text x="104" y="201" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">QUEUE</text><text x="104" y="281" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">WORKER</text><text x="104" y="361" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">AGENTS</text><text x="104" y="441" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">TOOLS</text><text x="104" y="521" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">STORES</text><a href="vscode://file/home/vuzle/Documents/mycel/web/src/api/work.ts" class="hv" data-path="web/src/api/work.ts" data-tip="web/src/api/work.ts
-Lan types the question"><rect x="116" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">web/src/api/work.ts</text><text x="126" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">Lan types the question</text></a><a href="vscode://file/home/vuzle/Documents/mycel/web/src/hooks/useJobStream.ts" class="hv" data-path="web/src/hooks/useJobStream.ts" data-tip="web/src/hooks/useJobStream.ts
+Lan types the question"><rect x="116" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">api/work.ts</text><text x="126" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">Lan types the question</text></a><a href="vscode://file/home/vuzle/Documents/mycel/web/src/hooks/useJobStream.ts" class="hv" data-path="web/src/hooks/useJobStream.ts" data-tip="web/src/hooks/useJobStream.ts
 shows each step live"><rect x="876" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="886" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">hooks/useJobStream.ts</text><text x="886" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">shows each step live</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/chat.py" class="hv" data-path="src/mycel/api/routes/chat.py" data-tip="api/routes/chat.py
 POST /chat → 202 + job id"><rect x="116" y="96" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="114" font-family="var(--mono)" font-size="11" fill="var(--ink)">api/routes/chat.py</text><text x="126" y="130" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">POST /chat → 202 + job id</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/services/chat.py" class="hv" data-path="src/mycel/services/chat.py" data-tip="services/chat.py
 save turn, make the job"><rect x="306" y="96" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="114" font-family="var(--mono)" font-size="11" fill="var(--ink)">services/chat.py</text><text x="316" y="130" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">save turn, make the job</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/events.py" class="hv" data-path="src/mycel/api/routes/events.py" data-tip="api/routes/events.py
@@ -633,7 +633,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by plugins and etl; llm is the model gateway, imported by agents; agents is imported by domains; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
+             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by plugins and etl; llm holds model specs and the cost budget, imported by agents; agents is imported by domains; the worker runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -672,7 +672,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
 
             <rect x="628" y="30" width="256" height="38" rx="2"
                   fill="var(--surface)" stroke="var(--line)"/>
-            <text x="756" y="54" font-size="10" fill="var(--ink)">domains · jobs · scheduler · api</text>
+            <text x="756" y="54" font-size="10" fill="var(--ink)">domains · worker · scheduler · api</text>
           </g>
 
           <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)"
@@ -721,26 +721,25 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <p class="dirs-h">src/mycel/</p>
     <div class="dirs">
       <div class="d" data-path="src/mycel/api/app.py"><b>api/</b><small>Routes, middleware, serves the web app. Parses and authorises; never runs a model.</small></div>
-      <div class="d" data-path="src/mycel/services/enqueue.py"><b>services/</b><small>One job each, done inside a request: enqueue, fetch, transform, permission.</small></div>
-      <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does: chat, ingest, index, sync. Knows nothing about HTTP.</small></div>
-      <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, analyst, researcher; their tools and prompts.</small></div>
-      <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>Jira and Google behind one interface: OAuth, tools, sync, doctor probe.</small></div>
-      <div class="d" data-path="src/mycel/plugins/jira/client.py"><b>plugins/</b><small>One package per provider: HTTP client, consent, tools, sync.</small></div>
-      <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold, and the checks between.</small></div>
+      <div class="d" data-path="src/mycel/services/enqueue.py"><b>services/</b><small>One job each, called from api, worker, plugins and tools: enqueue, permission, sealing, model catalog.</small></div>
+      <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does: chat, ingest, index, sync, key checks; the Knowledge chip. Knows nothing about HTTP.</small></div>
+      <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, analyst, researcher; shared tools, prompts, and the runtime that opens a model.</small></div>
+      <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>One package per provider (Jira, Google): HTTP client, OAuth, tools, sync, doctor probe.</small></div>
+      <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold and the checks between; uploaded files into passages.</small></div>
       <div class="d" data-path="src/mycel/queue/topology.py"><b>queue/</b><small>RabbitMQ: publish, consume, retry, dead-letter.</small></div>
       <div class="d" data-path="src/mycel/scheduler/runner.py"><b>scheduler/</b><small>Timers: outbox relay, one sync per plugin, sweeps.</small></div>
-      <div class="d" data-path="src/mycel/infra/postgres/engine.py"><b>infra/</b><small>Postgres, Redis, Qdrant, MinIO, SMTP, HTTP clients.</small></div>
-      <div class="d" data-path="src/mycel/llm/budget.py"><b>llm/</b><small>Model routing and the per-job cost budget.</small></div>
+      <div class="d" data-path="src/mycel/infra/postgres/engine.py"><b>infra/</b><small>Postgres, Redis, Qdrant, MinIO, SMTP, the shared HTTP client. All SQL lives here.</small></div>
+      <div class="d" data-path="src/mycel/llm/budget.py"><b>llm/</b><small>Model specs, prices and the per-job cost budget. Value types only.</small></div>
       <div class="d" data-path="src/mycel/events/__init__.py"><b>events/</b><small>What a run publishes while it works.</small></div>
       <div class="d" data-path="src/mycel/core/config.py"><b>core/</b><small>Settings and shared types. Imports no other layer.</small></div>
       <div class="d" data-path="src/mycel/observability/tracing.py"><b>observability/</b><small>Traces to Langfuse, Prometheus metrics.</small></div>
       <div class="d" data-path="src/mycel/doctor/__init__.py"><b>doctor/</b><small>What is configured, broken, or off on purpose.</small></div>
       <div class="d" data-path="src/mycel/mcp/__init__.py"><b>mcp/</b><small>Tools on external MCP servers.</small></div>
-      <div class="d root" data-path="src/mycel/lifecycle.py"><b>lifecycle.py · worker.py</b><small>At the root: process start/stop, and job dispatch. Each wires every layer, so inside one they would import upward.</small></div>
+      <div class="d root" data-path="src/mycel/lifecycle.py"><b>lifecycle.py · worker/</b><small>At the root: process start/stop, and job dispatch (<code>worker/handlers.py</code>). Each wires every layer, so inside one they would import upward.</small></div>
     </div>
     <p class="dirs-h">repo root</p>
     <div class="dirs">
-      <div class="d" data-path="web/src/main.tsx"><b>web/</b><small>The React app, served by the API at /app.</small></div>
+      <div class="d" data-path="web/src/main.tsx"><b>web/</b><small>The React app, served by the API at /app. <code>src/api/</code> one file per backend area; <code>components/home/</code> the landing page.</small></div>
       <div class="d" data-path="migrations/env.py"><b>migrations/</b><small>Alembic. A downgrade outside a _test database is refused.</small></div>
       <div class="d" data-path="config/litellm/config.yaml"><b>config/</b><small>Environment YAML, the gateway, MCP servers.</small></div>
       <div class="d" data-path="evals/analyst/run.py"><b>evals/</b><small>Golden questions run by hand against real models.</small></div>
@@ -757,12 +756,16 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr><td class="who">core/</td><td>agents, services, domains, api</td><td>the foundation; imports nothing else</td></tr>
         <tr><td class="who">infra/</td><td>agents, services, domains, api, queue, lifecycle</td><td>stores sit under everything that runs work</td></tr>
         <tr><td class="who">llm/ · events/</td><td>infra and everything above it</td><td>value types that infra may store</td></tr>
-        <tr><td class="who">queue/</td><td>agents, services, domains, api, lifecycle</td><td>moves jobs; worker.py runs them</td></tr>
-        <tr><td class="who">services/</td><td>agents</td><td>tools call services, never the reverse</td></tr>
+        <tr><td class="who">queue/</td><td>agents, services, domains, api, lifecycle</td><td>moves jobs; worker/ runs them</td></tr>
+        <tr><td class="who">services/</td><td>agents, domains, plugins, api</td><td>everything above calls services, never the reverse</td></tr>
+        <tr><td class="who">etl/</td><td>services, domains, agents, plugins, api</td><td>pure steps on rows; a plugin feeds them</td></tr>
+        <tr><td class="who">domains/</td><td>api</td><td>a job runs in the worker, not inside a request</td></tr>
         <tr><td class="who">api/</td><td>agents, domains</td><td>the API queues work; agents run only in the worker</td></tr>
+        <tr><td class="who">plugins/ · mcp/</td><td>anything in agents but its tool kit: deps, chip filter, guards, errors, limits</td><td>a change inside agents cannot break a provider</td></tr>
+        <tr><td class="who">plugins/&lt;p&gt;/client · http</td><td>any of mycel but <code>core</code>, <code>infra.http</code>, <code>plugins/errors.py</code></td><td>a provider client only talks to the provider</td></tr>
       </tbody>
     </table>
-    <div class="path-note"><ul class="bul"><li><code>test_gold_entry_point.py</code>: reading gold for a person must ask <code>permission.py</code></li><li><code>worker.py</code>, <code>lifecycle.py</code> at the root: each wires every layer</li></ul></div>
+    <div class="path-note"><ul class="bul"><li><code>test_gold_entry_point.py</code>: reading gold for a person must ask <code>permission.py</code></li><li><code>worker/</code>, <code>lifecycle.py</code> at the root: each wires every layer</li><li>nothing in the app imports <code>devtools/</code></li></ul></div>
   </section>
   <section id="s03">
     <div class="section-head">
@@ -1325,7 +1328,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr>
           <td class="who">etl/ — bronze → silver → gold</td>
           <td>Built — <code>normalize.py</code> and <code>promote.py</code>, driven by
-            <code>services/transform.py</code> under an advisory lock</td>
+            <code>etl/transform.py</code> under an advisory lock</td>
         </tr>
         <tr>
           <td class="who">agents/ · chat</td>

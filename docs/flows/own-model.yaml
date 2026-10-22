@@ -7,7 +7,7 @@ page:
 lanes: [browser, api, worker, chat, stores]
 boxes:
   - {id: panel,   lane: browser, col: 0, file: web/src/components/panels/OwnModels.tsx,        label: panels/OwnModels.tsx,     role: "add model, test keys"}
-  - {id: apits,   lane: browser, col: 1, file: web/src/api/models.ts,                                 label: web/src/api/models.ts,           role: "/models/own requests"}
+  - {id: apits,   lane: browser, col: 1, file: web/src/api/models.ts,                                 label: api/models.ts,          role: "/models/own requests"}
   - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/models.py,                 label: routes/models.py,         role: "own model routes"}
   - {id: svc,     lane: api,     col: 2, file: src/mycel/services/own_models.py,               label: services/own_models.py,   role: "check, encrypt, save", hot: true}
   - {id: guard,   lane: api,     col: 3, file: src/mycel/services/url_guard.py,                label: services/url_guard.py,    role: "no private addresses"}

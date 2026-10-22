@@ -7,7 +7,7 @@ lanes: [browser, api, services, stores]
 boxes:
   - {id: page,    lane: browser,  col: 0, file: web/src/pages/dashboard/index.tsx,        label: dashboard/index.tsx,   role: "lays out the panels"}
   - {id: hook,    lane: browser,  col: 1, file: web/src/pages/dashboard/useDashboard.ts,  label: useDashboard.ts,       role: "refresh every 30 s"}
-  - {id: apits,   lane: browser,  col: 2, file: web/src/api/lists.ts,                           label: web/src/api/lists.ts,        role: "fetch, 401 → sign in"}
+  - {id: apits,   lane: browser,  col: 2, file: web/src/api/lists.ts,                           label: api/lists.ts,          role: "GET /dashboard"}
   - {id: rdash,   lane: api,      col: 2, file: src/mycel/api/routes/dashboard.py,        label: routes/dashboard.py,   role: "GET /dashboard"}
   - {id: rproj,   lane: api,      col: 3, file: src/mycel/api/routes/projects.py,         label: routes/projects.py,    role: "GET /projects"}
   - {id: sgate,   lane: services, col: 2, file: src/mycel/services/dashboards.py,         label: services/dashboards.py, role: "access check"}

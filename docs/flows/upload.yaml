@@ -7,12 +7,12 @@ page:
 lanes: [browser, api, queue, worker, stores]
 boxes:
   - {id: ui,      lane: browser, col: 0, file: web/src/components/knowledge/Documents.tsx,     label: knowledge/Documents.tsx,  role: "upload button, 2 MB check"}
-  - {id: apits,   lane: browser, col: 1, file: web/src/api/documents.ts,                                 label: web/src/api/documents.ts,           role: "posts the file"}
+  - {id: apits,   lane: browser, col: 1, file: web/src/api/documents.ts,                                 label: api/documents.ts,          role: "posts the file"}
   - {id: live,    lane: browser, col: 3, file: web/src/hooks/useDocuments.ts,                  label: hooks/useDocuments.ts,    role: "live list"}
   - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/documents.py,              label: routes/documents.py,      role: "upload, status stream"}
   - {id: svc,     lane: api,     col: 2, file: src/mycel/services/documents.py,                label: services/documents.py,    role: "checks, save, queue", hot: true}
   - {id: enq,     lane: queue,   col: 2, file: src/mycel/services/enqueue.py,                  label: services/enqueue.py,      role: "INGEST job"}
-  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker.py --queue ingest", role: "one at a time"}
+  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time"}
   - {id: ingest,  lane: worker,  col: 2, file: src/mycel/domains/ingest.py,                    label: domains/ingest.py,        role: "parse, chunk, embed", hot: true}
   - {id: files,   lane: stores,  col: 0, file: src/mycel/infra/objects/files.py,               label: "MinIO",                  role: "the original file"}
   - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document, chunk", role: "status, pieces"}

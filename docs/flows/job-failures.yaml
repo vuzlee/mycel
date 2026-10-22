@@ -13,7 +13,7 @@ boxes:
   - {id: topo,     lane: broker,  col: 1, file: src/mycel/queue/topology.py,                     label: queue/topology.py,      role: "jobs · jobs.retry · jobs.dlq"}
   - {id: retry,    lane: broker,  col: 2, file: src/mycel/queue/retry.py,                        label: queue/retry.py,         role: "5 s → 30 s → 2 m → dlq"}
   - {id: consumer, lane: worker,  col: 0, file: src/mycel/queue/consumer.py,                     label: queue/consumer.py,      role: "run, then ack or reject", hot: true}
-  - {id: worker,   lane: worker,  col: 1, file: src/mycel/worker/handlers.py,                             label: worker.py,              role: "FINAL or TRANSIENT"}
+  - {id: worker,   lane: worker,  col: 1, file: src/mycel/worker/handlers.py,                             label: worker/handlers.py,      role: "FINAL or TRANSIENT"}
   - {id: chat,     lane: worker,  col: 2, file: src/mycel/domains/chat.py,                       label: domains/chat.py,        role: "marks the turn failed"}
   - {id: claims,   lane: worker,  col: 3, file: src/mycel/infra/redis/claims.py,                 label: "Redis · claim",        role: "one run per job"}
   - {id: replaysh, lane: ops,     col: 0, file: scripts/ops/replay.sh,                           label: ops/replay.sh,          role: "you run it"}

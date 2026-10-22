@@ -207,7 +207,7 @@
   <div>│   └── <span data-path="src/mycel/infra/redis/results.py" tabindex="0">results.py</span><em>running / done, for polling</em></div>
   <div class="d">├── infra/postgres/repositories/</div>
   <div>│   └── <span class="own" data-path="src/mycel/infra/postgres/repositories/conversations.py" tabindex="0">conversations.py</span><em>DONE? lookup · ONE ROW upsert</em></div>
-  <div>└── <span data-path="src/mycel/worker/handlers.py" tabindex="0">worker.py</span><em>wires chat.run into a Handler</em></div>
+  <div>└── <span data-path="src/mycel/worker/handlers.py" tabindex="0">worker/handlers.py</span><em>wires chat.run into a Handler</em></div>
 </div></div>
 
 <h3 id="classes">3b · Class diagram</h3>
@@ -355,7 +355,7 @@
   <tr><td>ack</td><td>"done, delete the message"</td><td><span class="src" data-path="src/mycel/queue/consumer.py" tabindex="0">queue/consumer.py</span></td></tr>
   <tr><td>redelivered</td><td>flag: sent before, never acked</td><td><span class="src" data-path="src/mycel/queue/consumer.py" tabindex="0">queue/consumer.py</span></td></tr>
   <tr><td>claim</td><td>short Redis key: who works on a job</td><td><span class="src" data-path="src/mycel/infra/redis/claims.py" tabindex="0">infra/redis/claims.py</span></td></tr>
-  <tr><td>AlreadyRunning</td><td>claim taken; treated as transient, retried</td><td><span class="src" data-path="src/mycel/worker/handlers.py" tabindex="0">worker.py</span></td></tr>
+  <tr><td>AlreadyRunning</td><td>claim taken; treated as transient, retried</td><td><span class="src" data-path="src/mycel/worker/handlers.py" tabindex="0">worker/handlers.py</span></td></tr>
   <tr><td>delivery count</td><td>how often the queue resent a job</td><td><span class="src" data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">infra/redis/deliveries.py</span></td></tr>
   <tr><td>uq_turn_job_id</td><td>one turn row per job id</td><td><span class="src" data-path="src/mycel/infra/postgres/repositories/conversations.py" tabindex="0">repositories/conversations.py</span></td></tr>
 </table></div>

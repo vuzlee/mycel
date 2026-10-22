@@ -1,4 +1,4 @@
-reviewed: 1792515323   # 2026-10-20: web_search batching and analyst prompt re-read; recipe unchanged
+reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); recipe unchanged
 page:
   eyebrow: Change
   title: Add a tool to the analyst
@@ -16,6 +16,7 @@ tables:
     head: [Way, Where]
     rows:
       - ["an MCP server's tools", "declare the server in `config/mcp/`, name it in the agent's `mcp_servers`; `src/mycel/mcp/clients.py` connects"]
+      - ["a tool on a person's account (Jira, Google)", "in that plugin's package; see Add a plugin. It may import only the tool kit from `agents/`: deps, `chip_filter.opens`, guards, errors, limits (`tests/test_layers.py`)"]
 mistakes:
   - ["toolset made without `opens(Chip…)`", "never offered once the person picks sources"]
   - ["chip set per tool, not per toolset", "chips apply to the whole toolset"]

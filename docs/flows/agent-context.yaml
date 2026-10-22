@@ -1,4 +1,4 @@
-reviewed: 1792515323   # 2026-10-20: re-read after 3dee7cd and MYC-214..219; failures/notes updated
+reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); flow unchanged
 title: "Agent context: the date goes in every prompt, searches filter by recency, old results shrink, and a run near its cap summarises itself"
 page:
   eyebrow: Flow

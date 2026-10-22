@@ -6,8 +6,8 @@ page:
 lanes: [browser, api, plugin, provider, store]
 boxes:
   - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
-  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                                    label: web/src/api/connections.ts,          role: "goes to /connections/{key}/start"}
-  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start, callback"}
+  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                label: api/connections.ts,      role: "goes to /connections/{key}/start"}
+  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start; callback under /auth"}
   - {id: registry, lane: api,      col: 0, file: src/mycel/plugins/registry.py,                     label: plugins/registry.py,     role: "plugin by key"}
   - {id: jplugin,  lane: plugin,   col: 1, file: src/mycel/plugins/jira/plugin.py,                  label: jira/plugin.py,          role: "connect → access → sync", hot: true}
   - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,                  label: jira/access.py,          role: "which projects readable"}
@@ -30,11 +30,11 @@ edges:
   - {from: jplugin,  to: access,   step: 7, kind: calls,  text: "access.refresh(user_id)",   label: "projects"}
   - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
 notes:
-  - ["Google", "`plugins/google/` (oauth, calendar, mail) — same shape, no access or sync step"]
+  - ["Google", "`plugins/google/` (oauth, mail and calendar clients and tools) — same shape, no access or sync step"]
   - ["routes", "`/connections/{key}/start` · `/auth/{key}/callback` (registered with the provider) · `DELETE /connections/{key}` · `GET /connections`"]
   - ["state", "Redis, 10 min, used once; only the account that started may finish"]
   - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]
-  - ["Google", "same path without steps 7–8; its tools go to the researcher"]
+  - ["Google", "same path without steps 7–8; its tools go to the researcher. Sign-in and connect share `/auth/google/callback`"]
   - ["back to the page", "`/app/home?jira=connected` or `?jira_error=…`"]
 failures:
   - ["unknown plugin", "404", "src/mycel/api/routes/connections.py"]
