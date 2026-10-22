@@ -6,7 +6,7 @@ from redis.exceptions import RedisError
 
 from mycel.core.logging import get_logger
 from mycel.infra.redis import access_tokens as store
-from mycel.services.tokens import TokenUnreadable, seal, unseal
+from mycel.services.sealing import TokenUnreadable, seal, unseal
 
 log = get_logger(__name__)
 

@@ -8,9 +8,9 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import CHIPS_KEY, parse
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.chip_filter import CHIPS_KEY, parse
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.researcher import Researcher

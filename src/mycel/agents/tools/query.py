@@ -10,14 +10,12 @@ from collections.abc import Sequence
 from typing import Any
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
-from sqlalchemy import text
 
-from mycel.agents.core.chips import opens
+from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.guards import guard_repeat
 from mycel.core.chips import Chip
-from mycel.infra.postgres.acl import READER_ROLE, SCOPE_SETTING
-from mycel.infra.postgres.session import session_scope
+from mycel.infra.postgres.acl import scoped_read
 from mycel.services.permission import readable_projects
 
 MAX_ROWS = 200
@@ -106,22 +104,10 @@ async def read_rows(
 ) -> tuple[list[str], Sequence[Sequence[Any]]]:
     """`read`, as columns and rows, for a caller that draws from them too."""
     scope = await _scope(deps)
-    async with session_scope() as session:
-        # Must be the query's own transaction to protect anything.
-        await session.execute(text("SET TRANSACTION READ ONLY"))
-        await session.execute(text(f"SET LOCAL statement_timeout = {TIMEOUT_MS}"))
-        # Scope before role: after `SET ROLE` the scope can no longer be set.
-        # `set_config` rather than `SET LOCAL` so the scope is a bind parameter.
-        await session.execute(
-            text("SELECT set_config(:name, :scope, true)"),
-            {"name": SCOPE_SETTING, "scope": scope},
-        )
-        await session.execute(text(f"SET LOCAL ROLE {READER_ROLE}"))
-        try:
-            result = await session.execute(text(query), params or {})
-        except Exception as exc:
-            raise _Failed(str(exc.__cause__ or exc)) from exc
-        return list(result.keys()), result.fetchall()
+    try:
+        return await scoped_read(query, params or {}, scope, TIMEOUT_MS)
+    except Exception as exc:
+        raise _Failed(str(exc.__cause__ or exc)) from exc
 
 
 def build_toolset() -> FunctionToolset[MycelDeps]:

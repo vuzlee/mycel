@@ -10,15 +10,15 @@ from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import retrieval
 from evals.rag.metrics import normalize
 from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.core.chips import Chip
 from mycel.core.config import get_settings
+from mycel.domains.knowledge import render
 from mycel.infra.postgres.repositories.documents import ChunkRow
 from mycel.infra.vectors import documents as vectors
 from mycel.services.citations import check
-from mycel.services.knowledge import render
 
 STATE = retrieval.RESULTS / "answers.jsonl"
 

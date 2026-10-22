@@ -10,9 +10,9 @@ from pydantic import SecretStr
 from pydantic_ai import ModelRetry
 
 import mycel.agents.tools.web_search as web_search
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.config import Settings
 from mycel.infra import http
 from mycel.llm.budget import JobBudget

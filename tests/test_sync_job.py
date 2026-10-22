@@ -75,7 +75,7 @@ async def test_connecting_jira_refreshes_access_and_queues_a_sync(
 
 def test_a_jira_hiccup_is_retried_not_parked() -> None:
     """A timeout or 5xx from Jira may pass in a minute; the SYNC job must be retried."""
-    from mycel.sources import SourceError
+    from mycel.plugins.errors import SourceError
 
     assert issubclass(SourceError, worker.TRANSIENT)
 

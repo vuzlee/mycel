@@ -1,1 +1,4 @@
-"""Storage backends: Postgres, Qdrant, the object store, and Redis for in-flight state."""
+"""Backends and transport this deployment runs.
+
+Postgres, Qdrant, Redis, the object store, a shared HTTP client and SMTP.
+"""

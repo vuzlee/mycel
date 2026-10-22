@@ -1,11 +1,7 @@
-/** The two batch A fixes a browser run cannot keep watching: listener cleanup and the source race. */
+/** `useFollow` drops its observer when the conversation unmounts or is replaced. */
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { act, render, renderHook, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SourcePanel } from "../components/knowledge/SourcePanel";
-import { makeQueryClient } from "../lib/queryClient";
 import { useFollow } from "./useJobStream";
 
 class CountingObserver {
@@ -24,7 +20,7 @@ afterEach(() => {
   CountingObserver.live = 0;
 });
 
-describe("useFollow (#7)", () => {
+describe("useFollow", () => {
   it("keeps one listener and one observer however often the ref is called", () => {
     vi.stubGlobal("ResizeObserver", CountingObserver);
     const element = document.createElement("div");
@@ -61,45 +57,5 @@ describe("useFollow (#7)", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(watched).toContain(conversation);
-  });
-});
-
-describe("SourcePanel (#8)", () => {
-  const source = (chunk: number) => ({
-    label: String(chunk),
-    chunk_id: chunk,
-    document_id: chunk,
-    filename: `doc-${chunk}.md`,
-    mime: "text/markdown",
-    page: null,
-    page_end: null,
-    section: "",
-  });
-
-  it("shows the source clicked last, even when the first answers later", async () => {
-    const resolvers: Record<string, (r: Response) => void> = {};
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        (path: string) =>
-          new Promise<Response>((resolve) => {
-            resolvers[path] = resolve;
-          }),
-      ),
-    );
-    const client = makeQueryClient();
-    const wrap = (node: ReactNode) => (
-      <QueryClientProvider client={client}>{node}</QueryClientProvider>
-    );
-    const { rerender } = render(wrap(<SourcePanel source={source(1)} onClose={() => {}} />));
-    rerender(wrap(<SourcePanel source={source(2)} onClose={() => {}} />));
-
-    const answer = (text: string) =>
-      new Response(JSON.stringify({ text, chunk_id: 0 }), { status: 200 });
-    await act(async () => resolvers["/chunks/2"]!(answer("second passage")));
-    await act(async () => resolvers["/chunks/1"]!(answer("first passage")));
-
-    expect(await screen.findByText("second passage")).toBeTruthy();
-    expect(screen.queryByText("first passage")).toBeNull();
   });
 });

@@ -10,9 +10,9 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RequestUsage
 
 import mycel.agents.core.runner as runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import RunawayStopped
+from mycel.agents.core.settings import AgentSettings
 from mycel.llm.budget import BudgetExceeded, JobBudget
 
 pytestmark = pytest.mark.anyio

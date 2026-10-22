@@ -6,12 +6,12 @@ Building a model makes no network call, so agents can be constructed at import t
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.own_endpoint import OwnEndpoint
 from mycel.agents.core.rotating import OnFailure, RotatingModel
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.config import Settings, get_settings
 from mycel.core.exceptions import ConfigError
-from mycel.llm.router import resolve
+from mycel.llm.model_spec import resolve
 
 if TYPE_CHECKING:
     from openai import AsyncOpenAI

@@ -10,8 +10,8 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "mycel"
 NOT_PERSON_FACING = {
     "plugins/jira/sync.py",
     "domains/index.py",
-    "services/transform.py",
-    "services/dashboard.py",
+    "etl/transform.py",
+    "services/gold_board.py",
     "services/gather.py",
     "infra/vectors/indexer.py",
     "infra/postgres/repositories/gold.py",

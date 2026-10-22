@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic_ai import FunctionToolset, RunContext
 
 from mycel.agents.core import charts
-from mycel.agents.core.chips import opens
+from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.tools.query import final, read_rows
 from mycel.core.chips import Chip

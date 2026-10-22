@@ -16,7 +16,9 @@ from mycel.plugins import registry
 from mycel.plugins.base import Plugin
 from mycel.services import google_signin
 
-router = APIRouter(prefix="/auth", tags=["connections"])
+router = APIRouter(prefix="/connections", tags=["connections"])
+#: Redirect uris are registered with each provider under `/auth`, so the callbacks stay there.
+callbacks = APIRouter(prefix="/auth", tags=["connections"])
 
 log = get_logger(__name__)
 
@@ -33,13 +35,13 @@ class PluginResponse(BaseModel):
     note: str | None = None
 
 
-@router.get("/plugins", response_model=list[PluginResponse])
+@router.get("", response_model=list[PluginResponse])
 async def list_plugins(user: CurrentUser) -> list[PluginResponse]:
     """Every plugin, and what this person has attached to each."""
     return [await _describe(p, user) for p in registry.PLUGINS]
 
 
-@router.get("/google/callback")
+@callbacks.get("/google/callback")
 async def finish_google(
     user: MaybeUser,
     session: Db,
@@ -71,7 +73,7 @@ async def start_connection(key: str, user: CurrentUser) -> RedirectResponse:
     return RedirectResponse(await plugin.consent_url(user.id))
 
 
-@router.get("/{key}/callback")
+@callbacks.get("/{key}/callback")
 async def finish_connection(
     key: str,
     user: MaybeUser,

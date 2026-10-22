@@ -1,6 +1,6 @@
 """The orchestrator is told which sources are on and off, so an old turn cannot overrule them."""
 
-from mycel.agents.core.chips import missing_sources_note
+from mycel.agents.core.chip_filter import missing_sources_note
 from mycel.core.chips import Chip
 
 

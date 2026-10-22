@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
 from mycel.services import conversations as domain
-from mycel.services import models
+from mycel.services import model_catalog as models
 from mycel.services.conversations import HISTORY_LIMIT
 
 router = APIRouter(tags=["conversations"])

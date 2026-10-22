@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseChart } from "../components/Chart";
 import { buildConversation } from "./buildConversation";
-import type { SequencedEvent } from "./types";
+import type { SequencedEvent } from "./streamEvents";
 
 const spec = { type: "bar", title: "Hours", unit: "h", labels: ["ann", "bob"], values: [7, 3] };
 

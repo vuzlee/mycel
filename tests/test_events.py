@@ -10,9 +10,9 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 import mycel.agents.core.runner as runner
 import mycel.api.routes.events as events
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.emit import RunEmitter
+from mycel.agents.core.settings import AgentSettings
 from mycel.events.channel import NullChannel, RecordingChannel
 from mycel.events.event import TOOL_CALLED, TOOL_RETURNED, AgentEvent, SequencedEvent
 from mycel.infra.redis import streams

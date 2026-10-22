@@ -1,5 +1,5 @@
 import type { ConversationSummary } from "../../api";
-import { useAuth } from "../../context/auth";
+import { useAuth } from "../../context/AuthContext";
 
 /** The account, as the server knows it. The address is the identity and cannot change. */
 export function ProfilePanel({ conversations }: { conversations: ConversationSummary[] }) {

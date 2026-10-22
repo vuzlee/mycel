@@ -8,11 +8,10 @@ import pytest
 
 from mycel.agents.core import runner
 from mycel.core.principal import Principal
-from mycel.domains import chat
+from mycel.domains import chat, knowledge
 from mycel.events.event import RUN_FINISHED
 from mycel.infra.redis import answers, budgets, citations
 from mycel.queue.job import Job, JobKind
-from mycel.services import knowledge
 
 pytestmark = pytest.mark.anyio
 

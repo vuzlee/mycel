@@ -9,7 +9,7 @@ export const MODELS_KEY = ["models"];
 
 /** One list of the models this person may ask with: a switch, the one picked first, and for
  *  their own models the test, edit and delete in the same row. */
-export function ModelsPage() {
+export function ModelsPanel() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: MODELS_KEY, queryFn: fetchModels });
   const own = useQuery({ queryKey: OWN_KEY, queryFn: fetchOwnModels });

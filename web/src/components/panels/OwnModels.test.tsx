@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeQueryClient } from "../../lib/queryClient";
-import { ModelsPage } from "./ModelsPage";
+import { ModelsPanel } from "./ModelsPanel";
 
 afterEach(() => {
   cleanup();
@@ -43,12 +43,12 @@ function show() {
   client.setDefaultOptions({ queries: { retry: false } });
   render(
     <QueryClientProvider client={client}>
-      <ModelsPage />
+      <ModelsPanel />
     </QueryClientProvider>,
   );
 }
 
-describe("ModelsPage with own models", () => {
+describe("ModelsPanel with own models", () => {
   it("lists a model with its key hints, never a key", async () => {
     serve({
       "GET /models/own": [MODEL],

@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from mycel.infra.postgres.documents import DELETING
+from mycel.infra.postgres.document_status import DELETING
 from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.services import documents

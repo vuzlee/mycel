@@ -17,9 +17,9 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.tools import ToolDefinition
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import DegenerateLoop
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.analyst import Analysis, Analyst, unanswered
 from mycel.llm.budget import JobBudget
 

@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import ProcessHistory
 
-from mycel.agents.core.chips import allowed
+from mycel.agents.core.chip_filter import allowed
 from mycel.agents.core.compact import compact
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.history import shrink_old_results
 from mycel.agents.core.prompt_parts import PromptParts
+from mycel.agents.core.settings import AgentSettings
 from mycel.mcp.clients import build_toolsets
 
 if TYPE_CHECKING:

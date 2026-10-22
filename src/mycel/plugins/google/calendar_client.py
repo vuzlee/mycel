@@ -9,7 +9,8 @@ import httpx2
 
 from mycel.core.logging import get_logger
 from mycel.infra.http import shared
-from mycel.sources import GOOGLE_TIMEOUT_SECONDS, SourceError
+from mycel.plugins.errors import SourceError
+from mycel.plugins.google.http import GOOGLE_TIMEOUT_SECONDS
 
 API = "https://www.googleapis.com/calendar/v3"
 #: The person's own calendar.

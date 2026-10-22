@@ -7,8 +7,8 @@ from zoneinfo import ZoneInfo
 import httpx2
 import pytest
 
-import mycel.sources.google_calendar as google_calendar
-from mycel.sources import SourceError
+import mycel.plugins.google.calendar_client as google_calendar
+from mycel.plugins.errors import SourceError
 
 #: The asker's zone, from their browser.
 TZ = ZoneInfo("Asia/Bangkok")

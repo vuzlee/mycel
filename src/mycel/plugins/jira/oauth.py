@@ -11,7 +11,7 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, JiraAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import access_tokens, oauth
-from mycel.services.tokens import seal
+from mycel.services.sealing import seal
 
 log = get_logger(__name__)
 

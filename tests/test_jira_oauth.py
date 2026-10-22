@@ -14,7 +14,7 @@ from mycel.core.exceptions import ConfigError
 from mycel.plugins.jira import oauth
 from mycel.plugins.jira.oauth import JiraAuthError, NotConnected
 from mycel.services import oauth as shared_oauth
-from mycel.services.tokens import TokenUnreadable, seal, unseal
+from mycel.services.sealing import TokenUnreadable, seal, unseal
 from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio

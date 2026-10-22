@@ -8,10 +8,6 @@ export interface Topic {
   label: string;
 }
 
-export function anchorFor(jobId: string): string {
-  return `turn-${jobId}`;
-}
-
 interface Props {
   topics: Topic[];
   /** The scrolling body the turns live in. The observer needs it as its root, and it

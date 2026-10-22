@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AuthProvider } from "../context/auth";
+import { AuthProvider } from "../context/AuthContext";
 import { makeQueryClient } from "../lib/queryClient";
 import { Waiting } from "./Waiting";
 

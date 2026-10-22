@@ -1,1 +1,1 @@
-"""Background ETL steps: bronze -> silver -> gold."""
+"""Background ETL: bronze -> silver -> gold for work data, and uploaded files into passages."""

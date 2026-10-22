@@ -7,7 +7,7 @@ page:
 lanes: [browser, api, worker, chat, stores]
 boxes:
   - {id: panel,   lane: browser, col: 0, file: web/src/components/panels/OwnModels.tsx,        label: panels/OwnModels.tsx,     role: "add model, test keys"}
-  - {id: apits,   lane: browser, col: 1, file: web/src/api.ts,                                 label: web/src/api.ts,           role: "/models/own requests"}
+  - {id: apits,   lane: browser, col: 1, file: web/src/api/models.ts,                                 label: web/src/api/models.ts,           role: "/models/own requests"}
   - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/models.py,                 label: routes/models.py,         role: "own model routes"}
   - {id: svc,     lane: api,     col: 2, file: src/mycel/services/own_models.py,               label: services/own_models.py,   role: "check, encrypt, save", hot: true}
   - {id: guard,   lane: api,     col: 3, file: src/mycel/services/url_guard.py,                label: services/url_guard.py,    role: "no private addresses"}
@@ -41,7 +41,7 @@ failures:
   - ["a key fails the test", "that key shows not ok, with why", "src/mycel/domains/chat_model.py"]
   - ["a key runs out mid-chat", "next key tried", "src/mycel/agents/core/rotating.py"]
   - ["every key fails", "quota → retried later; auth → the turn fails", "src/mycel/agents/core/rotating.py"]
-  - ["encryption key changed", "stored keys cannot be read", "src/mycel/services/tokens.py"]
+  - ["encryption key changed", "stored keys cannot be read", "src/mycel/services/sealing.py"]
 related:
   - [Architecture, ../overview/architecture.html]
   - [Config, ../overview/config.html]

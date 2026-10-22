@@ -1,7 +1,7 @@
 /** The product, running, above the fold. */
 
 import { useEffect, useMemo, useState } from "react";
-import { labelFor } from "../lib/toolLabel";
+import { labelFor } from "../../lib/toolLabel";
 
 interface Scene {
   question: string;

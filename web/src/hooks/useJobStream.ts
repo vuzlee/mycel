@@ -1,8 +1,8 @@
 /** The only place that touches `EventSource`. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SequencedEvent, StreamState } from "../lib/types";
-import { RUN_FINISHED } from "../lib/types";
+import type { SequencedEvent, StreamState } from "../lib/streamEvents";
+import { RUN_FINISHED } from "../lib/streamEvents";
 
 export interface Stream {
   events: SequencedEvent[];

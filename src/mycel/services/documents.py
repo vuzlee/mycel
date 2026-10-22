@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from mycel.core.config import get_settings
 from mycel.infra.objects import buckets, files
 from mycel.infra.objects.client import presign
-from mycel.infra.postgres.documents import DELETING
+from mycel.infra.postgres.document_status import DELETING
 from mycel.infra.postgres.repositories.documents import (
     ChunkRow,
     DocumentRepository,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { me, type DocumentRow, type DocumentStatus } from "../api";
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/AuthContext";
 
 export interface Documents {
   documents: DocumentRow[];

@@ -1,1 +1,1 @@
-"""LLM layer: model routing and per-job cost budget."""
+"""Model specs, prices and the per-job cost budget. Value types only: nothing here opens a model."""

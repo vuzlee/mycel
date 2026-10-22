@@ -10,16 +10,16 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING, Protocol
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.model_builder import build_model, build_own_model
 from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.settings import AgentSettings
 from mycel.core import redact
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.redis import key_rotation
 from mycel.llm.budget import own_price, price_usd
+from mycel.llm.model_spec import resolve
 from mycel.llm.quota import cooldown_seconds
-from mycel.llm.router import resolve
 
 if TYPE_CHECKING:
     from pydantic_ai.models import Model

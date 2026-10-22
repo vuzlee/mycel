@@ -10,7 +10,7 @@ steps:
   - ["4", "src/mycel/plugins/jira/plugin.py", "copy into `plugins/<key>/plugin.py`: every `Plugin` member, then `PLUGIN = …()`"]
   - ["5", "src/mycel/plugins/registry.py", "add it to `PLUGINS`"]
   - ["6", "web/src/components/panels/Connections.tsx", "optional: an icon in `ICONS`"]
-  - ["test", "tests/test_plugin_tools.py", "no client → no tools; `/auth/plugins` lists it (`tests/test_auth.py`)"]
+  - ["test", "tests/test_plugin_tools.py", "no client → no tools; `GET /connections` lists it (`tests/test_auth.py`)"]
 mistakes:
   - ["tool module imported at the top of `plugin.py`", "`tests/test_layers.py` fails: api would import agents"]
   - ["key named `me`, `methods` or `plugins`", "an existing `/auth` route answers instead"]

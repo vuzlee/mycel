@@ -2,15 +2,16 @@
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
-from mycel.agents.core.chips import opens
+from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
 from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
+from mycel.plugins.errors import SourceError
+from mycel.plugins.google import mail_client as gmail
 from mycel.plugins.google.oauth import NotConnected, token_for
-from mycel.sources import SourceError, gmail
 
 log = get_logger(__name__)
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { anchorFor } from "../components/Topics";
+import { anchorFor } from "../lib/anchors";
 
 /** Refetch the sidebar once per finished run: the worker reorders it minutes after the fetch. */
 export function useRefetchOnSettle(

@@ -10,7 +10,7 @@ from mycel.core.exceptions import ConfigError
 from mycel.core.principal import Principal
 from mycel.domains import chat, chat_model
 from mycel.queue.job import Job, JobKind
-from mycel.services import models
+from mycel.services import model_catalog as models
 
 pytestmark = pytest.mark.anyio
 

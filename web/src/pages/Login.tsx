@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { fetchSignInMethods, googleSignInUrl, requestCode } from "../api";
 import { Mycelium, Spinner } from "../components/icons";
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/AuthContext";
 
 interface Sent {
   /** Where the guard bounced us from, to return to after signing in. */

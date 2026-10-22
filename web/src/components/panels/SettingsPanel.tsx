@@ -3,7 +3,7 @@ import { Chip, Moon, Person, Screen, Sun } from "../icons";
 import type { Theme } from "../../lib/theme";
 import { useTheme } from "../../lib/theme";
 import { Connections } from "./Connections";
-import { ModelsPage } from "./ModelsPage";
+import { ModelsPanel } from "./ModelsPanel";
 
 const THEMES: { value: Theme; label: string; icon: JSX.Element }[] = [
   { value: "system", label: "System", icon: <Screen size={17} /> },
@@ -39,7 +39,7 @@ const SECTIONS: SettingsSection[] = [
     label: "Models",
     icon: <Chip size={15} />,
     hint: "Which models you can ask with, and the one picked first.",
-    render: () => <ModelsPage />,
+    render: () => <ModelsPanel />,
   },
   {
     id: "accounts",

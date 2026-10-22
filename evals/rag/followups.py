@@ -12,11 +12,11 @@ from evals.common import CEILING_USD
 from evals.rag.metrics import Ranked, first_hit
 from evals.rag.retrieval import CORPUS_DIR, EVAL_OWNER_ID, RESULTS, TOP_K, cleanup, ingest
 from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.rewriter import Rewriter
+from mycel.domains.knowledge import search_text
 from mycel.infra.vectors import documents as vectors
-from mycel.services.knowledge import search_text
 
 HERE = Path(__file__).parent
 

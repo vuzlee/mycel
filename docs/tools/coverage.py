@@ -25,7 +25,7 @@ EXPLAINED = {
     "config/environments": "overview/config.html",
     "config/agents": "overview/config.html",
     "migrations/versions": "overview/database.html",
-    "src/mycel/infra/documents": "flows/upload.html",
+    "src/mycel/etl/documents": "flows/upload.html",
     "src/mycel/etl/checks": "flows/jira-sync.html",
     "web/src/context": "flows/sign-in.html",
     "src/mycel/plugins/google": "flows/connect.html",

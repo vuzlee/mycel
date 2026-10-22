@@ -1,4 +1,4 @@
-"""Call one connector in sources/, write the original payload down to bronze."""
+"""Read Jira on one grant, write the original payloads down to bronze."""
 
 import asyncio
 from collections.abc import Sequence
@@ -6,14 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.models import JiraIssue
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
-from mycel.sources import jira
-from mycel.sources.jira_http import session as jira_session
+from mycel.plugins.jira import client as jira
+from mycel.plugins.jira.http import session as jira_session
 
 #: Distinguishes "no argument" from an explicit None, which means read everything.
 UNSET: datetime = datetime.min
@@ -41,7 +39,7 @@ async def fetch_jira(
 ) -> FetchResult:
     """Pull every issue in `projects` that moved since that project's last fetch."""
     bronze = BronzeRepository(session)
-    marks = await _watermarks(session) if since is UNSET else {}
+    marks = await bronze.last_fetched_per_project() if since is UNSET else {}
     issues: list[dict[str, Any]] = []
 
     async with jira_session():
@@ -78,10 +76,3 @@ def _jql(project: str, since: datetime | None) -> str:
     if since is None:
         return f"{scope} ORDER BY updated ASC"
     return f'{scope} AND updated >= "{since.strftime(JQL_STAMP)}" ORDER BY updated ASC'
-
-
-async def _watermarks(session: AsyncSession) -> dict[str, datetime]:
-    """When bronze last heard of each project. A project absent here is read in full."""
-    project = JiraIssue.payload["fields"]["project"]["key"].astext
-    rows = await session.execute(select(project, func.max(JiraIssue.fetched_at)).group_by(project))
-    return {str(p): stamp for p, stamp in rows.all() if p}

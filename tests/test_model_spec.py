@@ -3,7 +3,7 @@
 import pytest
 
 from mycel.core.exceptions import ConfigError
-from mycel.llm.router import ModelSpec, Tier, resolve
+from mycel.llm.model_spec import ModelSpec, Tier, resolve
 
 
 def test_parses_both_tiers() -> None:

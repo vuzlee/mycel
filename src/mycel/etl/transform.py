@@ -7,10 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.logging import get_logger
 from mycel.etl import normalize, promote
+from mycel.etl.run_checks import check_work
 from mycel.infra.postgres.repositories.bronze import BronzeRepository
 from mycel.infra.postgres.repositories.gold import GoldRepository
 from mycel.infra.postgres.repositories.silver import SilverRepository
-from mycel.services.check import check_work
 
 log = get_logger(__name__)
 

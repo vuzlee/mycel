@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from pydantic_ai.agent import AgentRun
     from pydantic_ai.usage import RunUsage, UsageLimits
 
-    from mycel.agents.core.config import AgentSettings
     from mycel.agents.core.deps import MycelDeps
+    from mycel.agents.core.settings import AgentSettings
 
 OutputT = TypeVar("OutputT")
 

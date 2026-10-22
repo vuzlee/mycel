@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from mycel.api.dependencies import CurrentUser
 from mycel.api.limits import per_user
-from mycel.services import models as domain
+from mycel.services import model_catalog
 from mycel.services import own_models as own
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -37,7 +37,7 @@ class DefaultRequest(BaseModel):
     ref: str
 
 
-def _response(found: domain.Models) -> ModelsResponse:
+def _response(found: model_catalog.Models) -> ModelsResponse:
     return ModelsResponse(
         models=[
             ModelChoiceResponse(ref=c.ref, label=c.label, source=c.source, enabled=c.enabled)
@@ -50,17 +50,17 @@ def _response(found: domain.Models) -> ModelsResponse:
 @router.get("", response_model=ModelsResponse)
 async def list_models(user: CurrentUser) -> ModelsResponse:
     """Every model this person may pick, with their toggles and default."""
-    return _response(await domain.models_for(user.id))
+    return _response(await model_catalog.models_for(user.id))
 
 
 @router.put("/prefs/{ref}", response_model=ModelsResponse)
 async def toggle_model(ref: str, body: ToggleRequest, user: CurrentUser) -> ModelsResponse:
     """Turn one model on or off for this person."""
     try:
-        return _response(await domain.set_enabled(user.id, ref, body.enabled))
-    except domain.UnknownModel:
+        return _response(await model_catalog.set_enabled(user.id, ref, body.enabled))
+    except model_catalog.UnknownModel:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model") from None
-    except domain.LastModel:
+    except model_catalog.LastModel:
         raise HTTPException(status.HTTP_409_CONFLICT, "at least one model must stay on") from None
 
 
@@ -68,8 +68,8 @@ async def toggle_model(ref: str, body: ToggleRequest, user: CurrentUser) -> Mode
 async def set_default_model(body: DefaultRequest, user: CurrentUser) -> ModelsResponse:
     """The model the composer picks before this person chooses."""
     try:
-        return _response(await domain.set_default(user.id, body.ref))
-    except domain.UnknownModel:
+        return _response(await model_catalog.set_default(user.id, body.ref))
+    except model_catalog.UnknownModel:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such model, or it is off") from None
 
 

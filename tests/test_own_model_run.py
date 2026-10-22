@@ -11,10 +11,10 @@ from pydantic import SecretStr
 from pydantic_ai import models
 
 from mycel.agents.core import model_builder, runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.exceptions import ModelQuota
 from mycel.agents.core.model_source import OwnModel
 from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core import redact

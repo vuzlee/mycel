@@ -1,4 +1,4 @@
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/AuthContext";
 
 /** Who is signed in is not known yet: blank while asking, a way out if the API is down. */
 export function Waiting() {

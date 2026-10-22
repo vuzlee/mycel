@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +45,14 @@ class BronzeRepository:
         if since is not None:
             query = query.where(JiraIssue.fetched_at >= since)
         return list((await self._session.scalars(query)).all())
+
+    async def last_fetched_per_project(self) -> dict[str, datetime]:
+        """When bronze last heard of each project. A project absent here is read in full."""
+        project = JiraIssue.payload["fields"]["project"]["key"].astext
+        rows = await self._session.execute(
+            select(project, func.max(JiraIssue.fetched_at)).group_by(project)
+        )
+        return {str(p): stamp for p, stamp in rows.all() if p}
 
     async def issue_payloads(self, keys: Sequence[str] | None = None) -> list[dict[str, Any]]:
         """Stored issue payloads; `keys` narrows to one sync, none means all."""

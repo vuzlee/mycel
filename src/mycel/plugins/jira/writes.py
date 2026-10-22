@@ -6,8 +6,8 @@ from typing import Any
 from pydantic_ai import ModelRetry
 
 from mycel.infra.redis import drafts
+from mycel.plugins.jira import client as jira
 from mycel.plugins.jira.oauth import connected
-from mycel.sources import jira
 
 
 @dataclass(frozen=True, slots=True)

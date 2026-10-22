@@ -17,7 +17,9 @@ from mycel.infra.postgres.models import OwnModelKey
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.repositories.models import ModelPrefRepository
 from mycel.infra.redis import key_rotation
-from mycel.services import models, own_models, tokens, url_guard
+from mycel.services import model_catalog as models
+from mycel.services import own_models, url_guard
+from mycel.services import sealing as tokens
 from mycel.services.own_models import OwnModelNotFound, OwnModelRefused
 from tests.fakes import needs_postgres
 

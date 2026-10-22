@@ -1,12 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  Unauthorized,
-  deleteDocument,
-  fetchModels,
-  fetchProjects,
-  shaped,
-  toggleModel,
-} from "./api";
+import { Unauthorized, deleteDocument, fetchModels, fetchProjects, shaped, toggleModel } from ".";
 
 function answer(status: number, body: string): void {
   vi.stubGlobal(

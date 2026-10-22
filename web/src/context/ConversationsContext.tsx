@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext } from "react";
 import type { ReactNode } from "react";
 import type { ConversationSummary } from "../api";
 import { deleteConversation, editConversation, fetchConversations, pinConversation } from "../api";
-import { useAuth } from "./auth";
+import { useAuth } from "./AuthContext";
 
 const KEY = ["conversations"] as const;
 const NONE: ConversationSummary[] = [];

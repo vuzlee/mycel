@@ -4,9 +4,9 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.toolsets import AbstractToolset
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import missing_sources_note
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.chip_filter import missing_sources_note
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.prompts import load
 from mycel.agents.tools import delegate
 

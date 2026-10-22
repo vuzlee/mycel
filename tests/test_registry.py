@@ -6,7 +6,7 @@ import pytest
 from pydantic_ai import Agent
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import AGENTS, build, build_deps
 from mycel.agents.specialists.analyst import Analysis
 from mycel.core.exceptions import ConfigError

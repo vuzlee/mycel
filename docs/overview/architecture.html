@@ -99,8 +99,8 @@
           <!-- ===== Layer 1: sources ===== -->
           <rect x="218" y="86" width="200" height="64" rx="2"
                 fill="var(--bronze-wash)" stroke="var(--bronze)" stroke-width="1.4"/>
-          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/sources/jira.py" class="hv" data-path="src/mycel/sources/jira.py" data-tip="sources/jira.py&#10;provider HTTP clients"><text x="234" y="110" font-family="var(--mono)" font-size="12.5"
-                fill="var(--bronze)">sources/</text></a>
+          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/client.py" class="hv" data-path="src/mycel/plugins/jira/client.py" data-tip="plugins/jira/client.py&#10;provider HTTP client"><text x="234" y="110" font-family="var(--mono)" font-size="12.5"
+                fill="var(--bronze)">plugins/</text></a>
           <text x="234" y="130" font-family="var(--sans)" font-size="11.5"
                 fill="var(--ink-soft)">pull in, no processing</text>
 
@@ -254,7 +254,7 @@
       </div>
       <figcaption><ul class="bul"><li>Bold gold line: the only way data reaches the AI layer</li><li>Dashed: control and observability, not business data</li></ul></figcaption>
     </figure>
-    <div class="path-note"><ul class="bul"><li>Data axis: <code>sources → bronze → etl → silver → gold</code>, on a timer, minutes</li><li>Request axis: <code>route → domain → service</code>, seconds (Part 2)</li><li>The two meet only at gold</li></ul></div>
+    <div class="path-note"><ul class="bul"><li>Data axis: <code>plugins → bronze → etl → silver → gold</code>, on a timer, minutes</li><li>Request axis: <code>route → domain → service</code>, seconds (Part 2)</li><li>The two meet only at gold</li></ul></div>
   </section>
   <section id="s02">
     <div class="section-head">
@@ -268,7 +268,7 @@
         <div class="layer-name">bronze</div>
         <p>The original payload, untouched. Append only — never edited, never deleted.</p>
         <dl>
-          <dt>written by</dt><dd>sources/</dd>
+          <dt>written by</dt><dd>plugins/<dd>sources/</dd>lt;provider<dd>sources/</dd>gt;/</dd>
           <dt>read by</dt><dd>etl/</dd>
           <dt>type</dt><dd>JSONB + metadata</dd>
         </dl>
@@ -471,7 +471,7 @@
 
             <rect x="676" y="364" width="164" height="32" rx="2"
                   fill="var(--bronze-wash)" stroke="var(--bronze)"/>
-            <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/sources/jira.py" class="hv" data-path="src/mycel/sources/jira.py" data-tip="sources/jira.py&#10;provider HTTP clients"><text x="758" y="384" fill="var(--bronze)">sources/</text></a>
+            <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/client.py" class="hv" data-path="src/mycel/plugins/jira/client.py" data-tip="plugins/jira/client.py&#10;provider HTTP client"><text x="758" y="384" fill="var(--bronze)">plugins/</text></a>
           </g>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -550,8 +550,8 @@
     </div>
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
-      <div class="scroll-x"><svg class="diagram" viewBox="0 0 1042 576" role="img" aria-label="One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><text x="104" y="41" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">USER</text><text x="104" y="121" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">API</text><text x="104" y="201" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">QUEUE</text><text x="104" y="281" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">WORKER</text><text x="104" y="361" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">AGENTS</text><text x="104" y="441" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">TOOLS</text><text x="104" y="521" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">STORES</text><a href="vscode://file/home/vuzle/Documents/mycel/web/src/api.ts" class="hv" data-path="web/src/api.ts" data-tip="web/src/api.ts
-Lan types the question"><rect x="116" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">web/src/api.ts</text><text x="126" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">Lan types the question</text></a><a href="vscode://file/home/vuzle/Documents/mycel/web/src/hooks/useJobStream.ts" class="hv" data-path="web/src/hooks/useJobStream.ts" data-tip="web/src/hooks/useJobStream.ts
+      <div class="scroll-x"><svg class="diagram" viewBox="0 0 1042 576" role="img" aria-label="One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><text x="104" y="41" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">USER</text><text x="104" y="121" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">API</text><text x="104" y="201" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">QUEUE</text><text x="104" y="281" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">WORKER</text><text x="104" y="361" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">AGENTS</text><text x="104" y="441" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">TOOLS</text><text x="104" y="521" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end" letter-spacing="1.2">STORES</text><a href="vscode://file/home/vuzle/Documents/mycel/web/src/api/work.ts" class="hv" data-path="web/src/api/work.ts" data-tip="web/src/api/work.ts
+Lan types the question"><rect x="116" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">web/src/api/work.ts</text><text x="126" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">Lan types the question</text></a><a href="vscode://file/home/vuzle/Documents/mycel/web/src/hooks/useJobStream.ts" class="hv" data-path="web/src/hooks/useJobStream.ts" data-tip="web/src/hooks/useJobStream.ts
 shows each step live"><rect x="876" y="16" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="886" y="34" font-family="var(--mono)" font-size="11" fill="var(--ink)">hooks/useJobStream.ts</text><text x="886" y="50" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">shows each step live</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/chat.py" class="hv" data-path="src/mycel/api/routes/chat.py" data-tip="api/routes/chat.py
 POST /chat → 202 + job id"><rect x="116" y="96" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="126" y="114" font-family="var(--mono)" font-size="11" fill="var(--ink)">api/routes/chat.py</text><text x="126" y="130" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">POST /chat → 202 + job id</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/services/chat.py" class="hv" data-path="src/mycel/services/chat.py" data-tip="services/chat.py
 save turn, make the job"><rect x="306" y="96" width="150" height="44" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="316" y="114" font-family="var(--mono)" font-size="11" fill="var(--ink)">services/chat.py</text><text x="316" y="130" font-family="var(--sans)" font-size="9.5" fill="var(--ink-soft)">save turn, make the job</text></a><a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/routes/events.py" class="hv" data-path="src/mycel/api/routes/events.py" data-tip="api/routes/events.py
@@ -633,7 +633,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by sources and etl; llm is the model gateway, imported by agents; agents is imported by domains; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
+             aria-label="Mycel's dependency graph: core is the bottom layer, imported by infra; infra is imported by plugins and etl; llm is the model gateway, imported by agents; agents is imported by domains; jobs runs all of the above, while domains, scheduler and api sit on top; observability sits horizontally underneath, imported by every layer.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -652,7 +652,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
 
             <rect x="324" y="56" width="104" height="38" rx="2"
                   fill="var(--bronze-wash)" stroke="var(--bronze)"/>
-            <text x="376" y="80" fill="var(--bronze)">sources</text>
+            <text x="376" y="80" fill="var(--bronze)">plugins</text>
 
             <rect x="324" y="168" width="104" height="38" rx="2"
                   fill="var(--silver-wash)" stroke="var(--silver)"/>
@@ -725,7 +725,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does: chat, ingest, index, sync. Knows nothing about HTTP.</small></div>
       <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, analyst, researcher; their tools and prompts.</small></div>
       <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>Jira and Google behind one interface: OAuth, tools, sync, doctor probe.</small></div>
-      <div class="d" data-path="src/mycel/sources/jira.py"><b>sources/</b><small>Provider HTTP clients: Jira, Gmail, Google Calendar.</small></div>
+      <div class="d" data-path="src/mycel/plugins/jira/client.py"><b>plugins/</b><small>One package per provider: HTTP client, consent, tools, sync.</small></div>
       <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold, and the checks between.</small></div>
       <div class="d" data-path="src/mycel/queue/topology.py"><b>queue/</b><small>RabbitMQ: publish, consume, retry, dead-letter.</small></div>
       <div class="d" data-path="src/mycel/scheduler/runner.py"><b>scheduler/</b><small>Timers: outbox relay, one sync per plugin, sweeps.</small></div>

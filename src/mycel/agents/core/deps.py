@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from zoneinfo import ZoneInfo
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.model_source import ModelSource
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.chips import Chip
 from mycel.core.principal import Principal
 from mycel.events.channel import EventChannel, NullChannel

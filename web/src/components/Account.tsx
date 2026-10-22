@@ -1,7 +1,7 @@
 /** Who you are signed in as, and everything you can do about it. */
 
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/AuthContext";
 import { useConversations } from "../context/ConversationsContext";
 import { Modal } from "./Modal";
 import { HelpPanel, ProfilePanel, SettingsPanel } from "./panels";

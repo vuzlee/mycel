@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from mycel.core.principal import Principal
 from mycel.infra.postgres.session import session_scope
-from mycel.services.dashboard import Dashboard, build_dashboard, list_projects
+from mycel.services.gold_board import Dashboard, build_dashboard, list_projects
 from mycel.services.permission import readable, require
 
 #: The default window.

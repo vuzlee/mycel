@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthProvider } from "../context/auth";
+import { AuthProvider } from "../context/AuthContext";
 import { makeQueryClient } from "../lib/queryClient";
 import { useDocuments } from "./useDocuments";
 

@@ -8,10 +8,10 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 
 from mycel.agents.core import charts, runner
-from mycel.agents.core.chips import parse as parse_chips
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.chip_filter import parse as parse_chips
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.model_source import ModelSource
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.core.chips import Chip
@@ -19,7 +19,7 @@ from mycel.core.config import get_settings, zone_of
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
 from mycel.core.usage import TurnUsage
-from mycel.domains import chat_cache
+from mycel.domains import chat_cache, knowledge
 from mycel.domains.chat_knowledge import (
     answer_without_model,
     cache_writer,
@@ -39,7 +39,7 @@ from mycel.infra.redis.streams import RedisEventChannel
 from mycel.observability.metrics import jobs_total
 from mycel.observability.turns import chat_turn, observe
 from mycel.queue.job import Job
-from mycel.services import knowledge, models
+from mycel.services import model_catalog as models
 from mycel.services.chat import find_turn
 
 log = get_logger(__name__)

@@ -1,7 +1,7 @@
 /** What Mycel actually does, one card each, with a small scene that plays when it is seen. */
 
 import type { ReactNode } from "react";
-import { Board, Calendar, Globe, Mail, Notebook } from "./icons";
+import { Board, Calendar, Globe, Mail, Notebook } from "../icons";
 
 interface Case {
   icon: ReactNode;

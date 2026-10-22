@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from mycel.core.config import get_settings
-from mycel.infra.documents import tokens
+from mycel.etl.documents import tokens
 
 
 @dataclass(frozen=True, slots=True)

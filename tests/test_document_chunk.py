@@ -1,6 +1,6 @@
 """Tables: kept whole when they fit, split by rows with the header on every piece."""
 
-from mycel.infra.documents.chunk import split_rows, table_passages
+from mycel.etl.documents.chunk import split_rows, table_passages
 
 
 def words(text: str) -> int:

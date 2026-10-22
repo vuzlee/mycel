@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from pydantic_ai.usage import RunUsage
 
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.llm.budget import BudgetExceeded, JobBudget, own_price
 
 

@@ -10,8 +10,8 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 import mycel.agents.core.runner as runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.schemas import ProgressSummary
 from mycel.agents.specialists.summarizer import Summarizer
 from mycel.etl.normalize import JIRA

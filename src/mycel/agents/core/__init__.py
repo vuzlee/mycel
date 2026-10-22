@@ -1,1 +1,1 @@
-"""Agent runtime built on pydantic-ai: wiring, config, deps, guards, errors."""
+"""Agent runtime on pydantic-ai: deps, settings, guards, errors, and opening a model."""

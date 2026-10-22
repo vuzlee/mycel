@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic_ai import FunctionToolset, ModelRetry, RunContext
 
-from mycel.agents.core.chips import opens
+from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
 from mycel.agents.core.guards import guard_repeat
@@ -16,8 +16,9 @@ from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.chips import Chip
 from mycel.core.logging import get_logger
 from mycel.infra.redis import drafts
+from mycel.plugins.errors import SourceError
+from mycel.plugins.google import calendar_client as google_calendar
 from mycel.plugins.google.oauth import GoogleError, NotConnected, token_for
-from mycel.sources import SourceError, google_calendar
 
 #: How far behind the clock a start may be: a draft for now, agreed to a moment later.
 LATE_START = timedelta(minutes=15)

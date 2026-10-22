@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildConversation } from "./buildConversation";
-import type { SequencedEvent } from "./types";
+import type { SequencedEvent } from "./streamEvents";
 
 const event = (
   seq: number,

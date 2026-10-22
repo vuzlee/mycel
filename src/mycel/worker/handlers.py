@@ -1,11 +1,5 @@
-"""The worker process: which domain runs each kind of job.
+"""Which domain runs each kind of job, and which failures are final or retried."""
 
-python -m mycel.worker [--queue ingest]
-"""
-
-import asyncio
-import os
-import sys
 from types import ModuleType
 
 import botocore.exceptions
@@ -27,12 +21,10 @@ from mycel.agents.core.exceptions import (
 )
 from mycel.domains import chat, index, ingest, key_check, sync
 from mycel.infra.redis.claims import AlreadyRunning
-from mycel.lifecycle import running, start, stop_on_signals
 from mycel.llm.budget import BudgetExceeded
-from mycel.queue import consumer, topology
+from mycel.plugins.errors import SourceError
 from mycel.queue.handler import Handler
 from mycel.queue.job import INGEST_KINDS, Job, JobKind
-from mycel.sources import SourceError
 
 
 class UnknownJob(Exception):
@@ -101,25 +93,3 @@ async def record_failure(job: Job, error: str) -> None:
 
 
 HANDLER = Handler(run=run, record_failure=record_failure, final=FINAL, transient=TRANSIENT)
-
-
-def main(jobs: Handler, argv: list[str] | None = None) -> int:
-    """Consume `--queue` (jobs by default) until SIGTERM, serving /metrics."""
-    args = argv if argv is not None else sys.argv[1:]
-    queue = args[args.index("--queue") + 1] if "--queue" in args else topology.QUEUE
-    process = "ingest" if queue == topology.INGEST_QUEUE else "worker"
-    start(process)
-
-    async def _main() -> bool:
-        async with running(process):
-            return await consumer.run_worker(jobs, stop_on_signals(), queue)
-
-    if asyncio.run(_main()):
-        # A fresh process image gives docling's memory back without a container restart,
-        # which Kubernetes would back off.
-        os.execv(sys.executable, [sys.executable, *sys.orig_argv[1:]])
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main(HANDLER))

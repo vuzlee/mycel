@@ -4,8 +4,8 @@ from typing import Any
 
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
-from mycel.sources import NotWritten
-from mycel.sources.jira_http import Auth, call, request
+from mycel.plugins.errors import NotWritten
+from mycel.plugins.jira.http import Auth, call, request
 
 __all__ = ["Auth"]
 

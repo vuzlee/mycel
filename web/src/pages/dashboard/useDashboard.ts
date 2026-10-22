@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchDashboard } from "../../api";
-import { useProjects } from "../../lib/useProjects";
+import { useProjects } from "../../hooks/useProjects";
 import { WINDOWS } from "./format";
 
 const EVERY_MS = 30_000;

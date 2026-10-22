@@ -7,12 +7,12 @@ lanes: [browser, api, services, stores]
 boxes:
   - {id: page,    lane: browser,  col: 0, file: web/src/pages/dashboard/index.tsx,        label: dashboard/index.tsx,   role: "lays out the panels"}
   - {id: hook,    lane: browser,  col: 1, file: web/src/pages/dashboard/useDashboard.ts,  label: useDashboard.ts,       role: "refresh every 30 s"}
-  - {id: apits,   lane: browser,  col: 2, file: web/src/api.ts,                           label: web/src/api.ts,        role: "fetch, 401 → sign in"}
+  - {id: apits,   lane: browser,  col: 2, file: web/src/api/lists.ts,                           label: web/src/api/lists.ts,        role: "fetch, 401 → sign in"}
   - {id: rdash,   lane: api,      col: 2, file: src/mycel/api/routes/dashboard.py,        label: routes/dashboard.py,   role: "GET /dashboard"}
   - {id: rproj,   lane: api,      col: 3, file: src/mycel/api/routes/projects.py,         label: routes/projects.py,    role: "GET /projects"}
   - {id: sgate,   lane: services, col: 2, file: src/mycel/services/dashboards.py,         label: services/dashboards.py, role: "access check"}
   - {id: perm,    lane: services, col: 3, file: src/mycel/services/permission.py,         label: services/permission.py, role: "may this person read it?"}
-  - {id: sbuild,  lane: services, col: 1, file: src/mycel/services/dashboard.py,          label: services/dashboard.py, role: "builds the numbers", hot: true}
+  - {id: sbuild,  lane: services, col: 1, file: src/mycel/services/gold_board.py,          label: services/gold_board.py, role: "builds the numbers", hot: true}
   - {id: gather,  lane: services, col: 0, file: src/mycel/services/gather.py,             label: services/gather.py,    role: "items, totals, late"}
   - {id: gold,    lane: stores,   col: 0, file: src/mycel/infra/postgres/repositories/gold.py,       label: "Postgres · gold",   role: "work items"}
   - {id: stats,   lane: stores,   col: 1, file: src/mycel/infra/postgres/repositories/gold_stats.py, label: gold_stats.py,      role: "counts, effort, sprints"}
@@ -32,11 +32,11 @@ notes:
   - ["shows", "estimate vs spent per person · late items · status, priority, kind, sprint, epics"]
   - ["cache", "none on the server; the browser refreshes every 30 s"]
   - ["limit", "at most 300 items in the window; older ones dropped and counted"]
-  - ["web shell", "`web/src/main.tsx` routes · `context/auth.tsx` who is signed in · `components/Sidebar.tsx`"]
+  - ["web shell", "`web/src/main.tsx` routes · `context/AuthContext.tsx` who is signed in · `components/Sidebar.tsx`"]
 failures:
   - ["project not readable, or signed out", "403 not your project", "src/mycel/api/routes/dashboard.py"]
   - ["`days` outside 1–90", "422", "src/mycel/api/routes/dashboard.py"]
-  - ["session expired", "back to sign in", "web/src/api.ts"]
+  - ["session expired", "back to sign in", "web/src/api/client.ts"]
   - ["no projects", "the picker says no projects yet", "web/src/pages/dashboard/useDashboard.ts"]
 related:
   - [Database, ../overview/database.html]

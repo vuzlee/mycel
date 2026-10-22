@@ -13,7 +13,7 @@ from mycel.infra.redis import access_tokens as access_store
 from mycel.plugins.google import oauth
 from mycel.plugins.google.oauth import GoogleError, NotConnected
 from mycel.services import oauth as shared_oauth
-from mycel.services.tokens import seal
+from mycel.services.sealing import seal
 from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio

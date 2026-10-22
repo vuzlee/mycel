@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.model_source import ModelSource
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.researcher import Researcher

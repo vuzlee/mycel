@@ -10,7 +10,7 @@ from typing import Any
 import httpx2
 
 from mycel.core.logging import get_logger
-from mycel.sources import NotWritten, SourceError
+from mycel.plugins.errors import NotWritten, SourceError
 
 HTTP_TIMEOUT_SECONDS = 30.0
 

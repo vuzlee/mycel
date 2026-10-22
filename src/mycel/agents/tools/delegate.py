@@ -12,10 +12,10 @@ from pydantic_ai.toolsets import FunctionToolset
 
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.chips import opens
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import AgentError, ToolFailed, TransportError
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.researcher import Researcher
 from mycel.agents.specialists.summarizer import Summarizer

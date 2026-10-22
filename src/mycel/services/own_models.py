@@ -1,7 +1,7 @@
 """Models a person adds with their own keys: an OpenAI-compatible base URL, a model id, keys.
 
 Keys are sealed before they reach the database and never leave it again: a response shows
-the last four characters, and a run unseals them only for itself (see `own_model_run.py`).
+the last four characters, and a run unseals them only for itself (see `domains/chat_model.py`).
 """
 
 from dataclasses import dataclass
@@ -11,8 +11,9 @@ from mycel.infra.postgres.repositories.models import ModelPrefRepository
 from mycel.infra.postgres.repositories.own_models import OwnKey, OwnModelRepository, OwnModelRow
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import key_checks
-from mycel.services import enqueue, tokens, url_guard
-from mycel.services.models import OWN
+from mycel.services import enqueue, url_guard
+from mycel.services import sealing as tokens
+from mycel.services.model_catalog import OWN
 
 #: Enough for a handful of providers each; a list longer than this is a mistake.
 MAX_MODELS = 10

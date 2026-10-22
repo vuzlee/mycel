@@ -23,7 +23,7 @@ from mycel.infra.postgres.repositories.gold_stats import (
     SprintTally,
 )
 from mycel.services.conversations import ConversationSummary
-from mycel.services.dashboard import Dashboard, EpicProgress
+from mycel.services.gold_board import Dashboard, EpicProgress
 
 #: Who every request in this file is made by.
 SIGNED_IN = Principal(id=1, email="tester@example.com")

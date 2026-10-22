@@ -11,9 +11,9 @@ boxes:
   - {id: jsync,    lane: plugin,   col: 1, file: src/mycel/plugins/jira/sync.py,         label: jira/sync.py,          role: "one run, start to end", hot: true}
   - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,       label: jira/access.py,        role: "who reads which project"}
   - {id: oauth,    lane: plugin,   col: 3, file: src/mycel/plugins/jira/oauth.py,        label: jira/oauth.py,         role: "each reader's token"}
-  - {id: srcjira,  lane: jira,     col: 2, file: src/mycel/sources/jira.py,              label: sources/jira.py,       role: "Jira REST: search, hours"}
-  - {id: fetch,    lane: pipeline, col: 1, file: src/mycel/services/fetch.py,            label: services/fetch.py,     role: "changed since last run"}
-  - {id: transform,lane: pipeline, col: 2, file: src/mycel/services/transform.py,        label: services/transform.py, role: "bronze → silver → gold"}
+  - {id: srcjira,  lane: jira,     col: 2, file: src/mycel/plugins/jira/client.py,       label: jira/client.py,        role: "Jira REST: search, hours"}
+  - {id: fetch,    lane: pipeline, col: 1, file: src/mycel/plugins/jira/fetch.py,        label: jira/fetch.py,         role: "changed since last run"}
+  - {id: transform,lane: pipeline, col: 2, file: src/mycel/etl/transform.py,             label: etl/transform.py,      role: "bronze → silver → gold"}
   - {id: bronze,   lane: stores,   col: 1, file: src/mycel/infra/postgres/repositories/bronze.py, label: "Postgres · bronze", role: "raw, as Jira sent it"}
   - {id: gold,     lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/gold.py,   label: "Postgres · gold",   role: "what agents read", hot: true}
   - {id: index,    lane: search,   col: 2, file: src/mycel/domains/index.py,             label: domains/index.py,      role: "INDEX_GOLD job: embed"}
@@ -41,11 +41,11 @@ notes:
 failures:
   - ["a reader's token fails", "skipped — their projects wait for the next run", "src/mycel/plugins/jira/sync.py"]
   - ["a person's access read fails", "their access is cleared until the next run", "src/mycel/plugins/jira/access.py"]
-  - ["Jira says 429", "3 tries with Retry-After", "src/mycel/sources/jira_http.py"]
+  - ["Jira says 429", "3 tries with Retry-After", "src/mycel/plugins/jira/http.py"]
   - ["Jira times out or 5xx", "the whole run stops; error recorded", "src/mycel/plugins/jira/sync.py"]
   - ["run stops after bronze was written", "the next run lifts them too (keys fetched since the last good sync)", "src/mycel/plugins/jira/sync.py"]
-  - ["a row fails the checks", "nothing reaches gold this run", "src/mycel/services/transform.py"]
-  - ["Jira times out or 5xx in a SYNC job", "retried 5 s → 30 s → 2 min, then parked", "src/mycel/worker.py"]
+  - ["a row fails the checks", "nothing reaches gold this run", "src/mycel/etl/transform.py"]
+  - ["Jira times out or 5xx in a SYNC job", "retried 5 s → 30 s → 2 min, then parked", "src/mycel/worker/handlers.py"]
   - ["no ingest worker running", "the embed job waits in its queue", "src/mycel/domains/index.py"]
 related:
   - [Connect an account, connect.html]

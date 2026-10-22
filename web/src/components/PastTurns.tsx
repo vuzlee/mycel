@@ -4,7 +4,7 @@ import type { Turn } from "../api";
 import { buildConversation } from "../lib/buildConversation";
 import { Answer } from "./Answer";
 import { Steps } from "./Steps";
-import { anchorFor } from "./Topics";
+import { anchorFor } from "../lib/anchors";
 
 interface Props {
   turns: Turn[];

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mycel.core.config import HostModel, Settings
 from mycel.infra.postgres.repositories.identity import IdentityRepository
 from mycel.infra.postgres.repositories.models import ModelPrefRepository
-from mycel.services import models
+from mycel.services import model_catalog as models
 from tests.fakes import needs_postgres
 
 pytestmark = [pytest.mark.anyio, needs_postgres]

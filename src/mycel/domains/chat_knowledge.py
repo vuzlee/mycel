@@ -4,17 +4,17 @@ from dataclasses import replace
 from typing import Any
 
 from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.orchestrator import Orchestrator
 from mycel.agents.specialists.rewriter import Rewriter
 from mycel.core.chips import Chip
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
+from mycel.domains import knowledge
 from mycel.events.channel import NullChannel
 from mycel.infra.redis import answers
 from mycel.queue.job import Job
-from mycel.services import knowledge
 from mycel.services.citations import check
 
 log = get_logger(__name__)

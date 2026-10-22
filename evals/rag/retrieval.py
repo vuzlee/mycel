@@ -11,8 +11,8 @@ from pathlib import Path
 import yaml
 
 from evals.rag.metrics import Ranked, first_hit, mrr, normalize, recall_at, threshold
-from mycel.infra.documents.chunk import passages
-from mycel.infra.documents.parse import parse
+from mycel.etl.documents.chunk import passages
+from mycel.etl.documents.parse import parse
 from mycel.infra.vectors import documents as vectors
 
 HERE = Path(__file__).parent

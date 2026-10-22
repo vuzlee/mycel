@@ -8,7 +8,7 @@ import pytest
 
 import mycel.plugins.jira.sync as sync
 from mycel.plugins.jira import oauth as jira_oauth
-from mycel.services.fetch import FetchResult
+from mycel.plugins.jira.fetch import FetchResult
 
 pytestmark = pytest.mark.anyio
 

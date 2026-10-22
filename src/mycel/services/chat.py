@@ -10,7 +10,8 @@ from mycel.infra.postgres.repositories.conversations import (
     TurnRow,
 )
 from mycel.infra.postgres.session import session_scope
-from mycel.services import enqueue, models
+from mycel.services import enqueue
+from mycel.services import model_catalog as models
 
 #: How much of a question becomes the conversation's title in the sidebar.
 TITLE_CHARS = 80

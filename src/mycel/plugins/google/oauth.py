@@ -10,12 +10,11 @@ from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.accounts import AccountRepository, GoogleAccountRow
 from mycel.infra.postgres.session import session_scope
 from mycel.services import access_tokens, oauth
-from mycel.services.tokens import seal
+from mycel.services.google_signin import GOOGLE_AUTH_URL, GOOGLE_CALLBACK_PATH, GOOGLE_TOKEN_URL
+from mycel.services.sealing import seal
 
 log = get_logger(__name__)
 
-AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
 
 #: Narrowest that does the job.
@@ -26,7 +25,6 @@ SCOPES = (
     "https://www.googleapis.com/auth/gmail.readonly",
 )
 
-CALLBACK_PATH = "/auth/google/callback"
 PROVIDER = "google"
 
 
@@ -42,9 +40,9 @@ GOOGLE = oauth.OAuthProvider(
     key=PROVIDER,
     name="Google",
     env="GOOGLE",
-    auth_url=AUTH_URL,
-    token_url=TOKEN_URL,
-    callback_path=CALLBACK_PATH,
+    auth_url=GOOGLE_AUTH_URL,
+    token_url=GOOGLE_TOKEN_URL,
+    callback_path=GOOGLE_CALLBACK_PATH,
     client=lambda cfg: (cfg.google_client_id, cfg.google_client_secret),
     json_body=False,
     error=GoogleError,

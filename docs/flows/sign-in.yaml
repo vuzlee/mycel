@@ -7,7 +7,7 @@ page:
 lanes: [browser, api, services, stores]
 boxes:
   - {id: login,  lane: browser,  col: 0, file: web/src/pages/Login.tsx,                           label: pages/Login.tsx,           role: "Google button, email box"}
-  - {id: apits,  lane: browser,  col: 1, file: web/src/api.ts,                                    label: web/src/api.ts,            role: "calls /auth routes"}
+  - {id: apits,  lane: browser,  col: 1, file: web/src/api/auth.ts,                                    label: web/src/api/auth.ts,            role: "calls /auth routes"}
   - {id: conn,   lane: api,      col: 0, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "Google comes back here"}
   - {id: route,  lane: api,      col: 1, file: src/mycel/api/routes/auth.py,                      label: api/routes/auth.py,        role: "sign-in routes, sets cookie"}
   - {id: deps,   lane: api,      col: 3, file: src/mycel/api/dependencies.py,                     label: api/dependencies.py,       role: "cookie → who is asking"}
@@ -29,7 +29,7 @@ edges:
   - {from: sauth, to: idrepo, step: 6, kind: calls,  text: "create_session(",               label: "session row"}
   - {from: deps,  to: sauth,  step: 7, kind: calls,  text: "session_user(",                 label: "each request", enter: 0.2}
 notes:
-  - ["in the browser", "`web/src/context/auth.tsx` holds who is signed in; `main.tsx` guards private pages"]
+  - ["in the browser", "`web/src/context/AuthContext.tsx` holds who is signed in; `main.tsx` guards private pages"]
   - ["session cookie", "`mycel_session` · 14 days · httponly · samesite=lax · secure outside dev"]
   - ["renewed?", "yes — each use (at most once a minute) and each page load push the end out 14 days"]
   - ["who may sign up", "`REGISTRATION_ALLOWED_DOMAINS`; empty = anyone"]

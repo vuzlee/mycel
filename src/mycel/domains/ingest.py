@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.objects import buckets, files
-from mycel.infra.postgres.documents import DELETING, FAILED, READY
+from mycel.infra.postgres.document_status import DELETING, FAILED, READY
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import document_events
@@ -19,7 +19,7 @@ from mycel.queue.producer import publish
 from mycel.services.enqueue import delete_job
 
 if TYPE_CHECKING:
-    from mycel.infra.documents.chunk import Passage
+    from mycel.etl.documents.chunk import Passage
 
 log = get_logger(__name__)
 
@@ -121,8 +121,8 @@ async def _fail(document_id: int, reason: str) -> None:
 
 async def _parse_and_chunk(path: Path) -> "tuple[int, list[Passage]] | str":
     """`(pages, passages)`, or the failure reason. CPU-bound, so off the event loop."""
-    from mycel.infra.documents.chunk import passages
-    from mycel.infra.documents.parse import ParseError, parse
+    from mycel.etl.documents.chunk import passages
+    from mycel.etl.documents.parse import ParseError, parse
 
     def work() -> "tuple[int, list[Passage]] | str":
         try:

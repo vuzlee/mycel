@@ -221,7 +221,7 @@ class TestQueueingAQuestion:
     def test_a_model_not_available_is_a_422(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from mycel.services.models import UnknownModel
+        from mycel.services.model_catalog import UnknownModel
 
         _queues(monkeypatch, UnknownModel("host:off"))
         response = client.post("/chat", json={"question": "q?", "model_ref": "host:off"})

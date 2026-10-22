@@ -9,12 +9,11 @@ from mycel.api.app import create_app
 from mycel.api.dependencies import current_user
 from mycel.core.config import Settings
 from mycel.core.principal import Principal
-from mycel.services import models as domain
-from mycel.services import own_models
+from mycel.services import model_catalog, own_models
 
 SIGNED_IN = Principal(id=1, email="tester@example.com")
-FOUND = domain.Models(
-    choices=[domain.ModelChoice(ref="host:a", label="A", source="host", enabled=True)],
+FOUND = model_catalog.Models(
+    choices=[model_catalog.ModelChoice(ref="host:a", label="A", source="host", enabled=True)],
     default_ref="host:a",
 )
 
@@ -33,7 +32,7 @@ def _domain(monkeypatch: pytest.MonkeyPatch, name: str, result: object) -> None:
             raise result
         return result
 
-    monkeypatch.setattr(f"mycel.api.routes.models.domain.{name}", fake)
+    monkeypatch.setattr(f"mycel.api.routes.models.model_catalog.{name}", fake)
 
 
 class TestModelsApi:
@@ -48,13 +47,13 @@ class TestModelsApi:
     def test_turning_off_the_last_is_409(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _domain(monkeypatch, "set_enabled", domain.LastModel("host:a"))
+        _domain(monkeypatch, "set_enabled", model_catalog.LastModel("host:a"))
         assert client.put("/models/prefs/host:a", json={"enabled": False}).status_code == 409
 
     def test_an_unknown_model_is_404(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _domain(monkeypatch, "set_enabled", domain.UnknownModel("host:x"))
+        _domain(monkeypatch, "set_enabled", model_catalog.UnknownModel("host:x"))
         assert client.put("/models/prefs/host:x", json={"enabled": True}).status_code == 404
 
     def test_default(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

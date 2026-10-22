@@ -1,6 +1,6 @@
 /** Turns a flat event list into the tree the conversation renders. */
 
-import type { SequencedEvent } from "./types";
+import type { SequencedEvent } from "./streamEvents";
 import type { ChartSpec } from "../components/Chart";
 import { parseChart } from "../components/Chart";
 import {
@@ -15,7 +15,7 @@ import {
   field,
   text,
   toolCallId,
-} from "./types";
+} from "./streamEvents";
 
 export interface ProseItem {
   kind: "text" | "thinking";

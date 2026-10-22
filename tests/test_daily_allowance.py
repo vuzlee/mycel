@@ -13,7 +13,8 @@ from mycel.core.config import get_settings
 from mycel.core.usage import TurnUsage
 from mycel.infra.postgres.models import Turn
 from mycel.queue.job import Job
-from mycel.services import chat, enqueue, models
+from mycel.services import chat, enqueue
+from mycel.services import model_catalog as models
 from tests.fakes import needs_postgres
 from tests.pg import AppRepository
 

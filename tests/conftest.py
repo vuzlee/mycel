@@ -104,7 +104,7 @@ def free_claims(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch)
 @pytest.fixture(autouse=True)
 def default_model(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Every turn runs on the host default; tests/test_models_service.py checks the real thing."""
-    from mycel.services import models
+    from mycel.services import model_catalog as models
 
     if request.module.__name__.endswith(("test_models_service", "test_own_models")):
         return
@@ -149,3 +149,14 @@ def _fresh_http_client() -> Iterator[None]:
     http._clients.clear()
     yield
     http._clients.clear()
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """`live` for a real broker, Qdrant or MCP server; `pg` for every test gated on Postgres."""
+    from tests.fakes import needs_postgres
+
+    for item in items:
+        if item.path.stem.endswith("_live"):
+            item.add_marker(pytest.mark.live)
+        elif any(m.kwargs == needs_postgres.mark.kwargs for m in item.iter_markers("skipif")):
+            item.add_marker(pytest.mark.pg)

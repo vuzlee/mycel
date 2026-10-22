@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { lazy, StrictMode, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Waiting } from "./components/Waiting";
-import { AuthProvider, useAuth } from "./context/auth";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ConversationsProvider } from "./context/ConversationsContext";
 import { queryClient } from "./lib/queryClient";
 import "./styles/index.css";

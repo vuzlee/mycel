@@ -13,7 +13,7 @@ from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.infra.postgres.repositories.conversations import TurnRow
 from mycel.infra.redis import citations, results
-from mycel.services import models
+from mycel.services import model_catalog as models
 from mycel.services.chat import find_own_turn, request_chat
 
 router = APIRouter(prefix="/chat", tags=["chat"])

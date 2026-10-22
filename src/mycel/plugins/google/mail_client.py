@@ -9,7 +9,8 @@ from typing import Any
 import httpx2
 
 from mycel.core.logging import get_logger
-from mycel.sources import SourceError, google_client
+from mycel.plugins.errors import SourceError
+from mycel.plugins.google.http import google_client
 
 log = get_logger(__name__)
 

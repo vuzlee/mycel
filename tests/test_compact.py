@@ -17,8 +17,8 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.usage import RunUsage
 
 from mycel.agents.core.compact import compact
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio

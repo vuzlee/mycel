@@ -641,7 +641,7 @@ class TestTheGoogleRoutesOverHttp:
         """`configured` is about the machine, not the person."""
         self._sign_in(client)
 
-        body = client.get("/auth/google").json()
+        body = client.get("/connections/google").json()
 
         assert body["configured"] is False
         assert body["who"] is None
@@ -649,7 +649,7 @@ class TestTheGoogleRoutesOverHttp:
     def test_every_plugin_is_listed_and_an_unknown_one_is_404(self, client: TestClient) -> None:
         self._sign_in(client)
 
-        keys = [p["key"] for p in client.get("/auth/plugins").json()]
+        keys = [p["key"] for p in client.get("/connections").json()]
 
         assert keys == ["google", "jira"]
         assert client.get("/auth/nope").status_code == 404
@@ -658,7 +658,7 @@ class TestTheGoogleRoutesOverHttp:
     def test_starting_a_round_it_cannot_finish_is_refused(self, client: TestClient) -> None:
         self._sign_in(client)
 
-        assert client.get("/auth/google/start", follow_redirects=False).status_code == 503
+        assert client.get("/connections/google/start", follow_redirects=False).status_code == 503
 
     def test_a_cancelled_consent_comes_back_to_the_app(self, client: TestClient) -> None:
         """Somebody pressed Cancel on Google's screen."""
@@ -703,11 +703,11 @@ class TestTheGoogleRoutesOverHttp:
         """The end state is what was asked for, which is the whole of what DELETE promises."""
         self._sign_in(client)
 
-        assert client.delete("/auth/google").status_code == 204
+        assert client.delete("/connections/google").status_code == 204
 
     def test_signed_out_learns_nothing(self, client: TestClient) -> None:
-        assert client.get("/auth/google").status_code == 401
-        assert client.delete("/auth/google").status_code == 401
+        assert client.get("/connections/google").status_code == 401
+        assert client.delete("/connections/google").status_code == 401
 
 
 def test_one_callback_tells_a_sign_in_from_a_connection() -> None:

@@ -7,15 +7,15 @@ import httpx2
 import pytest
 from pydantic_ai import ModelRetry
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.config import get_settings
 from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
 from mycel.llm.budget import JobBudget
+from mycel.plugins.jira import client as jira
 from mycel.plugins.jira.tools import CONNECT, build_toolset, offered
-from mycel.sources import jira
 from tests.fakes import FakeRedis
 
 pytestmark = pytest.mark.anyio

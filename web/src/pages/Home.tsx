@@ -2,11 +2,11 @@
 
 import { REPO } from "../lib/links";
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/auth";
+import { useAuth } from "../context/AuthContext";
 import { Account } from "../components/Account";
-import { Demo } from "../components/Demo";
-import { Flow } from "../components/Flow";
-import { UseCases } from "../components/UseCases";
+import { Demo } from "../components/home/Demo";
+import { Flow } from "../components/home/Flow";
+import { UseCases } from "../components/home/UseCases";
 import { ArrowRight, Mycelium } from "../components/icons";
 import { useReveal } from "../hooks/useReveal";
 

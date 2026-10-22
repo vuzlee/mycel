@@ -13,7 +13,7 @@ from evals.common import CEILING_USD, ids, read_jsonl
 from evals.rag import answers, retrieval
 from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 
 STATE = retrieval.RESULTS / "grades.jsonl"

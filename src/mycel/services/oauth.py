@@ -14,7 +14,7 @@ from mycel.core.exceptions import ConfigError, MycelError
 from mycel.infra.http import shared
 from mycel.infra.redis._kv import key
 from mycel.infra.redis.client import get_client
-from mycel.services.tokens import TokenUnreadable, key_set, unseal
+from mycel.services.sealing import TokenUnreadable, key_set, unseal
 
 HTTP_TIMEOUT_SECONDS = 15.0
 

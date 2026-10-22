@@ -5,8 +5,8 @@ from datetime import timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.services.dashboard import RECENT_LIMIT, build_dashboard
 from mycel.services.gather import gather_progress
+from mycel.services.gold_board import RECENT_LIMIT, build_dashboard
 from tests.fakes import needs_postgres
 from tests.pg import (
     PROJECT,

@@ -4,8 +4,8 @@ import pytest
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from mycel.agents.core import model_builder
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.model_builder import build_model
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.config import Settings
 from mycel.core.exceptions import ConfigError
 

@@ -32,7 +32,7 @@ from mycel.observability.tracing import setup_tracing
 from mycel.services import documents as document_service
 from mycel.services.auth import AuthError
 from mycel.services.chat import ConversationNotFound, DailyLimitReached, TurnInProgress
-from mycel.services.models import UnknownModel
+from mycel.services.model_catalog import UnknownModel
 
 log = get_logger(__name__)
 
@@ -71,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(connections.callbacks)
     app.include_router(connections.router)
     app.include_router(projects.router)
     app.include_router(conversations.router)

@@ -9,16 +9,16 @@ from typing import Any
 import httpx2
 import pytest
 
-import mycel.sources.jira as jira
+import mycel.plugins.jira.client as jira
 from mycel.core.config import Settings
 from mycel.etl.checks.work import CheckFailed, check_item, check_items, check_worklog
 from mycel.etl.normalize import JIRA, from_jira_issue, from_jira_worklog
 from mycel.etl.promote import to_gold_item, to_gold_worklog
+from mycel.etl.run_checks import check_work
 from mycel.infra.postgres.repositories.gold import WorkItemRow, WorklogRow
-from mycel.services import fetch
-from mycel.services.check import check_work
-from mycel.sources import SourceError
-from mycel.sources.jira_http import session as jira_session
+from mycel.plugins.errors import SourceError
+from mycel.plugins.jira import fetch
+from mycel.plugins.jira.http import session as jira_session
 
 pytestmark = pytest.mark.anyio
 
@@ -365,7 +365,7 @@ class TestHowJiraFails:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """`NotWritten` is what lets a tool offer a draft again."""
-        from mycel.sources import NotWritten
+        from mycel.plugins.errors import NotWritten
 
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({}, status=403))
         with pytest.raises(NotWritten):
@@ -375,7 +375,7 @@ class TestHowJiraFails:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The request may have arrived and only the answer been lost."""
-        from mycel.sources import NotWritten
+        from mycel.plugins.errors import NotWritten
 
         def handler(request: httpx2.Request) -> httpx2.Response:
             raise httpx2.TimeoutException("too slow")
@@ -390,7 +390,7 @@ class TestHowJiraFails:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Same reason as the timeout: Jira failed partway and said nothing about how far."""
-        from mycel.sources import NotWritten
+        from mycel.plugins.errors import NotWritten
 
         monkeypatch.setattr(httpx2, "AsyncClient", _responds({"errorMessages": ["boom"]}, 500))
         with pytest.raises(SourceError) as caught:
@@ -659,6 +659,6 @@ class TestTheChecks:
 class TestTheFetchQuery:
     def test_a_refetch_still_restricts_the_query(self) -> None:
         """Jira answers an unrestricted JQL with 'Unbounded JQL queries are not allowed'."""
-        from mycel.services.fetch import _jql
+        from mycel.plugins.jira.fetch import _jql
 
         assert _jql("MYC", None).split(" ORDER BY")[0].strip() != ""

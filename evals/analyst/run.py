@@ -21,8 +21,8 @@ from evals.analyst.case import Case, Run, load_all
 from evals.common import CEILING_USD
 from evals.summarizer.run import Result, report
 from mycel.agents.core import runner
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.model_source import ModelSource
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.registry import build_deps
 from mycel.agents.specialists.analyst import Analysis, Analyst
 from mycel.core.principal import Principal

@@ -6,7 +6,7 @@ page:
   lede: ["Each turn picks one model: a host model or the person's own", "Every call is priced; a job stops at $0.50"]
 lanes: [model, turn, stores]
 boxes:
-  - {id: svcmodels, lane: model,  col: 0, file: src/mycel/services/models.py,              label: services/models.py,     role: "host models, person's picks"}
+  - {id: svcmodels, lane: model,  col: 0, file: src/mycel/services/model_catalog.py,              label: services/model_catalog.py, role: "host models, person's picks"}
   - {id: source,    lane: model,  col: 1, file: src/mycel/agents/core/model_source.py,     label: core/model_source.py,   role: "host or own; prices usage"}
   - {id: builder,   lane: model,  col: 2, file: src/mycel/agents/core/model_builder.py,    label: core/model_builder.py,  role: "the client to call"}
   - {id: litellm,   lane: model,  col: 3, file: config/litellm/config.yaml,                label: "LiteLLM gateway",      role: "host models, $10 key"}

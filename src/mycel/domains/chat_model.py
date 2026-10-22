@@ -4,7 +4,6 @@ from dataclasses import dataclass, replace
 
 from pydantic import SecretStr
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.exceptions import (
     ModelAuth,
     ModelBlocked,
@@ -19,12 +18,15 @@ from mycel.agents.core.exceptions import (
 from mycel.agents.core.model_builder import build_own_model
 from mycel.agents.core.model_source import GatewayModel, ModelSource, OwnModel
 from mycel.agents.core.own_endpoint import OwnEndpoint
+from mycel.agents.core.settings import AgentSettings
 from mycel.core import redact
 from mycel.core.exceptions import ConfigError
 from mycel.infra.postgres.repositories.own_models import OwnModelRepository
 from mycel.infra.postgres.session import session_scope
 from mycel.infra.redis import key_rotation
-from mycel.services import models, tokens, url_guard
+from mycel.services import model_catalog as models
+from mycel.services import sealing as tokens
+from mycel.services import url_guard
 from mycel.services.own_models import own_id
 
 

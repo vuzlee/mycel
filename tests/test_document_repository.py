@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mycel.infra.postgres import documents as tables
+from mycel.infra.postgres import document_status as tables
 from mycel.infra.postgres.models import Document
 from mycel.infra.postgres.repositories.documents import DocumentRepository, NewChunk
 from mycel.infra.postgres.repositories.identity import IdentityRepository

@@ -17,10 +17,14 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.infra.redis._kv import key, put, take
 from mycel.infra.redis.client import get_client
-from mycel.plugins.google.oauth import AUTH_URL, CALLBACK_PATH, TOKEN_URL
 from mycel.services import oauth
 
 log = get_logger(__name__)
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+#: Shared with the Gmail/Calendar connection: one client, one redirect uri.
+GOOGLE_CALLBACK_PATH = "/auth/google/callback"
 
 #: Marks a sign-in round's state, so the shared callback can tell it from a connection.
 STATE_PREFIX = "signin."
@@ -63,7 +67,7 @@ async def start(hint: str | None, next_path: str | None) -> tuple[str, str]:
     )
     params = {
         "client_id": client_id,
-        "redirect_uri": oauth.redirect_uri(CALLBACK_PATH),
+        "redirect_uri": oauth.redirect_uri(GOOGLE_CALLBACK_PATH),
         "response_type": "code",
         "scope": "openid email",
         "state": state,
@@ -74,7 +78,7 @@ async def start(hint: str | None, next_path: str | None) -> tuple[str, str]:
         params["login_hint"] = hint.strip()
     else:
         params["prompt"] = "select_account"
-    return f"{AUTH_URL}?{urlencode(params)}", state
+    return f"{GOOGLE_AUTH_URL}?{urlencode(params)}", state
 
 
 async def finish(state: str, cookie_state: str | None, code: str) -> Identity:
@@ -90,11 +94,11 @@ async def finish(state: str, cookie_state: str | None, code: str) -> Identity:
     if client_id is None or secret is None:
         raise SignInError("this deployment has no Google client")
     status, payload = await oauth.post_token(
-        TOKEN_URL,
+        GOOGLE_TOKEN_URL,
         data={
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": oauth.redirect_uri(CALLBACK_PATH),
+            "redirect_uri": oauth.redirect_uri(GOOGLE_CALLBACK_PATH),
             "client_id": client_id,
             "client_secret": secret.get_secret_value(),
         },

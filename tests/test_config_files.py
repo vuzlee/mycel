@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from mycel.agents.core.config import AgentSettings
+from mycel.agents.core.settings import AgentSettings
 from mycel.core.config_files import (
     AGENTS_SUBDIR,
     CONFIG_DIR,

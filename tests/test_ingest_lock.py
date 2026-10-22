@@ -10,7 +10,7 @@ import pytest
 
 from mycel.domains import ingest
 from mycel.infra.objects import files
-from mycel.infra.postgres.documents import DELETING, READY
+from mycel.infra.postgres.document_status import DELETING, READY
 from mycel.infra.redis import document_events
 from mycel.infra.vectors import documents as vectors
 from mycel.queue.job import Job, JobKind

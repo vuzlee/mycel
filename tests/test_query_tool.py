@@ -11,8 +11,8 @@ from pydantic_ai import ModelRetry
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.tools import query as query_tool
 from mycel.agents.tools.query import MAX_ROWS, _limited, _reject, build_toolset, table
 from mycel.core.principal import Principal

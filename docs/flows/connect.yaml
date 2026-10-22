@@ -6,7 +6,7 @@ page:
 lanes: [browser, api, plugin, provider, store]
 boxes:
   - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
-  - {id: apits,    lane: browser,  col: 1, file: web/src/api.ts,                                    label: web/src/api.ts,          role: "goes to /auth/{key}/start"}
+  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                                    label: web/src/api/connections.ts,          role: "goes to /connections/{key}/start"}
   - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start, callback"}
   - {id: registry, lane: api,      col: 0, file: src/mycel/plugins/registry.py,                     label: plugins/registry.py,     role: "plugin by key"}
   - {id: jplugin,  lane: plugin,   col: 1, file: src/mycel/plugins/jira/plugin.py,                  label: jira/plugin.py,          role: "connect → access → sync", hot: true}
@@ -14,7 +14,7 @@ boxes:
   - {id: enqueue,  lane: plugin,   col: 3, file: src/mycel/services/enqueue.py,                     label: services/enqueue.py,     role: "queues a sync"}
   - {id: soauth,   lane: provider, col: 0, file: src/mycel/services/oauth.py,                       label: services/oauth.py,       role: "one-time state"}
   - {id: joauth,   lane: provider, col: 1, file: src/mycel/plugins/jira/oauth.py,                   label: jira/oauth.py,           role: "Atlassian consent, token"}
-  - {id: tokens,   lane: provider, col: 2, file: src/mycel/services/tokens.py,                      label: services/tokens.py,      role: "encrypts the token"}
+  - {id: tokens,   lane: provider, col: 2, file: src/mycel/services/sealing.py,                      label: services/sealing.py,     role: "encrypts the token"}
   - {id: redis,    lane: store,    col: 0, file: src/mycel/infra/redis/client.py,                   label: Redis,                   role: "state, 10 min"}
   - {id: accounts, lane: store,    col: 1, file: src/mycel/infra/postgres/repositories/accounts.py, label: "Postgres · jira_account", role: "account, project access"}
 edges:
@@ -31,7 +31,7 @@ edges:
   - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
 notes:
   - ["Google", "`plugins/google/` (oauth, calendar, mail) — same shape, no access or sync step"]
-  - ["routes", "`/auth/{key}/start` · `/auth/{key}/callback` · `DELETE /auth/{key}` · `GET /auth/plugins`"]
+  - ["routes", "`/connections/{key}/start` · `/auth/{key}/callback` (registered with the provider) · `DELETE /connections/{key}` · `GET /connections`"]
   - ["state", "Redis, 10 min, used once; only the account that started may finish"]
   - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]
   - ["Google", "same path without steps 7–8; its tools go to the researcher"]

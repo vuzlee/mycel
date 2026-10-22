@@ -101,13 +101,17 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["mycel.infra.documents.*"]
+module = ["mycel.etl.documents.*"]
 disable_error_code = ["attr-defined"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Name every skip: a run without the stores skips the database tests, and should say so.
 addopts = "-rs"
+markers = [
+  "pg: needs the test database (tagged in conftest from `needs_postgres`)",
+  "live: needs a real broker, Qdrant or MCP server",
+]
 
 [tool.coverage.run]
 source = ["src/mycel"]

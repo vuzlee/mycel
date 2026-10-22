@@ -9,9 +9,9 @@ import httpx2
 import pytest
 from pydantic_ai import ModelRetry
 
-from mycel.agents.core.config import AgentSettings
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import ToolFailed
+from mycel.agents.core.settings import AgentSettings
 from mycel.agents.tools.limits import MAX_HOURS
 from mycel.core.principal import Principal
 from mycel.infra.redis import drafts
