@@ -34,4 +34,4 @@ tables:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Job failures, ../flows/job-failures.html]
-  - ["Traces, metrics, events", ../flows/observe.html]
+  - ["Traces, metrics, logs, events", ../flows/observe.html]

@@ -34,4 +34,4 @@ failures:
   - ["cap reached anyway", "the run stops as runaway", "src/mycel/llm/budget.py"]
 related:
   - [Model and cost, model-cost.html]
-  - ["Traces, metrics, events", observe.html]
+  - ["Traces, metrics, logs, events", observe.html]

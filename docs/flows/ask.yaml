@@ -1,3 +1,4 @@
+reviewed: 1792705266   # 2026-10-23: delegate.py returns a refused project read as text; the flow drawn (analyst path) is unchanged
 title: "One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"
 lanes: [user, api, queue, worker, agents, tools, stores]
 boxes:
