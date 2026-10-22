@@ -243,11 +243,10 @@ class TestTheSummarizerTool:
         monkeypatch.setattr(delegate, "gather_progress", lambda *a, **k: reached.append(a))
         _granted(monkeypatch, "OTHER")
 
-        with pytest.raises(ToolFailed) as raised:
-            await _call_summarizer(deps, "MYC")
+        refused = await _call_summarizer(deps, "MYC")
 
         assert reached == []
-        assert "MYC" in str(raised.value)
+        assert "MYC" in refused, "the refusal goes back to the model, not to the queue"
 
     async def test_the_refusal_does_not_say_whether_the_project_exists(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -255,10 +254,9 @@ class TestTheSummarizerTool:
         """One sentence for both cases."""
         _granted(monkeypatch, "OTHER")
 
-        with pytest.raises(ToolFailed) as raised:
-            await _call_summarizer(deps, "MYC")
+        refused = await _call_summarizer(deps, "MYC")
 
-        assert "does not exist or you do not have access" in str(raised.value)
+        assert "does not exist or you do not have access" in refused
 
     async def test_a_run_with_nobody_attached_reads_nothing(
         self, deps: MycelDeps, monkeypatch: pytest.MonkeyPatch
@@ -266,8 +264,9 @@ class TestTheSummarizerTool:
         """`None` is closed, not open."""
         _granted(monkeypatch, "MYC")
 
-        with pytest.raises(ToolFailed):
-            await _call_summarizer(replace(deps, principal=None), "MYC")
+        refused = await _call_summarizer(replace(deps, principal=None), "MYC")
+
+        assert "does not exist or you do not have access" in refused
 
 
 def _granted(monkeypatch: pytest.MonkeyPatch, *projects: str) -> None:

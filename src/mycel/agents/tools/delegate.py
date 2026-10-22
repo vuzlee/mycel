@@ -14,7 +14,7 @@ from mycel.agents.core import runner
 from mycel.agents.core.base import BaseAgent
 from mycel.agents.core.chip_filter import opens
 from mycel.agents.core.deps import MycelDeps
-from mycel.agents.core.exceptions import AgentError, ToolFailed, TransportError
+from mycel.agents.core.exceptions import AgentError, TransportError
 from mycel.agents.core.settings import AgentSettings
 from mycel.agents.specialists.analyst import Analyst
 from mycel.agents.specialists.researcher import Researcher
@@ -65,7 +65,8 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
             project: The project key, e.g. "PROJ".
             days: How far back the window reaches. Defaults to a week.
         """
-        await _require_readable(ctx, project)
+        if (refused := await _refusal(ctx, project)) is not None:
+            return refused
         until = datetime.now(UTC)
         async with session_scope() as session:
             window = await gather_progress(session, project, until - timedelta(days=days), until)
@@ -74,13 +75,14 @@ def build_toolset() -> FunctionToolset[MycelDeps]:
     return toolset
 
 
-async def _require_readable(ctx: RunContext[MycelDeps], project: str) -> None:
-    """Raise `ToolFailed` unless the asker may read `project`; no principal reads nothing."""
+async def _refusal(ctx: RunContext[MycelDeps], project: str) -> str | None:
+    """Why the asker may not read `project`, or None. An answer for the model, not a failed job."""
     try:
         await require(ctx.deps.principal, project)
     except NotReadable as exc:
         log.info("project read refused", extra={"project": project, "job_id": ctx.deps.job_id})
-        raise ToolFailed("summarizer", str(exc)) from None
+        return str(exc)
+    return None
 
 
 async def _delegate(

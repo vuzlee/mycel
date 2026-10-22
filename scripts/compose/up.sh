@@ -31,7 +31,7 @@ start_stores
 migrate
 
 log "starting the application"
-docker compose "${profiles[@]}" up -d
+docker compose "${profiles[@]}" up -d --build
 
 wait_for api "curl -sf http://localhost:$API_PORT/health/live"
 echo

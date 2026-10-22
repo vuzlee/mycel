@@ -13,6 +13,12 @@ discovery.relabel "containers" {
     regex         = "/(.*)"
     target_label  = "container"
   }
+
+  // `worker`, not `mycel-worker-1`: one name across replicas.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
 }
 
 loki.source.docker "containers" {

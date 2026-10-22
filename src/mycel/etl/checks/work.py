@@ -8,6 +8,8 @@ from mycel.infra.postgres.repositories.gold import CATEGORIES, WorkItemRow, Work
 
 #: How far a past timestamp may sit ahead of now (clock skew); due dates are exempt.
 FUTURE_TOLERANCE = timedelta(minutes=5)
+#: A worklog may be logged ahead for the next day; further than that is a parsing bug.
+WORKLOG_AHEAD = timedelta(days=1)
 
 
 class CheckFailed(MycelError):
@@ -35,14 +37,14 @@ def check_item(row: WorkItemRow) -> str | None:
 
 
 def check_worklog(row: WorklogRow) -> str | None:
-    """A back-dated `started` is allowed; a future one is not."""
+    """A back-dated `started` is allowed; one more than a day ahead is not."""
     if not row.issue_key.strip():
         return "issue_key is empty"
     if row.time_spent_seconds <= 0:
         return f"time_spent_seconds is {row.time_spent_seconds}"
     if row.started_at.tzinfo is None:
         return "started_at has no timezone"
-    if row.started_at > datetime.now(UTC) + FUTURE_TOLERANCE:
+    if row.started_at > datetime.now(UTC) + WORKLOG_AHEAD:
         return f"started_at is in the future: {row.started_at.isoformat()}"
     return None
 

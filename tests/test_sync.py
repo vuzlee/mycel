@@ -636,8 +636,12 @@ class TestTheChecks:
         """It is the one honest time series in a project filled in after the fact."""
         assert check_worklog(_worklog(started_at=datetime(2024, 1, 1, tzinfo=UTC))) is None
 
-    def test_a_worklog_from_the_future_is_caught(self) -> None:
-        ahead = datetime.now(UTC) + timedelta(days=1)
+    def test_a_worklog_logged_for_tomorrow_is_allowed(self) -> None:
+        ahead = datetime.now(UTC) + timedelta(hours=20)
+        assert check_worklog(_worklog(started_at=ahead)) is None
+
+    def test_a_worklog_far_in_the_future_is_caught(self) -> None:
+        ahead = datetime.now(UTC) + timedelta(days=2)
         assert check_worklog(_worklog(started_at=ahead)) is not None
 
     def test_effort_of_zero_is_caught(self) -> None:
