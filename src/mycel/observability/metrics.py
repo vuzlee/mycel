@@ -64,6 +64,14 @@ redis_memory_ratio = Gauge(
 )
 
 
+http_requests = Histogram(
+    "mycel_http_request_seconds",
+    "Wall time of one API request, by route template (never the raw path) and status.",
+    ["method", "route", "status"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30),
+)
+
+
 def start_job_series(kinds: list[str]) -> None:
     """Every kind and outcome at zero: `increase()` misses a series' first sample, so a counter
     that appears at 4 reads as no failures at all."""

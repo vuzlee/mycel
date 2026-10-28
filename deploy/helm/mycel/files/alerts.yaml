@@ -39,3 +39,17 @@ groups:
         for: 5m
         annotations:
           summary: "{{ $labels.job }} on {{ $labels.instance }} has not answered a scrape for 5 minutes"
+
+  - name: mycel-api
+    rules:
+      - alert: ApiErrors
+        expr: sum(rate(mycel_http_request_seconds_count{status=~"5.."}[5m])) / sum(rate(mycel_http_request_seconds_count[5m])) > 0.05
+        for: 5m
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of API requests answered 5xx over 5 minutes"
+
+      - alert: ApiSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(mycel_http_request_seconds_bucket{route!~"/chat/.*events|/app"}[5m]))) > 2
+        for: 10m
+        annotations:
+          summary: "API p95 latency is {{ $value | humanizeDuration }}"

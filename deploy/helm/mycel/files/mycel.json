@@ -1,7 +1,7 @@
 {
   "uid": "mycel-health",
   "title": "Mycel — is something broken",
-  "description": "One board, four panels, one question. A second board gets made when somebody asks something this one cannot answer; until then it would be a file to keep in step for nothing.",
+  "description": "One board, six panels, one question. A second board gets made when somebody asks something this one cannot answer; until then it would be a file to keep in step for nothing.",
   "tags": ["mycel"],
   "timezone": "browser",
   "schemaVersion": 39,
@@ -83,6 +83,40 @@
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "sum by (model, direction) (rate(mycel_tokens_spent_total[5m])) * 60",
           "legendFormat": "{{model}} {{direction}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "API requests per second",
+      "description": "Split by status. A 503 band is the database pool saying no under load; a 500 band is a bug.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (status) (rate(mycel_http_request_seconds_count[1m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "API p95 latency",
+      "description": "By route template. The event stream is left out: it stays open for the whole turn on purpose.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(mycel_http_request_seconds_bucket{route!~\"/chat/.*events|/app\"}[5m])))",
+          "legendFormat": "{{route}}"
         }
       ]
     }

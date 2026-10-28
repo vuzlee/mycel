@@ -55,6 +55,10 @@ class JsonFormatter(logging.Formatter):
 #: Libraries that log full request URLs (which may carry credentials) at INFO.
 _QUIET = ("httpx", "httpx2", "httpcore")
 
+#: Uvicorn's loggers carry their own plain-text handlers; routed to root they become JSON,
+#: so a traceback from an unhandled request lands with `level=ERROR` like everything else.
+_ADOPTED = ("uvicorn", "uvicorn.error", "uvicorn.access")
+
 
 def setup_logging(level: str = "INFO") -> None:
     """Install the JSON formatter on the root logger. Safe to call more than once."""
@@ -68,6 +72,11 @@ def setup_logging(level: str = "INFO") -> None:
 
     for name in _QUIET:
         logging.getLogger(name).setLevel(logging.WARNING)
+
+    for name in _ADOPTED:
+        adopted = logging.getLogger(name)
+        adopted.handlers.clear()
+        adopted.propagate = True
 
 
 def bind_request_id(request_id: str) -> Token[str]:

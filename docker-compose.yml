@@ -38,6 +38,10 @@ services:
       <<: *stores
       # /metrics on 9103, on the compose network only.
       METRICS_HOST: "0.0.0.0"
+      # Every request holds a connection, so the api gets the deep pool. At 15 a load test
+      # starved it at 100 concurrent; 20 + 10 still leaves the other three under max_connections.
+      DB_POOL_SIZE: "20"
+      DB_MAX_OVERFLOW: "10"
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}

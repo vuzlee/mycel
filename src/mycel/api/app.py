@@ -6,13 +6,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 from starlette.types import Scope
 
 from mycel import REPO_ROOT
 from mycel.api import health
-from mycel.api.middleware import RequestIdMiddleware
+from mycel.api.middleware import MetricsMiddleware, RequestIdMiddleware
 from mycel.api.routes import (
     auth,
     chat,
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls=UNTRACED)
 
+    app.add_middleware(MetricsMiddleware)
     # Added last so it runs outermost: everything inside needs the request id bound.
     app.add_middleware(RequestIdMiddleware)
 
@@ -172,6 +174,14 @@ def _install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(TurnInProgress)
     async def _turn_running(request: Request, exc: TurnInProgress) -> JSONResponse:
         return problem(409, "turn_in_progress", str(exc))
+
+    @app.exception_handler(PoolTimeout)
+    async def _pool_full(request: Request, exc: PoolTimeout) -> JSONResponse:
+        """Every database connection is busy: overload, not a bug, so the caller may retry."""
+        log.warning("database pool exhausted", extra={"path": request.url.path})
+        response = problem(503, "overloaded", "too many requests at once; try again shortly")
+        response.headers["retry-after"] = "5"
+        return response
 
     @app.exception_handler(MycelError)
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:
