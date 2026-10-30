@@ -1,0 +1,11 @@
+# The api on the load database, each side on its own cores so a busy desktop or k6 does not
+# move the number. 16 threads = 8 cores × 2: api gets thread 2 (core 1; its sibling 3 left idle),
+# Postgres threads 4-7 (cores 2-3), k6 threads 8-13 (load.sh). scripts/ops/load.sh seed applies it; reset
+# puts both back.
+services:
+  api:
+    cpuset: "2"
+    environment:
+      POSTGRES_DB: mycel_load
+  postgres:
+    cpuset: "4-7"

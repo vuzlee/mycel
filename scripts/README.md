@@ -30,6 +30,13 @@ deliberately off.
 
 ## load
 
-`stack.sh load [compose|k8s] [vus] [seconds] [routes]`: signed-in reads under k6 in docker,
-one line per status. Writes a one-hour session for the first user and deletes it on exit.
+`stack.sh load [compose|k8s] [rates] [seconds] [routes]`: signed-in reads under k6 in docker at a
+fixed arrival rate, one step per rate, stopping at the first that breaks the SLO (p95 < 300 ms,
+p99 < 1 s, errors < 0.1%; `SLO_P95`, `SLO_P99`, `SLO_ERRORS` override). Prints one row per step
+and the capacity: the last rate that held. Each step runs `RUNS` (3) times and holds only if all do.
+Writes a session for the first user and deletes it on exit.
+
+`stack.sh load seed [users]` builds `mycel_load` (2,000 users, 1 M turns, 50k work items), moves the
+api onto it and pins api, Postgres and k6 to their own cores; runs then sign in as many users.
+`stack.sh load reset` puts the api back on the dev database. The seed refuses any other database.
 No route in the default mix calls a model.

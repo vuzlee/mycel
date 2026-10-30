@@ -12,7 +12,7 @@
 #   scripts/stack.sh broker-rebuild     fresh broker data dir, users kept (queues must be empty)
 #   scripts/stack.sh gateway-key [usd]  the app's scoped gateway key, from the master key
 #   scripts/stack.sh web-smoke [base]   the batch A web fixes in headless Chrome
-#   scripts/stack.sh load [compose|k8s] [vus] [s] [routes]   signed-in reads under k6
+#   scripts/stack.sh load [compose|k8s|seed|reset] [rates] [s] [routes]   reads at an arrival rate, to the SLO
 
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
