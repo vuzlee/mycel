@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, or_, select, true, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,16 +61,14 @@ class ConversationRepository:
         self, user_id: int, kind: str | None = None, limit: int = 50
     ) -> list[ConversationRow]:
         """One person's sidebar: pinned first, then by newest turn."""
+        # Lateral, per conversation of this person. A grouped subquery over every turn of
+        # every person cost 2.9 s at a million turns, on each sidebar load.
         spoke = (
-            select(Turn.conversation_id, func.max(Turn.updated_at).label("at"))
-            .group_by(Turn.conversation_id)
-            .subquery()
+            select(func.max(Turn.updated_at).label("at"))
+            .where(Turn.conversation_id == Conversation.id)
+            .lateral()
         )
-        query = (
-            select(Conversation)
-            .outerjoin(spoke, spoke.c.conversation_id == Conversation.id)
-            .where(Conversation.user_id == user_id)
-        )
+        query = select(Conversation).outerjoin(spoke, true()).where(Conversation.user_id == user_id)
         if kind is not None:
             query = query.where(Conversation.kind == kind)
         # Pinned first, newest pin on top; pins never fall off the end of the page.

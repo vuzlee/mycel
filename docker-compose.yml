@@ -38,10 +38,11 @@ services:
       <<: *stores
       # /metrics on 9103, on the compose network only.
       METRICS_HOST: "0.0.0.0"
-      # Every request holds a connection, so the api gets the deep pool. At 15 a load test
-      # starved it at 100 concurrent; 20 + 10 still leaves the other three under max_connections.
-      DB_POOL_SIZE: "20"
-      DB_MAX_OVERFLOW: "10"
+      # One process saturates one core near 300 rps whatever the pool: 5, 10, 20 and 30 all
+      # measured the same. No overflow: one closes on return and reconnects with SCRAM on the
+      # next burst (note 121, F13). The full budget is in deploy/helm/mycel/values.yaml.
+      DB_POOL_SIZE: "10"
+      DB_MAX_OVERFLOW: "0"
     ports: ["8000:8000"]
     depends_on:
       postgres: {condition: service_healthy}

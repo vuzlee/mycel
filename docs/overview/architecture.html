@@ -1274,7 +1274,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <table class="tbl">
       <thead><tr><th>Topic</th><th>Choice</th><th>Why</th></tr></thead>
       <tbody>
-        <tr><td class="who">api probes</td><td>ready: <code>/health/ready</code> (checks Postgres) · live: <code>/health/live</code> (checks nothing)</td><td>DB down → pod leaves the Service; a DB blink restarts nothing</td></tr>
+        <tr><td class="who">api probes</td><td>ready: <code>/health/ready</code> (checks Postgres on its own connection) · live: <code>/health/live</code> (checks nothing)</td><td>DB down → pod leaves the Service; a full request pool does not; a DB blink restarts nothing</td></tr>
         <tr><td class="who">worker, scheduler, ingest probes</td><td>liveness on <code>/metrics</code>, no readiness</td><td>they serve no requests</td></tr>
         <tr><td class="who">worker replicas</td><td>any number</td><td>RabbitMQ gives each message to one consumer</td></tr>
         <tr><td class="who">scheduler replicas</td><td>1, <code>Recreate</code></td><td>RollingUpdate would run two for a moment</td></tr>

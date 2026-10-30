@@ -4,6 +4,7 @@ import json
 import logging
 
 import pytest
+from asyncpg.exceptions import TooManyConnectionsError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
@@ -30,6 +31,10 @@ def app() -> FastAPI:
     @built.get("/test/pool-full")
     async def pool_full() -> None:
         raise PoolTimeout("QueuePool limit reached")
+
+    @built.get("/test/postgres-full")
+    async def postgres_full() -> None:
+        raise TooManyConnectionsError("sorry, too many clients already")
 
     @built.get("/test/crash/{thing_id}")
     async def crash(thing_id: str) -> None:
@@ -58,8 +63,10 @@ def test_an_unknown_path_shares_one_label(app: FastAPI) -> None:
     assert _count(UNMATCHED, "404") == before + 1
 
 
-def test_a_full_pool_answers_503_with_retry_after(app: FastAPI) -> None:
-    response = TestClient(app).get("/test/pool-full")
+@pytest.mark.parametrize("path", ["/test/pool-full", "/test/postgres-full"])
+def test_overload_answers_503_with_retry_after(app: FastAPI, path: str) -> None:
+    """Postgres out of slots was a 500 at 9 api pods: overload must read as overload."""
+    response = TestClient(app).get(path)
     assert response.status_code == 503
     assert response.json()["error"] == "overloaded"
     assert response.headers["retry-after"] == "5"

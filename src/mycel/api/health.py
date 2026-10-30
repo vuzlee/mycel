@@ -6,7 +6,7 @@ from fastapi import APIRouter, Response, status
 from sqlalchemy import text
 
 from mycel.core.logging import get_logger
-from mycel.infra.postgres.session import session_scope
+from mycel.infra.postgres.engine import get_probe_engine
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -21,10 +21,10 @@ async def live() -> dict[str, Literal["ok"]]:
 
 @router.get("/ready")
 async def ready(response: Response) -> dict[str, str]:
-    """Ready. Reaches Postgres, because readiness that checks nothing always passes."""
+    """Ready. Reaches Postgres, on its own connection, so a full request pool is not "down"."""
     try:
-        async with session_scope() as session:
-            await session.execute(text("SELECT 1"))
+        async with get_probe_engine().connect() as conn:
+            await conn.execute(text("SELECT 1"))
     except Exception as exc:  # any failure means not ready
         log.warning("readiness failed", extra={"error": str(exc), "error_type": type(exc).__name__})
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

@@ -102,6 +102,30 @@ def free_claims(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.fixture(autouse=True)
+def session_cache(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cookies cached in a dict, never in the developer's Redis; test_session_cache checks Redis."""
+    from mycel.core.principal import Principal
+    from mycel.infra.redis import sessions
+
+    if request.module.__name__.endswith("test_session_cache"):
+        return
+    held: dict[str, Principal] = {}
+
+    async def get(token: str) -> Principal | None:
+        return held.get(token)
+
+    async def put(token: str, user: Principal, ttl_seconds: int) -> None:
+        held[token] = user
+
+    async def drop(token: str) -> None:
+        held.pop(token, None)
+
+    monkeypatch.setattr(sessions, "get", get)
+    monkeypatch.setattr(sessions, "put", put)
+    monkeypatch.setattr(sessions, "drop", drop)
+
+
+@pytest.fixture(autouse=True)
 def default_model(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Every turn runs on the host default; tests/test_models_service.py checks the real thing."""
     from mycel.services import model_catalog as models

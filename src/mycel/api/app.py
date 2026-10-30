@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from asyncpg.exceptions import TooManyConnectionsError
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -175,13 +176,22 @@ def _install_error_handlers(app: FastAPI) -> None:
     async def _turn_running(request: Request, exc: TurnInProgress) -> JSONResponse:
         return problem(409, "turn_in_progress", str(exc))
 
-    @app.exception_handler(PoolTimeout)
-    async def _pool_full(request: Request, exc: PoolTimeout) -> JSONResponse:
-        """Every database connection is busy: overload, not a bug, so the caller may retry."""
-        log.warning("database pool exhausted", extra={"path": request.url.path})
+    def overloaded(reason: str, request: Request) -> JSONResponse:
+        """Overload, not a bug, so the caller may retry."""
+        log.warning(reason, extra={"path": request.url.path})
         response = problem(503, "overloaded", "too many requests at once; try again shortly")
         response.headers["retry-after"] = "5"
         return response
+
+    @app.exception_handler(PoolTimeout)
+    async def _pool_full(request: Request, exc: PoolTimeout) -> JSONResponse:
+        """Every connection of this process's pool is busy."""
+        return overloaded("database pool exhausted", request)
+
+    @app.exception_handler(TooManyConnectionsError)
+    async def _postgres_full(request: Request, exc: TooManyConnectionsError) -> JSONResponse:
+        """Postgres refused a new connection: every process together is over max_connections."""
+        return overloaded("postgres has no connection slot left", request)
 
     @app.exception_handler(MycelError)
     async def _mycel(request: Request, exc: MycelError) -> JSONResponse:

@@ -53,8 +53,9 @@ envFrom:
 {{- end -}}
 
 {{/*
-Store hosts and METRICS_HOST as container `env:`, which outranks the Secret. Fails to render
-without externalStores.host. Usage: include "mycel.env" (dict "ctx" . "metrics" true)
+Store hosts, METRICS_HOST and a per-component pool as container `env:`, which outranks the
+Secret. Fails to render without externalStores.host.
+Usage: include "mycel.env" (dict "ctx" . "metrics" true "pool" .Values.api.dbPool)
 */}}
 {{- define "mycel.env" -}}
 {{- $host := required "externalStores.host must name where the stores run" .ctx.Values.externalStores.host -}}
@@ -67,6 +68,10 @@ env:
   - {name: LITELLM_BASE_URL, value: {{ printf "http://%s:4000" $host | quote }}}
   {{- if .metrics }}
   - {name: METRICS_HOST, value: "0.0.0.0"}
+  {{- end }}
+  {{- with .pool }}
+  - {name: DB_POOL_SIZE, value: {{ .size | quote }}}
+  - {name: DB_MAX_OVERFLOW, value: {{ .overflow | quote }}}
   {{- end }}
 {{ include "mycel.envFrom" .ctx }}
 {{- end -}}

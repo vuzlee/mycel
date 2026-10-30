@@ -1,7 +1,6 @@
 """The HTTP API: app."""
 
-from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -69,23 +68,6 @@ def _kept(job_id: str, *, status: str = "done", age_s: float = 0.0) -> TurnRow:
         steps=None,
         created_at=datetime.now(UTC) - timedelta(seconds=age_s),
     )
-
-
-class _FakeSession:
-    async def execute(self, statement: object) -> None:
-        return None
-
-
-def _database(monkeypatch: pytest.MonkeyPatch, up: bool) -> None:
-    """Stand in for Postgres, so the API tests need no server."""
-
-    @asynccontextmanager
-    async def fake_scope() -> AsyncIterator[_FakeSession]:
-        if not up:
-            raise OSError("connection refused")
-        yield _FakeSession()
-
-    monkeypatch.setattr("mycel.api.health.session_scope", fake_scope)
 
 
 class TestTheSinglePageApp:

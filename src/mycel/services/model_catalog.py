@@ -50,9 +50,9 @@ def host_ref(name: str) -> str:
 async def labels_for(user_id: int) -> dict[str, str]:
     """Every ref this person's turns may name, host and own, to the label it shows as."""
     async with session_scope() as session:
-        own = await OwnModelRepository(session).all_of(user_id)
+        own = await OwnModelRepository(session).labels_of(user_id)
     labels = {host_ref(m.name): m.label for m in get_settings().host_models}
-    labels.update({f"{OWN}:{m.id}": m.label for m in own})
+    labels.update({f"{OWN}:{i}": label for i, label in own})
     return labels
 
 
@@ -76,10 +76,9 @@ def _choices(
 
 
 async def _load(session: AsyncSession, user_id: int) -> tuple[list[ModelChoice], str | None]:
-    repo = ModelPrefRepository(session)
-    own = [(m.id, m.label) for m in await OwnModelRepository(session).all_of(user_id)]
-    choices = _choices(await repo.toggles(user_id), own, get_settings())
-    return choices, await repo.default(user_id)
+    own = await OwnModelRepository(session).labels_of(user_id)
+    toggles, default = await ModelPrefRepository(session).toggles_and_default(user_id)
+    return _choices(toggles, own, get_settings()), default
 
 
 def _pick_default(choices: list[ModelChoice], chosen: str | None, settings: Settings) -> str:

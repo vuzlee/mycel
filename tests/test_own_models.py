@@ -141,7 +141,7 @@ class TestLimitsAndRemoval:
         await own_models.remove_own(people[0], view.id)
 
         assert (await session.scalars(select(OwnModelKey))).all() == []
-        assert await ModelPrefRepository(session).default(people[0]) is None
+        assert (await ModelPrefRepository(session).toggles_and_default(people[0]))[1] is None
 
 
 class TestRotatingTheEncryptionKey:

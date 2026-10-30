@@ -193,7 +193,8 @@ class Turn(Base):
     __tablename__ = "turn"
     __table_args__ = (
         UniqueConstraint("job_id", name="uq_turn_job_id"),
-        Index("ix_turn_conversation", "conversation_id"),
+        # Leads with the conversation for its turns; `updated_at` second for the sidebar order.
+        Index("ix_turn_conversation_updated", "conversation_id", "updated_at"),
         {"schema": APP},
     )
 

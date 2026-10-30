@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.infra.postgres.models import WorkItem, Worklog
@@ -127,8 +127,15 @@ class GoldRepository:
         return [to_row(row) for row in await self._session.scalars(query)]
 
     async def projects(self) -> list[str]:
-        """Every project with work in it."""
-        query: Select[tuple[str]] = select(WorkItem.project).distinct().order_by(WorkItem.project)
+        """Every project with work in it, in order.
+
+        One index hop per project on `(project, updated_at)`: a plain DISTINCT reads every
+        row, 2.2 s at two million, on each page load that fills the picker.
+        """
+        first = select(func.min(WorkItem.project).label("v")).cte("p", recursive=True)
+        after = select(func.min(WorkItem.project)).where(WorkItem.project > first.c.v)
+        found = first.union_all(select(after.scalar_subquery()).where(first.c.v.is_not(None)))
+        query: Select[tuple[str]] = select(found.c.v).where(found.c.v.is_not(None))
         return [str(p) for p in (await self._session.scalars(query)).all()]
 
 

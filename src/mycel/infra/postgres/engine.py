@@ -32,7 +32,24 @@ def get_engine() -> AsyncEngine:
     )
 
 
+@lru_cache(maxsize=1)
+def get_probe_engine() -> AsyncEngine:
+    """One connection for readiness, apart from the request pool.
+
+    A probe that queues behind requests on a busy pod times out, and the pod leaves the
+    Service while it is merely slow: every caller then gets 503 from the ingress.
+    """
+    return create_async_engine(
+        async_dsn(get_settings().database_url),
+        pool_size=1,
+        max_overflow=0,
+        pool_timeout=POOL_TIMEOUT_SECONDS,
+        pool_pre_ping=True,
+    )
+
+
 async def dispose_engine() -> None:
-    if get_engine.cache_info().currsize:
-        await get_engine().dispose()
-    get_engine.cache_clear()
+    for engine in (get_engine, get_probe_engine):
+        if engine.cache_info().currsize:
+            await engine().dispose()
+        engine.cache_clear()

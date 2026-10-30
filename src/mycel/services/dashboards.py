@@ -22,4 +22,4 @@ async def get_dashboard(user: Principal, project: str, days: int = DEFAULT_DAYS)
 async def known_projects(user: Principal) -> list[str]:
     """Which projects have data and this person may read, for the picker."""
     async with session_scope() as session:
-        return await readable(user, await list_projects(session))
+        return await readable(user, await list_projects(session), session)

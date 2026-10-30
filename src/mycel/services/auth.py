@@ -4,6 +4,7 @@ import re
 import secrets
 from datetime import UTC, datetime, timedelta
 
+from redis.exceptions import RedisError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,7 @@ from mycel.core.exceptions import MycelError
 from mycel.core.logging import get_logger
 from mycel.core.principal import Principal
 from mycel.infra.postgres.repositories.identity import IdentityRepository, UserRow
+from mycel.infra.redis import sessions as session_cache
 
 log = get_logger(__name__)
 
@@ -20,6 +22,10 @@ TOUCH_EVERY = timedelta(minutes=1)
 
 #: How long a session lives unused; each use (at most once a minute) starts it again.
 SESSION_TTL = timedelta(days=14)
+
+#: How long a looked-up cookie is trusted without asking Postgres. A deleted row is dropped
+#: from the cache at once; this bounds anything that removes rows another way (a user deleted).
+CACHE_FOR = TOUCH_EVERY
 
 #: Bytes of entropy in a session token.
 TOKEN_BYTES = 32
@@ -79,6 +85,16 @@ async def open_session(session: AsyncSession, user_id: int) -> str:
 async def close_session(session: AsyncSession, token: str) -> None:
     """Sign out. Deleting a token that is already gone is not an error."""
     await IdentityRepository(session).delete_session(token)
+    await _forget(token)
+
+
+async def cached_user(token: str) -> Principal | None:
+    """Who a cookie named a moment ago, or None to ask Postgres. A cache outage is a miss."""
+    try:
+        return await session_cache.get(token)
+    except RedisError:
+        log.warning("session cache unreachable")
+        return None
 
 
 async def session_user(session: AsyncSession, token: str) -> Principal | None:
@@ -97,7 +113,25 @@ async def session_user(session: AsyncSession, token: str) -> Principal | None:
     # A write per request is a write per poll; minute precision is enough for both fields.
     if now - row.last_seen_at >= TOUCH_EVERY:
         await repo.touch_session(token, now, now + SESSION_TTL)
-    return _principal(user)
+    principal = _principal(user)
+    # Never past the row's own end, so a cached cookie cannot outlive its session.
+    await _remember(token, principal, min(CACHE_FOR, row.expires_at - now))
+    return principal
+
+
+async def _remember(token: str, user: Principal, ttl: timedelta) -> None:
+    seconds = int(ttl.total_seconds())
+    if seconds <= 0:
+        return
+    try:
+        await session_cache.put(token, user, seconds)
+    except RedisError:
+        log.warning("session cache unreachable")
+
+
+async def _forget(token: str) -> None:
+    """Drop a cookie from the cache. Raises if Redis is down: a revoke must not half-happen."""
+    await session_cache.drop(token)
 
 
 async def sweep_expired_sessions(session: AsyncSession) -> int:

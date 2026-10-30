@@ -80,23 +80,6 @@ def _kept(job_id: str, *, status: str = "done", age_s: float = 0.0) -> TurnRow:
     )
 
 
-class _FakeSession:
-    async def execute(self, statement: object) -> None:
-        return None
-
-
-def _database(monkeypatch: pytest.MonkeyPatch, up: bool) -> None:
-    """Stand in for Postgres, so the API tests need no server."""
-
-    @asynccontextmanager
-    async def fake_scope() -> AsyncIterator[_FakeSession]:
-        if not up:
-            raise OSError("connection refused")
-        yield _FakeSession()
-
-    monkeypatch.setattr("mycel.api.health.session_scope", fake_scope)
-
-
 def _may_read(monkeypatch: pytest.MonkeyPatch, projects: set[str]) -> None:
     """What `services/permission.py` reads, without a database: this person's projects."""
 
@@ -318,6 +301,39 @@ class TestTheLists:
         monkeypatch.setattr("mycel.services.dashboards.list_projects", fake_list)
 
         assert client.get("/projects").json() == ["MYC"]
+
+    def test_projects_hold_one_connection_at_a_time(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A second session inside the first held two connections; a full pool then hung."""
+        open_now: list[int] = [0]
+        most: list[int] = [0]
+
+        @asynccontextmanager
+        async def counted() -> AsyncIterator[object]:
+            open_now[0] += 1
+            most[0] = max(most[0], open_now[0])
+            try:
+                yield object()
+            finally:
+                open_now[0] -= 1
+
+        async def fake_list(session: Any) -> list[str]:
+            return ["MYC", "OPS"]
+
+        async def fake_grants(self: Any, user_id: int) -> frozenset[str]:
+            return frozenset({"MYC"})
+
+        monkeypatch.setattr("mycel.services.dashboards.session_scope", counted)
+        monkeypatch.setattr("mycel.services.permission.session_scope", counted)
+        monkeypatch.setattr("mycel.services.dashboards.list_projects", fake_list)
+        monkeypatch.setattr(
+            "mycel.infra.postgres.repositories.accounts.AccountRepository.projects_for",
+            fake_grants,
+        )
+
+        assert client.get("/projects").json() == ["MYC"]
+        assert most[0] == 1
 
     def test_threads_are_this_person_s(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

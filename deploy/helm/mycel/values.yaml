@@ -17,9 +17,15 @@ image:
 
 api:
   replicas: 1
+  # One uvicorn process is CPU-bound on one core under load (note 121): ask for that core.
+  # No CPU limit: throttling a pod that is already the bottleneck only adds latency.
   resources:
-    requests: {cpu: 200m, memory: 512Mi}
+    requests: {cpu: 1000m, memory: 512Mi}
     limits: {memory: 1Gi}
+  # Outranks config.DB_POOL_*. No overflow: an overflow connection closes on return and is
+  # reopened with SCRAM on the next burst, ~25 ms of CPU each (F13). 8 held 300+ rps with
+  # p95 near 10's; more only queues in Postgres instead of in the pool.
+  dbPool: {size: 8, overflow: 0}
   # Only the ingress controller reaches the http port; see templates/api/networkpolicy.yaml
   # for why FORWARDED_ALLOW_IPS depends on it.
   networkPolicy:
@@ -66,8 +72,15 @@ externalStores:
 config:
   MYCEL_ENV: prod
   LOG_LEVEL: INFO
-  # Budget: (pool + overflow) × processes must stay under Postgres max_connections (100)
-  # minus ~10 for migrations and psql. 5 processes × (5 + 5) = 50.
+  # Budget: every process that opens Postgres shares max_connections (100), and 3 of those are
+  # reserved for superusers. Per app process: (pool + overflow), plus 1 for readiness on api.
+  #   api      replicas × (api.dbPool + 1)          4 × 9  = 36
+  #   worker, scheduler, ingest   these values each  4 × 10 = 40 (2 workers)
+  #   LiteLLM  database_connection_pool_limit, 10 by default (Prisma, per worker)
+  #   ~5       migrations, psql, the doctor
+  # 91 of 97: four api pods is the ceiling without PgBouncer. Compose running beside the chart
+  # takes its own share out of the same 97. Workers keep 5 + 5: an agent runs tools at once,
+  # each in its own session, and that has not been measured.
   DB_POOL_SIZE: "5"
   DB_MAX_OVERFLOW: "5"
   # The api is a ClusterIP reached through the ingress, so uvicorn takes the client address

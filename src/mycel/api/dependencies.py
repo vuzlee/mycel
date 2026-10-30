@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mycel.core.principal import Principal
 from mycel.infra.postgres.session import session_scope
-from mycel.services.auth import session_user
+from mycel.services.auth import cached_user, session_user
 
 #: The cookie a browser sends back.
 SESSION_COOKIE = "mycel_session"
@@ -27,9 +27,12 @@ Db = Annotated[AsyncSession, Depends(get_db, scope="function")]
 async def signed_in(
     mycel_session: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
 ) -> Principal | None:
-    """Who is calling, or None. Its own short transaction: the handler's work needs the pool."""
+    """Who is calling, or None. Cached a minute; otherwise its own short transaction."""
     if not mycel_session:
         return None
+    cached = await cached_user(mycel_session)
+    if cached is not None:
+        return cached
     async with session_scope() as session:
         return await session_user(session, mycel_session)
 

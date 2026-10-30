@@ -99,21 +99,27 @@ def _kept(job_id: str, *, status: str = "done", age_s: float = 0.0) -> TurnRow:
     )
 
 
-class _FakeSession:
+class _FakeConnection:
     async def execute(self, statement: object) -> None:
         return None
 
 
-def _database(monkeypatch: pytest.MonkeyPatch, up: bool) -> None:
-    """Stand in for Postgres, so the API tests need no server."""
+class _FakeProbe:
+    """The readiness engine: `connect()` works, or Postgres is down."""
+
+    def __init__(self, up: bool) -> None:
+        self.up = up
 
     @asynccontextmanager
-    async def fake_scope() -> AsyncIterator[_FakeSession]:
-        if not up:
+    async def connect(self) -> AsyncIterator[_FakeConnection]:
+        if not self.up:
             raise OSError("connection refused")
-        yield _FakeSession()
+        yield _FakeConnection()
 
-    monkeypatch.setattr("mycel.api.health.session_scope", fake_scope)
+
+def _database(monkeypatch: pytest.MonkeyPatch, up: bool) -> None:
+    """Stand in for Postgres, so the API tests need no server."""
+    monkeypatch.setattr("mycel.api.health.get_probe_engine", lambda: _FakeProbe(up))
 
 
 class TestHealth:

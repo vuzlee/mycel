@@ -39,6 +39,15 @@ class OwnModelRepository:
         )
         return int(found or 0)
 
+    async def labels_of(self, owner_id: int) -> list[tuple[int, str]]:
+        """Id and label of each, oldest first: what a picker shows, without the sealed keys."""
+        rows = await self._session.execute(
+            select(OwnModel.id, OwnModel.label)
+            .where(OwnModel.owner_id == owner_id)
+            .order_by(OwnModel.id)
+        )
+        return [(i, label) for i, label in rows.tuples()]
+
     async def all_of(self, owner_id: int) -> list[OwnModelRow]:
         rows = await self._session.scalars(
             select(OwnModel).where(OwnModel.owner_id == owner_id).order_by(OwnModel.id)

@@ -13,13 +13,6 @@ class ModelPrefRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def toggles(self, user_id: int) -> dict[str, bool]:
-        """Every toggle this person set, by `model_ref`. Missing means untouched."""
-        rows = await self._session.execute(
-            select(ModelPref.model_ref, ModelPref.enabled).where(ModelPref.user_id == user_id)
-        )
-        return {ref: enabled for ref, enabled in rows.tuples()}
-
     async def set_toggle(self, user_id: int, model_ref: str, enabled: bool) -> None:
         stmt = insert(ModelPref).values(user_id=user_id, model_ref=model_ref, enabled=enabled)
         await self._session.execute(
@@ -36,11 +29,23 @@ class ModelPrefRepository:
             update(User).where(User.default_model_ref == model_ref).values(default_model_ref=None)
         )
 
-    async def default(self, user_id: int) -> str | None:
-        found: str | None = await self._session.scalar(
-            select(User.default_model_ref).where(User.id == user_id)
+    async def toggles_and_default(self, user_id: int) -> tuple[dict[str, bool], str | None]:
+        """Every toggle this person set (missing means untouched), and their default model.
+
+        One round trip: the user row with its toggles joined on.
+        """
+        rows = await self._session.execute(
+            select(User.default_model_ref, ModelPref.model_ref, ModelPref.enabled)
+            .outerjoin(ModelPref, ModelPref.user_id == User.id)
+            .where(User.id == user_id)
         )
-        return found
+        default: str | None = None
+        toggles: dict[str, bool] = {}
+        for chosen, ref, enabled in rows.tuples():
+            default = chosen
+            if ref is not None:
+                toggles[ref] = enabled
+        return toggles, default
 
     async def set_default(self, user_id: int, model_ref: str | None) -> None:
         await self._session.execute(

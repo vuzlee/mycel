@@ -75,7 +75,26 @@ class TestDefault:
     ) -> None:
         await models.set_default(user_id, B)
         await ModelPrefRepository(session).forget(B)
-        assert await ModelPrefRepository(session).default(user_id) is None
+        assert (await ModelPrefRepository(session).toggles_and_default(user_id))[1] is None
+
+
+class TestOneRoundTrip:
+    """Toggles and default come back from one query, the user row joined to its toggles."""
+
+    async def test_nothing_set_is_no_toggles_and_no_default(
+        self, user_id: int, session: AsyncSession
+    ) -> None:
+        assert await ModelPrefRepository(session).toggles_and_default(user_id) == ({}, None)
+
+    async def test_several_toggles_and_a_default_together(
+        self, user_id: int, session: AsyncSession
+    ) -> None:
+        await models.set_enabled(user_id, B, False)
+        await models.set_enabled(user_id, A, True)
+        await models.set_default(user_id, A)
+
+        found = await ModelPrefRepository(session).toggles_and_default(user_id)
+        assert found == ({A: True, B: False}, A)
 
 
 class TestResolveBeforeARun:

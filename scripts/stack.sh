@@ -12,12 +12,13 @@
 #   scripts/stack.sh broker-rebuild     fresh broker data dir, users kept (queues must be empty)
 #   scripts/stack.sh gateway-key [usd]  the app's scoped gateway key, from the master key
 #   scripts/stack.sh web-smoke [base]   the batch A web fixes in headless Chrome
+#   scripts/stack.sh load [compose|k8s] [vus] [s] [routes]   signed-in reads under k6
 
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-  sed -n '3,13p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
+  sed -n '3,15p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
   exit "${1:-1}"
 }
 
@@ -44,6 +45,7 @@ case "$mode" in
   broker-rebuild) run "$HERE/ops/broker-rebuild.sh" "$@" ;;
   gateway-key)  run "$HERE/ops/gateway-key.sh" "$@" ;;
   web-smoke)    run "$HERE/ops/web-smoke.sh" "$@" ;;
+  load)         run "$HERE/ops/load.sh" "$@" ;;
 
   -h|--help|help) usage 0 ;;
   *) printf '\033[31mxx\033[0m unknown: %s\n\n' "$mode" >&2; usage ;;
