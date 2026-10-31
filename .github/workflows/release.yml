@@ -95,3 +95,21 @@ jobs:
           actual=$(grep -cE "^\s+image: mycel(-ingest)?:${{ github.sha }}$" /tmp/rendered.yaml || true)
           echo "$actual of $expected mycel images carry this commit"
           [ "$expected" = "$actual" ] && [ "$actual" != "0" ]
+
+      # EKS session (HLD 123): the stores release and the app on values-aws.yaml.
+      - name: Stores chart lints and renders
+        run: |
+          helm lint deploy/helm/mycel-stores
+          helm template mycel-stores deploy/helm/mycel-stores > /tmp/stores.yaml
+
+      - name: Renders on values-aws.yaml
+        run: |
+          helm lint deploy/helm/mycel -f deploy/helm/mycel/values-aws.yaml --set image.tag=${{ github.sha }}
+          helm template mycel deploy/helm/mycel -f deploy/helm/mycel/values-aws.yaml \
+            --set image.tag=${{ github.sha }} > /tmp/aws.yaml
+
+      - name: No credential in the EKS render
+        run: |
+          if grep -nE '^\s+(password|secret|token|api_key):' /tmp/stores.yaml /tmp/aws.yaml; then
+            echo "a rendered manifest carries a credential"; exit 1
+          fi

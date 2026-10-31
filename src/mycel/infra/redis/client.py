@@ -28,6 +28,8 @@ async def _client_for(url: str) -> redis.Redis:
             decode_responses=True,
             max_connections=settings.redis_max_connections,
             timeout=settings.redis_pool_timeout_seconds,
+            # Above the 5 s XREAD block in streams.read; the client default is also 5 s.
+            socket_timeout=15,
         )
         _clients[key] = redis.Redis(connection_pool=pool)
     return _clients[key]

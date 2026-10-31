@@ -71,6 +71,10 @@ for _ in $(seq 20); do curl -sf http://localhost:14000/health/liveliness >/dev/n
 models=$(uv run python -c "
 from mycel.core.config import get_settings
 import json; print(json.dumps([m.name for m in get_settings().host_models]))")
+# A rerun finds the stores still up and the alias taken: drop the old key first.
+curl -fsS http://localhost:14000/key/delete \
+  -H "Authorization: Bearer $(env_value LITELLM_MASTER_KEY)" -H "Content-Type: application/json" \
+  -d '{"key_aliases": ["mycel-app"]}' >/dev/null 2>&1 || true
 key=$(curl -fsS http://localhost:14000/key/generate \
   -H "Authorization: Bearer $(env_value LITELLM_MASTER_KEY)" -H "Content-Type: application/json" \
   -d "{\"key_alias\": \"mycel-app\", \"models\": $models, \"max_budget\": 10, \"budget_duration\": \"30d\"}" \
