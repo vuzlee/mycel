@@ -15,9 +15,12 @@ OLD = datetime(2026, 11, 1, 7, tzinfo=UTC)
 
 @pytest.fixture(scope="module")
 def reaper() -> types.ModuleType:
-    sys.modules.setdefault("boto3", types.SimpleNamespace(client=lambda name: None))
+    boto3 = types.ModuleType("boto3")
+    boto3.client = lambda name: None  # type: ignore[attr-defined]
+    sys.modules.setdefault("boto3", boto3)
     path = Path(__file__).parents[1] / "deploy/aws/bootstrap/reaper/reaper.py"
     spec = importlib.util.spec_from_file_location("reaper", path)
+    assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
