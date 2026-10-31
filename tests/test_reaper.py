@@ -3,6 +3,7 @@
 import importlib.util
 import sys
 import types
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,16 +15,21 @@ OLD = datetime(2026, 11, 1, 7, tzinfo=UTC)
 
 
 @pytest.fixture(scope="module")
-def reaper() -> types.ModuleType:
+def reaper() -> Iterator[types.ModuleType]:
     boto3 = types.ModuleType("boto3")
     boto3.client = lambda name: None  # type: ignore[attr-defined]
-    sys.modules.setdefault("boto3", boto3)
+    real = sys.modules.get("boto3")
+    sys.modules["boto3"] = boto3  # no clients, no region needed
     path = Path(__file__).parents[1] / "deploy/aws/bootstrap/reaper/reaper.py"
     spec = importlib.util.spec_from_file_location("reaper", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module
+    yield module
+    if real is not None:
+        sys.modules["boto3"] = real
+    else:
+        del sys.modules["boto3"]
 
 
 @pytest.mark.parametrize(
