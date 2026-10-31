@@ -44,6 +44,16 @@ jobs:
       # Not the ingest group: docling is ~2.5 GB and no test here parses a document.
       - run: uv sync --locked --no-group ingest
 
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_wrapper: false}
+      - name: Terraform format and validate
+        run: |
+          terraform fmt -check -recursive deploy/aws
+          for root in deploy/aws/bootstrap deploy/aws/session; do
+            terraform -chdir=$root init -backend=false -input=false > /dev/null
+            terraform -chdir=$root validate
+          done
+
       - name: Lint
         run: uv run ruff check .
 

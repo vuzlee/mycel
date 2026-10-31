@@ -1,0 +1,2 @@
+# `up` writes this; by hand: owner_cidr = "$(curl -s https://checkip.amazonaws.com)/32"
+owner_cidr = "203.0.113.7/32"

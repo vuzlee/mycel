@@ -56,3 +56,11 @@ evals/rag/results/followups-*.json
 
 # This deployment's models and providers; start from models.example.yaml.
 *.tsbuildinfo
+
+# Terraform: providers, state and the owner's values stay local
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.tfstate.lock.info
+deploy/aws/bootstrap/reaper.zip
