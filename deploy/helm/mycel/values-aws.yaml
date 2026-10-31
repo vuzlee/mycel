@@ -1,0 +1,38 @@
+# Overrides values.yaml for a session on EKS (HLD 123): one node, stores in the cluster
+# (release mycel-stores), reached only by kubectl port-forward.
+
+# Docker Hub, pulled with a login: anonymous pulls are capped at 10 an hour per address.
+# The login and the secret come from scripts/k8s/stores-up.sh; so do repository and tag.
+image:
+  pullPolicy: IfNotPresent
+  pullSecret: ""   # set by scripts/k8s/stores-up.sh when .env has a Docker Hub login
+
+# 1000m is the core a load test needs (note 121); a session needs far less, and the node
+# has 4 cores for everything.
+api:
+  resources:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+# The Services of release mycel-stores, by name.
+externalStores:
+  host: ""
+  postgresPort: 5432
+  postgres: postgres
+  rabbitmq: rabbitmq
+  qdrant: qdrant
+  minio: minio
+  litellm: litellm
+
+config:
+  # Port-forward to localhost:8000; Google and Jira already accept that callback.
+  PUBLIC_BASE_URL: http://localhost:8000
+  # Real mail and Jira: the trace tree, tokens and cost go to Langfuse, the text does not.
+  OTEL_CAPTURE_CONTENT: "false"
+
+# Nothing is public: no load balancer, no ingress.
+ingress:
+  enabled: false
+
+monitoring:
+  enabled: true

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mycel-stores
+description: The stores Mycel needs, in the cluster, data kept only while the pod lives
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

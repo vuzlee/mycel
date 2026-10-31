@@ -51,6 +51,7 @@ spec:
         # The hash is of the config VALUES, not of this template file: a template that
         checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
     spec:
+      {{- include "mycel.pullSecrets" . | nindent 6 }}
       containers:
         - name: loki
           image: {{ .Values.monitoring.loki.image }}

@@ -158,7 +158,6 @@ services:
     # Its own database on the same Postgres: it holds the app's scoped key, not app data.
     environment:
       DEFAULT_MODEL_API_KEY: ${DEFAULT_MODEL_API_KEY:-}
-      DEFAULT_MODEL_BASE_URL: ${DEFAULT_MODEL_BASE_URL:-}
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set it in .env}
       DATABASE_URL: postgresql://${POSTGRES_USER:-mycel}:${POSTGRES_PASSWORD}@postgres:5432/litellm
     depends_on:

@@ -1,0 +1,32 @@
+{{/*
+LiteLLM. Its four files come from config/litellm/ as one ConfigMap made by the script. Provider keys come from the Secret by `envFrom`, so a new
+provider in models.yaml needs no change here. Its database lives on the Postgres above.
+*/}}
+{{- $c := dict "ctx" . "name" "litellm" -}}
+{{ include "stores.deploymentHead" $c }}
+      containers:
+        - name: litellm
+          image: {{ .Values.litellm.image }}
+          command: ["/bin/sh", "/app/entrypoint.sh"]
+          envFrom: [{secretRef: {name: {{ .Values.secret.name }}}}]
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.secret.name }}, key: POSTGRES_PASSWORD}}
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@postgres:5432/litellm"
+          ports: [{name: http, containerPort: 4000}]
+          readinessProbe:
+            httpGet: {path: /health/liveliness, port: http}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+          volumeMounts:
+            {{- range list "config.yaml" "models.yaml" "entrypoint.sh" "mycel_callbacks.py" }}
+            - {name: config, mountPath: /app/{{ . }}, subPath: {{ . }}}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.litellm.resources | nindent 12 }}
+      volumes:
+        - {name: config, configMap: {name: {{ .Values.litellm.configMap }}}}
+---
+{{ include "stores.service" (merge (dict "ports" (list (list "http" 4000))) $c) }}

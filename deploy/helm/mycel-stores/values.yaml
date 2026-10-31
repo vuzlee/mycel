@@ -1,0 +1,71 @@
+# The stores compose runs, as one Deployment and Service each.
+#
+# emptyDir everywhere: a session starts empty and is deleted after, so nothing is kept and
+# nothing is left behind. A store whose pod is recreated loses its data — `helm upgrade`
+# of this release is not part of a session.
+#
+# Installed before the app release: the app's migrate hook runs before any of its own
+# resources, so Postgres has to be up already.
+
+# Keys the stores read, created outside git by scripts/k8s/stores-up.sh from .env.
+secret:
+  name: mycel-stores-secrets
+
+# Docker Hub login for every pull; empty pulls anonymously (10 an hour per address).
+pullSecret: ""
+
+postgres:
+  image: postgres:16-alpine
+  user: mycel
+  db: mycel
+  resources:
+    requests: {cpu: 200m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+rabbitmq:
+  image: rabbitmq:4.3.6-management-alpine
+  user: mycel
+  resources:
+    requests: {cpu: 100m, memory: 384Mi}
+    limits: {memory: 768Mi}
+
+# Two servers, two eviction rules: see docker-compose.yml for why they cannot share one.
+redis:
+  image: redis:7-alpine
+  maxmemory: 256mb
+  policy: noeviction
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 320Mi}
+
+redisCache:
+  image: redis:7-alpine
+  maxmemory: 128mb
+  policy: allkeys-lru
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 192Mi}
+
+qdrant:
+  image: qdrant/qdrant:v1.19.1
+  resources:
+    requests: {cpu: 100m, memory: 512Mi}
+    limits: {memory: 1Gi}
+
+minio:
+  image: cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
+
+# config/litellm/ as a ConfigMap, made by the script from the files in git.
+litellm:
+  configMap: mycel-litellm-config
+  image: ghcr.io/berriai/litellm@sha256:625981c83410a3ea68eb0697590a57ec1d764d634514d54fa5db0591077ee839
+  resources:
+    requests: {cpu: 100m, memory: 768Mi}
+    limits: {memory: 1536Mi}
+
+# Only pods of the two releases may reach a store.
+networkPolicy:
+  enabled: true

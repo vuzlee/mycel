@@ -2,6 +2,7 @@
 
 ```
 helm/mycel/     the chart: api, worker, scheduler, ingest, migrate hook, monitoring
+helm/mycel-stores/  the stores in the cluster, for stores-up and EKS
 helm/mycel/files/   Grafana and Loki config, also mounted by compose
 monitoring/     Prometheus, Alertmanager and Alloy config for compose
 inference/      local vLLM (planned, off)
@@ -22,11 +23,14 @@ minikube tunnel                         # mycel.local and grafana.mycel.local in
 
 ## What runs where
 
-| Pods | Stays in compose on the host |
-|---|---|
-| api · worker · scheduler · ingest | Postgres · RabbitMQ · Redis · Qdrant · MinIO · LiteLLM |
+| Setup | Pods | Stores |
+|---|---|---|
+| `k8s up` (minikube) | api · worker · scheduler · ingest | compose on the host, at `externalStores.host` (`host.minikube.internal`) |
+| `k8s stores-up` (minikube, later EKS) | the same, `values-aws.yaml` | in the cluster, chart `helm/mycel-stores/`, one Service per store, `emptyDir` |
 
-Pods reach the stores at `externalStores.host` (`host.minikube.internal`).
+`stores-up` installs the stores first (the migrate hook needs Postgres), makes the app's
+gateway key, then the app. Every pod pulls with one Docker Hub login when `.env` has
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Plan: `docs/plan/aws-phase-1.html`.
 
 ## Rules
 
@@ -34,7 +38,8 @@ Pods reach the stores at `externalStores.host` (`host.minikube.internal`).
 |---|---|
 | Create the Secret with `scripts/stack.sh k8s secret` | `localhost` inside a pod is that pod; the script rewrites the store URLs |
 | Settings that must hold go in the container `env:` | the Secret carries all of `.env` and overrides the ConfigMap |
-| The Secret needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | tracing is on with content: without the keys every pod refuses to start (`ConfigError`) |
+| Every pod has `enableServiceLinks: false` | a Service named `rabbitmq` would inject `RABBITMQ_PORT=tcp://…` and break Settings |
+| The Secret needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | tracing is on: without the keys every pod refuses to start (`ConfigError`) |
 | Migrations run as a `pre-install,pre-upgrade` hook | new pods never start on an old schema |
 | Every migration is backward compatible by one step | the old code serves while it runs; drop a column in two releases |
 | `scheduler`: `replicas: 1`, `strategy: Recreate` | two schedulers fire every schedule twice |

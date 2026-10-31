@@ -1,0 +1,28 @@
+{{/*
+RabbitMQ. A fixed hostname as in compose: the data directory is named after the node.
+`ping` answers before AMQP accepts, so readiness checks the port.
+*/}}
+{{- $c := dict "ctx" . "name" "rabbitmq" -}}
+{{ include "stores.deploymentHead" $c }}
+      hostname: rabbitmq
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.rabbitmq.image }}
+          env:
+            - {name: RABBITMQ_DEFAULT_USER, value: {{ .Values.rabbitmq.user | quote }}}
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom: {secretKeyRef: {name: {{ .Values.secret.name }}, key: RABBITMQ_PASSWORD}}
+          ports:
+            - {name: amqp, containerPort: 5672}
+            - {name: management, containerPort: 15672}
+          readinessProbe:
+            exec: {command: [rabbitmq-diagnostics, -q, check_port_connectivity]}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+          volumeMounts: [{name: data, mountPath: /var/lib/rabbitmq}]
+          resources:
+            {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+      volumes: [{name: data, emptyDir: {}}]
+---
+{{ include "stores.service" (merge (dict "ports" (list (list "amqp" 5672) (list "management" 15672))) $c) }}

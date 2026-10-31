@@ -55,5 +55,4 @@ evals/rag/results/retrieval-*.json
 evals/rag/results/followups-*.json
 
 # This deployment's models and providers; start from models.example.yaml.
-config/litellm/models.yaml
 *.tsbuildinfo

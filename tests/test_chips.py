@@ -28,7 +28,7 @@ async def offered(agent_cls: type[BaseAgent[Any]], chips: frozenset[Chip] | None
         seen.append({t.name for t in info.function_tools})
         return ModelResponse(parts=[TextPart("ok")])
 
-    agent = agent_cls.build(AgentSettings(model_spec="cloud:x"))
+    agent = agent_cls.build(AgentSettings())
     deps = MycelDeps("j", JobBudget("j", Decimal("1")), chips=chips)
     with agent.override(model=FunctionModel(respond)):
         try:
@@ -152,7 +152,7 @@ async def instructions_seen(chips: frozenset[Chip] | None) -> str:
         seen.append(info.instructions or "")
         return ModelResponse(parts=[TextPart("ok")])
 
-    agent = Orchestrator.build(AgentSettings(model_spec="cloud:x"))
+    agent = Orchestrator.build(AgentSettings())
     deps = MycelDeps("j", JobBudget("j", Decimal("1")), chips=chips)
     with agent.override(model=FunctionModel(respond)):
         await agent.run("hi", deps=deps)

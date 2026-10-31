@@ -1,4 +1,6 @@
-"""Agent settings shared by every agent: model, generation parameters, loop limits.
+"""Agent settings shared by every agent: generation parameters, loop limits.
+
+No model here: every agent of a run calls the model the turn picked, or the host default.
 
 Field defaults are the fallback when `config/` is absent; `from_config()` layers the YAML over them.
 """
@@ -22,8 +24,6 @@ from mycel.core.exceptions import ConfigError
 @dataclass(frozen=True, slots=True)
 class AgentSettings:
     """What one agent needs to be built and run safely."""
-
-    model_spec: str = "cloud:claude-sonnet-5"
 
     # Zero so identical runs give reviewable, identical reports.
     temperature: float = 0.0

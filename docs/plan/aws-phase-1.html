@@ -1,0 +1,405 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AWS phase 1 · Mycel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="../page.css">
+
+<body>
+<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
+<div class="page">
+<header class="hero"><p class="eyebrow">Plan · 124 running on minikube · 2026-10-31</p><h1>Mycel on AWS, phase 1</h1><div class="hero-lede"><ul class="bul"><li>The whole product on EKS, one node, up a few hours, then deleted</li><li>Only the owner uses it; nothing is kept between sessions</li><li>Written for someone new to Mycel and to AWS: read "Read this first", then top to bottom</li><li>Hover a box for its file; a <code>file</code> link opens it in VS Code</li></ul></div></header>
+
+<section id="first">
+<h2>Read this first</h2>
+<h3 class="tbl-title">What Mycel is, in one line</h3>
+<ul class="bul"><li>A chat app: you ask in plain words, AI agents answer from your Jira, Gmail, Calendar and uploaded documents</li><li>Today it runs on a laptop; this plan puts the same thing on Amazon's cloud (AWS)</li></ul>
+
+<h3 class="tbl-title">Words used on this page</h3>
+<table class="tbl"><thead><tr><th>Word</th><th>Means</th><th>Here</th></tr></thead><tbody>
+<tr><td class="who">container image</td><td>a packed program with everything it needs to run</td><td><code>mycel</code>, <code>postgres</code>… 13 in all</td></tr>
+<tr><td class="who">pod</td><td>one running copy of an image</td><td>17 pods: <code>mycel</code> runs as api, worker, scheduler</td></tr>
+<tr><td class="who">Kubernetes (k8s)</td><td>software that starts pods, restarts them when they die, lets them find each other</td><td>everything below runs on it</td></tr>
+<tr><td class="who">cluster · node</td><td>a group of machines Kubernetes runs on · one machine in it</td><td>one cluster, one node</td></tr>
+<tr><td class="who">minikube</td><td>a one-machine Kubernetes on your laptop, for trying things</td><td>batch 124 tests here at $0</td></tr>
+<tr><td class="who">EKS</td><td>Kubernetes run by AWS: AWS keeps the control part, you rent the machines</td><td>$0.10 an hour while it exists</td></tr>
+<tr><td class="who">EC2</td><td>a virtual machine rented by the hour</td><td>the one node, 4 CPU / 16 GB</td></tr>
+<tr><td class="who">Helm chart</td><td>an install package: templates that become Kubernetes objects</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/">mycel</a> and <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/">mycel-stores</a></td></tr>
+<tr><td class="who">values file</td><td>the settings a chart is filled in with, one per place it runs</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/values-aws.yaml">values-aws.yaml</a></td></tr>
+<tr><td class="who">Service</td><td>a fixed name pods reach each other by</td><td>the app calls <code>postgres:5432</code></td></tr>
+<tr><td class="who">Secret · ConfigMap</td><td>passwords and keys given to pods · plain files given to pods</td><td>made from <code>.env</code> and <a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/">config/litellm/</a></td></tr>
+<tr><td class="who">stores</td><td>the programs that keep data: database, queue, cache, search, files</td><td>Postgres, RabbitMQ, Redis ×2, Qdrant, MinIO</td></tr>
+<tr><td class="who">LiteLLM</td><td>one door to every AI model; holds the provider keys</td><td>calls Gemini 3.5 Flash Lite</td></tr>
+<tr><td class="who"><code>emptyDir</code></td><td>a pod's scratch folder, gone when the pod goes</td><td>stores keep data only for one session</td></tr>
+<tr><td class="who">port-forward</td><td>a tunnel from your laptop to one pod, through Kubernetes</td><td><code>localhost:8000</code> opens the app; nothing is public</td></tr>
+<tr><td class="who">Terraform</td><td>describes cloud resources in files; one command makes or deletes all of them</td><td>batch 125</td></tr>
+<tr><td class="who">IAM · SSO</td><td>who may do what in AWS · signing in through a portal with short sessions</td><td>user <code>vuzle</code>, 8-hour sessions</td></tr>
+</tbody></table>
+
+<h3 class="tbl-title">On this page</h3>
+<table class="tbl"><thead><tr><th>#</th><th>Section</th><th>Answers</th></tr></thead><tbody>
+<tr><td>1</td><td><a href="#now">Where it stands</a></td><td>what is done, what is next</td></tr>
+<tr><td>2</td><td><a href="#s0">Goal and limits</a></td><td>why, for whom, how much money</td></tr>
+<tr><td>3</td><td><a href="#s1">What runs where</a></td><td>the picture: laptop, AWS, outside services</td></tr>
+<tr><td>4</td><td><a href="#charts">Two charts, one cluster</a></td><td>images, pods, packages</td></tr>
+<tr><td>5</td><td><a href="#s1b">Why it is shaped this way</a></td><td>each choice and what it replaced</td></tr>
+<tr><td>6</td><td><a href="#s1c">What changes in the repo</a></td><td>files touched, bugs found</td></tr>
+<tr><td>7</td><td><a href="#s1d">How everything gets in</a></td><td>the install script, step by step</td></tr>
+<tr><td>8</td><td><a href="#s2">One session</a></td><td>up, use, delete</td></tr>
+<tr><td>9</td><td><a href="#s3">Cost</a> · <a href="#s4">Sizing</a></td><td>money per hour, CPU and memory</td></tr>
+<tr><td>10</td><td><a href="#s5">Batches</a> · <a href="#s6">Traps</a> · <a href="#s7">Left out</a> · <a href="#s8">Phase 2</a></td><td>the work, the risks, what comes later</td></tr>
+<tr><td>11</td><td><a href="#files">Every file</a></td><td>where each piece lives in the repo</td></tr>
+</tbody></table>
+</section>
+
+<section id="now">
+<h2>1 · Where it stands</h2>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 940 150" role="img" aria-label="Progress: account setup done, batch 124 running on minikube with the browser smoke test left, batches 125 and 126 not started.">
+<defs><marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+<g class="hv" data-tip="root MFA · Identity Center user vuzle, AdministratorAccess 8 h · aws + terraform installed · profile mycel · quota 5 vCPU · Docker Hub read-only token in .env"><rect x="16" y="20" width="200" height="110" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="40" font-size="9.5" fill="var(--ink-faint)">0 · ACCOUNT</text><text x="28" y="62">✓ done</text><text x="28" y="84" font-size="9.5" fill="var(--ink-soft)">MFA, SSO user, CLI,</text><text x="28" y="100" font-size="9.5" fill="var(--ink-soft)">Terraform, quota 5 vCPU,</text><text x="28" y="116" font-size="9.5" fill="var(--ink-soft)">Docker Hub token</text></g>
+<g class="hv" data-tip="deploy/helm/mycel-stores/ · values-aws.yaml · scripts/k8s/stores-up.sh&#10;18 pods up, 0 restarts · doctor ok · browser smoke left"><rect x="248" y="20" width="220" height="110" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><text x="260" y="40" font-size="9.5" fill="var(--ink-faint)">124 · MINIKUBE · $0</text><text x="260" y="62">● running</text><text x="260" y="84" font-size="9.5" fill="var(--ink-soft)">18 pods up, doctor ok</text><text x="260" y="100" font-size="9.5" fill="var(--ink-soft)">left: sign in, chat,</text><text x="260" y="116" font-size="9.5" fill="var(--ink-soft)">upload, Jira, Grafana</text></g>
+<g class="hv" data-tip="deploy/aws/bootstrap/ · deploy/aws/session/"><rect x="500" y="20" width="200" height="110" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="512" y="40" font-size="9.5" fill="var(--ink-faint)">125 · TERRAFORM</text><text x="512" y="62">○ next</text><text x="512" y="84" font-size="9.5" fill="var(--ink-soft)">state, budgets, reaper,</text><text x="512" y="100" font-size="9.5" fill="var(--ink-soft)">VPC, EKS 1.37, node</text></g>
+<g class="hv" data-tip="scripts/aws/"><rect x="732" y="20" width="192" height="110" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="744" y="40" font-size="9.5" fill="var(--ink-faint)">126 · ONE SESSION</text><text x="744" y="62">○ later</text><text x="744" y="84" font-size="9.5" fill="var(--ink-soft)">aws up / down,</text><text x="744" y="100" font-size="9.5" fill="var(--ink-soft)">every flow on EKS</text></g>
+</g>
+<g fill="none" stroke="var(--ink-faint)"><path d="M216 75 H248" marker-end="url(#ap)"/><path d="M468 75 H500" marker-end="url(#ap)"/><path d="M700 75 H732" marker-end="url(#ap)"/></g>
+</svg></div></figure>
+</section>
+
+<section id="s0">
+<h2>2 · Goal and limits</h2>
+<table class="tbl"><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody>
+<tr><td class="who">Why AWS</td><td>real EKS experience for a portfolio; today Mycel runs on minikube</td></tr>
+<tr><td class="who">What must work</td><td>every feature: sign-in, chat streaming, upload and ask, Jira, Gmail, Calendar, Grafana, Langfuse</td></tr>
+<tr><td class="who">Who uses it</td><td>phase 1: only the owner · phase 2: others, for a demo</td></tr>
+<tr class="tone-gold"><td class="who">Money</td><td>hard cap $30 a month · $100 credit, expires 2027-10-30 · Paid plan</td></tr>
+<tr><td class="who">How long it runs</td><td>a few hours to test, then deleted; never left on</td></tr>
+<tr><td class="who">Data</td><td>real people's mail and Jira, but not kept: every session starts empty</td></tr>
+<tr><td class="who">Region · models</td><td>eu-west-2 London · Gemini 3.5 Flash Lite through LiteLLM, two keys, no GPU</td></tr>
+<tr><td class="who">Rule</td><td>change as little as possible against minikube</td></tr>
+</tbody></table>
+</section>
+
+<section id="s1">
+<h2>3 · What runs where</h2>
+<ul class="bul"><li>Left: your laptop · middle: AWS · right: services on the internet</li><li>Purple arrow: the only way in — <code>kubectl</code> to EKS, which forwards to the pods</li><li>Bottom box: made once, never deleted; it deletes the cluster if you forget</li></ul>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 940 584" role="img" aria-label="Laptop reaches the EKS control plane with kubectl; port-forward goes through it to the pods. One EC2 node runs the app, the stores and monitoring. Outside: Docker Hub for images, model providers, Langfuse Cloud, Google and Jira. A bootstrap part that is never deleted holds the state bucket, budgets and the reaper Lambda that deletes an expired cluster.">
+<defs><marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+<rect x="200" y="16" width="520" height="552" rx="4" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+<text x="212" y="34" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">AWS · EU-WEST-2</text>
+<g class="hv" data-tip="Amazon EKS, run by AWS, $0.10/h while it exists&#10;API endpoint public to your IP only, private for the node · access entry for your SSO role&#10;deploy/aws/session/ (batch 125)">
+<rect x="220" y="46" width="480" height="56" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="232" y="68" font-family="var(--mono)" font-size="11" fill="var(--ink)">EKS control plane · run by AWS · $0.10/h</text>
+<text x="232" y="88" font-family="var(--mono)" font-size="9.5" fill="var(--ink-soft)">Kubernetes API · public: your IP only · private: the node</text>
+</g>
+<g fill="none" stroke="var(--accent)" stroke-width="1.5"><path d="M91 264 V74 H220" marker-end="url(#aa)"/><path d="M318 102 V170" marker-end="url(#aa)"/></g>
+<text x="98" y="160" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">kubectl</text>
+<text x="98" y="174" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">port-forward</text>
+<g transform="translate(0,64)">
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+
+<!-- laptop -->
+<g class="hv" data-tip="your machine · aws sso login · kubectl · helm · terraform&#10;scripts/aws/ (batch 126)">
+<rect x="16" y="200" width="150" height="88" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="28" y="222">Your laptop</text>
+<text x="28" y="242" font-size="9.5" fill="var(--ink-soft)">localhost:8000 app</text>
+<text x="28" y="258" font-size="9.5" fill="var(--ink-soft)">localhost:3000 Grafana</text>
+<text x="28" y="274" font-size="9.5" fill="var(--ink-soft)">stack.sh aws up/down</text>
+</g>
+
+<!-- VPC / node -->
+<rect x="220" y="46" width="480" height="300" rx="3" fill="var(--surface-alt)" stroke="var(--line)"/>
+<text x="400" y="64" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">VPC · PUBLIC SUBNETS · NO NAT</text>
+
+<g class="hv" data-tip="EC2 worker node, 4 vCPU / 16 GiB, 60 GB disk, public IP (no NAT)&#10;no port open to the internet&#10;deploy/aws/session/ (batch 125)">
+<rect x="236" y="76" width="448" height="256" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="400" y="94" font-size="9.5" fill="var(--ink-faint)">EKS worker · 1 × EC2 4 vCPU / 16 GiB</text>
+</g>
+
+<g class="hv" data-tip="release mycel · deploy/helm/mycel/ + values-aws.yaml · built in 124, running on minikube">
+<rect x="252" y="106" width="132" height="210" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="264" y="126">App</text>
+<text x="264" y="150" font-size="9.5" fill="var(--ink-soft)">api</text>
+<text x="264" y="168" font-size="9.5" fill="var(--ink-soft)">worker ×2</text>
+<text x="264" y="186" font-size="9.5" fill="var(--ink-soft)">scheduler</text>
+<text x="264" y="204" font-size="9.5" fill="var(--ink-soft)">ingest</text>
+<text x="264" y="222" font-size="9.5" fill="var(--ink-soft)">migrate (hook)</text>
+<text x="264" y="300" font-size="9" fill="var(--ink-faint)">already in the chart</text>
+</g>
+
+<g class="hv" data-tip="release mycel-stores · deploy/helm/mycel-stores/ · built in 124&#10;emptyDir: gone when the pod goes">
+<rect x="398" y="106" width="132" height="210" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="4 3"/>
+<text x="410" y="126">Stores</text>
+<text x="410" y="150" font-size="9.5" fill="var(--ink-soft)">Postgres</text>
+<text x="410" y="168" font-size="9.5" fill="var(--ink-soft)">RabbitMQ</text>
+<text x="410" y="186" font-size="9.5" fill="var(--ink-soft)">Redis ×2</text>
+<text x="410" y="204" font-size="9.5" fill="var(--ink-soft)">Qdrant</text>
+<text x="410" y="222" font-size="9.5" fill="var(--ink-soft)">MinIO</text>
+<text x="410" y="240" font-size="9.5" fill="var(--ink-soft)">LiteLLM</text>
+<text x="410" y="300" font-size="9" fill="var(--ink-faint)">NEW · emptyDir</text>
+</g>
+
+<g class="hv" data-tip="monitoring.enabled: true · deploy/helm/mycel/templates/monitoring/">
+<rect x="544" y="106" width="126" height="210" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="556" y="126">Monitoring</text>
+<text x="556" y="150" font-size="9.5" fill="var(--ink-soft)">Prometheus</text>
+<text x="556" y="168" font-size="9.5" fill="var(--ink-soft)">Alertmanager</text>
+<text x="556" y="186" font-size="9.5" fill="var(--ink-soft)">Loki</text>
+<text x="556" y="204" font-size="9.5" fill="var(--ink-soft)">Alloy</text>
+<text x="556" y="222" font-size="9.5" fill="var(--ink-soft)">Grafana</text>
+<text x="556" y="300" font-size="9" fill="var(--ink-faint)">a flag in the chart</text>
+</g>
+
+<!-- bootstrap -->
+<rect x="220" y="362" width="480" height="126" rx="3" fill="var(--surface-alt)" stroke="var(--line)"/>
+<text x="232" y="380" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">BOOTSTRAP · MADE ONCE · NEVER DELETED</text>
+<g class="hv" data-tip="S3, versioned, locked · Terraform's memory of what it made&#10;deploy/aws/bootstrap/ (batch 125)">
+<rect x="236" y="392" width="140" height="80" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="248" y="414">State bucket</text>
+<text x="248" y="434" font-size="9.5" fill="var(--ink-soft)">S3, ~$0</text>
+</g>
+<g class="hv" data-tip="AWS Budgets, counted before credits · email&#10;deploy/aws/bootstrap/ (batch 125)">
+<rect x="390" y="392" width="140" height="80" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="402" y="414">Budgets</text>
+<text x="402" y="434" font-size="9.5" fill="var(--ink-soft)">mail at $10, $20</text>
+</g>
+<g class="hv" data-tip="Lambda every 15 min · past mycel-expires: node group, then cluster · emails&#10;deploy/aws/bootstrap/reaper/ (batch 125)">
+<rect x="544" y="392" width="140" height="80" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="556" y="414">Reaper Lambda</text>
+<text x="556" y="434" font-size="9.5" fill="var(--ink-soft)">every 15 min</text>
+<text x="556" y="450" font-size="9.5" fill="var(--ink-soft)">deletes after 4 h</text>
+</g>
+
+<!-- outside -->
+<text x="744" y="34" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">OUTSIDE AWS</text>
+<g class="hv" data-tip="11 of 13 images · pulled with your read-only token (secret dockerhub)&#10;minio from cgr.dev, litellm from ghcr.io"><rect x="744" y="46" width="180" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="756" y="68">Docker Hub</text><text x="756" y="84" font-size="9.5" fill="var(--ink-soft)">11 images, with login</text></g>
+<g class="hv" data-tip="gemini/gemini-3.5-flash-lite, one entry per key · no GPU&#10;config/litellm/models.yaml"><rect x="744" y="112" width="180" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="756" y="134">Google Gemini</text><text x="756" y="150" font-size="9.5" fill="var(--ink-soft)">3.5 Flash Lite, 2 keys</text></g>
+<g class="hv" data-tip="traces only, OTEL_CAPTURE_CONTENT=false: no prompt or answer text&#10;src/mycel/observability/tracing.py"><rect x="744" y="178" width="180" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="756" y="200">Langfuse Cloud</text><text x="756" y="216" font-size="9.5" fill="var(--ink-soft)">traces, no content</text></g>
+<g class="hv" data-tip="OAuth back to http://localhost:8000 · already registered&#10;src/mycel/plugins/"><rect x="744" y="244" width="180" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="756" y="266">Google · Jira</text><text x="756" y="282" font-size="9.5" fill="var(--ink-soft)">sign-in, sync</text></g>
+
+</g>
+<!-- edges -->
+<g fill="none" stroke="var(--ink-faint)">
+<path d="M384 210 H398" marker-end="url(#aa)"/>
+<path d="M670 70 H744" marker-start="url(#aa)"/>
+<path d="M530 240 V330 H700 V137 H744" marker-end="url(#aa)"/>
+<path d="M384 290 H392 V340 H710 V203 H744" marker-end="url(#aa)"/>
+<path d="M710 269 H744" marker-end="url(#aa)"/>
+<path d="M614 392 V316" marker-end="url(#aa)" stroke="var(--accent)" stroke-dasharray="4 3"/>
+</g>
+<g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">
+<text x="622" y="362">deletes</text>
+</g>
+</g>
+</svg></div></figure>
+
+</section>
+
+<section id="charts">
+<h2>4 · Two charts, one cluster, 17 pods</h2>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 940 300" role="img" aria-label="Two Helm charts installed into one cluster. Chart mycel holds 5 app pods from 2 images and 5 monitoring pods. Chart mycel-stores holds 7 store pods from 6 images. 13 images, 17 pods.">
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+<rect x="16" y="16" width="908" height="268" rx="4" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+<text x="28" y="34" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">ONE CLUSTER · ONE NODE · A CHART IS AN INSTALL PACKAGE, NOT A MACHINE</text>
+
+<g class="hv" data-tip="deploy/helm/mycel/ · values-aws.yaml&#10;installed second: its migrate hook needs Postgres"><rect x="32" y="48" width="436" height="220" rx="2" fill="var(--surface-alt)" stroke="var(--accent)"/><text x="44" y="68">chart mycel</text><text x="160" y="68" font-size="9.5" fill="var(--ink-faint)">installed 2nd · 10 pods</text></g>
+<g class="hv" data-tip="image mycel · one image, four commands: uvicorn, worker, scheduler, alembic"><rect x="48" y="82" width="200" height="104" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="60" y="100" font-size="9.5" fill="var(--ink-faint)">image mycel</text><text x="60" y="120" font-size="9.5" fill="var(--ink-soft)">api</text><text x="60" y="136" font-size="9.5" fill="var(--ink-soft)">worker ×2</text><text x="60" y="152" font-size="9.5" fill="var(--ink-soft)">scheduler</text><text x="60" y="168" font-size="9.5" fill="var(--ink-soft)">migrate (runs, exits)</text></g>
+<g class="hv" data-tip="image mycel-ingest · docling and its models baked in · ~200 Mi idle, 3–4 Gi parsing"><rect x="48" y="196" width="200" height="56" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="60" y="214" font-size="9.5" fill="var(--ink-faint)">image mycel-ingest</text><text x="60" y="234" font-size="9.5" fill="var(--ink-soft)">ingest (docling)</text></g>
+<g class="hv" data-tip="monitoring.enabled: true · 5 images, 5 pods"><rect x="262" y="82" width="190" height="170" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="274" y="100" font-size="9.5" fill="var(--ink-faint)">monitoring · 5 images</text><text x="274" y="120" font-size="9.5" fill="var(--ink-soft)">prometheus</text><text x="274" y="136" font-size="9.5" fill="var(--ink-soft)">alertmanager</text><text x="274" y="152" font-size="9.5" fill="var(--ink-soft)">loki</text><text x="274" y="168" font-size="9.5" fill="var(--ink-soft)">alloy</text><text x="274" y="184" font-size="9.5" fill="var(--ink-soft)">grafana</text></g>
+
+<g class="hv" data-tip="deploy/helm/mycel-stores/ · emptyDir · one Service per store, same name&#10;installed first"><rect x="488" y="48" width="420" height="220" rx="2" fill="var(--surface-alt)" stroke="var(--accent)" stroke-dasharray="4 3"/><text x="500" y="68">chart mycel-stores</text><text x="650" y="68" font-size="9.5" fill="var(--ink-faint)">installed 1st · 7 pods</text></g>
+<g class="hv" data-tip="Docker Hub, with your login"><rect x="504" y="82" width="190" height="170" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="516" y="100" font-size="9.5" fill="var(--ink-faint)">from Docker Hub</text><text x="516" y="120" font-size="9.5" fill="var(--ink-soft)">postgres</text><text x="516" y="136" font-size="9.5" fill="var(--ink-soft)">rabbitmq</text><text x="516" y="152" font-size="9.5" fill="var(--ink-soft)">redis + redis-cache</text><text x="516" y="168" font-size="9.5" fill="var(--ink-soft)">  (one image, two pods)</text><text x="516" y="184" font-size="9.5" fill="var(--ink-soft)">qdrant</text></g>
+<g class="hv" data-tip="other registries: not counted by Docker Hub's limit"><rect x="708" y="82" width="184" height="170" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="720" y="100" font-size="9.5" fill="var(--ink-faint)">other registries</text><text x="720" y="120" font-size="9.5" fill="var(--ink-soft)">minio · cgr.dev</text><text x="720" y="136" font-size="9.5" fill="var(--ink-soft)">litellm · ghcr.io</text></g>
+</g>
+</svg></div></figure>
+<ul class="bul"><li>Image = the program · pod = one run of it · a chart = the install package</li><li>13 images → 17 pods: <code>mycel</code> runs 4, <code>redis</code> runs 2</li></ul>
+
+<table class="tbl"><thead><tr><th>Group</th><th>Before (minikube + compose)</th><th>Now: minikube in 124, EKS in 126</th><th>Work</th></tr></thead><tbody>
+<tr><td class="who">App</td><td>chart</td><td>same chart + <code>values-aws.yaml</code></td><td>done ✓</td></tr>
+<tr class="tone-gold"><td class="who">Stores</td><td>compose on the host</td><td>new chart <code>mycel-stores</code>, in the cluster</td><td>done ✓</td></tr>
+<tr><td class="who">Monitoring</td><td>a flag</td><td>same flag, on</td><td>pull secret ✓</td></tr>
+<tr><td class="who">Traces</td><td>Langfuse, with content</td><td>Langfuse, <b>no</b> content</td><td>done ✓</td></tr>
+<tr><td class="who">Images</td><td>built and loaded</td><td>minikube: built and loaded · EKS: pulled from Docker Hub with login</td><td>pull secret ✓</td></tr>
+</tbody></table>
+</section>
+
+<section id="s1b">
+<h2>5 · Why it is shaped this way</h2>
+<table class="tbl"><thead><tr><th>Choice</th><th>Instead of</th><th>Because</th></tr></thead><tbody>
+<tr><td class="who">Stores as containers in the cluster</td><td>RDS, ElastiCache, Amazon MQ · or a second EC2</td><td>no extra machine, no managed-service price, all of it on EKS</td></tr>
+<tr><td class="who"><code>emptyDir</code>, no disks for data</td><td>EBS volumes (PVC)</td><td>data is not kept, so nothing is left to clean up</td></tr>
+<tr><td class="who"><code>kubectl port-forward</code></td><td>domain + load balancer</td><td>only the owner uses it; Google and Jira accept a <code>localhost</code> callback, already registered</td></tr>
+<tr><td class="who">Public subnets, no NAT</td><td>private subnets + NAT</td><td>NAT is the largest avoidable cost; no port on the node is open</td></tr>
+<tr><td class="who">MinIO, Docker Hub</td><td>S3, ECR</td><td>both already work; S3 needs a code change (region fixed to us-east-1)</td></tr>
+<tr><td class="who">Traces without content</td><td>prompts and answers in Langfuse</td><td>real mail and Jira would leave for Langfuse Cloud; the trace tree, tokens and cost stay</td></tr>
+<tr><td class="who">Delete the cluster each time</td><td>stop the EC2 only</td><td>EKS bills $0.10/h while it exists, node or not</td></tr>
+</tbody></table>
+</section>
+
+<section id="s1c">
+<h2>6 · What changes in the repo</h2>
+<table class="tbl"><thead><tr><th>Found in the code</th><th>Problem on EKS</th><th>Change</th></tr></thead><tbody>
+<tr class="tone-gold"><td class="who">migrations run before anything else in a release (<code>templates/hooks/migrate.yaml</code>)</td><td>Postgres in the same release would not be up yet</td><td>stores in their own release, installed first ✓</td></tr>
+<tr><td class="who">every store at one host (<code>templates/_helpers.tpl</code>)</td><td>in a cluster each store has its own name</td><td>one host per store; minikube unchanged ✓</td></tr>
+<tr><td class="who">the app's LiteLLM key lives in LiteLLM's database</td><td>database is empty each session</td><td><code>up</code> makes a new key every time ✓</td></tr>
+<tr><td class="who">api trusts <code>X-Forwarded-For</code>, safe only with NetworkPolicy</td><td>EKS does not enforce it by default</td><td>turn enforcement on in the VPC CNI</td></tr>
+<tr><td class="who">api asks 1 CPU (set for load tests)</td><td>does not fit one node with the rest</td><td><code>values-aws.yaml</code> asks 250m ✓</td></tr>
+<tr><td class="who">Kubernetes puts <code>&lt;SERVICE&gt;_PORT</code> in every pod</td><td>Service <code>rabbitmq</code> overwrote <code>RABBITMQ_PORT</code></td><td><code>enableServiceLinks: false</code> ✓</td></tr>
+<tr><td class="who">every agent named <code>claude-sonnet-5</code> in code</td><td>no such model on AWS</td><td>agents take the turn's model, else <code>default: true</code> in <code>host_models</code> ✓</td></tr>
+<tr><td class="who">keys split only from <code>*_API_KEYS</code></td><td><code>DEFAULT_MODEL_API_KEY=a,b</code> stayed one key</td><td><code>entrypoint.sh</code> splits both forms ✓</td></tr>
+<tr><td class="who">built in 124</td><td></td><td><code>deploy/helm/mycel-stores/</code> · <code>values-aws.yaml</code> · <code>scripts/k8s/stores-up.sh</code> ✓</td></tr>
+<tr><td class="who">still to build</td><td></td><td><code>deploy/aws/</code> (Terraform, 125) · <code>scripts/aws/</code> (126)</td></tr>
+</tbody></table>
+<ul class="bul"><li>Each session: sign in again, connect Google and Jira again, wait for the first sync</li><li>Keys in <code>.env</code> today; <code>.env.aws</code> with non-dev passwords before 126</li></ul>
+</section>
+
+<section id="s1d">
+<h2>7 · How everything gets in: stores-up</h2>
+<ul class="bul"><li>One command, <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/k8s/stores-up.sh">scripts/k8s/stores-up.sh</a> — five steps, left to right</li><li>The order is forced: the app's database migration needs Postgres already running</li></ul>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 940 210" role="img" aria-label="stores-up.sh in five steps: Docker Hub pull secret, stores secret and LiteLLM config, install mycel-stores and wait, make the app's gateway key with the master key, app secret and install mycel. The Gemini keys go only to LiteLLM.">
+<defs><marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+<g class="hv" data-tip="kubectl create secret docker-registry dockerhub · from DOCKERHUB_USERNAME / DOCKERHUB_TOKEN"><rect x="16" y="20" width="168" height="96" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="28" y="40" font-size="9.5" fill="var(--ink-faint)">0</text><text x="28" y="60">pull secret</text><text x="28" y="80" font-size="9.5" fill="var(--ink-soft)">one Docker Hub login</text><text x="28" y="96" font-size="9.5" fill="var(--ink-soft)">for every pod</text></g>
+<g class="hv" data-tip="mycel-stores-secrets from .env · ConfigMap from config/litellm/"><rect x="200" y="20" width="168" height="96" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="212" y="40" font-size="9.5" fill="var(--ink-faint)">1</text><text x="212" y="60">stores' keys</text><text x="212" y="80" font-size="9.5" fill="var(--ink-soft)">.env → Secret</text><text x="212" y="96" font-size="9.5" fill="var(--ink-soft)">LiteLLM files → ConfigMap</text></g>
+<g class="hv" data-tip="helm upgrade --install mycel-stores · wait for 7 rollouts&#10;Postgres makes the litellm database on start"><rect x="384" y="20" width="168" height="96" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="396" y="40" font-size="9.5" fill="var(--ink-faint)">2</text><text x="396" y="60">mycel-stores</text><text x="396" y="80" font-size="9.5" fill="var(--ink-soft)">7 stores, wait until</text><text x="396" y="96" font-size="9.5" fill="var(--ink-soft)">each is ready</text></g>
+<g class="hv" data-tip="port-forward to LiteLLM, /key/generate with the master key&#10;its database is new each time, so the key is too · no model call"><rect x="568" y="20" width="168" height="96" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="580" y="40" font-size="9.5" fill="var(--ink-faint)">3</text><text x="580" y="60">gateway key</text><text x="580" y="80" font-size="9.5" fill="var(--ink-soft)">new each time,</text><text x="580" y="96" font-size="9.5" fill="var(--ink-soft)">capped at $10</text></g>
+<g class="hv" data-tip="mycel-secrets: .env minus master key, Gemini keys, Docker Hub; plus the app key and Redis URLs&#10;helm upgrade --install mycel -f values-aws.yaml"><rect x="752" y="20" width="172" height="96" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="764" y="40" font-size="9.5" fill="var(--ink-faint)">4</text><text x="764" y="60">mycel</text><text x="764" y="80" font-size="9.5" fill="var(--ink-soft)">app Secret, then</text><text x="764" y="96" font-size="9.5" fill="var(--ink-soft)">migrate → 10 pods</text></g>
+<g class="hv" data-tip="the app never holds a provider key"><rect x="384" y="146" width="540" height="48" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="396" y="166" font-size="10">Gemini keys reach only LiteLLM · the app holds only its $10 gateway key</text><text x="396" y="182" font-size="9.5" fill="var(--ink-soft)">scripts/k8s/stores-up.sh · same steps on minikube and EKS</text></g>
+</g>
+<g fill="none" stroke="var(--ink-faint)"><path d="M184 68 H200" marker-end="url(#as)"/><path d="M368 68 H384" marker-end="url(#as)"/><path d="M552 68 H568" marker-end="url(#as)"/><path d="M736 68 H752" marker-end="url(#as)"/></g>
+</svg></div></figure>
+
+<h3 class="tbl-title">Found on minikube, fixed</h3>
+<table class="tbl"><thead><tr><th>Broke</th><th>Why</th><th>Fix</th></tr></thead><tbody>
+<tr class="tone-gold"><td class="who">migrate: <code>rabbitmq_port = 'tcp://10.102…:5672'</code></td><td>Kubernetes puts <code>&lt;SERVICE&gt;_PORT</code> in every pod; a Service named <code>rabbitmq</code> overwrote the app's own setting</td><td><code>enableServiceLinks: false</code> on every pod, both charts</td></tr>
+<tr><td class="who">every agent hard-wired to one model</td><td><code>model_spec</code> in code and in base.yaml</td><td>removed: the turn's pick for the whole run, else the <code>default: true</code> host model</td></tr>
+</tbody></table>
+</section>
+
+<section id="s2">
+<h2>8 · One session</h2>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 940 230" role="img" aria-label="A session: up takes about 15 minutes and sets an expiry 4 hours ahead, forward opens the ports, you test, down deletes everything and checks nothing is left. If you forget, the reaper deletes the cluster after the expiry.">
+<defs><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+<g class="hv" data-tip="terraform apply → stores → gateway key → Secret → app&#10;scripts/aws/up.sh"><rect x="16" y="30" width="190" height="78" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="50" font-size="9.5" fill="var(--ink-faint)">1 · ~15 min</text><text x="28" y="70">stack.sh aws up</text><text x="28" y="90" font-size="9.5" fill="var(--ink-soft)">expiry = now + 4 h</text></g>
+<g class="hv" data-tip="api 8000, Grafana 3000&#10;scripts/aws/forward.sh"><rect x="246" y="30" width="190" height="78" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="258" y="50" font-size="9.5" fill="var(--ink-faint)">2</text><text x="258" y="70">aws forward</text><text x="258" y="90" font-size="9.5" fill="var(--ink-soft)">open localhost</text></g>
+<g class="hv" data-tip="sign in, connect Google + Jira again, chat, upload, Grafana&#10;aws extend 2 → 2 more hours"><rect x="476" y="30" width="190" height="78" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="488" y="50" font-size="9.5" fill="var(--ink-faint)">3</text><text x="488" y="70">test / demo</text><text x="488" y="90" font-size="9.5" fill="var(--ink-soft)">empty data each time</text></g>
+<g class="hv" data-tip="helm uninstall ×2 → terraform destroy → leftover check by tag&#10;scripts/aws/down.sh"><rect x="706" y="30" width="218" height="78" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="718" y="50" font-size="9.5" fill="var(--ink-faint)">4 · ~10–15 min</text><text x="718" y="70">stack.sh aws down</text><text x="718" y="90" font-size="9.5" fill="var(--ink-soft)">then: nothing left</text></g>
+<g class="hv" data-tip="Lambda: node group first, cluster next run, email&#10;the VPC left is free; next down cleans it"><rect x="476" y="146" width="448" height="60" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="4 3"/><text x="488" y="170">forgot? reaper deletes it at 4 h</text><text x="488" y="190" font-size="9.5" fill="var(--ink-soft)">costs at most ~$1.4 more, not $250 a month</text></g>
+</g>
+<g fill="none" stroke="var(--ink-faint)">
+<path d="M206 69 H246" marker-end="url(#ab)"/><path d="M436 69 H476" marker-end="url(#ab)"/><path d="M666 69 H706" marker-end="url(#ab)"/>
+<path d="M571 108 V146" marker-end="url(#ab)" stroke-dasharray="4 3"/>
+</g>
+</svg></div></figure>
+
+<h3 class="tbl-title">What down deletes, in order</h3>
+<table class="tbl"><thead><tr><th>Step</th><th>Does</th><th>Why in this order</th></tr></thead><tbody>
+<tr><td class="who">1</td><td><code>helm uninstall mycel</code>, <code>mycel-stores</code></td><td>pods release their network cards first</td></tr>
+<tr><td class="who">2</td><td><code>terraform destroy</code></td><td>node, cluster, VPC, roles</td></tr>
+<tr class="tone-gold"><td class="who">3</td><td>look for anything tagged <code>mycel-session</code></td><td>found → printed, fails loudly</td></tr>
+</tbody></table>
+</section>
+
+<section id="s3">
+<h2>9 · Cost</h2>
+<table class="tbl"><thead><tr><th>Item</th><th>Per hour</th><th>Note</th></tr></thead><tbody>
+<tr><td class="who">EKS control plane</td><td>$0.10</td><td>billed while the cluster exists, even with no node</td></tr>
+<tr><td class="who">EC2 4 vCPU / 16 GiB</td><td>~$0.19–0.23</td><td>exact type picked in 125</td></tr>
+<tr><td class="who">Public IP + 60 GB disk</td><td>~$0.012</td><td></td></tr>
+<tr class="tone-gold"><td class="who">Total</td><td>~$0.30–0.35</td><td>3 h ≈ $1 · 10 sessions ≈ $10 · credit $100</td></tr>
+<tr><td class="who">Bootstrap (bucket, budgets, Lambda)</td><td>~$0</td><td>inside the free allowance</td></tr>
+</tbody></table>
+<ul class="bul"><li>Estimates, not measured; read on the first bill</li><li>The $100 credit covers EKS, EC2, VPC, S3, Lambda and Budgets (checked on the eligible-services list, 2026-10-31)</li></ul>
+</section>
+
+<section id="s4">
+<h2>9b · Sizing</h2>
+<table class="tbl"><thead><tr><th>Group</th><th>CPU</th><th>Memory</th></tr></thead><tbody>
+<tr><td class="who">App, api at 250m</td><td>1.85</td><td>4.75 GiB</td></tr>
+<tr><td class="who">Stores</td><td>~0.6</td><td>~2.5 GiB</td></tr>
+<tr><td class="who">Monitoring</td><td>0.37</td><td>0.9 GiB</td></tr>
+<tr><td class="who">EKS system pods</td><td>~0.35</td><td>~0.4 GiB</td></tr>
+<tr class="tone-gold"><td class="who">Total / usable on the node</td><td>~3.2 / 3.9</td><td>~8.6 / 14.5 GiB</td></tr>
+<tr><td class="who">Measured on minikube, idle</td><td>~0.4</td><td>~2.3 GiB</td></tr>
+</tbody></table>
+<ul class="bul"><li>Requests are what a pod reserves; use is far lower at rest</li><li>ingest: ~200 Mi idle, 3–4 Gi while docling parses — measured on the first upload</li><li>EKS numbers in 126; next size is 8 vCPU / 32 GiB</li></ul>
+</section>
+
+<section id="s5">
+<h2>10 · Three batches</h2>
+<table class="tbl"><thead><tr><th>Batch</th><th>Builds</th><th>Proves</th><th>AWS cost</th></tr></thead><tbody>
+<tr class="tone-gold"><td class="who">124 ●</td><td>stores chart, one host per store, <code>values-aws.yaml</code>, <code>stores-up.sh</code></td><td>whole stack in a cluster, on minikube: pods up, browser smoke left</td><td>$0</td></tr>
+<tr><td class="who">125</td><td>Terraform: bootstrap (state, budgets, reaper) + session (VPC, EKS, node)</td><td>empty cluster up, reaped, down clean</td><td>~1–2 h</td></tr>
+<tr><td class="who">126</td><td><code>aws up · forward · extend · down · status</code>, leftover check</td><td>every flow on EKS, node measured</td><td>1 session</td></tr>
+</tbody></table>
+<h3 class="tbl-title">Before 125, in the AWS console — all done</h3>
+<table class="tbl"><thead><tr><th>Do</th><th>Result</th></tr></thead><tbody>
+<tr><td class="who">✓ MFA on root</td><td>root is put away</td></tr>
+<tr><td class="who">✓ IAM Identity Center, user <code>vuzle</code></td><td><code>AdministratorAccess</code>, 8 h sessions, AWS-owned key (free)</td></tr>
+<tr><td class="who">✓ <code>aws configure sso</code>, profile <code>mycel</code></td><td><code>aws sso login --profile mycel</code> when it expires</td></tr>
+<tr><td class="who">✓ Quota</td><td>5 vCPU on-demand: one 4-vCPU node fits</td></tr>
+<tr><td class="who">✓ Tools</td><td>aws 2.39, terraform 1.17, kubectl 1.31, helm 3.16</td></tr>
+<tr><td class="who">✓ Docker Hub token</td><td>read-only, in <code>.env</code></td></tr>
+</tbody></table>
+</section>
+
+<section id="s6">
+<h2>10b · Traps found in review</h2>
+<table class="tbl"><thead><tr><th>Trap</th><th>What would happen</th><th>Plan</th></tr></thead><tbody>
+<tr class="tone-gold"><td class="who">API open to your IP only</td><td>the node is not your IP: it never joins, cluster has 0 nodes</td><td>private endpoint on as well (free)</td></tr>
+<tr class="tone-gold"><td class="who">Docker Hub without login</td><td>10 pulls an hour per IP; a session needs 11 → pods stuck pulling</td><td>pull secret on all 17 pods ✓</td></tr>
+<tr><td class="who">EKS version too old</td><td>extended support: $0.60/h, not $0.10</td><td>pin a version in standard support</td></tr>
+<tr><td class="who">No public IP on the node</td><td>no NAT, so no internet, no images</td><td>subnets give one on launch</td></tr>
+<tr><td class="who">Expiry tag in Terraform</td><td>every apply puts it back; <code>extend</code> undone</td><td>set by the scripts</td></tr>
+<tr class="tone-gold"><td class="who"><code>&lt;SERVICE&gt;_PORT</code> injected into pods</td><td>migrate died: <code>rabbitmq_port</code> not a number</td><td>found on minikube, fixed ✓</td></tr>
+<tr><td class="who">NetworkPolicy, enforced for the first time</td><td>suspicion: blocks port-forward to the api</td><td>tried first in 126</td></tr>
+</tbody></table>
+</section>
+
+<section id="s7">
+<h2>10c · Left out on purpose</h2>
+<table class="tbl"><thead><tr><th>Not used</th><th>Because</th><th>Phase 2?</th></tr></thead><tbody>
+<tr><td class="who">Domain, ALB, HTTPS</td><td>only the owner uses it; localhost works for OAuth</td><td>yes, for others</td></tr>
+<tr><td class="who">NAT gateway</td><td>the largest avoidable cost</td><td>no</td></tr>
+<tr><td class="who">RDS, ElastiCache, Amazon MQ</td><td>containers are enough, data is thrown away</td><td>no</td></tr>
+<tr><td class="who">S3, ECR</td><td>MinIO and Docker Hub already work</td><td>optional</td></tr>
+<tr><td class="who">Disks for data (PVC)</td><td>nothing is kept between sessions</td><td>no</td></tr>
+<tr><td class="who">KMS key, control plane logs</td><td>both outlive a deleted cluster</td><td>no</td></tr>
+</tbody></table>
+</section>
+
+<section id="s8">
+<h2>10d · Phase 2, later</h2>
+<table class="tbl"><thead><tr><th>Add</th><th>For</th><th>Extra cost</th></tr></thead><tbody>
+<tr><td class="who">Domain, Route 53, ACM, ALB + its controller</td><td>others reach it by HTTPS</td><td>~$0.03/h · $0.50/month · domain ~$10–15/year</td></tr>
+<tr><td class="who">Callbacks for the domain, Google test users</td><td>others can sign in</td><td>$0</td></tr>
+<tr><td class="who">ALB limited by IP, allowed domains checked</td><td>the README says Mycel is not built to face the internet</td><td>$0</td></tr>
+<tr><td class="who"><code>down</code> waits for the ALB to go; reaper deletes it too</td><td>the controller makes it outside Terraform</td><td>$0</td></tr>
+<tr><td class="who">Optional: S3 by Pod Identity, ECR, deploy from CI</td><td>more AWS on the CV</td><td>cents</td></tr>
+</tbody></table>
+</section>
+
+<section id="files">
+<h2>11 · Every file</h2>
+<table class="tbl"><thead><tr><th>Part</th><th>File</th><th>Does</th></tr></thead><tbody><tr><td class="who">Plan</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/notes/flow/plan/e12-aws/123-hld-eks-one-node-stores-in-cluster-port-forward-session-lifecycle.md">notes/flow/plan/e12-aws/123-hld-eks-one-node-stores-in-cluster-port-forward-session-lifecycle.md</a></td><td>HLD 123: every decision and why</td></tr><tr><td class="who">Plan</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/notes/flow/plan/e12-aws/124-stores-chart-per-store-hosts-and-aws-values-proven-on-minikube.md">notes/flow/plan/e12-aws/124-stores-chart-per-store-hosts-and-aws-values-proven-on-minikube.md</a></td><td>batch 124: tasks, first run on minikube</td></tr><tr><td class="who">Plan</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/notes/flow/plan/e12-aws/125-terraform-bootstrap-state-budgets-reaper-and-session-vpc-eks-node.md">notes/flow/plan/e12-aws/125-terraform-bootstrap-state-budgets-reaper-and-session-vpc-eks-node.md</a></td><td>batch 125: Terraform</td></tr><tr><td class="who">Plan</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/notes/flow/plan/e12-aws/126-stack-sh-aws-up-forward-extend-down-leftover-check-and-full-smoke.md">notes/flow/plan/e12-aws/126-stack-sh-aws-up-forward-extend-down-leftover-check-and-full-smoke.md</a></td><td>batch 126: scripts, smoke on EKS</td></tr><tr><td class="who">App chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/values-aws.yaml">deploy/helm/mycel/values-aws.yaml</a></td><td>what differs on AWS: store names, 250m api, no ingress</td></tr><tr><td class="who">App chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/_helpers.tpl">deploy/helm/mycel/templates/_helpers.tpl</a></td><td>one host per store, the pull secret</td></tr><tr><td class="who">App chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/values.yaml">deploy/helm/mycel/values.yaml</a></td><td>defaults every place starts from</td></tr><tr><td class="who">Stores chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/values.yaml">deploy/helm/mycel-stores/values.yaml</a></td><td>images, memory, pull secret</td></tr><tr><td class="who">Stores chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/_helpers.tpl">deploy/helm/mycel-stores/templates/_helpers.tpl</a></td><td>one Deployment + Service per store</td></tr><tr><td class="who">Stores chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/postgres.yaml">deploy/helm/mycel-stores/templates/postgres.yaml</a></td><td>makes the litellm database on start</td></tr><tr><td class="who">Stores chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/litellm.yaml">deploy/helm/mycel-stores/templates/litellm.yaml</a></td><td>the gateway, keys from the Secret</td></tr><tr><td class="who">Stores chart</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/networkpolicy.yaml">deploy/helm/mycel-stores/templates/networkpolicy.yaml</a></td><td>only Mycel's pods reach a store</td></tr><tr><td class="who">Script</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/k8s/stores-up.sh">scripts/k8s/stores-up.sh</a></td><td>installs both charts in order</td></tr><tr><td class="who">Script</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/k8s/build.sh">scripts/k8s/build.sh</a></td><td>builds the two images into minikube</td></tr><tr><td class="who">Models</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/models.yaml">config/litellm/models.yaml</a></td><td>Gemini 3.5 Flash Lite, one entry per key</td></tr><tr><td class="who">Models</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/entrypoint.sh">config/litellm/entrypoint.sh</a></td><td>splits a comma list of keys</td></tr><tr><td class="who">Models</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/environments/base.yaml">config/environments/base.yaml</a></td><td>host_models: which model is the default</td></tr><tr><td class="who">Models</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/runner.py">src/mycel/agents/core/runner.py</a></td><td>source_of: the turn's model, else the default</td></tr><tr><td class="who">Deploy notes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/README.md">deploy/README.md</a></td><td>both ways to run on Kubernetes, the rules</td></tr></tbody></table>
+<h3 class="tbl-title">Read next</h3>
+<table class="tbl"><thead><tr><th>Page</th><th>For</th></tr></thead><tbody>
+<tr><td class="who"><a href="../overview/architecture.html">Architecture</a></td><td>what the app itself is made of; §Kubernetes for the chart rules</td></tr>
+<tr><td class="who"><a href="../operate/setup.html">First-time setup</a></td><td>Google and Jira OAuth apps, <code>.env</code>, models</td></tr>
+<tr><td class="who"><a href="../operate/run.html">Run and fix it</a></td><td>every <code>stack.sh</code> command, what to do when something breaks</td></tr>
+<tr><td class="who"><a href="../flows/model-cost.html">Model and cost</a></td><td>how a turn picks its model and what a call costs</td></tr>
+<tr><td class="who"><a href="../flows/observe.html">Traces, metrics, logs</a></td><td>Grafana, Prometheus, Loki, Langfuse</td></tr>
+</tbody></table>
+</section>
+
+<!-- pager --><nav class="pager"><a href="../flows/observe.html">‹ Traces, metrics, logs, events</a><a class="at" href="../index.html">5.5 · contents</a><a href="../change/add-plugin.html">Add a plugin ›</a></nav><!-- /pager -->
+<footer><span><a href="../index.html">Handbook</a> · <a href="../operate/run.html">Run and fix it</a> · <a href="../overview/architecture.html">Architecture</a></span><span class="mono">docs/plan/aws-phase-1.html</span></footer>
+</div><script src="../tip.js"></script></body>

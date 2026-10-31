@@ -3,7 +3,6 @@
 agents:
   # Overridden per agent in config/agents/<name>.yaml.
   defaults:
-    model_spec: cloud:claude-sonnet-5
     # The gateway drops it for models that reject sampling parameters.
     temperature: 0.0
     timeout_s: 60.0
@@ -40,12 +39,12 @@ settings:
   # What the model picker offers everyone. Each name must be a model_name in
   # config/litellm/models.yaml; exactly one is the default. doctor checks both.
   host_models:
-    - {name: claude-sonnet-5, label: Claude Sonnet 5, default: true}
+    - {name: gemini-3.5-flash-lite, label: Gemini 3.5 Flash Lite, default: true}
   # Hosts an own model may reach over plain http (e.g. a LAN Ollama); the rest need https.
   model_http_hosts: []
   # USD per million tokens [input, output] by gateway name. Unlisted models cost $0.
   model_prices_usd:
-    claude-sonnet-5: [2.00, 10.00]
+    gemini-3.5-flash-lite: [0.10, 0.40]
   job_ceiling_usd: 0.50
   # Per person per 24 hours; open jobs count at their ceiling. 0 turns it off.
   user_daily_usd: 5.00

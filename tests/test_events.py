@@ -217,7 +217,7 @@ class TestNestingThroughARealRun:
     async def test_a_delegated_run_nests_under_the_call_that_made_it(
         self, channel: Collector
     ) -> None:
-        settings = AgentSettings(model_spec="local:qwen3-4b")
+        settings = AgentSettings()
         deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
@@ -265,7 +265,7 @@ class TestNestingThroughARealRun:
         deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
-            settings=AgentSettings(model_spec="local:qwen3-4b"),
+            settings=AgentSettings(),
             events=channel,
         )
         agent = Agent(name="orchestrator", deps_type=MycelDeps, output_type=str)
@@ -283,7 +283,7 @@ class TestNestingThroughARealRun:
         deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
-            settings=AgentSettings(model_spec="local:qwen3-4b"),
+            settings=AgentSettings(),
             events=channel,
         )
         agent = Agent(name="orchestrator", deps_type=MycelDeps, output_type=str)

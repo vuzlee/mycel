@@ -29,6 +29,7 @@ parts:
       - [Outbox, queue/outbox.html, "Why a job is never lost between commit and publish", "queue · infra/postgres/repositories", [2, 3]]
       - [Idempotency, queue/idempotency.html, "Why a job delivered twice runs once", "queue · infra/redis", [2, 4]]
       - ["Traces, metrics, logs, events", flows/observe.html, "An answer is slow or wrong — where do I look?", "observability · events · doctor · deploy/monitoring", [2, 5]]
+      - ["On AWS (EKS), phase 1", plan/aws-phase-1.html, "How does Mycel run on AWS, and what does it cost?", "deploy/helm · scripts/k8s · deploy/aws", [2, 6]]
   - name: Change it
     pages:
       - [Add a plugin, change/add-plugin.html, "Add a provider people connect", "src/mycel/plugins/<key>/", [3, 2]]

@@ -61,6 +61,7 @@ spec:
         # Hash the provisioned files themselves: editing a dashboard must roll the pod,
         checksum/files: {{ printf "%s%s%s" (.Files.Get "files/datasources.yaml") (.Files.Get "files/dashboards.yaml") (.Files.Get "files/mycel.json") | sha256sum }}
     spec:
+      {{- include "mycel.pullSecrets" . | nindent 6 }}
       containers:
         - name: grafana
           image: {{ .Values.monitoring.grafana.image }}

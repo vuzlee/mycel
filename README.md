@@ -87,12 +87,12 @@ scripts/stack.sh k8s up                   # add `monitoring` as above
 minikube tunnel                           # then add mycel.local to /etc/hosts
 ```
 
-More in [deploy/](deploy/README.md).
+More in [deploy/](deploy/README.md). On AWS (EKS, planned): [docs/plan/aws-phase-1.html](docs/plan/aws-phase-1.html).
 </details>
 
 Open <http://localhost:8000/app> (or <http://mycel.local/app> on k8s) and sign in with
 Google or an emailed code. First time: create the Jira and Google OAuth apps, fill `.env`,
-copy `config/litellm/models.example.yaml`, then `scripts/stack.sh doctor` — steps in
+edit the models in `config/litellm/models.yaml`, then `scripts/stack.sh doctor` — steps in
 [docs/operate/setup.html](docs/operate/setup.html). Stop with `scripts/stack.sh <mode> down`.
 
 ## Development

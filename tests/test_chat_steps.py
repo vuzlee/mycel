@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from mycel.agents.core import runner
+from mycel.core.config import get_settings
 from mycel.core.principal import Principal
 from mycel.domains import chat, knowledge
 from mycel.events.event import RUN_FINISHED
@@ -118,7 +119,7 @@ async def test_an_answer_records_what_it_used(world: dict[str, Any]) -> None:
     await chat.run(_job(["web"]))
     usage = world["usage"][0]
     assert (usage.model_ref, usage.tokens_in, usage.tokens_out) == (
-        "host:claude-sonnet-5",
+        f"host:{get_settings().default_host_model.name}",
         700,
         200,
     )

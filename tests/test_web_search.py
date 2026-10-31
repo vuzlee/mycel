@@ -56,7 +56,7 @@ def _deps() -> MycelDeps:
     return MycelDeps(
         job_id="job-1",
         budget=JobBudget("job-1", Decimal("1.00")),
-        settings=AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000),
+        settings=AgentSettings(repeat_threshold=1_000_000),
     )
 
 

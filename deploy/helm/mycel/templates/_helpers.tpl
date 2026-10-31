@@ -54,18 +54,24 @@ envFrom:
 
 {{/*
 Store hosts, METRICS_HOST and a per-component pool as container `env:`, which outranks the
-Secret. Fails to render without externalStores.host.
+Secret. Each store has its own host, defaulting to externalStores.host: one machine on
+minikube, one Service per store in a cluster. Fails to render with neither.
 Usage: include "mycel.env" (dict "ctx" . "metrics" true "pool" .Values.api.dbPool)
 */}}
+{{- define "mycel.storeHost" -}}
+{{- $s := .ctx.Values.externalStores -}}
+{{- required (printf "externalStores.%s or externalStores.host must name where it runs" .store) (index $s .store | default $s.host) -}}
+{{- end -}}
+
 {{- define "mycel.env" -}}
-{{- $host := required "externalStores.host must name where the stores run" .ctx.Values.externalStores.host -}}
+{{- $s := .ctx.Values.externalStores -}}
 env:
-  - {name: POSTGRES_HOST, value: {{ $host | quote }}}
-  - {name: POSTGRES_PORT, value: "5433"}
-  - {name: RABBITMQ_HOST, value: {{ $host | quote }}}
-  - {name: QDRANT_URL, value: {{ printf "http://%s:6333" $host | quote }}}
-  - {name: S3_ENDPOINT_URL, value: {{ printf "http://%s:9000" $host | quote }}}
-  - {name: LITELLM_BASE_URL, value: {{ printf "http://%s:4000" $host | quote }}}
+  - {name: POSTGRES_HOST, value: {{ include "mycel.storeHost" (dict "ctx" .ctx "store" "postgres") | quote }}}
+  - {name: POSTGRES_PORT, value: {{ $s.postgresPort | quote }}}
+  - {name: RABBITMQ_HOST, value: {{ include "mycel.storeHost" (dict "ctx" .ctx "store" "rabbitmq") | quote }}}
+  - {name: QDRANT_URL, value: {{ printf "http://%s:6333" (include "mycel.storeHost" (dict "ctx" .ctx "store" "qdrant")) | quote }}}
+  - {name: S3_ENDPOINT_URL, value: {{ printf "http://%s:9000" (include "mycel.storeHost" (dict "ctx" .ctx "store" "minio")) | quote }}}
+  - {name: LITELLM_BASE_URL, value: {{ printf "http://%s:4000" (include "mycel.storeHost" (dict "ctx" .ctx "store" "litellm")) | quote }}}
   {{- if .metrics }}
   - {name: METRICS_HOST, value: "0.0.0.0"}
   {{- end }}
@@ -74,4 +80,12 @@ env:
   - {name: DB_MAX_OVERFLOW, value: {{ .overflow | quote }}}
   {{- end }}
 {{ include "mycel.envFrom" .ctx }}
+{{- end -}}
+
+{{/* The pull secret, when one is set. Every pod uses it, so all pulls share one login. */}}
+{{- define "mycel.pullSecrets" -}}
+{{- with .Values.image.pullSecret }}
+imagePullSecrets:
+  - name: {{ . }}
+{{- end }}
 {{- end -}}

@@ -62,6 +62,7 @@ spec:
       annotations:
         checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
     spec:
+      {{- include "mycel.pullSecrets" . | nindent 6 }}
       containers:
         - name: alertmanager
           image: {{ .Values.monitoring.alertmanager.image }}

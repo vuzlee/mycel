@@ -15,6 +15,7 @@ from pydantic_ai.models import Model
 from mycel.agents.core.emit import RunEmitter
 from mycel.agents.core.exceptions import translate_agent_errors
 from mycel.agents.core.model_source import GatewayModel, ModelSource
+from mycel.core.config import get_settings
 from mycel.core.logging import get_logger
 from mycel.events.event import RUN_FINISHED, RUN_STARTED
 from mycel.llm.budget import BudgetExceeded
@@ -106,8 +107,8 @@ def _record_usage(
 
 
 def source_of(deps: "MycelDeps", cfg: "AgentSettings") -> ModelSource:
-    """The turn's model, or this agent's own `model_spec` when no turn picked one."""
-    return deps.model or GatewayModel(cfg.model_spec)
+    """The turn's model, or the host default when no turn picked one."""
+    return deps.model or GatewayModel(f"cloud:{get_settings().default_host_model.name}")
 
 
 async def delegate(

@@ -27,7 +27,7 @@ def config_dir(tmp_path: Path) -> Path:
         "  workers: 4\n"
         "agents:\n"
         "  defaults:\n"
-        "    model_spec: cloud:gemini-2.5-flash\n"
+        "    temperature: 0.5\n"
         "    request_limit: 12\n"
         "    tool_calls_limit: 20\n",
         encoding="utf-8",
@@ -37,7 +37,7 @@ def config_dir(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (tmp_path / AGENTS_SUBDIR / "analyst.yaml").write_text(
-        "model_spec: cloud:gemini-3.8-flash\ntool_calls_limit: 30\n", encoding="utf-8"
+        "timeout_s: 90.0\ntool_calls_limit: 30\n", encoding="utf-8"
     )
     return tmp_path
 
@@ -51,10 +51,10 @@ class TestLayering:
         assert load_config("dev", config_dir)["etl"]["workers"] == 4
 
     def test_it_merges_at_every_depth(self, config_dir: Path) -> None:
-        """Two levels down, where a top-level merge would drop `model_spec` entirely."""
+        """Two levels down, where a top-level merge would drop `temperature` entirely."""
         defaults = load_config("dev", config_dir)["agents"]["defaults"]
         assert defaults["request_limit"] == 8
-        assert defaults["model_spec"] == "cloud:gemini-2.5-flash"
+        assert defaults["temperature"] == 0.5
 
     def test_an_environment_with_no_overlay_is_fine(self, config_dir: Path) -> None:
         """Not every environment differs from base."""
@@ -86,14 +86,14 @@ class TestBadFiles:
 class TestAgentSettings:
     def test_all_three_layers_show_up(self, config_dir: Path) -> None:
         cfg = AgentSettings.from_config("analyst", env="dev", config_dir=config_dir)
-        assert cfg.model_spec == "cloud:gemini-3.8-flash"  # the agent's own file
+        assert cfg.timeout_s == 90.0  # the agent's own file
         assert cfg.request_limit == 8  # dev.yaml
         assert cfg.tool_calls_limit == 30  # the agent's file beating base.yaml
-        assert cfg.temperature == 0.0  # the dataclass default, unset everywhere
+        assert cfg.repeat_threshold == 2  # the dataclass default, unset everywhere
 
     def test_an_agent_with_no_file_gets_the_defaults(self, config_dir: Path) -> None:
         cfg = AgentSettings.from_config("researcher", env="dev", config_dir=config_dir)
-        assert cfg.model_spec == "cloud:gemini-2.5-flash"
+        assert cfg.temperature == 0.5
         assert cfg.tool_calls_limit == 20
 
     def test_an_unknown_key_fails_with_the_real_names(self, config_dir: Path) -> None:
@@ -110,11 +110,11 @@ class TestTheRealConfigDir:
 
     def test_the_committed_config_loads(self) -> None:
         for env in ("dev", "prod"):
-            assert load_config(env)["agents"]["defaults"]["model_spec"]
+            assert load_config(env)["agents"]["defaults"]
 
     def test_the_analyst_file_is_valid(self) -> None:
         cfg = AgentSettings.from_config("analyst", env="prod")
-        assert cfg.model_spec.startswith("cloud:")  # the shared default, not an override
+        assert cfg.request_limit > 0
 
     def test_every_agent_file_parses(self) -> None:
         for path in sorted((CONFIG_DIR / AGENTS_SUBDIR).glob("*.yaml")):

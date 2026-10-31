@@ -1278,7 +1278,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr><td class="who">worker, scheduler, ingest probes</td><td>liveness on <code>/metrics</code>, no readiness</td><td>they serve no requests</td></tr>
         <tr><td class="who">worker replicas</td><td>any number</td><td>RabbitMQ gives each message to one consumer</td></tr>
         <tr><td class="who">scheduler replicas</td><td>1, <code>Recreate</code></td><td>RollingUpdate would run two for a moment</td></tr>
-        <tr><td class="who">stores</td><td>outside the cluster, compose on the host</td><td>StatefulSet + PVC is the hard part, proves nothing here</td></tr>
+        <tr><td class="who">stores</td><td><code>k8s up</code>: compose on the host · <code>stores-up</code> / EKS: chart <code>mycel-stores</code>, <code>emptyDir</code></td><td>not in the app chart: its migrate hook runs before anything else in its release</td></tr>
         <tr class="tone-gold"><td class="who">store hosts</td><td>set by the chart, never from <code>.env</code></td><td><code>localhost</code> in a pod is that pod</td></tr>
         <tr><td class="who">migrations</td><td>hook <code>pre-install,pre-upgrade</code></td><td>first install migrates too; a failed hook keeps old pods serving</td></tr>
         <tr><td class="who">secrets</td><td>chart names the Secret, renders none</td><td>created once: <code>kubectl create secret generic mycel-secrets --from-env-file=.env</code></td></tr>

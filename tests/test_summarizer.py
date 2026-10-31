@@ -1,6 +1,5 @@
 """The summarizer, and the prompt it is given."""
 
-from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -23,7 +22,7 @@ from mycel.services.gather import ProgressWindow
 
 pytestmark = pytest.mark.anyio
 
-LOCAL = AgentSettings(model_spec="local:qwen3-4b")
+LOCAL = AgentSettings()
 PROJECT = "MYC"
 
 
@@ -180,7 +179,7 @@ class TestTheConfiguredLimit:
 
     @pytest.fixture
     def configured(self) -> AgentSettings:
-        cfg = replace(AgentSettings.from_config(Summarizer.name), model_spec="local:qwen3-4b")
+        cfg = AgentSettings.from_config(Summarizer.name)
         assert cfg.tool_calls_limit == 0, "this test is about the zero"
         return cfg
 

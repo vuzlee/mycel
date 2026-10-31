@@ -99,6 +99,7 @@ spec:
       annotations:
         checksum/config: {{ toYaml .Values.monitoring | sha256sum }}
     spec:
+      {{- include "mycel.pullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "mycel.fullname" . }}-alloy
       containers:
         - name: alloy

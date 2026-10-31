@@ -56,9 +56,8 @@ ingest:
     requests: {cpu: 500m, memory: 2Gi}
     limits: {memory: 5Gi}
 
-# The stores stay outside the cluster: Postgres, RabbitMQ, Redis, Qdrant, MinIO and the
-# LiteLLM gateway run on the host under docker-compose. StatefulSet + PVC is the painful part of Kubernetes and adds nothing to
-# what this chart is meant to prove.
+# The stores are not in this chart. On minikube they run on the host under docker-compose;
+# in a cluster (values-aws.yaml) they are release mycel-stores, one Service each.
 #
 # `host` is the address the pods use to reach them. It is EMPTY here on purpose: inside a
 # pod `localhost` is that pod, so a DATABASE_URL copied straight from .env looks perfectly
@@ -66,6 +65,14 @@ ingest:
 # what the host is — values-minikube.yaml uses host.minikube.internal.
 externalStores:
   host: ""
+  # 5433 is compose's port on the host; a Postgres Service in the cluster listens on 5432.
+  postgresPort: 5433
+  # One host per store, each falling back to `host`. In a cluster: the Service names.
+  postgres: ""
+  rabbitmq: ""
+  qdrant: ""
+  minio: ""
+  litellm: ""
 
 # Values that are not keys. Anything that unlocks something lives in the Secret instead;
 # see secret.yaml for the split and why a URL counts as a key.

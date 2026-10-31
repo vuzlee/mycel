@@ -1,0 +1,18 @@
+{{/* Two Redis servers, the flags compose gives them: no disk, a memory cap, its own eviction rule. */}}
+{{- range $name, $v := dict "redis" .Values.redis "redis-cache" .Values.redisCache }}
+{{- $c := dict "ctx" $ "name" $name }}
+---
+{{ include "stores.deploymentHead" $c }}
+      containers:
+        - name: redis
+          image: {{ $v.image }}
+          args: ["--save", "", "--appendonly", "no", "--maxmemory", {{ $v.maxmemory | quote }}, "--maxmemory-policy", {{ $v.policy | quote }}]
+          ports: [{name: redis, containerPort: 6379}]
+          readinessProbe:
+            exec: {command: [redis-cli, ping]}
+            periodSeconds: 5
+          resources:
+            {{- toYaml $v.resources | nindent 12 }}
+---
+{{ include "stores.service" (merge (dict "ports" (list (list "redis" 6379))) $c) }}
+{{- end }}

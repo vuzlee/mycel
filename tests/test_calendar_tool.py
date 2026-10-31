@@ -77,7 +77,7 @@ def _ctx(principal: Principal | None = ASKER) -> Any:
         deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
-            settings=AgentSettings(model_spec="local:qwen3-4b"),
+            settings=AgentSettings(),
             principal=principal,
             # The asker's zone, as their browser sent it.
             tz=ZoneInfo("Asia/Bangkok"),

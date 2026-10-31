@@ -24,8 +24,8 @@ class MycelDeps:
     #: Chips picked this turn. `None` keeps every tool; an empty set keeps none.
     chips: "frozenset[Chip] | None" = None
 
-    #: The model the turn picked; every agent of the run calls it. `None` lets each agent
-    #: run on its own `model_spec` (a smoke script, an eval of one agent).
+    #: The model the turn picked; every agent of the run calls it. `None` is the host
+    #: default from `host_models` (a smoke script, an eval of one agent).
     model: ModelSource | None = None
 
     #: The asker's zone, from their browser; what "now", "tonight" and a booking mean.

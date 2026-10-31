@@ -34,6 +34,9 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
+      # Off: a Service named rabbitmq would inject RABBITMQ_PORT=tcp://...:5672, which
+      # Settings reads as the port and fails to parse. The app finds stores by name.
+      enableServiceLinks: false
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}

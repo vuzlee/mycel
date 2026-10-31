@@ -9,6 +9,7 @@ tables:
       - ["dev", "`scripts/stack.sh dev up` · `down` · `status` · `logs <name>`", "app on your machine, stores in docker compose"]
       - ["compose", "`scripts/stack.sh compose up [monitoring]`", "everything in containers"]
       - ["k8s", "`scripts/stack.sh k8s build` · `up` · `secret`", "the Helm chart on minikube; stores stay on the host"]
+      - ["k8s, stores inside", "`scripts/stack.sh k8s build` · `stores-up`", "both charts on minikube with `values-aws.yaml`; what EKS will run (AWS phase 1)"]
       - ["first time", "`docs/operate/setup.html`", "OAuth apps, `.env`, gateway key"]
   - title: Everyday commands
     head: [Command, Does]
@@ -30,8 +31,10 @@ tables:
       - ["document stuck on parsing", "ingest worker not running", "`scripts/stack.sh dev logs ingest`", "start it; the watchdog fails it after 10 min"]
       - ["signed out unexpectedly", "14 days without use, or the domain was removed", "`REGISTRATION_ALLOWED_DOMAINS`", "sign in again"]
       - ["Connect button missing", "plugin client not in `.env`", "doctor: PLUGINS group", "set `<KEY>_CLIENT_ID` / `_SECRET`"]
+      - ["a pod dies at start: `rabbitmq_port` not an integer", "a Service injected `RABBITMQ_PORT=tcp://…`", "`kubectl logs <pod>`", "`enableServiceLinks: false` on the pod (already set in both charts)"]
       - ["docs figure looks wrong", "code changed since the figure", "`uv run python docs/tools/check.py`", "fix the YAML, run `page.py`"]
 related:
   - [Architecture, ../overview/architecture.html]
   - [Job failures, ../flows/job-failures.html]
   - ["Traces, metrics, logs, events", ../flows/observe.html]
+  - ["AWS phase 1 plan", ../plan/aws-phase-1.html]

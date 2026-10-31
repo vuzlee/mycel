@@ -22,7 +22,7 @@ from mycel.llm.budget import BudgetExceeded, JobBudget
 
 pytestmark = pytest.mark.anyio
 
-LOCAL = AgentSettings(model_spec="local:qwen3-4b")
+LOCAL = AgentSettings()
 
 
 @asynccontextmanager
@@ -32,7 +32,7 @@ async def _null_session() -> AsyncIterator[None]:
 
 
 #: The specialists are delegated to on every step, which is the pattern guards.py stops.
-UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000)
+UNGUARDED = AgentSettings(repeat_threshold=1_000_000)
 
 
 @pytest.fixture

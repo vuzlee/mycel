@@ -12,12 +12,14 @@ from pydantic_ai.usage import RequestUsage
 import mycel.agents.core.runner as runner
 from mycel.agents.core.deps import MycelDeps
 from mycel.agents.core.exceptions import RunawayStopped
+from mycel.agents.core.model_source import GatewayModel
 from mycel.agents.core.settings import AgentSettings
+from mycel.core.config import get_settings
 from mycel.llm.budget import BudgetExceeded, JobBudget
 
 pytestmark = pytest.mark.anyio
 
-LOCAL = AgentSettings(model_spec="local:qwen3-4b")
+LOCAL = AgentSettings()
 
 
 def _deps(ceiling: str = "1.00", settings: AgentSettings = LOCAL) -> MycelDeps:
@@ -78,7 +80,7 @@ class TestCharging:
 class TestStoppedRunsAreStillCharged:
     async def test_a_runaway_run_records_what_it_spent(self) -> None:
         """The reason runner.run uses iter() rather than run()."""
-        settings = AgentSettings(model_spec="local:qwen3-4b", request_limit=3)
+        settings = AgentSettings(request_limit=3)
         deps = _deps(settings=settings)
 
         def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -137,7 +139,7 @@ class TestDelegation:
 
     async def test_a_delegated_run_is_limited_by_its_own_config(self) -> None:
         """A delegated run given no `usage_limits` would fall to pydantic-ai's defaults."""
-        deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=3))
+        deps = _deps(settings=AgentSettings(tool_calls_limit=3))
         child = Agent(deps_type=MycelDeps, output_type=str)
         parent = Agent(deps_type=MycelDeps, output_type=str)
         queries: list[str] = []
@@ -178,8 +180,8 @@ class TestDelegation:
 
     async def test_a_delegate_limit_is_not_spent_by_its_caller(self) -> None:
         """The counters are the caller's."""
-        CHILD = AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=2)
-        deps = _deps(settings=AgentSettings(model_spec="local:qwen3-4b", tool_calls_limit=20))
+        CHILD = AgentSettings(tool_calls_limit=2)
+        deps = _deps(settings=AgentSettings(tool_calls_limit=20))
         child = Agent(deps_type=MycelDeps, output_type=str)
         parent = Agent(deps_type=MycelDeps, output_type=str)
         reads: list[str] = []
@@ -304,7 +306,7 @@ class TestBookkeepingNeverMasks:
         deps = MycelDeps(
             job_id="job-1",
             budget=Overdrawing("job-1", Decimal("1.00")),
-            settings=AgentSettings(model_spec="local:x", request_limit=2),
+            settings=AgentSettings(request_limit=2),
         )
         agent = Agent(deps_type=MycelDeps, output_type=str)
 
@@ -323,3 +325,16 @@ class TestBookkeepingNeverMasks:
                 await runner.run(agent, "go", deps)
 
         assert deps.budget.requests == 2, "the spend still has to be recorded"
+
+
+class TestWhichModel:
+    """One source: the turn's pick for every agent of the run, else the host default."""
+
+    def test_no_pick_is_the_host_default(self) -> None:
+        source = runner.source_of(_deps(), LOCAL)
+        assert source.name == f"cloud:{get_settings().default_host_model.name}"
+
+    def test_the_turns_pick_wins(self) -> None:
+        deps = _deps()
+        deps.model = GatewayModel("cloud:picked")
+        assert runner.source_of(deps, LOCAL).name == "cloud:picked"

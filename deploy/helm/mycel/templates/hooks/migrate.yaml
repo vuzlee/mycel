@@ -29,6 +29,9 @@ spec:
         {{- include "mycel.labels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
+      # Off: a Service named rabbitmq would inject RABBITMQ_PORT=tcp://...:5672, which
+      # Settings reads as the port and fails to parse. The app finds stores by name.
+      enableServiceLinks: false
       restartPolicy: Never
       {{- if .Values.image.pullSecret }}
       imagePullSecrets:

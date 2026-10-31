@@ -26,7 +26,7 @@ class TestBuild:
         assert build("analyst") is not build("analyst")
 
     def test_settings_reach_the_agent(self) -> None:
-        agent = build("analyst", AgentSettings(model_spec="local:qwen3-4b"))
+        agent = build("analyst", AgentSettings())
         assert isinstance(agent, Agent)
 
     def test_unknown_name_lists_what_exists(self) -> None:

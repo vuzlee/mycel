@@ -5,6 +5,7 @@
 #   scripts/stack.sh dev up|down|status|logs <name>      app on the host, stores in compose
 #   scripts/stack.sh compose up [monitoring]|down|status  everything in containers
 #   scripts/stack.sh k8s build|up [monitoring]|down [--all]|status|secret   chart on minikube
+#   scripts/stack.sh k8s stores-up [--images <user>] [--tag <sha>]       stores in the cluster too (AWS)
 #
 #   scripts/stack.sh doctor             what is configured, broken, or off
 #   scripts/stack.sh sync [--refetch]   one Jira sync now

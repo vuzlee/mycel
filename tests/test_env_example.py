@@ -11,7 +11,6 @@ from mycel.doctor.declared import declared, dev_values
 #: Read by containers, not by Settings.
 NOT_SETTINGS = {
     "DEFAULT_MODEL_API_KEY",
-    "DEFAULT_MODEL_BASE_URL",
     "GRAFANA_ADMIN_USER",
     "GRAFANA_ADMIN_PASSWORD",
 }

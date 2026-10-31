@@ -20,7 +20,7 @@ tables:
   - title: 3 · Models
     head: [Step, Do]
     rows:
-      - ["copy", "`config/litellm/models.example.yaml` → `config/litellm/models.yaml` (not tracked); keep the providers you have"]
+      - ["edit", "`config/litellm/models.yaml` (in git, no keys); keep the providers you have"]
       - ["name", "each `model_name` is what `config/agents/*.yaml` asks for as `cloud:<model_name>`"]
       - ["keys", "put the keys it names in `.env`"]
   - title: 4 · The rest of .env
@@ -49,3 +49,4 @@ related:
   - [Run and fix it, run.html]
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
+  - ["AWS phase 1 plan", ../plan/aws-phase-1.html]

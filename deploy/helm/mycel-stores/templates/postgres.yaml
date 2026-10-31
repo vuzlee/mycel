@@ -1,0 +1,39 @@
+{{/*
+Postgres. The init script makes the `litellm` database that the gateway keeps its keys in;
+it runs only on an empty data directory, which with emptyDir is every start.
+*/}}
+{{- $c := dict "ctx" . "name" "postgres" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  labels:
+    {{- include "stores.labels" $c | nindent 4 }}
+data:
+  litellm.sql: "CREATE DATABASE litellm;"
+---
+{{ include "stores.deploymentHead" $c }}
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - {name: POSTGRES_USER, value: {{ .Values.postgres.user | quote }}}
+            - {name: POSTGRES_DB, value: {{ .Values.postgres.db | quote }}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.secret.name }}, key: POSTGRES_PASSWORD}}
+            # A subdirectory: initdb refuses a mount point that holds lost+found.
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          ports: [{name: pg, containerPort: 5432}]
+          readinessProbe:
+            exec: {command: [pg_isready, -U, {{ .Values.postgres.user | quote }}]}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: init, mountPath: /docker-entrypoint-initdb.d}
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+      volumes:
+        - {name: data, emptyDir: {}}
+        - {name: init, configMap: {name: postgres-init}}
+---
+{{ include "stores.service" (merge (dict "ports" (list (list "pg" 5432))) $c) }}

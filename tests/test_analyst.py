@@ -25,10 +25,10 @@ from mycel.llm.budget import JobBudget
 
 pytestmark = pytest.mark.anyio
 
-LOCAL = AgentSettings(model_spec="local:qwen3-4b")
+LOCAL = AgentSettings()
 
 # TestModel repeats placeholder arguments every step, which trips the loop guard.
-UNGUARDED = AgentSettings(model_spec="local:qwen3-4b", repeat_threshold=1_000_000)
+UNGUARDED = AgentSettings(repeat_threshold=1_000_000)
 
 
 @pytest.fixture

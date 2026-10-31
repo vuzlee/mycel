@@ -3,7 +3,7 @@ title: "Model and cost: a turn picks a host or own model, every call is priced, 
 page:
   eyebrow: Flow
   title: Model and cost
-  lede: ["Each turn picks one model: a host model or the person's own", "Every call is priced; a job stops at $0.50"]
+  lede: ["Each turn picks one model, and every agent of the run calls it", "Every call is priced; a job stops at $0.50"]
 lanes: [model, turn, stores]
 boxes:
   - {id: svcmodels, lane: model,  col: 0, file: src/mycel/services/model_catalog.py,              label: services/model_catalog.py, role: "host models, person's picks"}
@@ -32,6 +32,7 @@ notes:
   - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens; cached input at the provider's cache rate"]
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
   - ["own models", "called direct, priced by the same table, not capped by the gateway"]
+  - ["one model a turn", "every agent of the run calls the turn's pick; no pick = `default: true` in `host_models`"]
 failures:
   - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
   - ["ceiling reached mid-run", "run stops as overdrawn", "src/mycel/agents/core/runner.py"]

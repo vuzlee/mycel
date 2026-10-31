@@ -35,7 +35,7 @@ class _Ctx:
         self.deps = MycelDeps(
             job_id="job-1",
             budget=JobBudget("job-1", Decimal("1.00")),
-            settings=AgentSettings(model_spec="local:qwen3-4b", total_tokens_limit=CAP),
+            settings=AgentSettings(total_tokens_limit=CAP),
         )
         self.usage = RunUsage(input_tokens=spent)
         self.model = FunctionModel(_summarise)
@@ -79,6 +79,6 @@ async def test_a_short_run_is_left_alone() -> None:
 
 async def test_no_cap_means_no_compaction() -> None:
     ctx: Any = _Ctx(spent=10_000)
-    ctx.deps.settings = AgentSettings(model_spec="local:qwen3-4b")
+    ctx.deps.settings = AgentSettings()
     history = _history(5)
     assert await compact(ctx, history) == history

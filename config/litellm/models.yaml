@@ -1,0 +1,18 @@
+# This deployment's models.
+model_list:
+  # Gemini 3.5 Flash Lite, one deployment per key so LiteLLM spreads load and cools down a
+  # key that is out of quota. DEFAULT_MODEL_API_KEY=a,b in .env; entrypoint.sh splits it
+  # into DEFAULT_MODEL_API_KEY_1, _2. A third key needs a third entry.
+  - model_name: gemini-3.5-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/DEFAULT_MODEL_API_KEY_1
+  - model_name: gemini-3.5-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/DEFAULT_MODEL_API_KEY_2
+
+  # Local vLLM is not listed: the local-llm profile is off and no agent names it. To use
+  # it, start that profile and add:
+  #   - model_name: qwen3-4b
+  #     litellm_params: {model: hosted_vllm/Qwen/Qwen2.5-3B-Instruct-AWQ, api_base: http://vllm:8000/v1}

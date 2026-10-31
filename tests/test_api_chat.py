@@ -279,7 +279,7 @@ class TestCollectingAnAnswer:
                 status="done",
                 answer=KEPT_ANSWER,
                 spent_usd="0.01",
-                model_ref="host:claude-sonnet-5",
+                model_ref=f"host:{get_settings().default_host_model.name}",
                 tokens_in=7100,
                 tokens_out=1800,
                 duration_ms=3420,
@@ -288,7 +288,7 @@ class TestCollectingAnAnswer:
         )
         body = client.get("/chat/job-abc").json()
 
-        assert body["model_label"] == "Claude Sonnet 5"
+        assert body["model_label"] == get_settings().default_host_model.label
         assert (body["tokens_in"], body["tokens_out"], body["duration_ms"]) == (7100, 1800, 3420)
         assert body["created_at"] is not None
 
