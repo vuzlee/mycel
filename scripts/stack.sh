@@ -6,6 +6,7 @@
 #   scripts/stack.sh compose up [monitoring]|down|status  everything in containers
 #   scripts/stack.sh k8s build|up [monitoring]|down [--all]|status|secret   chart on minikube
 #   scripts/stack.sh k8s stores-up [--images <user>] [--tag <sha>]       stores in the cluster too (AWS)
+#   scripts/stack.sh aws up [--tag <sha>]|forward|extend <h>|down|status [--bill]   a session on EKS
 #
 #   scripts/stack.sh doctor             what is configured, broken, or off
 #   scripts/stack.sh sync [--refetch]   one Jira sync now
@@ -19,7 +20,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-  sed -n '3,15p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
+  sed -n '3,16p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
   exit "${1:-1}"
 }
 
@@ -33,7 +34,7 @@ mode=${1:-dev}
 shift || true
 
 case "$mode" in
-  dev|compose|k8s)
+  dev|compose|k8s|aws)
     # `up` by default, so `stack.sh dev` and `stack.sh k8s` do the obvious thing.
     action=${1:-up}
     shift || true

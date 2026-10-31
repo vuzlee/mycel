@@ -13,6 +13,7 @@ coverage.xml
 
 # Environment - never commit
 .env
+.env.aws
 .env.bak.*
 
 # Local assistant/editor state, not part of the project

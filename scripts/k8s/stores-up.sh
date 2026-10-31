@@ -32,7 +32,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-env_value() { sed -n "s/^$1=//p" "$ROOT/.env" | tail -1; }
+# On EKS `aws up` passes .env with .env.aws laid over it.
+ENV_FILE=${ENV_FILE:-$ROOT/.env}
+env_value() { sed -n "s/^$1=//p" "$ENV_FILE" | tail -1; }
 
 # --- 0. one Docker Hub login for every pull
 pull=""
@@ -48,7 +50,7 @@ fi
 
 # --- 1. what the stores read
 log "stores Secret and LiteLLM config"
-kubectl create secret generic mycel-stores-secrets --from-env-file="$ROOT/.env" \
+kubectl create secret generic mycel-stores-secrets --from-env-file="$ENV_FILE" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 kubectl create configmap mycel-litellm-config --from-file="$ROOT/config/litellm/" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
@@ -88,7 +90,7 @@ tmp=$(mktemp)
 chmod 600 "$tmp"
 trap 'rm -f "$tmp"; kill $forward 2>/dev/null || true' EXIT
 grep -vE '^(LITELLM_MASTER_KEY|LITELLM_API_KEY|REDIS_URL|REDIS_CACHE_URL|DEFAULT_MODEL_API_KEY|DOCKERHUB_[A-Z]+)=' \
-  "$ROOT/.env" > "$tmp"
+  "$ENV_FILE" > "$tmp"
 {
   echo "LITELLM_API_KEY=$key"
   echo "REDIS_URL=redis://redis:6379/0"
