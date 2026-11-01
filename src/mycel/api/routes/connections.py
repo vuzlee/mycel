@@ -139,6 +139,6 @@ async def _finish(
 
 
 def _back(outcome: str) -> RedirectResponse:
-    """Back to the app, carrying what happened."""
+    """Back to the app with Settings open on Accounts, where the outcome shows."""
     base = get_settings().public_base_url.rstrip("/")
-    return RedirectResponse(f"{base}/app/home?{outcome}")
+    return RedirectResponse(f"{base}/app/?settings=accounts&{outcome}")

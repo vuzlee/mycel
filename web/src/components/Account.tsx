@@ -39,6 +39,12 @@ export function Account({ where }: Props) {
       setPanel("settings");
     };
     window.addEventListener(OPEN_SETTINGS, open);
+    // Back from a provider's consent page: `?settings=accounts` opens where the result shows.
+    const asked = new URLSearchParams(window.location.search).get("settings");
+    if (asked) {
+      setSection(asked);
+      setPanel("settings");
+    }
     return () => window.removeEventListener(OPEN_SETTINGS, open);
   }, [where]);
 

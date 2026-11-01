@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from asyncpg.exceptions import TooManyConnectionsError
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import TimeoutError as PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -129,6 +129,11 @@ def _mount_web(app: FastAPI) -> None:
         return
 
     app.mount("/app", _SinglePage(directory=WEB_DIST, html=True), name="web")
+
+    @app.get("/", include_in_schema=False)
+    async def front_door() -> RedirectResponse:
+        """The bare domain is what people type; the app lives under /app."""
+        return RedirectResponse("/app/")
 
 
 def _install_error_handlers(app: FastAPI) -> None:

@@ -668,6 +668,7 @@ class TestTheGoogleRoutesOverHttp:
 
         assert response.status_code == 307
         assert "google_error=access_denied" in response.headers["location"]
+        assert "/app/?settings=accounts&" in response.headers["location"]
 
     def test_a_callback_with_nothing_in_it_still_redirects(self, client: TestClient) -> None:
         response = client.get("/auth/google/callback", follow_redirects=False)

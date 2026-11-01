@@ -82,6 +82,13 @@ class TestTheSinglePageApp:
         assert "text/html" in response.headers["content-type"]
 
     @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
+    def test_the_bare_domain_opens_the_app(self, client: TestClient) -> None:
+        response = client.get("/", follow_redirects=False)
+
+        assert response.status_code == 307
+        assert response.headers["location"] == "/app/"
+
+    @pytest.mark.skipif(not WEB_DIST.is_dir(), reason="web/dist not built")
     def test_a_missing_asset_is_still_missing(self, client: TestClient) -> None:
         """HTML in place of a missing `.js` hides a broken build behind a syntax error."""
         assert client.get("/app/assets/nope.js").status_code == 404
