@@ -50,3 +50,11 @@ related:
   - [Architecture, ../overview/architecture.html]
   - [Upload a document, upload.html]
   - [Jira sync, jira-sync.html]
+words:
+  - ["job", "a unit of work on the queue"]
+  - ["outbox", "a table row written with the job, sent to the queue later; a crash cannot lose it"]
+  - ["RabbitMQ", "the message queue the workers read"]
+  - ["ack · reject", "tell the queue a job is done · failed"]
+  - ["retry queue", "holds a failed job for a delay, then sends it back"]
+  - ["dlq", "dead-letter queue: where a job parks after its last retry"]
+  - ["FINAL · TRANSIENT", "a failure retrying cannot fix · one it may"]

@@ -82,6 +82,8 @@ def flows() -> list[str]:
             if "/" in f and not (ROOT / f.split(":")[0]).exists():
                 misses.append(f"{y.name}: no file {f}")
         misses += [f"{y.name}: {m}" for m in env_keys(y)]
+        if "page" in spec and not spec.get("words"):
+            misses.append(f"{y.name}: no words: list, a fresher meets terms with no meaning")
         page = y.with_suffix(".html")
         if "page" in spec and (not page.exists() or page.read_text() != build(y)):
             misses.append(

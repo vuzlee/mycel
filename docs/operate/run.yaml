@@ -38,3 +38,8 @@ related:
   - [Job failures, ../flows/job-failures.html]
   - ["Traces, metrics, logs, events", ../flows/observe.html]
   - ["On AWS", aws.html]
+words:
+  - ["stack.sh", "the one script every start, stop and check goes through"]
+  - ["dev · compose · k8s", "app on the host · all in containers · on minikube"]
+  - ["doctor", "checks each part is up; run it first"]
+  - ["stores", "Postgres, RabbitMQ, Redis, Qdrant, MinIO, LiteLLM"]

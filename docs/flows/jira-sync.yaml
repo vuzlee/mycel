@@ -52,3 +52,10 @@ related:
   - [Connect an account, connect.html]
   - [Database, ../overview/database.html]
   - [Job failures, job-failures.html]
+words:
+  - ["bronze · silver · gold", "raw payloads · cleaned rows · joined table for reading"]
+  - ["reader", "the connected person whose token reads a project"]
+  - ["JQL", "Jira's query language; here: issues changed since the last run"]
+  - ["lock", "only one sync runs at a time"]
+  - ["embed", "turn text into numbers so it can be searched by meaning"]
+  - ["Qdrant", "the vector database that holds those numbers"]

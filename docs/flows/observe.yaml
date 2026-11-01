@@ -47,3 +47,11 @@ failures:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Model and cost, model-cost.html]
+words:
+  - ["trace · span", "one turn's tree of steps · one step in it, with time and tokens"]
+  - ["OTLP", "the standard wire format traces are sent in"]
+  - ["Langfuse", "where traces are read"]
+  - ["Prometheus · Grafana", "collects numbers every few seconds · draws them"]
+  - ["Loki", "stores container logs, searched in Grafana"]
+  - ["Alertmanager", "sends an alert when a rule fires"]
+  - ["doctor", "one command that checks each part is up"]

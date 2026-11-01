@@ -23,3 +23,8 @@ mistakes:
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, ../flows/jira-sync.html]
+words:
+  - ["bronze · silver · gold", "raw payloads · cleaned rows · joined table agents read"]
+  - ["migration", "a numbered file that changes the database schema"]
+  - ["refetch", "read Jira again so old rows get the new column"]
+  - ["prompt", "the instructions that tell the model which columns exist"]

@@ -36,3 +36,9 @@ edges:
   - {from: domain,   to: redis,    step: 8, kind: import, label: XADD each step, label_at: [3.2, 3.42], exit: 0.3, enter: 0.3, via: [[1.3, 3.5], [4.3, 3.5]]}
   - {from: events,   to: redis,             kind: import, label: XREAD, reverse: true}
   - {from: stream,   to: events,            kind: http,   text: "/events", label: SSE, reverse: true}
+words:
+  - ["turn", "one question and its answer"]
+  - ["agent", "a model with a prompt and tools it may call"]
+  - ["job", "a unit of work on the queue, run by a worker"]
+  - ["SSE", "server-sent events: the server pushes text to the browser as it is written"]
+  - ["stream", "Redis list of a run's events the browser reads live"]

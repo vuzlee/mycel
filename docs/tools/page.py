@@ -90,6 +90,8 @@ def build(path: Path) -> str:
     if spec.get("boxes"):
         out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
         out.append(f'<div class="scroll-x">{draw(spec)}</div></figure>')
+    if spec.get("words"):
+        out.append('<h3 class="tbl-title">Words</h3>' + table(["Word", "Means"], spec["words"]))
     if spec.get("steps"):
         out.append(
             '<h3 class="tbl-title">Files to change, in order</h3>'

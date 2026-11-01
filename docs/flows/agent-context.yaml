@@ -35,3 +35,10 @@ failures:
 related:
   - [Model and cost, model-cost.html]
   - ["Traces, metrics, logs, events", observe.html]
+words:
+  - ["prompt", "the fixed instructions sent before the conversation"]
+  - ["token", "the unit a model counts text in; about 4 characters"]
+  - ["token cap", "the most tokens one turn may send"]
+  - ["summarise", "replace old messages by a short summary to stay under the cap"]
+  - ["tool result", "what a tool returned to the model; old ones shrink to one line"]
+  - ["run", "one turn: the model and its tool calls until an answer"]

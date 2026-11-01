@@ -50,3 +50,10 @@ related:
   - [Jira sync, jira-sync.html]
   - [Add a plugin, ../change/add-plugin.html]
   - [Sign in, sign-in.html]
+words:
+  - ["plugin", "one provider people connect, e.g. Jira or Google, in its own folder"]
+  - ["OAuth", "the provider asks the person, then gives the app a token, never the password"]
+  - ["consent", "the provider's page where the person says yes"]
+  - ["state", "a one-time random value that ties the callback to the start"]
+  - ["callback", "the URL the provider sends the person back to, with a code"]
+  - ["token", "the key the app uses to read the person's data; stored encrypted"]

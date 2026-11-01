@@ -50,3 +50,9 @@ related:
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
   - ["On AWS", aws.html]
+words:
+  - ["OAuth app", "what you register at Google or Atlassian so people can connect"]
+  - ["redirect URI", "where the provider sends a person back; must match exactly"]
+  - [".env", "the host's settings and keys; nothing personal"]
+  - ["gateway key", "the app's key to LiteLLM, made once"]
+  - ["test user", "a Google account allowed while the app is in Testing"]

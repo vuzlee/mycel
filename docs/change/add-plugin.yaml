@@ -22,3 +22,9 @@ mistakes:
 related:
   - [Connect an account, ../flows/connect.html]
   - [Add a tool, add-tool.html]
+words:
+  - ["plugin", "one provider people connect, in its own folder"]
+  - ["registry", "the one list of plugins the app knows"]
+  - ["OAuth", "the provider asks the person, then gives the app a token"]
+  - ["consent", "the provider's page where the person says yes"]
+  - ["client", "the code that calls the provider's API"]

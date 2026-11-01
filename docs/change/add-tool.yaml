@@ -26,3 +26,8 @@ mistakes:
 related:
   - [Add a plugin, add-plugin.html]
   - [Architecture, ../overview/architecture.html]
+words:
+  - ["tool", "a function the model may call by name"]
+  - ["analyst", "the agent that answers questions over data"]
+  - ["prompt", "the instructions that tell the model the tool exists"]
+  - ["schema", "the arguments the tool takes, as the model sees them"]

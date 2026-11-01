@@ -42,3 +42,9 @@ failures:
 related:
   - [Own model, own-model.html]
   - [Config, ../overview/config.html]
+words:
+  - ["host model", "a model the deployment provides, through the gateway"]
+  - ["own model", "an endpoint and key a person adds themselves"]
+  - ["LiteLLM gateway", "one door to every host model; holds keys, counts spend"]
+  - ["budget", "the most one job may spend: $0.50"]
+  - ["usage", "tokens in and out of a call; priced into dollars"]

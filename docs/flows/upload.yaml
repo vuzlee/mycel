@@ -50,3 +50,10 @@ related:
   - [Job failures, job-failures.html]
   - [Database, ../overview/database.html]
   - [Architecture, ../overview/architecture.html]
+words:
+  - ["ingest", "read a file, split it, make it searchable"]
+  - ["chunk", "one piece of a document, a few paragraphs"]
+  - ["embed · vector", "turn a chunk into numbers by meaning · those numbers"]
+  - ["MinIO", "file storage, S3-compatible; keeps the original"]
+  - ["Qdrant", "the vector database search runs on"]
+  - ["SSE", "the server pushes status to the page as it changes"]

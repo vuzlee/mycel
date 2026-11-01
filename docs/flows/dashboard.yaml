@@ -41,3 +41,8 @@ failures:
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, jira-sync.html]
+words:
+  - ["gold", "the cleaned, joined table agents and charts read"]
+  - ["project access", "which Jira projects this person may browse, from their own token"]
+  - ["panel", "one chart on the page"]
+  - ["estimate vs spent", "hours planned against hours logged"]

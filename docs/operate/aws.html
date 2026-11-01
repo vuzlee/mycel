@@ -104,7 +104,7 @@
 <rect x="650" y="474" width="130" height="56" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
 <path d="M662 486 h20 v14 h-20 z M662 486 l10 8 l10 -8" fill="none" stroke="var(--ink-soft)"/><text x="690" y="496">Mail</text><text x="690" y="512" font-size="9.5" fill="var(--ink-soft)">SNS</text>
 </g>
-<g class="hv" data-tip="planned, HLD 128 · batch 129&#10;Hosted zone for mycel.sbs and its free HTTPS certificate">
+<g class="hv" data-tip="planned, HLD 128 · batch 130&#10;Hosted zone for mycel.sbs and its free HTTPS certificate">
 <rect x="220" y="542" width="268" height="52" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="5 4"/>
 <text x="232" y="564">Zone mycel.sbs · ACM cert</text><text x="232" y="580" font-size="9.5" fill="var(--ink-soft)">planned</text>
 </g>
@@ -166,7 +166,7 @@
 <tr><td class="who">Secrets</td><td>session passwords laid over <code>.env</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/.env.aws.example">.env.aws.example</a></td><td>126</td></tr>
 <tr><td class="who">State · Budgets</td><td>Terraform's memory · cost mails</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/state.tf">state.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/budgets.tf">budgets.tf</a></td><td>125</td></tr>
 <tr><td class="who">Reaper · Mail</td><td>delete a forgotten cluster; only one tagged <code>mycel-session</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper.tf">reaper.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper/reaper.py">reaper.py</a></td><td>125 · 127</td></tr>
-<tr><td class="who">Route 53 · ACM · ALB ┄</td><td>open the app on <code>https://mycel.sbs</code></td><td>not built; <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/ingress.yaml">ingress.yaml</a> is where it starts</td><td>128 → 129–131</td></tr>
+<tr><td class="who">Route 53 · ACM · ALB ┄</td><td>open the app on <code>https://mycel.sbs</code></td><td>not built; <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/ingress.yaml">ingress.yaml</a> is where it starts</td><td>128 → 130–132</td></tr>
 </tbody></table>
 </section>
 
@@ -215,7 +215,7 @@
 <tr><td class="who">126</td><td><code>stack.sh aws</code> commands, full smoke on EKS</td><td>done</td></tr>
 <tr><td class="who">127</td><td>reaper only on tagged clusters ✓ · real bill · one clean rerun</td><td>open</td></tr>
 <tr><td class="who">128</td><td>HLD: open on <code>https://mycel.sbs</code> for demos</td><td>draft</td></tr>
-<tr><td class="who">129–131</td><td>DNS and cert · ALB and chart · OAuth and a demo end to end</td><td>after 128</td></tr>
+<tr><td class="who">130–132</td><td>DNS and cert · ALB and chart · OAuth and a demo end to end</td><td>after 128</td></tr>
 </tbody></table>
 <ul class="bul"><li>Notes: <code>notes/flow/plan/e12-aws/</code> (outside git) · Jira epic MYC-264</li></ul>
 </section>
