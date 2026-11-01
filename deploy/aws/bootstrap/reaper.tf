@@ -40,9 +40,15 @@ resource "aws_iam_role_policy" "reaper" {
         Effect = "Allow"
         Action = [
           "eks:ListClusters", "eks:DescribeCluster", "eks:ListNodegroups", "eks:DescribeNodegroup",
-          "eks:DeleteNodegroup", "eks:DeleteCluster",
         ]
         Resource = "*"
+      },
+      # IAM, not only the code, keeps the reaper off clusters outside a session.
+      {
+        Effect    = "Allow"
+        Action    = ["eks:DeleteNodegroup", "eks:DeleteCluster"]
+        Resource  = "*"
+        Condition = { Null = { "aws:ResourceTag/mycel-session" = "false" } }
       },
       { Effect = "Allow", Action = "sns:Publish", Resource = aws_sns_topic.reaper.arn },
       {
