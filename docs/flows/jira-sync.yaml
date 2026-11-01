@@ -35,7 +35,7 @@ edges:
 notes:
   - ["checks", "`etl/checks/work.py` rejects bad rows before gold; the whole batch rolls back"]
   - ["who reads", "each project once, by the first connected person who may browse it"]
-  - ["what is read", "only issues Jira changed after the last good sync"]
+  - ["what is read", "issues changed since that project's last fetch; a project read for the first time is read in full"]
   - ["one at a time", "Postgres lock `sync:jira`; a second run is skipped"]
   - ["re-read everything", "`scripts/stack.sh sync --refetch`"]
   - ["where the code sits", "talking to Jira is `plugins/jira/` (client, fetch); the steps on rows are `etl/` (transform, checks)"]
@@ -62,3 +62,4 @@ words:
   - ["INDEX_GOLD", "the job that embeds new gold rows for search"]
   - ["ingest worker", "the worker for heavy jobs: parsing and embedding, one at a time"]
   - ["solid · dashed arrow", "main path, numbered · the other way in (a SYNC job instead of the timer)"]
+  - ["upsert", "insert, or update if the row exists"]

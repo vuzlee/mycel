@@ -12,7 +12,7 @@ boxes:
   - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/documents.py,              label: routes/documents.py,      role: "upload, status stream"}
   - {id: svc,     lane: api,     col: 2, file: src/mycel/services/documents.py,                label: services/documents.py,    role: "checks, save, queue", hot: true}
   - {id: enq,     lane: queue,   col: 2, file: src/mycel/services/enqueue.py,                  label: services/enqueue.py,      role: "INGEST job"}
-  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time"}
+  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time: prefetch 1 in queue/consumer.py"}
   - {id: ingest,  lane: worker,  col: 2, file: src/mycel/domains/ingest.py,                    label: domains/ingest.py,        role: "parse, chunk, embed", hot: true}
   - {id: files,   lane: stores,  col: 0, file: src/mycel/infra/objects/files.py,               label: "MinIO",                  role: "the original file"}
   - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document, chunk", role: "status, pieces"}
@@ -37,7 +37,7 @@ notes:
   - ["limits", "200 documents per person · 5 processing at once"]
   - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]
   - ["stuck", "watchdog every 60 s: parsing longer than 10 min → failed"]
-  - ["why one at a time", "parsing and embedding take most of a core and ~1.7 GiB; two at once would starve the pod"]
+  - ["why one at a time", "parsing and embedding hold 3–4 GB each; the pod's limit is 5 GiB"]
 failures:
   - ["over 2 MB", "refused in the browser; 413 at the server", "src/mycel/services/documents.py"]
   - ["empty or unknown type", "422 / 415", "src/mycel/services/documents.py"]
@@ -60,3 +60,5 @@ words:
   - ["SSE", "the server pushes status to the page as it changes"]
   - ["docling", "the library that reads PDF and DOCX into text"]
   - ["watchdog", "a scheduler timer that fails documents stuck in parsing"]
+  - ["relay", "a scheduler timer that resends unsent outbox jobs every 5 s"]
+  - ["outbox", "a job row saved with the data, sent to the queue after the commit"]

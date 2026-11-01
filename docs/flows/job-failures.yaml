@@ -33,7 +33,7 @@ edges:
 notes:
   - ["retry", "transient errors (a timeout, a server error HTTP 5xx, a rate limit): 5 s → 30 s → 2 min, then parked"]
   - ["final errors", "budget, unknown job, model refused, loop stopped → parked at once"]
-  - ["worker died", "the queue delivers again; the 5th delivery is parked (`MAX_ATTEMPTS` = 4)"]
+  - ["worker died", "the queue delivers again; redeliveries are counted, and the 6th delivery (count over `MAX_ATTEMPTS` = 4) is parked"]
   - ["run once", "a chat job claims its id in Redis; a second copy waits"]
   - ["see parked jobs", "`scripts/stack.sh replay`"]
   - ["send them back", "`scripts/stack.sh replay jobs.dlq 100`"]

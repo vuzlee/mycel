@@ -284,7 +284,7 @@
   <div class="sep">Same job delivered again (lost ack, crash after save)</div>
 
   <div class="n">1</div><div class="m r" style="grid-column:2/4"><span>deliver job 42 · redelivered</span></div>
-  <div class="n">2</div><div class="m r warn" style="grid-column:3/5"><span data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">COUNT: INCR → 2 ≤ 4</span></div>
+  <div class="n">2</div><div class="m r warn" style="grid-column:3/5"><span data-path="src/mycel/infra/redis/deliveries.py" tabindex="0">COUNT: INCR → 1 ≤ 4</span></div>
   <div class="n">3</div><div class="m r warn" style="grid-column:3/6"><span>DONE? turn 42</span></div>
   <div class="n"></div><div class="m l back ok" style="grid-column:3/6"><span>found · status done</span></div>
   <div class="n">4</div><div class="m r" style="grid-column:3/5"><span>re-store result (no model)</span></div>
@@ -313,14 +313,14 @@
 <div class="table-wrap"><table>
   <tr><th></th><th>What happened</th><th>What the next worker checks</th><th>Result</th></tr>
   <tr><td><b>A</b></td><td>queue resends job 42 while worker A is still on it</td><td>DONE? no → LOCK held by A → back off, retry in 5 s → later DONE? yes</td><td><span class="chip ok">1 model run</span></td></tr>
-  <tr><td><b>B</b></td><td>A saved the answer, then died before ack</td><td>COUNT 2 ≤ 4 → DONE? yes → re-store result, ack</td><td><span class="chip ok">1 model run</span> user sees the saved answer</td></tr>
+  <tr><td><b>B</b></td><td>A saved the answer, then died before ack</td><td>COUNT 1 ≤ 4 → DONE? yes → re-store result, ack</td><td><span class="chip ok">1 model run</span> user sees the saved answer</td></tr>
   <tr><td><b>C</b></td><td>A died while the model was answering, nothing saved</td><td>lock expires ≤ 25 s → DONE? no → LOCK free → calls the model</td><td><span class="chip warn">2 model runs</span> spend carries over, money limit holds</td></tr>
   <tr><td><b>D</b></td><td>the job itself crashes every worker</td><td>COUNT rises each time → over 4</td><td><span class="chip bad">parked</span> dead-letter queue, user sees "failed"</td></tr>
 </table></div>
 <p class="insight"><b>Key:</b> C is the one case where the model runs twice: nothing was saved, so there is nothing to reuse.</p>
 
 <h2 id="guards">05 · The four safeguards</h2>
-<p class="purpose">All four run inside the worker, in the order shown in the 02 table. They are not four ways to stop duplicates: each answers a different question.</p>
+<p class="purpose">All four run inside the worker, in the order of the 3c sequence: COUNT, DONE?, LOCK, ONE ROW. They are not four ways to stop duplicates: each answers a different question.</p>
 <div class="guard" data-path="src/mycel/infra/redis/deliveries.py"><b>1 COUNT</b><span>Has this job crashed workers too often?</span><small>stops D · a poison job looping forever</small></div>
 <div class="guard" data-path="src/mycel/domains/chat.py"><b>2 DONE?</b><span>Has this job been answered?</span><small>stops B · reuses a saved answer</small></div>
 <div class="guard" data-path="src/mycel/infra/redis/claims.py"><b>3 LOCK</b><span>Is someone answering it right now?</span><small>stops A · two workers at once</small></div>
@@ -331,7 +331,7 @@
   <div class="col ok"><h3>Guaranteed</h3><ul>
     <li>A saved answer is not recomputed.</li>
     <li>A repeat never creates a second turn row.</li>
-    <li>A job that keeps killing workers stops after 4 deliveries.</li>
+    <li>A job that keeps killing workers is parked on its 6th delivery: only redeliveries are counted, and the count must pass 4.</li>
     <li>A worker only renews or releases its own claim.</li>
   </ul></div>
   <div class="col bad"><h3>Not guaranteed</h3><ul>

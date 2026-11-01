@@ -31,10 +31,10 @@ edges:
   - {from: chat,    to: streams,          kind: import, label: "XADD", exit: 0.4, via: [[2.4, 0.5], [2.6, 0.5], [2.6, 2]]}
   - {from: sse,     to: streams, step: 5, kind: import, label: "read"}
 notes:
-  - ["traces", "Langfuse: one trace per turn, a span per model and tool call; text redacted"]
+  - ["traces", "Langfuse: one trace per turn, a span per model and tool call; prompts and answers included where `otel_capture_content` is on (dev, prod), secrets scrubbed; off on EKS"]
   - ["metrics", "`/metrics`: worker 9100 · scheduler 9101 · ingest 9102 · api 9103"]
   - ["logs", "JSON on stdout; Alloy ships it to Loki with `service` and `level` labels; `trace_id` stays in the body"]
-  - ["alerts", "rules in `deploy/helm/mycel/files/alerts.yaml`: process down, jobs parked, backlog, no worker, failing, Redis full"]
+  - ["alerts", "rules in `deploy/helm/mycel/files/alerts.yaml`: process down, jobs parked, backlog, no worker, failing, Redis full, API errors, API slow"]
   - ["live events", "Redis `events:<job>` → `GET /chat/{job}/events`, resumes from Last-Event-ID"]
   - ["health", "`scripts/stack.sh doctor` — every store, the gateway, plugins, settings"]
   - ["slow or costly answer", "Langfuse for steps and tokens; turn row for `spent_usd`, `duration_ms`"]

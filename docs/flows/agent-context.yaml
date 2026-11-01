@@ -11,8 +11,8 @@ boxes:
   - {id: history, lane: per request, col: 0, file: src/mycel/agents/core/history.py,     label: core/history.py,       role: "old results → one line"}
   - {id: compact, lane: per request, col: 1, file: src/mycel/agents/core/compact.py,     label: core/compact.py,       role: "at 75% of cap: summarise"}
   - {id: parts,   lane: per request, col: 2, file: src/mycel/agents/core/prompt_parts.py, label: core/prompt_parts.py, role: "size of each part, traced"}
-  - {id: search,  lane: tools,              col: 1, file: src/mycel/agents/tools/web_search.py,  label: tools/web_search.py,   role: "recency: day…year"}
-  - {id: budget,  lane: tools,              col: 2, file: src/mycel/llm/budget.py,               label: llm/budget.py,         role: "token cap per turn"}
+  - {id: search,  lane: tools,              col: 1, file: src/mycel/agents/tools/web_search.py,  label: tools/web_search.py,   role: "a tool; called by the model"}
+  - {id: budget,  lane: tools,              col: 2, file: src/mycel/agents/core/settings.py,     label: core/settings.py,      role: "token cap, from config/agents"}
   - {id: builder, lane: model,              col: 0, file: src/mycel/agents/core/model_source.py, label: core/model_source.py, role: "opens the model"}
 edges:
   - {from: runner,  to: base,    step: 1, kind: calls,  text: "dated(prompt, deps.tz)", label: "dated prompt"}
@@ -31,7 +31,7 @@ failures:
   - ["model ignores the date", "recency still filters by time", "src/mycel/agents/tools/web_search.py"]
   - ["a search stalls or returns 5xx", "resent once after 20 s; still failing → that query comes back empty with a warning, the others kept", "src/mycel/agents/tools/web_search.py"]
   - ["summary call fails", "the run goes on uncompacted and may hit the cap", "src/mycel/agents/core/compact.py"]
-  - ["cap reached anyway", "the run stops as runaway", "src/mycel/llm/budget.py"]
+  - ["cap reached anyway", "the run stops as runaway", "src/mycel/agents/core/exceptions.py"]
 related:
   - [Model and cost, model-cost.html]
   - ["Traces, metrics, logs, events", observe.html]

@@ -5,7 +5,7 @@ page:
   lede: ["A tool is a function the model may call", "Six files, in this order"]
 steps:
   - ["1", "src/mycel/agents/tools/work.py", "add `@toolset.tool(name=…)` inside `build_toolset()`; a new module copies `compute.py`"]
-  - ["2", "src/mycel/agents/core/guards.py", "call `guard_repeat(ctx, …)` first in the tool; raise `ModelRetry` for bad input"]
+  - ["2", "src/mycel/agents/core/guards.py", "use, do not edit: call `guard_repeat(ctx, …)` first in the tool; raise `ModelRetry` for bad input"]
   - ["3", "src/mycel/agents/specialists/analyst.py", "add the toolset in `toolsets()`; a ready-made answer also goes in `READY_READS` (work.py)"]
   - ["4", "src/mycel/agents/prompts/analyst.py", "tell the model when to use it"]
   - ["5", "config/agents/analyst.yaml", "raise `tool_calls_limit` if needed — and the \"twelve queries\" line in the prompt"]

@@ -12,7 +12,7 @@ steps:
   - ["6", "src/mycel/etl/normalize.py", "set it in `from_jira_issue()` — no defaults, a missing one fails"]
   - ["7", "src/mycel/agents/prompts/analyst.py", "add it to the gold schema the analyst reads"]
   - ["8", "src/mycel/api/routes/dashboard.py", "if the dashboard shows it: `ItemResponse`, then `web/src/api/types.ts` and the page"]
-  - ["9", "scripts/ops/sync.sh", "run `scripts/stack.sh sync --refetch` to fill old rows"]
+  - ["9", "scripts/ops/sync.sh", "run, do not edit: run `scripts/stack.sh sync --refetch` to fill old rows"]
   - ["test", "tests/pg.py", "the `_item` fixture; `tests/test_pg_schema.py` compares models with migrations"]
 mistakes:
   - ["silver and gold differ", "silver reads fail with `TypeError`"]
