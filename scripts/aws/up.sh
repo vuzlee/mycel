@@ -35,12 +35,13 @@ kubectl config use-context "$CONTEXT" >/dev/null
 kube wait --for=condition=Ready node --all --timeout=300s >/dev/null
 log "node ready after $(( ($(date +%s) - started) / 60 )) min"
 
-# .env with the session's passwords laid over it; the later line wins in env_value
-# and in --from-env-file.
+# .env with the session's passwords laid over it, one line per key:
+# --from-env-file refuses a key twice.
 env_file=$(mktemp)
 chmod 600 "$env_file"
 trap 'rm -f "$env_file"' EXIT
-cat "$ROOT/.env" "$ROOT/.env.aws" > "$env_file"
+awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/ { line[$1] = $0; if (!($1 in seen)) { seen[$1]; order[++n] = $1 } }
+  END { for (i = 1; i <= n; i++) print line[order[i]] }' "$ROOT/.env" "$ROOT/.env.aws" > "$env_file"
 
 ENV_FILE=$env_file "$ROOT/scripts/k8s/stores-up.sh" --images "$user" --tag "$TAG"
 log "up in $(( ($(date +%s) - started) / 60 )) min — next: scripts/stack.sh aws forward"
