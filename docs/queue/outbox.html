@@ -139,6 +139,9 @@
   <a href="#parts">05 Three moves</a><a href="#promise">06 Guarantees and limits</a><a href="#impl">Implementation</a>
 </nav>
 
+<h2 id="words">Words</h2>
+<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">outbox</td><td>a table of jobs waiting to be sent; the row is written in the same commit as the data</td></tr><tr><td class="who">commit · transaction</td><td>the moment a group of writes becomes permanent, all or none</td></tr><tr><td class="who">publish</td><td>send a message to the queue</td></tr><tr><td class="who">broker · RabbitMQ</td><td>the queue server that holds jobs for workers</td></tr><tr><td class="who">relay</td><td>a timer job that sends rows the API failed to send</td></tr><tr><td class="who">SKIP LOCKED</td><td>Postgres: skip rows another process is already handling</td></tr></tbody></table>
+
 <h2 id="problem">01 · The problem</h2>
 <p class="purpose">Without an outbox: the API saves the document, then dies before it publishes.</p>
 <div class="table-wrap wide"><div class="tl">

@@ -73,6 +73,53 @@ def files_list(spec: dict[str, Any]) -> list[list[str]]:
     return rows
 
 
+STEP = (
+    '<g class="hv" data-tip="{tip}&#10;step {num}">'
+    '<rect x="{x}" y="{y}" width="150" height="56" rx="2"'
+    ' fill="var(--surface)" stroke="var(--line)"/>'
+    '<text x="{tx}" y="{y1}" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">'
+    "{num} · {folder}</text>"
+    '<text x="{tx}" y="{y2}" font-family="var(--mono)" font-size="11" fill="var(--ink)">'
+    "{name}</text></g>"
+)
+ARROW = '<path d="M{x0} {y} H{x1}" stroke="var(--ink-faint)" marker-end="url(#st)"/>'
+STEP_DEFS = (
+    '<defs><marker id="st" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"'
+    ' orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>'
+)
+
+
+def steps_figure(steps: list[list[str]]) -> str:
+    """A change recipe as boxes, one per file, in order; hover shows the full path."""
+    per, w, gap = 5, 150, 22
+    out = []
+    for i, (num, path, _do) in enumerate(steps):
+        x, y = 16 + i % per * (w + gap), 16 + i // per * 90
+        short = path.replace("src/mycel/", "")
+        folder = short.rsplit("/", 1)[0] if "/" in short else ""
+        folder = folder if len(folder) <= 20 else "…" + folder[-19:]
+        out.append(
+            STEP.format(
+                tip=html.escape(short, quote=True),
+                num=html.escape(num),
+                x=x,
+                y=y,
+                tx=x + 10,
+                y1=y + 18,
+                y2=y + 38,
+                folder=html.escape(folder),
+                name=html.escape(path.split("/")[-1]),
+            )
+        )
+        if i % per < per - 1 and i < len(steps) - 1:
+            out.append(ARROW.format(x0=x + w, y=y + 28, x1=x + w + gap))
+    h = 16 + (len(steps) + per - 1) // per * 90
+    return (
+        f'<svg class="diagram" viewBox="0 0 {16 + per * (w + gap)} {h}" role="img"'
+        f' aria-label="Files to change, in order">{STEP_DEFS}{"".join(out)}</svg>'
+    )
+
+
 def build(path: Path) -> str:
     spec = yaml.safe_load(path.read_text())
     if spec.get("boxes"):
@@ -90,6 +137,9 @@ def build(path: Path) -> str:
     if spec.get("boxes"):
         out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
         out.append(f'<div class="scroll-x">{draw(spec)}</div></figure>')
+    if spec.get("steps") and not spec.get("boxes"):
+        out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
+        out.append(f'<div class="scroll-x">{steps_figure(spec["steps"])}</div></figure>')
     if spec.get("words"):
         out.append('<h3 class="tbl-title">Words</h3>' + table(["Word", "Means"], spec["words"]))
     if spec.get("steps"):
