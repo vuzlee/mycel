@@ -206,8 +206,31 @@
 </tbody></table>
 </section>
 
+<section id="next">
+<h2>5 · Next: open on https://mycel.sbs (HLD 128, to agree)</h2>
+<ul class="bul"><li>Before an interview: <code>aws up</code> · the interviewer opens the link and signs up · after: <code>down</code></li><li>The dashed boxes in §1</li></ul>
+<table class="tbl"><thead><tr><th>Decision</th><th>Why</th></tr></thead><tbody>
+<tr><td class="who">Domain</td><td><code>mycel.sbs</code> from Hostinger; its name servers point to a Route 53 zone in bootstrap ($0.50/month)</td></tr>
+<tr><td class="who">HTTPS</td><td>free ACM certificate, made once in bootstrap</td></tr>
+<tr><td class="who">Door</td><td>ALB on 443 (80 redirects), made by the LB controller from the app's Ingress</td></tr>
+<tr><td class="who">Who may enter</td><td>anyone, only while a session runs; no IP list, no password</td></tr>
+<tr><td class="who">Model cost</td><td>no cap: Gemini free tier; the risk is 20 requests a day, check before a demo</td></tr>
+<tr><td class="who">Google · Jira</td><td>add the <code>https://mycel.sbs</code> callbacks; Gmail linked with the owner's account in a demo</td></tr>
+<tr><td class="who">Api network rule</td><td>let in the ALB's subnet addresses instead of the nginx namespace</td></tr>
+<tr><td class="who"><code>down</code></td><td>uninstall, wait for the ALB to go, then destroy; leftovers also checks load balancers</td></tr>
+<tr><td class="who">Reaper</td><td>also deletes load balancers tagged <code>mycel-session</code>, only those</td></tr>
+<tr><td class="who">Not done</td><td>WAF, CloudFront, kept data between sessions</td></tr>
+</tbody></table>
+<table class="tbl"><thead><tr><th>Batch</th><th>Builds</th><th>Proves</th></tr></thead><tbody>
+<tr><td class="who">130</td><td>zone, NS at Hostinger, certificate; reaper and leftovers know load balancers</td><td>certificate issued</td></tr>
+<tr><td class="who">131</td><td>ALB Ingress, network rule, controller in <code>up</code>, DNS record, <code>down</code> waits</td><td><code>https://mycel.sbs</code> opens</td></tr>
+<tr><td class="who">132</td><td>OAuth callbacks; a demo end to end</td><td>a second account signs up and chats</td></tr>
+</tbody></table>
+<ul class="bul"><li>Extra cost: ~$0.03/h while up · $0.50/month for the zone</li></ul>
+</section>
+
 <section id="plans">
-<h2>5 · Plans behind this page</h2>
+<h2>6 · Plans behind this page</h2>
 <table class="tbl"><thead><tr><th>#</th><th>What</th><th>State</th></tr></thead><tbody>
 <tr><td class="who">123</td><td>HLD: one node, stores in the cluster, port-forward, cluster per session</td><td>agreed</td></tr>
 <tr><td class="who">124</td><td>stores chart, AWS values, proven on minikube</td><td>done</td></tr>
