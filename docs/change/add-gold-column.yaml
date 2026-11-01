@@ -28,3 +28,5 @@ words:
   - ["migration", "a numbered file that changes the database schema"]
   - ["refetch", "read Jira again so old rows get the new column"]
   - ["prompt", "the instructions that tell the model which columns exist"]
+  - ["silver", "per-source cleaned rows, one table per provider"]
+  - ["gold", "the one table the product reads, the same columns whatever the source"]

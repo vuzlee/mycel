@@ -89,6 +89,11 @@ STEP_DEFS = (
 )
 
 
+def _fit(name: str, room: int = 20) -> str:
+    """A box holds about 20 monospace characters; the hover keeps the whole path."""
+    return name if len(name) <= room else name[: room - 1] + "…"
+
+
 def steps_figure(steps: list[list[str]]) -> str:
     """A change recipe as boxes, one per file, in order; hover shows the full path."""
     per, w, gap = 5, 150, 22
@@ -96,8 +101,8 @@ def steps_figure(steps: list[list[str]]) -> str:
     for i, (num, path, _do) in enumerate(steps):
         x, y = 16 + i % per * (w + gap), 16 + i // per * 90
         short = path.replace("src/mycel/", "")
-        folder = short.rsplit("/", 1)[0] if "/" in short else ""
-        folder = folder if len(folder) <= 20 else "…" + folder[-19:]
+        parts = short.split("/")[:-1]
+        folder = "/".join(parts) if len("/".join(parts)) <= 20 else "…/" + parts[-1]
         out.append(
             STEP.format(
                 tip=html.escape(short, quote=True),
@@ -108,7 +113,7 @@ def steps_figure(steps: list[list[str]]) -> str:
                 y1=y + 18,
                 y2=y + 38,
                 folder=html.escape(folder),
-                name=html.escape(path.split("/")[-1]),
+                name=html.escape(_fit(path.split("/")[-1])),
             )
         )
         if i % per < per - 1 and i < len(steps) - 1:

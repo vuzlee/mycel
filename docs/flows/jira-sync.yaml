@@ -35,7 +35,7 @@ edges:
 notes:
   - ["checks", "`etl/checks/work.py` rejects bad rows before gold; the whole batch rolls back"]
   - ["who reads", "each project once, by the first connected person who may browse it"]
-  - ["what is read", "only issues changed since the last run (the newest `fetched_at`)"]
+  - ["what is read", "only issues Jira changed after the last good sync"]
   - ["one at a time", "Postgres lock `sync:jira`; a second run is skipped"]
   - ["re-read everything", "`scripts/stack.sh sync --refetch`"]
   - ["where the code sits", "talking to Jira is `plugins/jira/` (client, fetch); the steps on rows are `etl/` (transform, checks)"]
@@ -44,10 +44,10 @@ failures:
   - ["a person's access read fails", "their access is cleared until the next run", "src/mycel/plugins/jira/access.py"]
   - ["Jira says 429", "3 tries with Retry-After", "src/mycel/plugins/jira/http.py"]
   - ["Jira times out or 5xx", "the whole run stops; error recorded", "src/mycel/plugins/jira/sync.py"]
-  - ["run stops after bronze was written", "the next run lifts them too (keys fetched since the last good sync)", "src/mycel/plugins/jira/sync.py"]
+  - ["run stops after bronze was written", "the next run reads them again: it starts from the last good sync", "src/mycel/plugins/jira/sync.py"]
   - ["a row fails the checks", "nothing reaches gold this run", "src/mycel/etl/transform.py"]
   - ["Jira times out or 5xx in a SYNC job", "retried 5 s → 30 s → 2 min, then parked", "src/mycel/worker/handlers.py"]
-  - ["no ingest worker running", "the embed job waits in its queue", "src/mycel/domains/index.py"]
+  - ["no ingest worker running", "the embed job waits: it runs on the ingest worker, which owns the embedding model", "src/mycel/domains/index.py"]
 related:
   - [Connect an account, connect.html]
   - [Database, ../overview/database.html]
@@ -59,3 +59,6 @@ words:
   - ["lock", "only one sync runs at a time"]
   - ["embed", "turn text into numbers so it can be searched by meaning"]
   - ["Qdrant", "the vector database that holds those numbers"]
+  - ["INDEX_GOLD", "the job that embeds new gold rows for search"]
+  - ["ingest worker", "the worker for heavy jobs: parsing and embedding, one at a time"]
+  - ["solid · dashed arrow", "main path, numbered · the other way in (a SYNC job instead of the timer)"]

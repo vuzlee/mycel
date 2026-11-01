@@ -42,3 +42,6 @@ words:
   - ["summarise", "replace old messages by a short summary to stay under the cap"]
   - ["tool result", "what a tool returned to the model; old ones shrink to one line"]
   - ["run", "one turn: the model and its tool calls until an answer"]
+  - ["Tavily", "the web search API behind `web_search`"]
+  - ["runaway", "a run stopped at the token cap"]
+  - ["total_tokens_limit", "the token cap, per agent, in `config/agents/*.yaml`"]

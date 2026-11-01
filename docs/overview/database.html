@@ -10,7 +10,7 @@
 <body>
 <div class="page">
   <header class="hero">
-    <p class="eyebrow">Database · migration 0027</p>
+    <p class="eyebrow">Database · migration 0028</p>
     <h1>Database</h1>
     <div class="hero-lede"><ul class="bul"><li>One Postgres database, four schemas</li><li>Hover a table: its file, then what it holds · every field below</li></ul></div>
   </header>
@@ -88,7 +88,7 @@ job_id · body · published_at (empty until RabbitMQ has it)."><rect x="380" y="
         <thead><tr><th>Task</th><th>Command or rule</th></tr></thead>
         <tbody>
           <tr><td class="who">apply</td><td><code>uv run alembic upgrade head</code></td></tr>
-          <tr><td class="who">which version</td><td><code>uv run alembic current</code> → 0027</td></tr>
+          <tr><td class="who">which version</td><td><code>uv run alembic current</code> → 0028</td></tr>
           <tr><td class="who">downgrade</td><td>refused unless the database name ends in <code>_test</code> (or <code>MYCEL_ALLOW_DOWNGRADE=1</code>)</td></tr>
           <tr><td class="who">no tables in your client</td><td>open schema <code>gold</code> or <code>app</code>, not <code>public</code></td></tr>
           <tr><td class="who">row id vs Jira key</td><td><code>id</code> = row number here · <code>(source, issue_key)</code> = same issue on every sync</td></tr>
@@ -99,7 +99,7 @@ job_id · body · published_at (empty until RabbitMQ has it)."><rect x="380" y="
       </table>
     </details>
     <h3 class="tbl-title">Words</h3>
-    <table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">schema</td><td>a named folder of tables inside one database</td></tr><tr><td class="who">bronze · silver · gold</td><td>raw · cleaned · read by the product</td></tr><tr><td class="who">app</td><td>people, sessions, chats, connections</td></tr><tr><td class="who">migration</td><td>a numbered file that changes tables; run before new code starts</td></tr><tr><td class="who">row security</td><td>Postgres hides rows a person may not see, even from raw SQL</td></tr><tr><td class="who">role</td><td>a database user with its own rights</td></tr></tbody></table>
+    <table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">schema</td><td>a named folder of tables inside one database</td></tr><tr><td class="who">why silver and gold</td><td>silver: one cleaned table per source · gold: the one shape the product reads, whatever the source</td></tr><tr><td class="who">jsonb · timestamptz</td><td>JSON stored so Postgres can query inside it · a time with its zone</td></tr><tr><td class="who">no owner</td><td>a table without <code>user_id</code>: shared by the team, filtered by project instead</td></tr><tr><td class="who">bronze · silver · gold</td><td>raw · cleaned · read by the product</td></tr><tr><td class="who">app</td><td>people, sessions, chats, connections</td></tr><tr><td class="who">migration</td><td>a numbered file that changes tables; run before new code starts</td></tr><tr><td class="who">row security</td><td>Postgres hides rows a person may not see, even from raw SQL</td></tr><tr><td class="who">role</td><td>a database user with its own rights</td></tr></tbody></table>
     <h3 class="tbl-title">Where in code</h3>
     <table class="tbl"><thead><tr><th>Part</th><th>File</th></tr></thead><tbody><tr><td class="who">gold tables</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/gold.py">models/gold.py</a></td></tr><tr><td class="who">bronze · silver (Jira)</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/jira.py">models/jira.py</a></td></tr><tr><td class="who">app tables</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/app.py">models/app.py</a></td></tr><tr><td class="who">documents</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/models/documents.py">models/documents.py</a></td></tr><tr><td class="who">every SQL statement</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/repositories/">repositories/</a></td></tr><tr><td class="who">schema changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/migrations/versions/">migrations/versions/</a></td></tr><tr><td class="who">roles, row security</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/migrations/versions/0018_app_role_without_ddl.py">0018</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/migrations/versions/0012_gold_row_security.py">0012</a></td></tr></tbody></table>
   </section>

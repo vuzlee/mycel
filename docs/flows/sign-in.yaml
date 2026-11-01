@@ -41,7 +41,7 @@ failures:
   - ["Google answer fails a check (state, nonce, signature)", "`error=refused`", "src/mycel/services/google_signin.py"]
   - ["domain not allowed (new or existing account)", "`error=refused`", "src/mycel/services/auth.py"]
   - ["SMTP not set", "503 on code request", "src/mycel/api/routes/auth.py"]
-  - ["domain not allowed (code)", "202 anyway, no mail sent", "src/mycel/services/signin_code.py"]
+  - ["domain not allowed (code)", "202 anyway, no mail sent: an outsider cannot probe which domains are allowed", "src/mycel/services/signin_code.py"]
   - ["mail fails to send", "logged; page still says check your mail", "src/mycel/services/signin_code.py"]
   - ["wrong code", "400; after 5 tries the code is deleted", "src/mycel/services/signin_code.py"]
   - ["code older than 10 min", "400 expired", "src/mycel/services/signin_code.py"]
@@ -58,3 +58,4 @@ words:
   - ["SMTP", "the protocol that sends mail"]
   - ["httponly · secure · samesite", "the cookie is hidden from scripts · sent only on HTTPS · not sent from other sites"]
   - ["rate limit", "at most N requests a minute per IP"]
+  - ["one callback", "Google allows one redirect per client; sign-in and connect share it, the state tells them apart"]

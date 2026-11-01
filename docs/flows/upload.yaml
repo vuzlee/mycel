@@ -37,6 +37,7 @@ notes:
   - ["limits", "200 documents per person · 5 processing at once"]
   - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]
   - ["stuck", "watchdog every 60 s: parsing longer than 10 min → failed"]
+  - ["why one at a time", "parsing and embedding take most of a core and ~1.7 GiB; two at once would starve the pod"]
 failures:
   - ["over 2 MB", "refused in the browser; 413 at the server", "src/mycel/services/documents.py"]
   - ["empty or unknown type", "422 / 415", "src/mycel/services/documents.py"]
@@ -57,3 +58,5 @@ words:
   - ["MinIO", "file storage, S3-compatible; keeps the original"]
   - ["Qdrant", "the vector database search runs on"]
   - ["SSE", "the server pushes status to the page as it changes"]
+  - ["docling", "the library that reads PDF and DOCX into text"]
+  - ["watchdog", "a scheduler timer that fails documents stuck in parsing"]

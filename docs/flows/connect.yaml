@@ -30,12 +30,11 @@ edges:
   - {from: jplugin,  to: access,   step: 7, kind: calls,  text: "access.refresh(user_id)",   label: "projects"}
   - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
 notes:
-  - ["Google", "`plugins/google/` (oauth, mail and calendar clients and tools) — same shape, no access or sync step"]
   - ["routes", "`/connections/{key}/start` · `/auth/{key}/callback` (registered with the provider) · `DELETE /connections/{key}` · `GET /connections`"]
   - ["state", "Redis, 10 min, used once; only the account that started may finish"]
   - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]
-  - ["Google", "same path without steps 7–8; its tools go to the researcher. Sign-in and connect share `/auth/google/callback`"]
-  - ["back to the page", "`/app/home?jira=connected` or `?jira_error=…`"]
+  - ["Google", "`plugins/google/`: same path without steps 7–8 (no access, no sync); its tools go to the researcher; sign-in shares `/auth/google/callback`"]
+  - ["back to the page", "`/app/?settings=accounts&jira=connected` (or `jira_error=…`): Settings opens on Accounts"]
 failures:
   - ["unknown plugin", "404", "src/mycel/api/routes/connections.py"]
   - ["client id/secret or encryption key not set", "503", "src/mycel/services/oauth.py"]
@@ -57,3 +56,5 @@ words:
   - ["state", "a one-time random value that ties the callback to the start"]
   - ["callback", "the URL the provider sends the person back to, with a code"]
   - ["token", "the key the app uses to read the person's data; stored encrypted"]
+  - ["refresh token", "a long-lived key the app trades for short access tokens; the one thing stored"]
+  - ["GETDEL", "Redis: read a key and delete it in one step, so a state works once"]

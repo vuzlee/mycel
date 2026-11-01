@@ -33,6 +33,7 @@ notes:
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
   - ["own models", "called direct, priced by the same table, not capped by the gateway"]
   - ["one model a turn", "every agent of the run calls the turn's pick; no pick = `default: true` in `host_models`"]
+  - ["daily cap", "`user_daily_usd` per person a day; jobs still open count at their ceiling, so a turn is refused before it is queued"]
 failures:
   - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
   - ["ceiling reached mid-run", "run stops as overdrawn", "src/mycel/agents/core/runner.py"]
@@ -48,3 +49,5 @@ words:
   - ["LiteLLM gateway", "one door to every host model; holds keys, counts spend"]
   - ["budget", "the most one job may spend: $0.50"]
   - ["usage", "tokens in and out of a call; priced into dollars"]
+  - ["ceiling", "the most one job may spend; then it stops"]
+  - ["UsageLimits", "pydantic-ai's cap on tokens per run"]

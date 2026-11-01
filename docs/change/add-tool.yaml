@@ -31,3 +31,8 @@ words:
   - ["analyst", "the agent that answers questions over data"]
   - ["prompt", "the instructions that tell the model the tool exists"]
   - ["schema", "the arguments the tool takes, as the model sees them"]
+  - ["toolset", "a group of tools offered to the model together"]
+  - ["chip", "a source the person ticks under the chat box (Jira, Mail…); a toolset opens only for its chips"]
+  - ["ModelRetry", "an error the model reads and can fix by calling again"]
+  - ["READY_READS", "answers the app already knows how to compute; the model calls one instead of writing SQL"]
+  - ["MCP", "Model Context Protocol: a standard way to call tools that live on another server"]

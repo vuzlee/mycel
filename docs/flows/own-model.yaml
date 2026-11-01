@@ -31,7 +31,7 @@ edges:
   - {from: source, to: redisk,          kind: import, label: "cool a failed key", exit: 0.3, via: [[3.3, 3.5], [4, 3.5]]}
 notes:
   - ["limits", "10 models per person · 1–5 keys each · 6 key tests a minute"]
-  - ["URL", "https only (plain http only for allowed LAN hosts) · no private or internal address · checked on save and before every call"]
+  - ["URL", "https only (plain http only for hosts in `model_http_hosts`, `base.yaml`) · no private or internal address · checked on save and before every call"]
   - ["keys", "encrypted with `TOKEN_ENCRYPTION_KEY` · only the last 4 characters are shown"]
   - ["key order", "a key that gets 401/402/403/429 is set aside; the next key is tried"]
   - ["cost cap", "none — own model calls bypass the gateway's budget"]
@@ -51,3 +51,4 @@ words:
   - ["private address", "10.x, 192.168.x, localhost…; refused so no one reaches inside the network"]
   - ["429", "\"too many requests\"; the next key is tried"]
   - ["encrypted", "stored scrambled; only the app's key turns it back"]
+  - ["401 · 403 · 402", "bad or forbidden key · out of credit: the key is set aside"]

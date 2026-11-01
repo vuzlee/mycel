@@ -28,3 +28,7 @@ words:
   - ["OAuth", "the provider asks the person, then gives the app a token"]
   - ["consent", "the provider's page where the person says yes"]
   - ["client", "the code that calls the provider's API"]
+  - ["Plugin", "the interface every provider fills in, `plugins/base.py`"]
+  - ["OAuthProvider", "the shared consent round: start URL, code for token, refresh"]
+  - ["sealed", "encrypted with `TOKEN_ENCRYPTION_KEY` before it is stored"]
+  - ["SourceError · NotWritten", "the provider failed · a write was refused; the tool turns either into a readable answer"]

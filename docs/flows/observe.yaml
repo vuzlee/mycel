@@ -55,3 +55,8 @@ words:
   - ["Loki", "stores container logs, searched in Grafana"]
   - ["Alertmanager", "sends an alert when a rule fires"]
   - ["doctor", "one command that checks each part is up"]
+  - ["Alloy", "reads container logs and pushes them to Loki"]
+  - ["scrape", "Prometheus pulls `/metrics` every few seconds; logs are pushed instead"]
+  - ["Last-Event-ID", "the browser's place in the stream, so a reconnect resumes"]
+  - ["mycel-error", "the message header that says why a job was parked"]
+  - ["DLQ", "dead-letter queue: where a job parks after its last try"]
