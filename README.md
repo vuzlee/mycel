@@ -87,7 +87,7 @@ scripts/stack.sh k8s up                   # add `monitoring` as above
 minikube tunnel                           # then add mycel.local to /etc/hosts
 ```
 
-More in [deploy/](deploy/README.md). On AWS (EKS, planned): [docs/plan/aws-phase-1.html](docs/plan/aws-phase-1.html).
+More in [deploy/](deploy/README.md). On AWS (EKS, planned): [docs/operate/aws.html](docs/operate/aws.html).
 </details>
 
 Open <http://localhost:8000/app> (or <http://mycel.local/app> on k8s) and sign in with

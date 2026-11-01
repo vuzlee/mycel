@@ -32,7 +32,7 @@ minikube tunnel                         # mycel.local and grafana.mycel.local in
 
 `stores-up` installs the stores first (the migrate hook needs Postgres), makes the app's
 gateway key, then the app. Every pod pulls with one Docker Hub login when `.env` has
-`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Plan: `docs/plan/aws-phase-1.html`.
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Plan: `docs/operate/aws.html`.
 
 ## Run it on AWS (EKS)
 
@@ -51,7 +51,7 @@ scripts/stack.sh aws down      # ~10 min, then checks nothing that costs is left
 | `.env.aws` | the stores get session passwords, never the dev ones |
 
 Once per account: `terraform -chdir=deploy/aws/bootstrap apply` with `owner_email` in its
-`terraform.tfvars`, then confirm the SNS mail. Plan and measurements: `docs/plan/aws-phase-1.html`.
+`terraform.tfvars`, then confirm the SNS mail. Plan and measurements: `docs/operate/aws.html`.
 
 ## Rules
 

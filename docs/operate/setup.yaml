@@ -49,4 +49,4 @@ related:
   - [Run and fix it, run.html]
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
-  - ["AWS phase 1 plan", ../plan/aws-phase-1.html]
+  - ["On AWS", aws.html]

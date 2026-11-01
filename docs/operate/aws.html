@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AWS phase 1 · Mycel</title>
+<title>On AWS · Mycel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
@@ -10,7 +10,7 @@
 <body>
 <nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
 <div class="page">
-<header class="hero"><p class="eyebrow">Plan · 124–126 done, first EKS session passed · 2026-11-01</p><h1>Mycel on AWS, phase 1</h1><div class="hero-lede"><ul class="bul"><li>The whole product on EKS, one node, up a few hours, then deleted</li><li>Only the owner uses it; nothing is kept between sessions</li><li>Written for someone new to Mycel and to AWS: read "Read this first", then top to bottom</li><li>Hover a box for its file; a <code>file</code> link opens it in VS Code</li></ul></div></header>
+<header class="hero"><p class="eyebrow">Operate · sessions on EKS work (124–127) · public HTTPS planned (128) · 2026-11-01</p><h1>Mycel on AWS</h1><div class="hero-lede"><ul class="bul"><li>The whole product on EKS, one node, up a few hours, then deleted</li><li>Today: only the owner, by port-forward; nothing is kept between sessions</li><li>Next (§12): anyone opens it on <code>https://mycel.sbs</code> while a session runs, for interview demos</li><li>Written for someone new to Mycel and to AWS: read "Read this first", then top to bottom</li><li>Hover a box for its file; a <code>file</code> link opens it in VS Code</li></ul></div></header>
 
 <section id="first">
 <h2>Read this first</h2>
@@ -49,7 +49,7 @@
 <tr><td>7</td><td><a href="#s1d">How everything gets in</a></td><td>the install script, step by step</td></tr>
 <tr><td>8</td><td><a href="#s2">One session</a></td><td>up, use, delete</td></tr>
 <tr><td>9</td><td><a href="#s3">Cost</a> · <a href="#s4">Sizing</a></td><td>money per hour, CPU and memory</td></tr>
-<tr><td>10</td><td><a href="#s5">Batches</a> · <a href="#s6">Traps</a> · <a href="#s7">Left out</a> · <a href="#s8">Phase 2</a></td><td>the work, the risks, what comes later</td></tr>
+<tr><td>10</td><td><a href="#s5">Batches</a> · <a href="#s6">Traps</a> · <a href="#s7">Left out</a> · <a href="#next">Next: mycel.sbs</a></td><td>the work, the risks, what comes next</td></tr>
 <tr><td>11</td><td><a href="#files">Every file</a></td><td>where each piece lives in the repo</td></tr>
 </tbody></table>
 </section>
@@ -392,16 +392,7 @@
 </tbody></table>
 </section>
 
-<section id="s8">
-<h2>10d · Phase 2, later</h2>
-<table class="tbl"><thead><tr><th>Add</th><th>For</th><th>Extra cost</th></tr></thead><tbody>
-<tr><td class="who">Domain, Route 53, ACM, ALB + its controller</td><td>others reach it by HTTPS</td><td>~$0.03/h · $0.50/month · domain ~$10–15/year</td></tr>
-<tr><td class="who">Callbacks for the domain, Google test users</td><td>others can sign in</td><td>$0</td></tr>
-<tr><td class="who">ALB limited by IP, allowed domains checked</td><td>the README says Mycel is not built to face the internet</td><td>$0</td></tr>
-<tr><td class="who"><code>down</code> waits for the ALB to go; reaper deletes it too</td><td>the controller makes it outside Terraform</td><td>$0</td></tr>
-<tr><td class="who">Optional: S3 by Pod Identity, ECR, deploy from CI</td><td>more AWS on the CV</td><td>cents</td></tr>
-</tbody></table>
-</section>
+
 
 <section id="files">
 <h2>11 · Every file</h2>
@@ -416,6 +407,113 @@
 </tbody></table>
 </section>
 
+<section id="next">
+<h2>12 · Next: open on https://mycel.sbs (HLD 128, planned)</h2>
+<ul class="bul"><li>Use: before an interview <code>aws up</code>; the interviewer opens <code>https://mycel.sbs</code> and signs up; after: <code>down</code></li><li>Open to anyone while up; Gemini free tier, so strangers cost $0; the risk is its 20 req/day</li><li>Domain bought at Hostinger, name servers moved to Route 53</li></ul>
+<ul class="bul"><li>Purple: new in phase 2 · grey: as in phase 1</li><li>The owner still has port-forward for Grafana; others only have HTTPS</li></ul>
+<figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
+<svg class="diagram" viewBox="0 0 900 400" role="img" aria-label="Any browser resolves mycel.domain in Route 53, reaches the ALB on 443 if its IP is listed; the ALB with an ACM certificate forwards to the api pod on the one node. The controller pod makes the ALB. Bootstrap holds the zone, certificate, state, budgets and the reaper, which now also deletes tagged load balancers.">
+<defs><marker id="ab2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+<g font-family="var(--mono)" font-size="11" fill="var(--ink)">
+
+<g class="hv" data-tip="interviewer or anyone · signs up, chats, uploads">
+<rect x="16" y="60" width="150" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="28" y="84">Any browser</text><text x="28" y="104" font-size="9.5" fill="var(--ink-soft)">https://mycel.sbs</text>
+</g>
+<g class="hv" data-tip="owner · kubectl port-forward for Grafana, as in phase 1">
+<rect x="16" y="230" width="150" height="70" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
+<text x="28" y="254">Owner laptop</text><text x="28" y="274" font-size="9.5" fill="var(--ink-soft)">stack.sh aws up/down</text>
+</g>
+
+<rect x="200" y="16" width="684" height="368" rx="4" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+<text x="212" y="34" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">AWS · EU-WEST-2</text>
+
+<g class="hv" data-tip="ALB · HTTPS 443, 80 redirects · open to all while up · tag mycel-session&#10;made by the controller from the Ingress (batch 130)">
+<rect x="220" y="56" width="170" height="80" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="232" y="80">ALB</text><text x="232" y="100" font-size="9.5" fill="var(--ink-soft)">443 · open while up</text><text x="232" y="116" font-size="9.5" fill="var(--ink-soft)">cert from ACM</text>
+</g>
+
+<rect x="420" y="46" width="450" height="200" rx="3" fill="var(--surface-alt)" stroke="var(--line)"/>
+<text x="432" y="64" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">ONE NODE · AS PHASE 1</text>
+<g class="hv" data-tip="api pod · NetworkPolicy: port http from the public subnets (ipBlock) and Prometheus&#10;deploy/helm/mycel/templates/api/networkpolicy.yaml">
+<rect x="436" y="76" width="130" height="60" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="448" y="100">api</text><text x="448" y="118" font-size="9.5" fill="var(--ink-soft)">ipBlock rule</text>
+</g>
+<g class="hv" data-tip="aws-load-balancer-controller · Helm in aws up · IAM by Pod Identity · --default-tags mycel-session">
+<rect x="436" y="156" width="130" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="448" y="180">LB controller</text><text x="448" y="198" font-size="9.5" fill="var(--ink-soft)">makes the ALB</text>
+</g>
+<g class="hv" data-tip="worker, scheduler, ingest, stores, monitoring · unchanged">
+<rect x="586" y="76" width="268" height="150" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="598" y="100">rest of the app</text><text x="598" y="120" font-size="9.5" fill="var(--ink-soft)">worker · scheduler · stores</text><text x="598" y="136" font-size="9.5" fill="var(--ink-soft)">Grafana (port-forward)</text>
+</g>
+
+<g class="hv" data-tip="bootstrap root, never destroyed (batch 129)&#10;new: hosted zone, ACM cert · reaper also deletes tagged ALBs and target groups&#10;deploy/aws/bootstrap/">
+<rect x="220" y="270" width="650" height="96" rx="2" fill="var(--surface)" stroke="var(--line)"/>
+<text x="232" y="294">Bootstrap · made once</text>
+<text x="232" y="316" font-size="9.5" fill="var(--accent)">Route 53 zone mycel.sbs · ACM certificate · reaper learns ELB</text>
+<text x="232" y="334" font-size="9.5" fill="var(--ink-soft)">state bucket · budgets $10/$20 · reaper Lambda (as phase 1)</text>
+</g>
+</g>
+<g fill="none" stroke="var(--accent)" stroke-width="1.5">
+<path d="M166 96 H220" marker-end="url(#ab2)"/><path d="M390 106 H436" marker-end="url(#ab2)"/>
+<path d="M500 156 V146" marker-end="url(#ab2)"/><path d="M436 190 H305 V136" stroke-dasharray="4 3" marker-end="url(#ab2)"/>
+</g>
+<g fill="none" stroke="var(--line)" stroke-width="1.5"><path d="M166 265 H190 V200 H586" marker-end="url(#ab2)"/></g>
+</svg></div></figure>
+</section>
+<section id="next-s3">
+<h2>12a · Decisions</h2>
+<table class="tbl"><thead><tr><th>#</th><th>Decision</th><th>Why</th></tr></thead><tbody>
+<tr><td>1</td><td><code>mycel.sbs</code> (Hostinger): name servers moved to a Route 53 zone in bootstrap</td><td>simplest, one place for DNS</td></tr>
+<tr><td>2</td><td>ACM certificate, DNS-validated, in bootstrap</td><td>free; validation not repeated per session</td></tr>
+<tr><td>3</td><td>Load Balancer Controller by Helm in <code>up</code>, IAM by Pod Identity</td><td>no OIDC provider to manage</td></tr>
+<tr><td>4</td><td>Ingress <code>alb</code>, <code>target-type: ip</code>, 443 only, 80 redirects</td><td>one public port that matters</td></tr>
+<tr><td>5</td><td>ALB open to all on 443 and 80, only while up</td><td>a demo link must just work; the session is short and empty</td></tr>
+<tr><td>6</td><td>Controller tags the ALB <code>mycel-session</code></td><td>down, leftovers, reaper find it by tag</td></tr>
+<tr><td>7</td><td>NetworkPolicy: port http from the public subnet CIDRs (<code>ipBlock</code>)</td><td>the ALB's addresses live there</td></tr>
+<tr><td>8</td><td>DNS alias written by <code>up</code>, removed by <code>down</code>, AWS CLI</td><td>no ExternalDNS for one record</td></tr>
+<tr><td>9</td><td><code>PUBLIC_BASE_URL=https://mycel.sbs</code>, sign-up open</td><td>OAuth callbacks; anyone can make an account</td></tr>
+<tr><td>10</td><td>Google: HTTPS redirect URI; app stays in Testing; Gmail linked by the owner's account in a demo</td><td>no Google review</td></tr>
+<tr><td>11</td><td>Jira: HTTPS callback on the OAuth app</td><td>each user links their own Jira</td></tr>
+<tr><td>12</td><td><code>down</code>: uninstall, wait until no tagged ALB, then destroy</td><td>a VPC with an ALB in it cannot be deleted</td></tr>
+<tr><td>13</td><td>Reaper deletes tagged ALBs and target groups first; IAM tag condition as in 127</td><td>a forgotten ALB costs and blocks the VPC</td></tr>
+<tr><td>14</td><td><code>leftovers.sh</code> checks <code>elbv2</code> too</td><td><code>down</code> fails loudly on them</td></tr>
+</tbody></table>
+</section>
+<section id="next-s4">
+<h2>12b · Extra cost</h2>
+<table class="tbl"><thead><tr><th>Item</th><th>Price</th><th>Month, ~10 sessions of 3 h</th></tr></thead><tbody>
+<tr><td class="who">Hosted zone</td><td>$0.50 / month</td><td>$0.50</td></tr>
+<tr><td class="who">ALB</td><td>~$0.025 / h + LCU</td><td>~$0.80</td></tr>
+<tr><td class="who">ALB public IPv4 ×2</td><td>$0.005 / h each</td><td>~$0.30</td></tr>
+<tr><td class="who">ACM, Pod Identity, controller</td><td>$0</td><td>$0</td></tr>
+</tbody></table>
+<ul class="bul"><li>A session goes from ~$0.35/h to ~$0.38/h; the $30 cap is far off</li></ul>
+</section>
+<section id="next-s5">
+<h2>12c · Batches 129–131</h2>
+<table class="tbl"><thead><tr><th>#</th><th>Change</th><th>Proves</th></tr></thead><tbody>
+<tr><td>129</td><td>Bootstrap: zone, delegation, ACM; reaper and leftovers learn ELB</td><td>cert issued; reaper deletes a tagged target group, not an untagged one</td></tr>
+<tr><td>130</td><td>Chart: ALB Ingress, <code>ipBlock</code> policy; <code>up</code> installs controller, writes DNS; <code>down</code> waits</td><td>HTTPS works from a listed IP, times out from another</td></tr>
+<tr><td>131</td><td>OAuth redirect URIs for mycel.sbs; a demo run end to end</td><td>a second account signs up on mycel.sbs and chats</td></tr>
+</tbody></table>
+</section>
+<section id="next-s7">
+<h2>12d · Left out, and risks</h2>
+<table class="tbl"><thead><tr><th>Left out</th><th>Why</th></tr></thead><tbody>
+<tr><td class="who">WAF</td><td>$5/month + rules; the IP list is the gate</td></tr>
+<tr><td class="who">CloudFront, ExternalDNS, cert-manager</td><td>one record, one cert</td></tr>
+<tr><td class="who">Data kept between sessions</td><td>still a test bed</td></tr>
+</tbody></table>
+<table class="tbl"><thead><tr><th>Risk</th><th>Answer</th></tr></thead><tbody>
+<tr><td class="who">Gemini 20 req/day runs out mid-demo</td><td>check the day's use before; a paid model in <code>host_models</code> as backup</td></tr><tr><td class="who">Bots sign up while open</td><td>accepted: hours long, then destroyed</td></tr>
+<tr><td class="who">ALB deleted slowly, destroy times out</td><td>decision 12 waits; leftovers names it</td></tr>
+<tr><td class="who"><code>ipBlock</code> on the subnet also lets in the node</td><td>suspicion only; measure in 130</td></tr>
+<tr><td class="who">Delegation wrong, cert stuck pending</td><td>129 checks issuance first</td></tr>
+</tbody></table>
+</section>
+
 <!-- pager --><nav class="pager"><a href="../flows/observe.html">‹ Traces, metrics, logs, events</a><a class="at" href="../index.html">5.5 · contents</a><a href="../change/add-plugin.html">Add a plugin ›</a></nav><!-- /pager -->
-<footer><span><a href="../index.html">Handbook</a> · <a href="../operate/run.html">Run and fix it</a> · <a href="../overview/architecture.html">Architecture</a></span><span class="mono">docs/plan/aws-phase-1.html</span></footer>
+<footer><span><a href="../index.html">Handbook</a> · <a href="../operate/run.html">Run and fix it</a> · <a href="../overview/architecture.html">Architecture</a></span><span class="mono">docs/operate/aws.html</span></footer>
 </div><script src="../tip.js"></script></body>
