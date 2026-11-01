@@ -33,6 +33,15 @@ tables:
       - ["Connect button missing", "plugin client not in `.env`", "doctor: PLUGINS group", "set `<KEY>_CLIENT_ID` / `_SECRET`"]
       - ["a pod dies at start: `rabbitmq_port` not an integer", "a Service injected `RABBITMQ_PORT=tcp://…`", "`kubectl logs <pod>`", "`enableServiceLinks: false` on the pod (already set in both charts)"]
       - ["docs figure looks wrong", "code changed since the figure", "`uv run python docs/tools/check.py`", "fix the YAML, run `page.py`"]
+files:
+  - ["every command", "scripts/stack.sh"]
+  - ["dev", "scripts/dev/up.sh"]
+  - ["compose", "scripts/compose/up.sh"]
+  - ["k8s", "scripts/k8s/up.sh"]
+  - ["AWS", "scripts/aws/up.sh"]
+  - ["doctor", "scripts/ops/doctor.sh"]
+  - ["sync", "scripts/ops/sync.sh"]
+  - ["replay", "scripts/ops/replay.sh"]
 related:
   - [Architecture, ../overview/architecture.html]
   - [Job failures, ../flows/job-failures.html]

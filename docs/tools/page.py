@@ -161,6 +161,11 @@ def build(path: Path) -> str:
             '<h3 class="tbl-title">When it goes wrong</h3>'
             + table(["Case", "What happens", "Where"], spec["failures"], files_col=2)
         )
+    if spec.get("files"):
+        out.append(
+            '<h3 class="tbl-title">Where in code</h3>'
+            + table(["Part", "File"], spec["files"], files_col=1)
+        )
     if spec.get("boxes"):
         out.append(
             "<details><summary>Every file in this flow</summary>"

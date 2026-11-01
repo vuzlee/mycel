@@ -77,7 +77,11 @@ def flows() -> list[str]:
         spec = yaml.safe_load(y.read_text())
         if spec.get("boxes"):
             misses += [f"{y.name}: {m}" for m in check(spec)]
-        named = [r[1] for r in spec.get("steps", [])] + [r[2] for r in spec.get("failures", [])]
+        named = (
+            [r[1] for r in spec.get("steps", [])]
+            + [r[2] for r in spec.get("failures", [])]
+            + [r[1] for r in spec.get("files", [])]
+        )
         for f in named:
             if "/" in f and not (ROOT / f.split(":")[0]).exists():
                 misses.append(f"{y.name}: no file {f}")
