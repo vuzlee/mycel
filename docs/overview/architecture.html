@@ -12,37 +12,30 @@
   <header class="hero">
     <p class="eyebrow">Architecture</p>
     <h1>Mycel</h1>
-    <div class="hero-lede"><ul class="bul"><li>Answers questions about a team's work, from one box</li><li>Named after mycelium: works underground, surfaces as an answer</li></ul></div>
+    <div class="hero-lede"><ul class="bul"><li>A chat app: ask in plain words, AI agents answer from your Jira, Gmail, Calendar and uploaded files</li><li>Read top to bottom: the idea, how a request flows, where code lives, how it runs</li><li>Hover a box for its file · a <code>file</code> link opens it</li></ul></div>
     <div class="hero-meta">
-      <span><b>Storage</b> PostgreSQL · 3 schema</span>
-      <span><b>LLM</b> vLLM 3B local + cloud</span>
-      <span><b>Runtime</b> Python 3.11 · Docker</span>
-      <span><b>Observability</b> OTLP → Langfuse Cloud</span>
+      <span><b>Storage</b> PostgreSQL · bronze, silver, gold, app</span>
+      <span><b>Models</b> through the LiteLLM gateway, or a person's own</span>
+      <span><b>Runtime</b> Python 3.11 · Docker · Helm</span>
+      <span><b>Traces</b> OTLP → Langfuse</span>
     </div>
-
     <nav class="toc">
       <a href="#p1"><b>Part 1</b><span>The idea</span></a>
       <a href="#p2"><b>Part 2</b><span>Code flow</span></a>
-      <a href="#p3"><b>Part 3</b><span>Directory layout</span></a>
-      <a href="#p4"><b>Part 4</b><span>Running for real</span></a>
+      <a href="#p3"><b>Part 3</b><span>Where code lives</span></a>
+      <a href="#p4"><b>Part 4</b><span>Running it</span></a>
     </nav>
   </header>
-
-  <!-- ============ LAYER DIAGRAM ============ -->
-
-  <div class="part" id="p1">
-    <span class="part-num">Part 1</span>
-    <h2 class="part-title">The idea</h2>
-    <p class="part-blurb">Data from scattered sources flows one way through four layers and ends as an answer. Understand this part and you understand what the system does.</p>
-  </div>
-  <section id="s01">
+  <section id="s00">
+    <div class="section-head"><p class="eyebrow">0 · Read this first</p><h2>Words on this page</h2></div>
+<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">bronze · silver · gold</td><td>raw copy from the provider · cleaned rows · tables the product reads</td></tr><tr><td class="who">ETL</td><td>extract, transform, load: the steps that turn bronze into gold</td></tr><tr><td class="who">agent</td><td>a model with a prompt and tools it may call; the orchestrator hands work to specialists</td></tr><tr><td class="who">tool</td><td>a function an agent may call, e.g. run a query on gold</td></tr><tr><td class="who">job · queue · worker</td><td>a unit of slow work · RabbitMQ holding it · the process that runs it</td></tr><tr><td class="who">route · domain · service</td><td>HTTP entry · the order of steps for one job · one step, reusable</td></tr><tr><td class="who">outbox</td><td>a job row written in the same transaction as the data, sent to the queue after</td></tr><tr><td class="who">SSE</td><td>server-sent events: the server pushes each step to the browser as it happens</td></tr><tr><td class="who">gateway (LiteLLM)</td><td>one door to every hosted model; holds the keys, caps spend</td></tr><tr><td class="who">Helm chart</td><td>an install package for Kubernetes; same image everywhere, values differ</td></tr></tbody></table>
+  </section>
+  <div class="part" id="p1"><span class="part-num">Part 1</span><h2 class="part-title">The idea</h2></div>
+<section id="s01">
     <div class="section-head">
       <p class="eyebrow">1.1 · Data flow</p>
       <h2>Data flows one way through four layers</h2>
-      <p>
-        Each layer only reads the layer directly below it and writes to the one directly above. No shortcuts:
-        agents never touch <code>bronze</code> or <code>silver</code>.
-      </p>
+      <div><ul class="bul"><li>Each layer reads only the one below it</li><li>Agents never touch <code>bronze</code> or <code>silver</code></li></ul></div>
     </div>
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
@@ -257,53 +250,11 @@
     <div class="path-note"><ul class="bul"><li>Data axis: <code>plugins → bronze → etl → silver → gold</code>, on a timer, minutes</li><li>Request axis: <code>route → domain → service</code>, seconds (Part 2)</li><li>The two meet only at gold</li></ul></div>
   </section>
   <section id="s02">
-    <div class="section-head">
-      <p class="eyebrow">1.2 · The contract between layers</p>
-      <h2>Why <code>bronze</code> is kept untouched</h2>
-      <div><ul class="bul"><li>One source today: silver and gold hold the same columns</li><li>Bad transform → re-run from bronze, no new Jira calls</li><li>bronze is the copy we control: providers rate-limit, delete, change schema</li></ul></div>
-    </div>
-
-    <div class="layers">
-      <article class="layer">
-        <div class="layer-name">bronze</div>
-        <p>The original payload, untouched. Append only — never edited, never deleted.</p>
-        <dl>
-          <dt>written by</dt><dd>plugins/&lt;provider&gt;/</dd>
-          <dt>read by</dt><dd>etl/</dd>
-          <dt>type</dt><dd>JSONB + metadata</dd>
-        </dl>
-      </article>
-
-      <article class="layer">
-        <div class="layer-name">silver</div>
-        <p>The provider's envelope taken off: typed columns, timestamps in UTC, keyed on what
-        the source calls the row. Changes when <em>the source</em> changes.</p>
-        <dl>
-          <dt>written by</dt><dd>etl/normalize.py</dd>
-          <dt>read by</dt><dd>etl/promote.py</dd>
-          <dt>type</dt><dd>typed columns</dd>
-        </dl>
-      </article>
-
-      <article class="layer">
-        <div class="layer-name">gold</div>
-        <p>What the product reads, and the only contract with the AI layer. Changes when
-        <em>the question</em> changes.</p>
-        <dl>
-          <dt>written by</dt><dd>etl/promote.py</dd>
-          <dt>read by</dt><dd>agents/ · domains/</dd>
-          <dt>type</dt><dd>query tables</dd>
-        </dl>
-      </article>
-    </div>
+    <div class="section-head"><p class="eyebrow">1.2 · The contract between layers</p><h2>Three schemas, one direction</h2><div><ul class="bul"><li>Bad transform → re-run from bronze, no new Jira calls</li><li>Providers rate-limit and change; bronze is the copy we control</li></ul></div></div>
+<table class="tbl"><thead><tr><th>Schema</th><th>Holds</th><th>Written by</th><th>Read by</th></tr></thead><tbody><tr><td class="who">bronze</td><td>the provider's payload, untouched, append only</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/sync.py">plugins/&lt;p&gt;/sync.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td></tr><tr><td class="who">silver</td><td>typed columns, UTC times; changes when the source changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py">etl/promote.py</a></td></tr><tr><td class="who">gold</td><td>what the product reads; changes when the question changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py">etl/promote.py</a></td><td>agents · domains</td></tr><tr><td class="who">app</td><td>people, sessions, turns, connections</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/">infra/postgres/</a></td><td>api · services</td></tr></tbody></table>
   </section>
-
-  <div class="part" id="p2">
-    <span class="part-num">Part 2</span>
-    <h2 class="part-title">Code flow</h2>
-    <p class="part-blurb">Which layers a request passes through, which layer calls which, and which module may import which.</p>
-  </div>
-  <section id="s06">
+  <div class="part" id="p2"><span class="part-num">Part 2</span><h2 class="part-title">Code flow</h2></div>
+<section id="s06">
     <div class="section-head">
       <p class="eyebrow">2.1 · Each layer's responsibility</p>
       <h2>Who does what in a request</h2>
@@ -542,7 +493,7 @@
 
     <div class="path-note"><ul class="bul"><li>Domain = the chain; service = one link</li><li><code>domains/chat.py</code>: enqueue → worker → orchestrator → <code>app.turn</code></li><li><code>plugins/jira/sync.py</code>: fetch → transform → check</li></ul></div>
   </section>
-  <section id="s07">
+<section id="s07">
     <div class="section-head">
       <p class="eyebrow">2.2 · The life of a request</p>
       <h2>From the question to the stored answer</h2>
@@ -572,62 +523,13 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     </figure>
   </section>
   <section id="s10">
-    <div class="section-head">
-      <p class="eyebrow">2.3 · Who is calling</p>
-      <h2>A cookie, and one row that can be deleted</h2>
-      <div><ul class="bul"><li>Every request names a person: the data is the team's own</li><li>Browser holds a token; server keeps the matching row</li></ul></div>
-    </div>
-
-    <table class="tbl">
-      <thead>
-        <tr>
-          <th>Decision</th>
-          <th>Why</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="who">No passwords: Google or an emailed code</td>
-          <td>Mycel already lives on Google, so a password is one more secret to leak and
-            reset. The id token is checked against Google's keys; a code works once.</td>
-        </tr>
-        <tr>
-          <td class="who">An opaque token, not a JWT</td>
-          <td>Revoking a JWT needs a server-side list of revoked ones — that list is
-            <code>app.session</code> with extra steps. So it is that table without them, and
-            logging out deletes the row.</td>
-        </tr>
-        <tr>
-          <td class="who">Expiry checked on read</td>
-          <td>The database holds <code>expires_at</code> and enforces nothing. A session one
-            second past expiry has to read as gone before any sweeper runs.</td>
-        </tr>
-        <tr>
-          <td class="who">HttpOnly · SameSite=Lax</td>
-          <td>A token a page can read is a token a cross-site script can steal. Lax keeps it
-            off cross-site POSTs, which is the CSRF defence this needs while every mutating
-            call comes from the app's own pages.</td>
-        </tr>
-        <tr>
-          <td class="who"><code>Depends(current_user)</code>,<br>not middleware</td>
-          <td>It reaches the OpenAPI schema and mypy checks it. A middleware that sets a
-            request attribute does neither.</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div><ul class="bul"><li>Every security decision: <code>services/auth.py</code></li><li><code>api/routes/auth.py</code> only turns it into HTTP</li></ul></div>
-
-    <div><ul class="bul"><li>Which projects may this person read? → <code>services/permission.py</code></li><li>Answer comes from <code>app.membership</code>, filled from Jira</li><li>Agent queries: same list, enforced by Postgres row security</li></ul></div>
+    <div class="section-head"><p class="eyebrow">2.3 · Who is calling</p><h2>A cookie, and one row that can be deleted</h2><div><ul class="bul"><li>Every request names a person: the data is the team's own</li></ul></div></div>
+<table class="tbl"><thead><tr><th>Choice</th><th>Why</th></tr></thead><tbody><tr><td class="who">Google or a mailed code, no password</td><td>one less secret to leak</td></tr><tr><td class="who">opaque token in <code>app.session</code>, not a JWT</td><td>logout deletes the row; nothing to revoke</td></tr><tr><td class="who">expiry checked on read</td><td>a session past its time is gone at once</td></tr><tr><td class="who">HttpOnly · SameSite=Lax</td><td>scripts cannot read it; no cross-site POST</td></tr><tr><td class="who"><code>Depends(current_user)</code></td><td>typed, checked by mypy, in the API schema</td></tr></tbody></table><table class="tbl"><thead><tr><th>Question</th><th>Answered in</th></tr></thead><tbody><tr><td class="who">who is this?</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/services/auth.py">services/auth.py</a></td></tr><tr><td class="who">may they read this project?</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/services/permission.py">services/permission.py</a> · Postgres row security on gold</td></tr></tbody></table>
   </section>
-  <section id="s05">
+<section id="s05">
     <div class="section-head">
       <p class="eyebrow">2.4 · Dependency order</p>
-      <h2>Dependency order</h2>
-      <p>
-        Arrows read as <em>“is imported by”</em>. No arrow points back upwards —
-        if you find yourself needing an upward import, the design is wrong somewhere.
-      </p>
+      <h2>Dependency order</h2><div><ul class="bul"><li>Arrow = "is imported by"; none points up</li><li>Need an upward import? The design is wrong</li></ul></div>
     </div>
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
@@ -700,56 +602,14 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
                 fill="var(--accent)" text-anchor="middle">observability</text>
         </svg>
       </div>
-      <figcaption>
-        <code>observability</code> is a deliberate exception: it cuts across every layer, so it has to
-        stay very thin and hold no business logic.
-      </figcaption>
+      <figcaption><ul class="bul"><li><code>observability</code> cuts across every layer: thin, no business logic</li></ul></figcaption>
     </figure>
   </section>
-
-  <div class="part" id="p3">
-    <span class="part-num">Part 3</span>
-    <h2 class="part-title">Directory layout</h2>
-    <p class="part-blurb">One job per folder, obvious from the name. The last section goes deep into the AI layer — the easiest place to get wrong.</p>
-  </div>
+  <div class="part" id="p3"><span class="part-num">Part 3</span><h2 class="part-title">Where code lives</h2></div>
   <section id="s04">
-    <div class="section-head">
-      <p class="eyebrow">3.1 · Directory layout</p>
-      <h2>The name tells you the job</h2>
-      <div><ul class="bul"><li>Flat, one level deep; a big file becomes a same-name folder</li><li>A provider a person connects = a folder in <code>plugins/</code></li></ul></div>
-    </div>
-    <p class="dirs-h">src/mycel/</p>
-    <div class="dirs">
-      <div class="d" data-path="src/mycel/api/app.py"><b>api/</b><small>Routes, middleware, serves the web app. Parses and authorises; never runs a model.</small></div>
-      <div class="d" data-path="src/mycel/services/enqueue.py"><b>services/</b><small>One job each, called from api, worker, plugins and tools: enqueue, permission, sealing, model catalog.</small></div>
-      <div class="d" data-path="src/mycel/domains/chat.py"><b>domains/</b><small>What a queued job does: chat, ingest, index, sync, key checks; the Knowledge chip. Knows nothing about HTTP.</small></div>
-      <div class="d" data-path="src/mycel/agents/registry.py"><b>agents/</b><small>Orchestrator, analyst, researcher; shared tools, prompts, and the runtime that opens a model.</small></div>
-      <div class="d" data-path="src/mycel/plugins/registry.py"><b>plugins/</b><small>One package per provider (Jira, Google): HTTP client, OAuth, tools, sync, doctor probe.</small></div>
-      <div class="d" data-path="src/mycel/etl/promote.py"><b>etl/</b><small>bronze → silver → gold and the checks between; uploaded files into passages.</small></div>
-      <div class="d" data-path="src/mycel/queue/topology.py"><b>queue/</b><small>RabbitMQ: publish, consume, retry, dead-letter.</small></div>
-      <div class="d" data-path="src/mycel/scheduler/runner.py"><b>scheduler/</b><small>Timers: outbox relay, one sync per plugin, sweeps.</small></div>
-      <div class="d" data-path="src/mycel/infra/postgres/engine.py"><b>infra/</b><small>Postgres, Redis, Qdrant, MinIO, SMTP, the shared HTTP client. All SQL lives here.</small></div>
-      <div class="d" data-path="src/mycel/llm/budget.py"><b>llm/</b><small>Model specs, prices and the per-job cost budget. Value types only.</small></div>
-      <div class="d" data-path="src/mycel/events/__init__.py"><b>events/</b><small>What a run publishes while it works.</small></div>
-      <div class="d" data-path="src/mycel/core/config.py"><b>core/</b><small>Settings and shared types. Imports no other layer.</small></div>
-      <div class="d" data-path="src/mycel/observability/tracing.py"><b>observability/</b><small>Traces to Langfuse, Prometheus metrics.</small></div>
-      <div class="d" data-path="src/mycel/doctor/__init__.py"><b>doctor/</b><small>What is configured, broken, or off on purpose.</small></div>
-      <div class="d" data-path="src/mycel/mcp/__init__.py"><b>mcp/</b><small>Tools on external MCP servers.</small></div>
-      <div class="d root" data-path="src/mycel/lifecycle.py"><b>lifecycle.py · worker/</b><small>At the root: process start/stop, and job dispatch (<code>worker/handlers.py</code>). Each wires every layer, so inside one they would import upward.</small></div>
-    </div>
-    <p class="dirs-h">repo root</p>
-    <div class="dirs">
-      <div class="d" data-path="web/src/main.tsx"><b>web/</b><small>The React app, served by the API at /app. <code>src/api/</code> one file per backend area; <code>components/home/</code> the landing page.</small></div>
-      <div class="d" data-path="migrations/env.py"><b>migrations/</b><small>Alembic. A downgrade outside a _test database is refused.</small></div>
-      <div class="d" data-path="config/litellm/config.yaml"><b>config/</b><small>Environment YAML, the gateway, MCP servers.</small></div>
-      <div class="d" data-path="evals/analyst/run.py"><b>evals/</b><small>Golden questions run by hand against real models.</small></div>
-      <div class="d" data-path="tests/conftest.py"><b>tests/</b><small>Code tests; only ever on a _test database.</small></div>
-      <div class="d" data-path="scripts/stack.sh"><b>scripts/</b><small>Run, deploy, doctor, sync, gateway key.</small></div>
-      <div class="d" data-path="deploy/helm/mycel/values.yaml"><b>deploy/</b><small>Helm chart, monitoring.</small></div>
-      <div class="d" data-path="docs/index.html"><b>docs/</b><small>This handbook.</small></div>
-    </div>
-
-    <p class="dirs-h">import rules — tests/test_layers.py fails the build on any of these</p>
+    <div class="section-head"><p class="eyebrow">3.1 · Directory layout</p><h2>The name tells you the job</h2><div><ul class="bul"><li>One level deep; a big file becomes a same-name folder</li><li>A new provider = one folder in <code>plugins/</code></li></ul></div></div>
+<table class="tbl"><thead><tr><th>Folder</th><th>Job</th><th>Start at</th></tr></thead><tbody><tr><td class="who">api/</td><td>routes, middleware, serves the web app; never runs a model</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/api/app.py">app.py</a></td></tr><tr><td class="who">services/</td><td>one job each: enqueue, permission, sealing, model catalog</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/services/">src/mycel/services/</a></td></tr><tr><td class="who">domains/</td><td>what a queued job does: chat, ingest, index, sync</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/domains/chat.py">chat.py</a></td></tr><tr><td class="who">agents/</td><td>orchestrator, specialists, tools, prompts, the model runtime</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/registry.py">registry.py</a></td></tr><tr><td class="who">plugins/</td><td>one folder per provider: client, OAuth, tools, sync</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/registry.py">registry.py</a></td></tr><tr><td class="who">etl/</td><td>bronze → silver → gold; uploaded files into passages</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/transform.py">transform.py</a></td></tr><tr><td class="who">queue/</td><td>RabbitMQ: publish, consume, retry, dead-letter</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/queue/topology.py">topology.py</a></td></tr><tr><td class="who">scheduler/</td><td>timers: outbox relay, sync, sweeps</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/scheduler/runner.py">runner.py</a></td></tr><tr><td class="who">infra/</td><td>Postgres, Redis, Qdrant, MinIO, SMTP, HTTP; all SQL</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/">src/mycel/infra/</a></td></tr><tr><td class="who">llm/</td><td>model specs, prices, the per-job budget</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/llm/budget.py">budget.py</a></td></tr><tr><td class="who">events/</td><td>what a run publishes while it works</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/events/">src/mycel/events/</a></td></tr><tr><td class="who">core/</td><td>settings and shared types; imports nothing</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/core/config.py">config.py</a></td></tr><tr><td class="who">observability/</td><td>traces, metrics</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/observability/tracing.py">tracing.py</a></td></tr><tr><td class="who">doctor/</td><td>what is configured, broken or off</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/doctor/">src/mycel/doctor/</a></td></tr><tr><td class="who">mcp/</td><td>tools on external MCP servers</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/mcp/">src/mycel/mcp/</a></td></tr><tr><td class="who">lifecycle.py · worker/</td><td>process start/stop, job dispatch; wire every layer</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/worker/handlers.py">handlers.py</a></td></tr><tr><td class="who">web/</td><td>the React app, served at <code>/app</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/web/src/main.tsx">main.tsx</a></td></tr><tr><td class="who">migrations/</td><td>Alembic schema changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/migrations/versions/">migrations/versions/</a></td></tr><tr><td class="who">config/</td><td>environment YAML, gateway, MCP servers</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/">config/</a></td></tr><tr><td class="who">evals/</td><td>golden questions, run by hand</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/evals/">evals/</a></td></tr><tr><td class="who">tests/</td><td>code tests; only on a <code>_test</code> database</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/tests/">tests/</a></td></tr><tr><td class="who">scripts/</td><td>run, deploy, doctor, gateway key</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/stack.sh">stack.sh</a></td></tr><tr><td class="who">deploy/</td><td>Helm charts, Terraform, monitoring</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/">deploy/</a></td></tr><tr><td class="who">docs/</td><td>this handbook</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/docs/index.html">index.html</a></td></tr></tbody></table>
+<h3 class="tbl-title">import rules — tests/test_layers.py fails the build on any of these</h3>
     <table class="tbl">
       <thead><tr><th>Package</th><th>May never import</th><th>Why</th></tr></thead>
       <tbody>
@@ -765,194 +625,13 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr><td class="who">plugins/&lt;p&gt;/client · http</td><td>any of mycel but <code>core</code>, <code>infra.http</code>, <code>plugins/errors.py</code></td><td>a provider client only talks to the provider</td></tr>
       </tbody>
     </table>
-    <div class="path-note"><ul class="bul"><li><code>test_gold_entry_point.py</code>: reading gold for a person must ask <code>permission.py</code></li><li><code>worker/</code>, <code>lifecycle.py</code> at the root: each wires every layer</li><li>nothing in the app imports <code>devtools/</code></li></ul></div>
   </section>
   <section id="s03">
-    <div class="section-head">
-      <p class="eyebrow">3.2 · The AI layer</p>
-      <h2>Local carries the volume, cloud does the reasoning</h2>
-      <div><ul class="bul"><li>Every model call goes through <code>llm/</code> and the gateway</li><li>Swap model, add cache, cap spend: one change</li></ul></div>
-    </div>
-
-    <figure class="tipfig"><div class="tip" role="tooltip"></div>
-      <div class="scroll-x">
-        <svg class="diagram" viewBox="0 0 940 400" role="img"
-             aria-label="Mycel's AI layer: the orchestrator takes a chat request and splits it across specialist agents; agents call tools to query gold; every model call goes through the llm module, where the router chooses between vLLM running locally for high-volume work and a cloud API for the final reasoning; cache and budget sit on the path; evals score the results against a golden set.">
-          <defs>
-            <marker id="ai-ar" viewBox="0 0 10 10" refX="9" refY="5"
-                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
-            </marker>
-          </defs>
-
-          <!-- ===== agents ===== -->
-          <text x="24" y="28" font-family="var(--mono)" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">AGENTS/</text>
-
-          <rect x="24" y="42" width="168" height="46" rx="2"
-                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="40" y="62" font-family="var(--mono)" font-size="12"
-                fill="var(--gold)">orchestrator</text>
-          <text x="40" y="79" font-family="var(--sans)" font-size="9.5"
-                fill="var(--ink-soft)">splits tasks, merges results</text>
-
-          <g font-family="var(--sans)" font-size="10.5" fill="var(--ink-soft)">
-            <!-- One box, not a list. The roster is in section 3.1 and in agents/registry.py,
-                 either of which can gain a peer without this figure going stale. -->
-            <rect x="24" y="106" width="192" height="102" rx="2"
-                  fill="var(--surface)" stroke="var(--line)"/>
-            <g fill="var(--gold)">
-              <circle cx="42" cy="132" r="5"/>
-              <circle cx="58" cy="132" r="5" opacity="0.66"/>
-              <circle cx="74" cy="132" r="5" opacity="0.4"/>
-            </g>
-            <text x="40" y="162" font-size="9.5" fill="var(--ink)">specialists</text>
-            <text x="40" y="180" font-size="8.5">peers, not ranks — each differs</text>
-            <text x="40" y="195" font-size="8.5">by the tools it is given</text>
-          </g>
-
-          <!-- orchestrator -> agents -->
-          <g stroke="var(--gold)" stroke-width="1.2" fill="none" color="var(--gold)"
-             marker-end="url(#ai-ar)">
-            <path d="M 108 88 L 108 102"/>
-          </g>
-
-          <!-- tools -->
-          <rect x="24" y="232" width="168" height="46" rx="2"
-                fill="var(--surface)" stroke="var(--line)"/>
-          <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/tools/work.py" class="hv" data-path="src/mycel/agents/tools/work.py" data-tip="agents/tools/work.py&#10;functions the model may call"><text x="40" y="252" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">tools/</text></a>
-          <text x="40" y="269" font-family="var(--sans)" font-size="9"
-                fill="var(--ink-soft)">query gold · compute · charts</text>
-
-          <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none" color="var(--ink-faint)"
-             marker-end="url(#ai-ar)">
-            <path d="M 108 208 L 108 228"/>
-          </g>
-
-          <!-- gold -->
-          <rect x="24" y="316" width="168" height="40" rx="2"
-                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="40" y="341" font-family="var(--mono)" font-size="11.5"
-                fill="var(--gold)">gold</text>
-          <g stroke="var(--gold)" stroke-width="1.2" fill="none" color="var(--gold)"
-             marker-end="url(#ai-ar)">
-            <path d="M 108 278 L 108 312"/>
-          </g>
-
-          <!-- ===== llm/ : the only gateway ===== -->
-          <text x="256" y="28" font-family="var(--mono)" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">LLM/ — THE ONLY GATEWAY</text>
-
-          <rect x="256" y="42" width="236" height="314" rx="3"
-                fill="none" stroke="var(--accent)" stroke-width="1.4"/>
-
-          <rect x="280" y="70" width="188" height="44" rx="2"
-                fill="var(--surface)" stroke="var(--line)"/>
-          <text x="296" y="90" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">cache</text>
-          <text x="296" y="106" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-soft)">repeated prompt → no second call</text>
-
-          <rect x="280" y="130" width="188" height="44" rx="2"
-                fill="var(--surface)" stroke="var(--line)"/>
-          <text x="296" y="150" font-family="var(--mono)" font-size="11.5"
-                fill="var(--ink)">budget</text>
-          <text x="296" y="166" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-soft)">over the token ceiling → stop</text>
-
-          <rect x="280" y="190" width="188" height="44" rx="2"
-                fill="var(--accent)" stroke="var(--accent)" opacity="0.14"/>
-          <rect x="280" y="190" width="188" height="44" rx="2"
-                fill="none" stroke="var(--accent)" stroke-width="1.6"/>
-          <text x="296" y="210" font-family="var(--mono)" font-size="11.5"
-                fill="var(--accent)">router</text>
-          <text x="296" y="226" font-family="var(--sans)" font-size="10"
-                fill="var(--ink-soft)">picks local or cloud</text>
-
-          <!-- agents -> llm -->
-          <g stroke="var(--gold)" stroke-width="1.6" fill="none" color="var(--gold)"
-             marker-end="url(#ai-ar)">
-            <path d="M 192 65 L 224 65 L 224 92 L 276 92"/>
-          </g>
-          <text x="200" y="58" font-family="var(--mono)" font-size="9"
-                fill="var(--gold)">every call</text>
-
-          <!-- flow inside llm -->
-          <g stroke="var(--ink-faint)" stroke-width="1.1" fill="none" color="var(--ink-faint)"
-             marker-end="url(#ai-ar)">
-            <path d="M 374 114 L 374 126"/>
-            <path d="M 374 174 L 374 186"/>
-          </g>
-
-          <!-- ===== backend ===== -->
-          <text x="556" y="28" font-family="var(--mono)" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">WHERE THE MODEL ACTUALLY RUNS</text>
-
-          <!-- local -->
-          <rect x="556" y="42" width="360" height="130" rx="2"
-                fill="var(--silver-wash)" stroke="var(--silver)" stroke-width="1.4"/>
-          <text x="576" y="66" font-family="var(--mono)" font-size="12"
-                fill="var(--silver)">vLLM — local</text>
-          <text x="576" y="86" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">Qwen 2.5 3B · AWQ 4-bit · GTX 1660 Ti 6GB</text>
-          <line x1="576" y1="98" x2="896" y2="98" stroke="var(--silver)" opacity="0.35"/>
-          <text x="576" y="118" font-family="var(--sans)" font-size="11"
-                fill="var(--ink)">High-volume work, short output:</text>
-          <text x="576" y="136" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">classification · entity extraction · relevance scoring</text>
-          <text x="576" y="154" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">per-record summaries · data never leaves the machine</text>
-
-          <!-- cloud -->
-          <rect x="556" y="192" width="360" height="130" rx="2"
-                fill="var(--gold-wash)" stroke="var(--gold)" stroke-width="1.4"/>
-          <text x="576" y="216" font-family="var(--mono)" font-size="12"
-                fill="var(--gold)">API cloud</text>
-          <text x="576" y="236" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">large model · long context</text>
-          <line x1="576" y1="248" x2="896" y2="248" stroke="var(--gold)" opacity="0.35"/>
-          <text x="576" y="268" font-family="var(--sans)" font-size="11"
-                fill="var(--ink)">The final reasoning:</text>
-          <text x="576" y="286" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">synthesising sources · writing the answer</text>
-          <text x="576" y="304" font-family="var(--sans)" font-size="11"
-                fill="var(--ink-soft)">decisions needing lots of context</text>
-
-          <!-- router -> backends -->
-          <g stroke="var(--silver)" stroke-width="1.6" fill="none" color="var(--silver)"
-             marker-end="url(#ai-ar)">
-            <path d="M 492 206 L 520 206 L 520 107 L 552 107"/>
-          </g>
-          <g stroke="var(--gold)" stroke-width="1.6" fill="none" color="var(--gold)"
-             marker-end="url(#ai-ar)">
-            <path d="M 492 218 L 520 218 L 520 257 L 552 257"/>
-          </g>
-
-          <!-- evals -->
-          <rect x="556" y="338" width="360" height="40" rx="2"
-                fill="var(--surface)" stroke="var(--accent)" stroke-width="1.2"/>
-          <a href="vscode://file/home/vuzle/Documents/mycel/evals/analyst/run.py" class="hv" data-path="evals/analyst/run.py" data-tip="evals/analyst/run.py&#10;golden questions, run by hand"><text x="576" y="363" font-family="var(--mono)" font-size="11.5"
-                fill="var(--accent)">evals/</text></a>
-          <text x="648" y="363" font-family="var(--sans)" font-size="10.5"
-                fill="var(--ink-soft)">golden set — run by hand, compared to a baseline</text>
-          <g stroke="var(--accent)" stroke-width="1.1" stroke-dasharray="3 3" fill="none"
-             color="var(--accent)" marker-end="url(#ai-ar)" opacity="0.8">
-            <path d="M 736 322 L 736 334"/>
-          </g>
-        </svg>
-      </div>
-      <figcaption><ul class="bul"><li><code>router</code> alone knows which model runs where</li><li>No local model → every call goes to the cloud, no code change</li></ul></figcaption>
-    </figure>
-
+    <div class="section-head"><p class="eyebrow">3.2 · The AI layer</p><h2>Every model call goes through one place</h2><div><ul class="bul"><li>Figure: <a href="../flows/model-cost.html">Model and cost</a> · <a href="../flows/agent-context.html">What the model sees</a></li></ul></div></div>
+<table class="tbl"><thead><tr><th>Piece</th><th>Does</th><th>File</th></tr></thead><tbody><tr><td class="who">orchestrator</td><td>reads the question, hands parts to specialists, merges</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/registry.py">agents/registry.py</a></td></tr><tr><td class="who">specialists</td><td>analyst (gold), researcher (web, mail), summarizer</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/">agents/specialists/</a></td></tr><tr><td class="who">model builder</td><td>turns the turn's pick into a client: gateway or own endpoint</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/model_builder.py">model_builder.py</a></td></tr><tr><td class="who">runner</td><td>runs a turn, charges each call to the job budget</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/runner.py">runner.py</a></td></tr><tr><td class="who">budget</td><td>stops a job at its ceiling</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/llm/budget.py">llm/budget.py</a></td></tr><tr><td class="who">gateway</td><td>LiteLLM: host models and their keys</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/models.yaml">models.yaml</a></td></tr></tbody></table>
   </section>
-
-  <div class="part" id="p4">
-    <span class="part-num">Part 4</span>
-    <h2 class="part-title">Running for real</h2>
-    <p class="part-blurb">Docker, observability, and the path from dev machine to cluster. With a clear line between what exists and what is still only design.</p>
-  </div>
-  <section id="s15">
+  <div class="part" id="p4"><span class="part-num">Part 4</span><h2 class="part-title">Running it</h2></div>
+<section id="s15">
     <div class="section-head">
       <p class="eyebrow">4.0 · Processes</p>
       <h2>One image, four programs</h2>
@@ -976,8 +655,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       </tbody>
     </table>
   </section>
-
-  <section id="s09">
+<section id="s09">
     <div class="section-head">
       <p class="eyebrow">4.1 &middot; The operational stack</p>
       <h2>What <code>docker compose up</code> starts</h2>
@@ -1000,8 +678,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     </table>
     <div class="path-note"><ul class="bul"><li>Traces go straight to Langfuse (OTLP)</li><li>Grafana sees only anonymous spans</li></ul></div>
   </section>
-
-  <section id="s13">
+<section id="s13">
     <div class="section-head">
       <p class="eyebrow">4.1b &middot; Ports</p>
       <h2>What listens where</h2>
@@ -1043,12 +720,11 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     </table>
     <p>The cache Redis on 6380 can be flushed at any time; it only costs recomputation.</p>
   </section>
-
-  <section id="s14">
+<section id="s14">
     <div class="section-head">
       <p class="eyebrow">4.1c &middot; Silent traps</p>
       <h2>Six things that raise no error when they are wrong</h2>
-      <p>They simply behave wrongly, which is worse: nothing turns red, so nobody looks.</p>
+      
     </div>
 
     <table class="tbl">
@@ -1069,8 +745,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       </tbody>
     </table>
   </section>
-
-  <section id="s10">
+<section id="s10">
     <div class="section-head">
       <p class="eyebrow">4.2 · From dev machine to cluster</p>
       <h2>Two images, one environment</h2>
@@ -1201,7 +876,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr>
           <td class="who">dev</td>
           <td>Personal machine, real or sample data</td>
-          <td>local vLLM if there is a GPU</td>
+          <td>the gateway; local vLLM only with <code>--profile local-llm</code></td>
           <td>Runs from source, hot reload</td>
         </tr>
         <tr class="tone-gold">
@@ -1216,61 +891,8 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <div><ul class="bul"><li>Same images everywhere</li><li>Differences are env vars only; secrets never in <code>config/</code></li></ul></div>
   </section>
   <section id="s12">
-    <div class="section-head">
-      <p class="eyebrow">4.3 · On the cluster</p>
-      <h2>Kubernetes on-premise</h2>
-      <div><ul class="bul"><li>Runs in-house; only the final model call leaves</li><li><code>docker-compose.yml</code> = dev; <code>deploy/helm/</code> = cluster</li><li>Same image, same env vars, no <code>if env == "prod"</code></li></ul></div>
-      <div><ul class="bul"><li>Four app pods on minikube + ConfigMap, Service, Ingress, migration hook</li><li>Stores stay outside, at <code>host.minikube.internal</code></li><li>Not built on purpose: Argo CD, Harbor, autoscaling, StatefulSets</li></ul></div>
-    </div>
-
-    <table class="tbl">
-      <thead>
-        <tr>
-          <th>Requirement</th>
-          <th>Solution</th>
-          <th>Easy to get wrong</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="who">The API can scale</td>
-          <td><code>Deployment.replicas</code> — many pods behind one <code>Service</code></td>
-          <td>—</td>
-        </tr>
-        <tr>
-          <td class="who">A dead pod comes back</td>
-          <td>kubelet restarts the container; the Deployment recreates a lost pod</td>
-          <td>A hung pod with an open port looks healthy to K8s. Self-healing is only correct when the probes are</td>
-        </tr>
-        <tr>
-          <td class="who">More traffic adds pods</td>
-          <td><b>Not built.</b> <code>worker.replicas</code> is a number in values</td>
-          <td>There is no load. An HPA on CPU is ten lines that mean nothing, and the measure that would mean something is RabbitMQ queue depth through KEDA — a second control plane for a problem nobody has</td>
-        </tr>
-        <tr>
-          <td class="who">Services can reach each other</td>
-          <td><code>Service</code> — one stable DNS name, load-balanced already</td>
-          <td>—</td>
-        </tr>
-        <tr class="tone-gold">
-          <td class="who">Reproducible deploys</td>
-          <td><b>Helm</b> — a versioned chart; the same chart + the same values gives the same result</td>
-          <td><code>version</code> is the chart's, <code>appVersion</code> is the image's commit SHA. Rolling back the chart does not roll back the code</td>
-        </tr>
-        <tr class="tone-gold">
-          <td class="who">Automated deploys</td>
-          <td><b>Not built.</b> <code>helm upgrade --install</code>, run by hand or by CI</td>
-          <td>Argo CD answers &ldquo;what is running, who changed it, when&rdquo; — and with one person, one cluster and one branch, <code>git log</code> already answers it. Its <code>prune</code> is also a live hazard: one wrong line in values deletes a PVC</td>
-        </tr>
-        <tr class="tone-gold">
-          <td class="who">Private container images</td>
-          <td><b>Not built.</b> <code>minikube image load</code> — no registry at all</td>
-          <td>The only part of Harbor worth having here is the proxy cache, which <code>registry:2</code> does in one container. Tag = commit SHA, never <code>latest</code>: two pods with the same manifest would otherwise run different code</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3 class="tbl-title">Each pod on the cluster</h3>
+    <div class="section-head"><p class="eyebrow">4.3 · On a cluster</p><h2>Kubernetes: minikube and EKS</h2><div><ul class="bul"><li><code>docker-compose.yml</code> = dev · <code>deploy/helm/</code> = cluster</li><li>Same image, only values differ</li><li>AWS: <a href="../operate/aws.html">On AWS</a></li></ul></div></div>
+<h3 class="tbl-title">Each pod on the cluster</h3>
     <table class="tbl">
       <thead><tr><th>Topic</th><th>Choice</th><th>Why</th></tr></thead>
       <tbody>
@@ -1286,134 +908,12 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     </table>
   </section>
   <section id="s11">
-    <div class="section-head">
-      <p class="eyebrow">4.4 · Status</p>
-      <h2>What exists and what does not</h2>
-      <p>
-        Most of this page now describes a running system. The table below draws the line
-        between what runs and what is still an intention.
-      </p>
-    </div>
-
-    <table class="tbl">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="who">Directory skeleton · layer conventions</td>
-          <td>Built — the modules exist, docstrings state their responsibilities</td>
-        </tr>
-        <tr>
-          <td class="who">docker compose · observability</td>
-          <td>Running: postgres, rabbitmq, redis, qdrant, minio. Behind a profile: api, vllm, prometheus, loki, alloy, grafana. Dropped: kafka (JVM)</td>
-        </tr>
-        <tr>
-          <td class="who">CI · build image</td>
-          <td>Workflows exist: lint, type check, migrations, tests; builds an image tagged by SHA</td>
-        </tr>
-        <tr>
-          <td class="who">Helm chart on minikube</td>
-          <td>Built — four app pods (api, worker, scheduler, ingest) and a migration hook; CI renders it. There is no cluster beyond minikube to deploy to</td>
-        </tr>
-        <tr>
-          <td class="who">plugins/ — Jira, Google</td>
-          <td>Built — one interface and a registry; each person connects with OAuth. The Jira sync
-            reads each project on a connected person's token. <b>Writes are off</b> unless
-            <code>JIRA_WRITE_ENABLED</code> turns them on</td>
-        </tr>
-        <tr>
-          <td class="who">etl/ — bronze → silver → gold</td>
-          <td>Built — <code>normalize.py</code> and <code>promote.py</code>, driven by
-            <code>etl/transform.py</code> under an advisory lock</td>
-        </tr>
-        <tr>
-          <td class="who">agents/ · chat</td>
-          <td>Built — orchestrator, analyst, researcher (web + mail), summarizer; an answer is markdown kept in
-            <code>app.turn</code></td>
-        </tr>
-        <tr>
-          <td class="who">app/ — sign-in and Ask</td>
-          <td>Built — Google or an emailed code, an opaque session cookie. Chat is the main screen;
-            the old report page went once an agent could answer it</td>
-        </tr>
-        <tr class="tone-bronze">
-          <td class="who">Plugins beyond Jira and Google</td>
-          <td class="no">Slack and Confluence are still intentions. Adding one is a folder under
-            <code>plugins/</code> and a line in the registry</td>
-        </tr>
-        <tr>
-          <td class="who">Project membership</td>
-          <td>Built — Jira says which projects each person may browse; gold rows are filtered by
-            Postgres row-level security</td>
-        </tr>
-        <tr class="tone-bronze">
-          <td class="who">Vector search · librarian</td>
-          <td class="no"><code>infra/vectors/</code> backs <code>rag_search</code> over uploaded documents</td>
-        </tr>
-        <tr class="tone-bronze">
-          <td class="who">LLM cache</td>
-          <td class="no"><code>llm/cache.py</code> is written and has no caller</td>
-        </tr>
-        <tr class="tone-bronze">
-          <td class="who">evals/ — golden set</td>
-          <td class="no">Six cases in <code>evals/golden/</code>, run by hand — not in CI</td>
-        </tr>
-        <tr class="tone-bronze">
-          <td class="who">Model local 3B</td>
-          <td class="no">The specific work it carries is undecided. With no real high-volume work, the local layer can be dropped entirely</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="section-head"><p class="eyebrow">4.4 · Status</p><h2>What runs and what does not</h2></div>
+<table class="tbl"><thead><tr><th>Item</th><th>State</th></tr></thead><tbody><tr><td class="who">plugins</td><td>Jira, Google built; Slack, Confluence not</td></tr><tr><td class="who">agents</td><td>orchestrator, analyst, researcher, summarizer</td></tr><tr><td class="who">ETL</td><td>normalize, promote, checks, under one lock</td></tr><tr><td class="who">vector search</td><td>Qdrant behind <code>rag_search</code> over uploads</td></tr><tr><td class="who">evals</td><td>golden sets, run by hand, not in CI</td></tr><tr><td class="who">local model</td><td>vLLM in compose behind a profile; no agent uses it</td></tr><tr><td class="who">cluster</td><td>minikube; EKS by session (On AWS)</td></tr></tbody></table>
   </section>
   <section id="s08">
-    <div class="section-head">
-      <p class="eyebrow">Summary</p>
-      <h2>Nine rules that do not bend</h2>
-      <p>If only one part of this page sticks, make it this one.</p>
-    </div>
-
-    <ul class="rules">
-      <li>
-        <strong>One direction</strong>
-        <span>Data only flows bronze → silver → gold. No layer reads back upwards.</span>
-      </li>
-      <li>
-        <strong>Agents read gold only</strong>
-        <span>Agents never touch bronze or silver. Gold is the only contract.</span>
-      </li>
-      <li>
-        <strong>Adding a source does not change existing code</strong>
-        <span>A new provider = one folder in <code>plugins/</code> + one line in the registry.</span>
-      </li>
-      <li>
-        <strong>Models are called only through <code>llm/</code></strong>
-        <span>No module imports a provider SDK directly. Switching models, adding a cache, setting a spend ceiling — one change.</span>
-      </li>
-      <li>
-        <strong>Slow work goes on the queue</strong>
-        <span>The API does not wait for an LLM. Push to <code>queue/</code>, return a job id, retry on failure.</span>
-      </li>
-      <li>
-        <strong>Changing a prompt means running the evals</strong>
-        <span>A worse answer does not turn a test red. Only the golden set catches it.</span>
-      </li>
-      <li>
-        <strong>Thin routes, thick domains</strong>
-        <span>If <code>api/</code> could be deleted entirely and <code>scheduler</code> would still sync and answer, the layers are in the right place.</span>
-      </li>
-      <li>
-        <strong>One image for every environment</strong>
-        <span>Built once, tagged by commit SHA. Only environment variables differ.</span>
-      </li>
-      <li>
-        <strong>Module name = what it does</strong>
-        <span>No abbreviations, no abstraction layers built for a future that has not arrived.</span>
-      </li>
-    </ul>
+    <div class="section-head"><p class="eyebrow">Summary</p><h2>Nine rules that do not bend</h2></div>
+<table class="tbl"><thead><tr><th>Rule</th><th>Means</th></tr></thead><tbody><tr><td class="who">One direction</td><td>bronze → silver → gold, never back</td></tr><tr><td class="who">Agents read gold only</td><td>gold is the only contract with AI</td></tr><tr><td class="who">New source, no edits</td><td>a folder in <code>plugins/</code> + a registry line</td></tr><tr><td class="who">Models through one place</td><td>the gateway or a person's endpoint, built in <code>model_builder.py</code></td></tr><tr><td class="who">Slow work on the queue</td><td>the API returns a job id, never waits for a model</td></tr><tr><td class="who">Prompt changed → run evals</td><td>a worse answer turns no test red</td></tr><tr><td class="who">Thin routes, thick domains</td><td>the scheduler can run a job without the API</td></tr><tr><td class="who">One image everywhere</td><td>tagged by commit SHA; only env differs</td></tr><tr><td class="who">Name = job</td><td>no abbreviations, no layers for a future</td></tr></tbody></table>
   </section>
   <!-- pager --><nav class="pager"><span></span><a class="at" href="../index.html">1.1 · contents</a><a href="../overview/config.html">Config ›</a></nav><!-- /pager -->
 <footer>
