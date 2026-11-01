@@ -4,22 +4,22 @@ page:
   eyebrow: Flow
   title: What the model sees
   lede: ["Each model request is the prompt plus the run so far", "Four steps keep it current and under the token cap"]
-lanes: [run, before each request, tools, model]
+lanes: [run, per request, tools, model]
 boxes:
   - {id: runner,  lane: run,                col: 0, file: src/mycel/agents/core/runner.py,       label: core/runner.py,        role: "today's date on the prompt", hot: true}
   - {id: base,    lane: run,                col: 1, file: src/mycel/agents/core/base.py,         label: core/base.py,          role: "wires the steps below"}
-  - {id: history, lane: before each request, col: 0, file: src/mycel/agents/core/history.py,     label: core/history.py,       role: "old results → one line"}
-  - {id: compact, lane: before each request, col: 1, file: src/mycel/agents/core/compact.py,     label: core/compact.py,       role: "at 75% of cap: summarise"}
-  - {id: parts,   lane: before each request, col: 2, file: src/mycel/agents/core/prompt_parts.py, label: core/prompt_parts.py, role: "size of each part, traced"}
+  - {id: history, lane: per request, col: 0, file: src/mycel/agents/core/history.py,     label: core/history.py,       role: "old results → one line"}
+  - {id: compact, lane: per request, col: 1, file: src/mycel/agents/core/compact.py,     label: core/compact.py,       role: "at 75% of cap: summarise"}
+  - {id: parts,   lane: per request, col: 2, file: src/mycel/agents/core/prompt_parts.py, label: core/prompt_parts.py, role: "size of each part, traced"}
   - {id: search,  lane: tools,              col: 1, file: src/mycel/agents/tools/web_search.py,  label: tools/web_search.py,   role: "recency: day…year"}
   - {id: budget,  lane: tools,              col: 2, file: src/mycel/llm/budget.py,               label: llm/budget.py,         role: "token cap per turn"}
   - {id: builder, lane: model,              col: 0, file: src/mycel/agents/core/model_source.py, label: core/model_source.py, role: "opens the model"}
 edges:
   - {from: runner,  to: base,    step: 1, kind: calls,  text: "dated(prompt, deps.tz)", label: "dated prompt"}
   - {from: base,    to: history, step: 2, kind: import, label: "shrink", exit: -0.3, via: [[0.7, 0.5], [0, 0.5]]}
-  - {from: base,    to: compact, step: 3, kind: import, label: "maybe summarise"}
-  - {from: base,    to: parts,            kind: import, label: "measure", exit: 0.3, via: [[1.3, 0.5], [2, 0.5]]}
-  - {from: compact, to: budget,           kind: calls,  text: "total_tokens_limit", label: "cap", exit: 0.3, via: [[1.3, 1.5], [2, 1.5]]}
+  - {from: base,    to: compact, step: 3, kind: import, label: "maybe summarise", label_at: [1.05, 0.62]}
+  - {from: base,    to: parts,            kind: import, label: "side: measure", exit: 0.3, via: [[1.3, 0.5], [2, 0.5]]}
+  - {from: compact, to: budget,           kind: calls,  text: "total_tokens_limit", label: "side: read the cap", exit: 0.3, via: [[1.3, 1.5], [2, 1.5]]}
   - {from: runner,  to: builder,  step: 4, kind: import, label: "open, then request", exit: -0.45, via: [[-0.45, 3]], enter: -0.45, label_at: [-0.42, 2.45]}
 notes:
   - ["date", "every prompt starts with today's date in the asker's zone; a small model could not miss it"]
@@ -45,3 +45,4 @@ words:
   - ["Tavily", "the web search API behind `web_search`"]
   - ["runaway", "a run stopped at the token cap"]
   - ["total_tokens_limit", "the token cap, per agent, in `config/agents/*.yaml`"]
+  - ["numbered \u00b7 side arrow", "1 \u2192 4 is the order of one model request \u00b7 a side arrow is a lookup a step makes on the way"]
