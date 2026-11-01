@@ -107,7 +107,12 @@ if [[ -n $USER_IMAGES ]]; then
 else
   # Images loaded by `k8s build`: never pulled; the stores and monitoring still are.
   args+=(--set image.tag=dev --set image.pullPolicy=Never)
+  # minikube has no ALB: its nginx addon, or nothing.
+  args+=(--set ingress.className=nginx --set ingress.host=mycel.local --set-json 'ingress.annotations={}')
 fi
+# What only the caller knows, e.g. aws up's certificate and subnets.
+read -ra extra <<< "${HELM_EXTRA:-}"
+args+=("${extra[@]}")
 
 log "helm mycel"
 helm "${args[@]}" >/dev/null

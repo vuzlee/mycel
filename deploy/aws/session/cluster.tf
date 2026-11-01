@@ -30,6 +30,8 @@ module "eks" {
     kube-proxy     = {}
     coredns        = {}
     metrics-server = {}
+    # Lets the LB controller's pod take its AWS role (ingress.tf).
+    eks-pod-identity-agent = { before_compute = true }
   }
 
   eks_managed_node_groups = {

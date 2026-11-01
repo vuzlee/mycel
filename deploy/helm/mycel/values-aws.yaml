@@ -1,5 +1,5 @@
 # Overrides values.yaml for a session on EKS (HLD 123): one node, stores in the cluster
-# (release mycel-stores), reached only by kubectl port-forward.
+# (release mycel-stores); the owner by port-forward, anyone at https://mycel.sbs (HLD 128).
 
 # Docker Hub, pulled with a login: anonymous pulls are capped at 10 an hour per address.
 # The login and the secret come from scripts/k8s/stores-up.sh; so do repository and tag.
@@ -25,14 +25,28 @@ externalStores:
   litellm: litellm
 
 config:
-  # Port-forward to localhost:8000; Google and Jira already accept that callback.
-  PUBLIC_BASE_URL: http://localhost:8000
+  # Every OAuth callback is built from it; Google and Jira list the https one.
+  PUBLIC_BASE_URL: https://mycel.sbs
   # Real mail and Jira: the trace tree, tokens and cost go to Langfuse, the text does not.
   OTEL_CAPTURE_CONTENT: "false"
 
-# Nothing is public: no load balancer, no ingress.
+# https://mycel.sbs through an ALB the LB controller makes (HLD 128). up.sh sets the
+# certificate and the subnets' CIDRs; open to anyone while the session runs.
 ingress:
-  enabled: false
+  enabled: true
+  className: alb
+  host: mycel.sbs
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /health/ready
+    # SSE: an answer streams for minutes; the default 60 s would cut it.
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
 
 monitoring:
   enabled: true
+  # Anonymous admin must never sit behind the public ALB: port-forward only.
+  grafana:
+    ingress: false

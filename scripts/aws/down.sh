@@ -9,14 +9,16 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 require_login
 
-# Uninstalling first lets Kubernetes release what it made in AWS (none in phase 1,
-# but a Service of type LoadBalancer would leave one behind).
+# Uninstalling first lets Kubernetes release what it made in AWS: the ALB.
 if [[ -n $(cluster_arn) ]] && kube get ns >/dev/null 2>&1; then
   for release in mycel mycel-stores; do
     helm --kube-context "$CONTEXT" uninstall "$release" --wait >/dev/null 2>&1 \
       && log "$release uninstalled" || true
   done
 fi
+# The controller deletes the ALB once the Ingress is gone; it must still be running then.
+dns_unpoint_and_wait
+helm --kube-context "$CONTEXT" uninstall aws-load-balancer-controller -n kube-system >/dev/null 2>&1 || true
 
 log "terraform destroy (~8 min)"
 tf_init

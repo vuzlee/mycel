@@ -2,7 +2,8 @@
 The api trusts X-Forwarded-For (FORWARDED_ALLOW_IPS), and the rate limits key on the address
 it gives. That is safe only if nothing but the ingress controller can reach the http port:
 any other pod could name any address it liked. /metrics stays open to this release's
-Prometheus. Enforced only on a CNI that implements NetworkPolicy; minikube's default does not.
+Prometheus. An ALB in IP mode is no pod: it sends from its subnets, so on EKS the rule
+names their CIDRs (ingressCIDRs) instead of a namespace. Enforced only on a CNI that implements NetworkPolicy; minikube's default does not.
 */}}
 {{- if .Values.api.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
@@ -19,9 +20,15 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from:
+        {{- if .Values.api.networkPolicy.ingressCIDRs }}
+        {{- range .Values.api.networkPolicy.ingressCIDRs }}
+        - ipBlock: {cidr: {{ . }}}
+        {{- end }}
+        {{- else }}
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Values.api.networkPolicy.ingressNamespace }}
+        {{- end }}
       ports:
         - port: http
     - from:

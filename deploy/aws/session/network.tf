@@ -14,4 +14,6 @@ module "vpc" {
   public_subnets          = ["10.42.0.0/20", "10.42.16.0/20"]
   map_public_ip_on_launch = true
   enable_nat_gateway      = false
+  # The controller puts an internet-facing ALB in subnets with this tag.
+  public_subnet_tags = { "kubernetes.io/role/elb" = "1" }
 }

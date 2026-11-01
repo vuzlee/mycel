@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# One session on EKS (HLD 123): cluster, stores, app. ~15 min, then ~$0.33 an hour.
+# One session on EKS (HLD 123, 128): cluster, stores, app at https://mycel.sbs.
+# ~20 min, then ~$0.37 an hour.
 #
 #   scripts/stack.sh aws up [--tag <sha>]    images of that commit, default HEAD
 #
@@ -43,5 +44,22 @@ trap 'rm -f "$env_file"' EXIT
 awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/ { line[$1] = $0; if (!($1 in seen)) { seen[$1]; order[++n] = $1 } }
   END { for (i = 1; i <= n; i++) print line[order[i]] }' "$ROOT/.env" "$ROOT/.env.aws" > "$env_file"
 
-ENV_FILE=$env_file "$ROOT/scripts/k8s/stores-up.sh" --images "$user" --tag "$TAG"
-log "up in $(( ($(date +%s) - started) / 60 )) min — next: scripts/stack.sh aws forward"
+# The controller first: the app's Ingress is what it turns into an ALB.
+log "aws load balancer controller"
+helm repo add eks https://aws.github.io/eks-charts >/dev/null 2>&1 || true
+helm --kube-context "$CONTEXT" upgrade --install aws-load-balancer-controller \
+  eks/aws-load-balancer-controller --version "$LB_CHART" -n kube-system \
+  --set clusterName="$CLUSTER" --set region="$REGION" \
+  --set vpcId="$(tf_out vpc_id)" --set "defaultTags.mycel-session=$CLUSTER" \
+  --wait >/dev/null
+
+cert=$(aws_ acm list-certificates --certificate-statuses ISSUED \
+  --query "CertificateSummaryList[?DomainName=='$DOMAIN'].CertificateArn | [0]" --output text)
+[[ $cert == arn:* ]] || die "no issued certificate for $DOMAIN — check the name servers (batch 130)"
+cidrs=$(tf_out public_subnet_cidrs json | tr -d '[]" ')
+HELM_EXTRA="--set ingress.annotations.alb\.ingress\.kubernetes\.io/certificate-arn=$cert \
+--set api.networkPolicy.ingressCIDRs={$cidrs}" \
+  ENV_FILE=$env_file "$ROOT/scripts/k8s/stores-up.sh" --images "$user" --tag "$TAG"
+
+dns_point
+log "up in $(( ($(date +%s) - started) / 60 )) min — https://$DOMAIN · Grafana: scripts/stack.sh aws forward"

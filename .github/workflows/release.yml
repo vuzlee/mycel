@@ -108,6 +108,12 @@ jobs:
           helm template mycel deploy/helm/mycel -f deploy/helm/mycel/values-aws.yaml \
             --set image.tag=${{ github.sha }} > /tmp/aws.yaml
 
+      - name: One public Ingress on EKS, the api's; Grafana's admin is anonymous
+        run: |
+          n=$(grep -c '^kind: Ingress$' /tmp/aws.yaml)
+          [[ $n == 1 ]] || { echo "values-aws.yaml renders $n Ingresses; only the api may be public"; exit 1; }
+          ! grep -q 'name: mycel-mycel-grafana$' <(awk '/^kind: Ingress$/{p=1} p' /tmp/aws.yaml)
+
       - name: No credential in the EKS render
         run: |
           if grep -nE '^\s+(password|secret|token|api_key):' /tmp/stores.yaml /tmp/aws.yaml; then
