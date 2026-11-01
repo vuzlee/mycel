@@ -28,10 +28,10 @@ edges:
   - {from: chat,     to: claims,            kind: import, label: "claim"}
   - {from: consumer, to: retry,    step: 5, kind: import, label: "reject", exit: 0.3, via: [[0.3, 1.5], [2, 1.5]]}
   - {from: retry,    to: topo,              kind: import, label: "which queue"}
-  - {from: replaysh, to: replay,   step: 6, kind: calls,  text: "mycel.queue.replay", label: "dlq name, N"}
+  - {from: replaysh, to: replay,   step: 6, kind: calls,  text: "mycel.queue.replay", label: "replay jobs.dlq N"}
   - {from: replay,   to: topo,              kind: import, label: "back to jobs", via: [[1, 2.5], [0.5, 2.5], [0.5, 1]], enter: -0.5}
 notes:
-  - ["retry", "transient errors (incl. a source timeout, 5xx, rate limit): 5 s → 30 s → 2 min, then parked"]
+  - ["retry", "transient errors (a timeout, a server error HTTP 5xx, a rate limit): 5 s → 30 s → 2 min, then parked"]
   - ["final errors", "budget, unknown job, model refused, loop stopped → parked at once"]
   - ["worker died", "the queue delivers again; the 5th delivery is parked (`MAX_ATTEMPTS` = 4)"]
   - ["run once", "a chat job claims its id in Redis; a second copy waits"]
@@ -58,3 +58,4 @@ words:
   - ["retry queue", "holds a failed job for a delay, then sends it back"]
   - ["dlq", "dead-letter queue: where a job parks after its last retry"]
   - ["FINAL · TRANSIENT", "a failure retrying cannot fix · one it may"]
+  - ["claim", "a short Redis lock: only one worker runs a job at a time"]

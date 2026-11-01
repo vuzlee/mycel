@@ -33,12 +33,12 @@ notes:
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
   - ["own models", "called direct, priced by the same table, not capped by the gateway"]
   - ["one model a turn", "every agent of the run calls the turn's pick; no pick = `default: true` in `host_models`"]
-  - ["daily cap", "`user_daily_usd` per person a day; jobs still open count at their ceiling, so a turn is refused before it is queued"]
+  - ["daily cap", "`user_daily_usd`, $5 per person a day (`base.yaml`); jobs still open count at their ceiling, so a turn is refused before it is queued"]
 failures:
   - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
   - ["ceiling reached mid-run", "run stops as overdrawn", "src/mycel/agents/core/runner.py"]
   - ["unknown model ref", "config error", "src/mycel/domains/chat_model.py"]
-  - ["model has no price", "spend not added — no cap applies", "src/mycel/llm/budget.py"]
+  - ["model has no price", "spend not counted, so no cap applies: add it to `model_prices_usd`", "src/mycel/llm/budget.py"]
   - ["gateway key over $10", "gateway refuses; the turn fails", "scripts/ops/gateway-key.sh"]
 related:
   - [Own model, own-model.html]
@@ -49,5 +49,6 @@ words:
   - ["LiteLLM gateway", "one door to every host model; holds keys, counts spend"]
   - ["budget", "the most one job may spend: $0.50"]
   - ["usage", "tokens in and out of a call; priced into dollars"]
-  - ["ceiling", "the most one job may spend; then it stops"]
   - ["UsageLimits", "pydantic-ai's cap on tokens per run"]
+  - ["budget", "the job's ceiling minus what it has spent so far"]
+  - ["pydantic-ai", "the Python library the agents are built on"]

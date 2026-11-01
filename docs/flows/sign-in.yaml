@@ -8,7 +8,7 @@ lanes: [browser, api, services, stores]
 boxes:
   - {id: login,  lane: browser,  col: 0, file: web/src/pages/Login.tsx,                           label: pages/Login.tsx,           role: "Google button, email box"}
   - {id: apits,  lane: browser,  col: 1, file: web/src/api/auth.ts,                                    label: api/auth.ts,          role: "calls /auth routes"}
-  - {id: conn,   lane: api,      col: 0, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "Google comes back here"}
+  - {id: conn,   lane: api,      col: 0, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "Google comes back here (shared callback)"}
   - {id: route,  lane: api,      col: 1, file: src/mycel/api/routes/auth.py,                      label: api/routes/auth.py,        role: "sign-in routes, sets cookie"}
   - {id: deps,   lane: api,      col: 3, file: src/mycel/api/dependencies.py,                     label: api/dependencies.py,       role: "cookie → who is asking"}
   - {id: gsign,  lane: services, col: 0, file: src/mycel/services/google_signin.py,               label: services/google_signin.py, role: "checks Google's answer"}

@@ -140,7 +140,7 @@
 </nav>
 
 <h2 id="words">Words</h2>
-<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">outbox</td><td>a table of jobs waiting to be sent; the row is written in the same commit as the data</td></tr><tr><td class="who">commit · transaction</td><td>the moment a group of writes becomes permanent, all or none</td></tr><tr><td class="who">publish</td><td>send a message to the queue</td></tr><tr><td class="who">broker · RabbitMQ</td><td>the queue server that holds jobs for workers</td></tr><tr><td class="who">relay</td><td>a timer job that sends rows the API failed to send</td></tr><tr><td class="who">SKIP LOCKED</td><td>Postgres: skip rows another process is already handling</td></tr><tr><td class="who">HLD · LLD</td><td>the big picture of parts · the classes and calls inside the code</td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">outbox</td><td>a table of jobs waiting to be sent; the row is written in the same commit as the data</td></tr><tr><td class="who">commit · transaction</td><td>the moment a group of writes becomes permanent, all or none</td></tr><tr><td class="who">publish</td><td>send a message to the queue</td></tr><tr><td class="who">broker · RabbitMQ</td><td>the queue server that holds jobs for workers</td></tr><tr><td class="who">relay</td><td>a timer job that sends rows the API failed to send</td></tr><tr><td class="who">SKIP LOCKED</td><td>Postgres: skip rows another process is already handling</td></tr><tr><td class="who">HLD · LLD</td><td>the big picture of parts · the classes and calls inside the code</td></tr><tr><td class="who">JSONB</td><td>JSON stored so Postgres can query inside it</td></tr><tr><td class="who">partial index</td><td>an index over only some rows (here: unsent), so the relay finds them fast</td></tr><tr><td class="who">trace context</td><td>ids in the message headers that tie the job to its request's trace; kept so a relayed job is not a stray trace</td></tr></tbody></table>
 
 <h2 id="problem">01 · The problem</h2>
 <p class="purpose">Without an outbox: the API saves the document, then dies before it publishes.</p>
@@ -181,7 +181,7 @@
   <tr><td><b>Outbox</b></td><td>a durable "to send" list in Postgres</td><td>body · headers · <code>published_at</code></td></tr>
   <tr><td>Scheduler</td><td>runs the relay every 5 s, one instance at a time</td><td>a lock named <code>relay:outbox</code></td></tr>
   <tr><td>Relay</td><td>publishes rows the request could not</td><td>the <a href="#parts">relay</a> loop</td></tr>
-  <tr><td>Queue</td><td>receives the job; see <a href="idempotency.html">Idempotency</a> for repeats</td><td>—</td></tr>
+  <tr><td>Queue</td><td>receives the job; see <a href="idempotency.html">Idempotency</a> for repeats</td><td>the job, until a worker acks it</td></tr>
 </table></div>
 <p class="insight"><b>Key:</b> the job is saved <i>with</i> the data, so it exists whenever the data does. Publishing becomes retryable.</p>
 

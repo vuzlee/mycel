@@ -58,3 +58,5 @@ words:
   - ["token", "the key the app uses to read the person's data; stored encrypted"]
   - ["refresh token", "a long-lived key the app trades for short access tokens; the one thing stored"]
   - ["GETDEL", "Redis: read a key and delete it in one step, so a state works once"]
+  - ["code", "a one-time ticket the provider sends back; swapped for tokens"]
+  - ["access token", "a short-lived key sent on each call to the provider"]

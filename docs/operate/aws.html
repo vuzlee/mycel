@@ -104,7 +104,7 @@
 <rect x="650" y="474" width="130" height="56" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
 <path d="M662 486 h20 v14 h-20 z M662 486 l10 8 l10 -8" fill="none" stroke="var(--ink-soft)"/><text x="690" y="496">Mail</text><text x="690" y="512" font-size="9.5" fill="var(--ink-soft)">SNS</text>
 </g>
-<g class="hv" data-tip="deploy/aws/bootstrap/dns.tf&#10;Zone for mycel.sbs (name servers set at Hostinger) and its free HTTPS certificate">
+<g class="hv" data-tip="deploy/aws/bootstrap/dns.tf&#10;Zone for mycel.sbs (bought at Hostinger; its name servers there point here) and its free HTTPS certificate">
 <rect x="220" y="542" width="268" height="52" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
 <text x="232" y="564">Zone mycel.sbs · ACM cert</text><text x="232" y="580" font-size="9.5" fill="var(--ink-soft)">$0.50/month</text>
 </g>
@@ -149,21 +149,21 @@
 <tr><td class="who">Terraform · state</td><td>cloud resources written as files · the record of what it made, so it can delete it</td></tr>
 <tr><td class="who">Lambda · SNS</td><td>a function AWS runs on a schedule · a topic that sends mail</td></tr>
 <tr><td class="who">Route 53 · ACM · ALB</td><td>AWS's DNS · free HTTPS certificates · the public HTTPS load balancer</td></tr>
-<tr><td class="who">LB controller</td><td>a pod that reads the app's Ingress and makes the ALB for it</td></tr>
+<tr><td class="who">Ingress</td><td>a Kubernetes rule: which outside address reaches which Service</td></tr><tr><td class="who">LB controller</td><td>a pod that reads the app's Ingress and makes the ALB for it</td></tr>
 <tr><td class="who">LiteLLM</td><td>one door to every AI model; holds the provider keys</td></tr>
-<tr><td class="who">SSO</td><td>signing in to AWS through a portal, short sessions, no stored keys: <code>aws sso login --profile mycel</code></td></tr>
+<tr><td class="who">kubectl</td><td>the command line for Kubernetes</td></tr><tr><td class="who">Prometheus · Grafana · Loki · Alloy · Alertmgr</td><td>metrics · charts · logs · log shipper · alert sender</td></tr><tr><td class="who"><code>mycel-session</code> · <code>mycel-expires</code></td><td>tags: this resource belongs to a session · the time the reaper may delete it</td></tr><tr><td class="who">credits</td><td>$100 AWS gave the account; pays bills until 2027-10. Budgets count before them, so a real cost still shows</td></tr><tr><td class="who">SSO</td><td>signing in to AWS through a portal, short sessions, no stored keys: <code>aws sso login --profile mycel</code></td></tr>
 </tbody></table>
 </section>
 
 <section id="blocks">
 <h2>2 · Each block, its job, its code</h2>
-<table class="tbl"><thead><tr><th>Block</th><th>Job</th><th>Code</th><th>Plan</th></tr></thead><tbody>
+<table class="tbl"><thead><tr><th>Block</th><th>Job</th><th>Code</th><th>Plan batch (§5)</th></tr></thead><tbody>
 <tr><td class="who">Owner laptop</td><td>start, extend, delete a session; open Grafana</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/up.sh">up.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/forward.sh">forward.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/extend.sh">extend.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/down.sh">down.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/status.sh">status.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/leftovers.sh">leftovers.sh</a></td><td>126</td></tr>
 <tr><td class="who">EKS + node + VPC</td><td>the cluster, one machine, the network</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/cluster.tf">cluster.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/network.tf">network.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/versions.tf">versions.tf</a> (tag <code>mycel-session</code>)</td><td>125</td></tr>
 <tr><td class="who">App</td><td>the product; same chart as minikube, AWS values on top</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/values-aws.yaml">values-aws.yaml</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/">templates/</a></td><td>124</td></tr>
 <tr><td class="who">Stores</td><td>database, queue, caches, vectors, files, model gateway</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/">mycel-stores/templates/</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/k8s/stores-up.sh">stores-up.sh</a> (installs both charts, stores first)</td><td>124</td></tr>
 <tr><td class="who">Monitor</td><td>Grafana, metrics, logs; opened by port-forward</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/monitoring/">templates/monitoring/</a></td><td>earlier</td></tr>
-<tr><td class="who">Secrets</td><td>session passwords laid over <code>.env</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/.env.aws.example">.env.aws.example</a></td><td>126</td></tr>
+<tr><td class="who">Secrets</td><td>session passwords that replace the <code>.env</code> values on AWS</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/.env.aws.example">.env.aws.example</a></td><td>126</td></tr>
 <tr><td class="who">State · Budgets</td><td>Terraform's memory · cost mails</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/state.tf">state.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/budgets.tf">budgets.tf</a></td><td>125</td></tr>
 <tr><td class="who">Reaper · Mail</td><td>delete a forgotten cluster; only one tagged <code>mycel-session</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper.tf">reaper.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper/reaper.py">reaper.py</a></td><td>125 · 127</td></tr>
 <tr><td class="who">Zone · certificate</td><td><code>mycel.sbs</code> answers from AWS; free HTTPS</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/dns.tf">dns.tf</a></td><td>130</td></tr><tr><td class="who">ALB · LB controller</td><td>the public HTTPS door; the pod that makes it</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/ingress.yaml">ingress.yaml</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/ingress.tf">ingress.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/lib.sh">lib.sh</a> (DNS record)</td><td>131</td></tr><tr><td class="who">Api network rule</td><td>only the ALB reaches the api, so the client address it forwards can be trusted</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/networkpolicy.yaml">networkpolicy.yaml</a></td><td>131</td></tr>
@@ -173,10 +173,10 @@
 <section id="session">
 <h2>3 · One session</h2>
 <figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
-<svg class="diagram" viewBox="0 0 940 150" role="img" aria-label="aws up about 20 minutes, sets expiry to now plus 4 hours; anyone uses https://mycel.sbs; aws down about 16 minutes leaves nothing; if forgotten the reaper deletes it at expiry.">
+<svg class="diagram" viewBox="0 0 940 150" role="img" aria-label="aws up about 21 minutes, sets expiry to now plus 4 hours; anyone uses https://mycel.sbs; aws down about 16 minutes leaves nothing; if forgotten the reaper deletes it at expiry.">
 <defs><marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
 <g font-family="var(--mono)" font-size="11" fill="var(--ink)">
-<g class="hv" data-tip="scripts/aws/up.sh&#10;image on Docker Hub? · terraform apply · expiry tag · LB controller · both charts · DNS record"><rect x="16" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="42">1 · aws up · ~20 min</text><text x="28" y="62" font-size="9.5" fill="var(--ink-soft)">cluster, app, ALB, DNS</text><text x="28" y="78" font-size="9.5" fill="var(--ink-soft)">expires now + 4 h</text></g>
+<g class="hv" data-tip="scripts/aws/up.sh&#10;image on Docker Hub? · terraform apply · expiry tag · LB controller · both charts · DNS record"><rect x="16" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="42">1 · aws up · ~21 min</text><text x="28" y="62" font-size="9.5" fill="var(--ink-soft)">cluster, app, ALB, DNS</text><text x="28" y="78" font-size="9.5" fill="var(--ink-soft)">expires now + 4 h</text></g>
 <g class="hv" data-tip="https://mycel.sbs for anyone · scripts/aws/forward.sh: Grafana for the owner&#10;the ALB answers ~3 min after up ends"><rect x="248" y="20" width="200" height="70" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="260" y="42">2 · use mycel.sbs</text><text x="260" y="62" font-size="9.5" fill="var(--ink-soft)">data starts empty</text><text x="260" y="78" font-size="9.5" fill="var(--ink-soft)">extend &lt;h&gt; if needed</text></g>
 <g class="hv" data-tip="scripts/aws/down.sh · leftovers.sh&#10;helm uninstall → DNS record off, wait for the ALB → terraform destroy → anything left? fail loudly"><rect x="480" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="492" y="42">3 · aws down · ~16 min</text><text x="492" y="62" font-size="9.5" fill="var(--ink-soft)">uninstall, destroy,</text><text x="492" y="78" font-size="9.5" fill="var(--ink-soft)">check nothing is left</text></g>
 <g class="hv" data-tip="deploy/aws/bootstrap/reaper/reaper.py&#10;load balancers, then node group, then cluster on later runs; mail to the owner"><rect x="712" y="20" width="212" height="70" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="724" y="42">forgot? reaper</text><text x="724" y="62" font-size="9.5" fill="var(--ink-soft)">deletes it at expiry</text><text x="724" y="78" font-size="9.5" fill="var(--ink-soft)">at most ~$1.4 lost</text></g>
@@ -203,7 +203,7 @@
 <tr><td class="who">Limits</td><td>cap $30/month · budget mails at $10, $20 · $100 credit to 2027-10</td></tr>
 <tr><td class="who">Billed, before credits</td><td>reaper test (125) $0.03 · first session, ~1 h (126) $0.31 incl. $0.05 tax</td></tr>
 <tr><td class="who">Node use (measured)</td><td>CPU reserved 3.42 of 3.92, used 0.23 · memory used 3.6 of 14.4 GiB</td></tr>
-<tr><td class="who">Time (measured)</td><td><code>up</code> 18 min + ~3 min for the ALB · <code>down</code> 16 min</td></tr>
+<tr><td class="who">Time (measured)</td><td><code>up</code> ~21 min: 18 min, then ~3 min until the ALB answers · <code>down</code> 16 min</td></tr>
 <tr><td class="who">Models</td><td>Gemini free tier: $0, but 20 requests a day; check before a demo</td></tr>
 </tbody></table>
 </section>

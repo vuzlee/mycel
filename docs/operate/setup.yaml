@@ -64,3 +64,7 @@ words:
   - [".env", "the host's settings and keys; nothing personal"]
   - ["gateway key", "the app's key to LiteLLM, made once"]
   - ["test user", "a Google account allowed while the app is in Testing"]
+  - ["refresh token", "a long-lived key the app keeps per person, traded for short access tokens"]
+  - ["scope", "one permission the app asks the provider for"]
+  - ["Fernet", "the encryption format `TOKEN_ENCRYPTION_KEY` is a key for"]
+  - ["Testing (Google)", "an unpublished Google app: only listed test users may connect"]
