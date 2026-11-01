@@ -63,12 +63,17 @@ dns_point() {
 }
 
 # The record, then wait for every load balancer the controller made to go: the VPC
-# cannot be deleted while one sits in it.
+# cannot be deleted while one sits in it. The record is deleted as it is stored: by
+# then the ALB may be gone, and its zone with it.
 dns_unpoint_and_wait() {
-  local name
-  name=$(aws_ route53 list-resource-record-sets --hosted-zone-id "$(zone_id)" \
-    --query "ResourceRecordSets[?Name=='$DOMAIN.' && Type=='A'].AliasTarget.DNSName | [0]" --output text)
-  [[ $name == None || -z $name ]] || dns_change DELETE "${name%.}"
+  local record
+  record=$(aws_ route53 list-resource-record-sets --hosted-zone-id "$(zone_id)" \
+    --query "ResourceRecordSets[?Name=='$DOMAIN.' && Type=='A'] | [0]" --output json)
+  if [[ $record != null ]]; then
+    aws_ route53 change-resource-record-sets --hosted-zone-id "$(zone_id)" \
+      --change-batch "{\"Changes\": [{\"Action\": \"DELETE\", \"ResourceRecordSet\": $record}]}" >/dev/null
+    log "$DOMAIN record deleted"
+  fi
   local i
   for i in $(seq 1 60); do
     [[ -z $(aws_ elbv2 describe-load-balancers --query 'LoadBalancers[].LoadBalancerArn' --output text) ]] && return
