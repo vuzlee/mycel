@@ -48,3 +48,17 @@ def test_expired(
     reaper: types.ModuleType, tags: dict[str, str], created: datetime, want: bool
 ) -> None:
     assert reaper.expired(tags, created, NOW) is want
+
+
+@pytest.mark.parametrize(
+    ("tags", "want"),
+    [
+        ({"mycel-session": "mycel", "elbv2.k8s.aws/cluster": "mycel"}, True),
+        ({"elbv2.k8s.aws/cluster": "mycel"}, False),
+        ({"mycel-session": "mycel", "elbv2.k8s.aws/cluster": "other"}, False),
+        ({"mycel-session": "mycel"}, False),
+    ],
+    ids=["this-session", "not-a-session", "other-cluster", "not-the-controllers"],
+)
+def test_owned(reaper: types.ModuleType, tags: dict[str, str], want: bool) -> None:
+    assert reaper.owned(tags, "mycel") is want

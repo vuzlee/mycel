@@ -19,6 +19,7 @@ check "volumes"        ec2 describe-volumes --filters Name=tag-key,Values=mycel-
 check "ENIs"           ec2 describe-network-interfaces --filters Name=tag-key,Values=mycel-session --query 'NetworkInterfaces[].NetworkInterfaceId'
 check "addresses"      ec2 describe-addresses --filters Name=tag-key,Values=mycel-session --query 'Addresses[].PublicIp'
 check "load balancers" elbv2 describe-load-balancers --query 'LoadBalancers[].LoadBalancerName'
+check "target groups"  elbv2 describe-target-groups --query 'TargetGroups[].TargetGroupName'
 check "VPCs"           ec2 describe-vpcs --filters Name=tag-key,Values=mycel-session --query 'Vpcs[].VpcId'
 check "NAT gateways"   ec2 describe-nat-gateways --filter Name=state,Values=pending,available --query 'NatGateways[].NatGatewayId'
 

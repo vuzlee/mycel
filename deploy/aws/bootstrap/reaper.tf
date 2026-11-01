@@ -50,6 +50,17 @@ resource "aws_iam_role_policy" "reaper" {
         Resource  = "*"
         Condition = { Null = { "aws:ResourceTag/mycel-session" = "false" } }
       },
+      {
+        Effect   = "Allow"
+        Action   = ["elasticloadbalancing:DescribeLoadBalancers", "elasticloadbalancing:DescribeTargetGroups", "elasticloadbalancing:DescribeTags"]
+        Resource = "*"
+      },
+      {
+        Effect    = "Allow"
+        Action    = ["elasticloadbalancing:DeleteLoadBalancer", "elasticloadbalancing:DeleteTargetGroup"]
+        Resource  = "*"
+        Condition = { Null = { "aws:ResourceTag/mycel-session" = "false" } }
+      },
       { Effect = "Allow", Action = "sns:Publish", Resource = aws_sns_topic.reaper.arn },
       {
         Effect   = "Allow"

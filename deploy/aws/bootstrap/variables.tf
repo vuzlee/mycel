@@ -18,3 +18,15 @@ variable "budget_limits" {
   type        = list(number)
   default     = [10, 20]
 }
+
+variable "domain" {
+  description = "Bought elsewhere; its name servers point at the zone in dns.tf."
+  type        = string
+  default     = "mycel.sbs"
+}
+
+variable "wait_for_cert" {
+  description = "false until the registrar points at the zone, or apply waits on the certificate."
+  type        = bool
+  default     = false
+}
