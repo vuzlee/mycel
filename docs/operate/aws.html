@@ -10,12 +10,12 @@
 <body>
 <nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="run.html">Run and fix it</a></nav>
 <div class="page">
-<header class="hero"><p class="eyebrow">Operate · 2026-11-01</p><h1>Mycel on AWS</h1><div class="hero-lede"><ul class="bul"><li>The whole product on one EKS cluster, up a few hours, then deleted</li><li>Solid boxes run today · dashed boxes are planned (open on <code>https://mycel.sbs</code>)</li><li>Hover a box for its files</li></ul></div></header>
+<header class="hero"><p class="eyebrow">Operate · 2026-11-02</p><h1>Mycel on AWS</h1><div class="hero-lede"><ul class="bul"><li>The whole product on one EKS cluster, up a few hours, then deleted</li><li>Before a demo: <code>aws up</code> · anyone opens <code>https://mycel.sbs</code> · after: <code>aws down</code></li><li>Only the owner reaches Grafana and the stores, through a tunnel</li><li>Hover a box for its files</li></ul></div></header>
 
 <section id="hld">
 <h2>1 · The design</h2>
 <figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
-<svg class="diagram" viewBox="0 0 960 640" role="img" aria-label="An interviewer's browser reaches mycel.sbs through Route 53 and an ALB (planned) to the api pod. The owner's laptop reaches the EKS control plane by kubectl and port-forward. One EC2 node runs the app pods, the stores and monitoring. Outside: Docker Hub, Gemini, Langfuse, Google and Jira. A bootstrap part that is never deleted holds the Terraform state bucket, budgets, the reaper Lambda and its mail topic, plus the planned DNS zone and certificate.">
+<svg class="diagram" viewBox="0 0 960 640" role="img" aria-label="An interviewer's browser reaches mycel.sbs through Route 53 and an ALB to the api pod. The owner's laptop reaches the EKS control plane by kubectl and port-forward. One EC2 node runs the app pods, the stores and monitoring. Outside: Docker Hub, Gemini, Langfuse, Google and Jira. A bootstrap part that is never deleted holds the Terraform state bucket, budgets, the reaper Lambda and its mail topic, the DNS zone and the certificate.">
 <defs>
 <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker>
 <g id="cyl"><ellipse cx="9" cy="4" rx="9" ry="3.5" fill="var(--surface)" stroke="currentColor"/><path d="M0 4 V18 A9 3.5 0 0 0 18 18 V4" fill="var(--surface)" stroke="currentColor"/></g>
@@ -24,8 +24,8 @@
 <g font-family="var(--mono)" font-size="11" fill="var(--ink)">
 
 <!-- people -->
-<g class="hv" data-tip="anyone, while a session runs · signs up, chats, uploads&#10;Who opens the demo link (planned, HLD 128)">
-<rect x="16" y="70" width="150" height="76" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="5 4"/>
+<g class="hv" data-tip="anyone, while a session runs&#10;Opens the link, signs up, chats, uploads">
+<rect x="16" y="70" width="150" height="76" rx="2" fill="var(--surface)" stroke="var(--accent)"/>
 <circle cx="36" cy="92" r="6" fill="none" stroke="var(--accent)"/><path d="M26 110 a10 8 0 0 1 20 0" fill="none" stroke="var(--accent)"/>
 <text x="54" y="96">Interviewer</text><text x="28" y="132" font-size="9.5" fill="var(--ink-soft)">https://mycel.sbs</text>
 </g>
@@ -34,21 +34,21 @@
 <rect x="28" y="314" width="22" height="14" rx="1" fill="none" stroke="var(--accent)"/><path d="M24 332 H54" stroke="var(--accent)"/>
 <text x="60" y="326">Owner laptop</text>
 <text x="28" y="350" font-size="9.5" fill="var(--ink-soft)">stack.sh aws up/down</text>
-<text x="28" y="366" font-size="9.5" fill="var(--ink-soft)">localhost:8000 app</text>
-<text x="28" y="382" font-size="9.5" fill="var(--ink-soft)">localhost:3000 Grafana</text>
+<text x="28" y="366" font-size="9.5" fill="var(--ink-soft)">localhost:3000 Grafana</text>
+<text x="28" y="382" font-size="9.5" fill="var(--ink-soft)">localhost:8000 app</text>
 </g>
 
 <!-- AWS region -->
 <rect x="190" y="16" width="620" height="608" rx="4" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
 <text x="202" y="34" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">AWS · EU-WEST-2 LONDON</text>
 
-<g class="hv" data-tip="planned, HLD 128 · record written by aws up, removed by down&#10;Turns mycel.sbs into the ALB's address">
-<rect x="206" y="56" width="150" height="54" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="5 4"/>
+<g class="hv" data-tip="scripts/aws/lib.sh (dns_point · dns_unpoint_and_wait)&#10;Turns mycel.sbs into the ALB's address; written by up, deleted by down">
+<rect x="206" y="56" width="150" height="54" rx="2" fill="var(--surface)" stroke="var(--accent)"/>
 <circle cx="224" cy="83" r="9" fill="none" stroke="var(--accent)"/><path d="M215 83 H233 M224 74 V92" stroke="var(--accent)" stroke-width=".8"/>
 <text x="240" y="80">Route 53</text><text x="240" y="96" font-size="9.5" fill="var(--ink-soft)">DNS</text>
 </g>
-<g class="hv" data-tip="planned, HLD 128 · made by the LB controller from the Ingress&#10;deploy/helm/mycel/templates/api/ingress.yaml&#10;Public HTTPS door, 443, certificate from ACM">
-<rect x="206" y="140" width="150" height="62" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="5 4"/>
+<g class="hv" data-tip="deploy/helm/mycel/templates/api/ingress.yaml · values-aws.yaml&#10;Made by the LB controller from the Ingress · HTTPS 443, 80 redirects · open to anyone">
+<rect x="206" y="140" width="150" height="62" rx="2" fill="var(--surface)" stroke="var(--accent)"/>
 <circle cx="224" cy="171" r="9" fill="none" stroke="var(--accent)"/><path d="M216 171 H232 M226 165 L232 171 L226 177" fill="none" stroke="var(--accent)"/>
 <text x="240" y="166">ALB</text><text x="240" y="182" font-size="9.5" fill="var(--ink-soft)">HTTPS 443</text>
 </g>
@@ -64,11 +64,11 @@
 <text x="394" y="134" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2">VPC · ONE EC2 NODE · 4 vCPU / 16 GiB</text>
 </g>
 
-<g class="hv" data-tip="deploy/helm/mycel/ + values-aws.yaml&#10;The product: api answers the browser, workers run jobs, ingest reads files">
+<g class="hv" data-tip="deploy/helm/mycel/ + values-aws.yaml · LB controller: deploy/aws/session/ingress.tf&#10;The product: api answers the browser, workers run jobs, ingest reads files">
 <rect x="394" y="146" width="122" height="246" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/>
 <text x="406" y="166">App</text>
 <g color="var(--accent)"><use href="#pod" x="406" y="180"/><use href="#pod" x="406" y="210"/><use href="#pod" x="406" y="240"/><use href="#pod" x="406" y="270"/><use href="#pod" x="406" y="300"/><use href="#pod" x="406" y="330"/></g>
-<g font-size="9.5" fill="var(--ink-soft)"><text x="428" y="192">api</text><text x="428" y="222">worker ×2</text><text x="428" y="252">scheduler</text><text x="428" y="282">ingest</text><text x="428" y="312">migrate</text><text x="428" y="342">LB ctl ┄</text></g>
+<g font-size="9.5" fill="var(--ink-soft)"><text x="428" y="192">api</text><text x="428" y="222">worker ×2</text><text x="428" y="252">scheduler</text><text x="428" y="282">ingest</text><text x="428" y="312">migrate</text><text x="428" y="342">LB controller</text></g>
 </g>
 
 <g class="hv" data-tip="deploy/helm/mycel-stores/&#10;Where data lives; emptyDir, gone with the session">
@@ -78,7 +78,7 @@
 <g font-size="9.5" fill="var(--ink-soft)"><text x="566" y="192">Postgres</text><text x="566" y="222">RabbitMQ</text><text x="566" y="252">Redis ×2</text><text x="566" y="282">Qdrant</text><text x="566" y="312">MinIO</text><text x="566" y="342">LiteLLM</text></g>
 </g>
 
-<g class="hv" data-tip="deploy/helm/mycel/templates/monitoring/&#10;Metrics, logs, alerts for the owner">
+<g class="hv" data-tip="deploy/helm/mycel/templates/monitoring/&#10;Metrics, logs, alerts; the owner only, by port-forward (never behind the ALB)">
 <rect x="680" y="146" width="100" height="246" rx="2" fill="var(--surface)" stroke="var(--line)"/>
 <text x="692" y="166">Monitor</text>
 <path d="M694 200 l10 -10 l8 6 l12 -14" fill="none" stroke="var(--ink-soft)"/>
@@ -104,9 +104,9 @@
 <rect x="650" y="474" width="130" height="56" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
 <path d="M662 486 h20 v14 h-20 z M662 486 l10 8 l10 -8" fill="none" stroke="var(--ink-soft)"/><text x="690" y="496">Mail</text><text x="690" y="512" font-size="9.5" fill="var(--ink-soft)">SNS</text>
 </g>
-<g class="hv" data-tip="planned, HLD 128 · batch 130&#10;Hosted zone for mycel.sbs and its free HTTPS certificate">
-<rect x="220" y="542" width="268" height="52" rx="2" fill="var(--surface)" stroke="var(--accent)" stroke-dasharray="5 4"/>
-<text x="232" y="564">Zone mycel.sbs · ACM cert</text><text x="232" y="580" font-size="9.5" fill="var(--ink-soft)">planned</text>
+<g class="hv" data-tip="deploy/aws/bootstrap/dns.tf&#10;Zone for mycel.sbs (name servers set at Hostinger) and its free HTTPS certificate">
+<rect x="220" y="542" width="268" height="52" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/>
+<text x="232" y="564">Zone mycel.sbs · ACM cert</text><text x="232" y="580" font-size="9.5" fill="var(--ink-soft)">$0.50/month</text>
 </g>
 
 <!-- outside -->
@@ -122,14 +122,14 @@
 </g>
 
 <!-- arrows -->
-<g fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4">
+<g fill="none" stroke="var(--accent)" stroke-width="1.5">
 <path d="M166 96 H206" marker-end="url(#aw)"/><path d="M281 110 V140" marker-end="url(#aw)"/><path d="M356 171 H394" marker-end="url(#aw)"/>
 </g>
 <g fill="none" stroke="var(--accent)" stroke-width="1.5">
 <path d="M166 340 H368 V71 H380" marker-end="url(#aw)"/>
 <path d="M569 474 V420 H794 V71" stroke-dasharray="2 3" marker-end="url(#aw)"/>
 </g>
-<g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)"><text x="210" y="332">kubectl · port-forward</text><text x="576" y="434">deletes when expired</text></g>
+<g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)"><text x="210" y="332">kubectl · port-forward</text><text x="170" y="88">https</text><text x="576" y="434">deletes when expired</text></g>
 <g fill="none" stroke="var(--ink-faint)" stroke-width="1.2">
 <path d="M794 100 H812 V79 H830" marker-end="url(#aw)"/><path d="M668 340 H812 V203 H830" marker-end="url(#aw)"/>
 <path d="M780 273 H830" marker-end="url(#aw)"/><path d="M794 343 H830" marker-end="url(#aw)"/>
@@ -158,7 +158,7 @@
 <section id="blocks">
 <h2>2 · Each block, its job, its code</h2>
 <table class="tbl"><thead><tr><th>Block</th><th>Job</th><th>Code</th><th>Plan</th></tr></thead><tbody>
-<tr><td class="who">Owner laptop</td><td>start, open, extend, delete a session</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/up.sh">up.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/forward.sh">forward.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/extend.sh">extend.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/down.sh">down.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/status.sh">status.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/leftovers.sh">leftovers.sh</a></td><td>126</td></tr>
+<tr><td class="who">Owner laptop</td><td>start, extend, delete a session; open Grafana</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/up.sh">up.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/forward.sh">forward.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/extend.sh">extend.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/down.sh">down.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/status.sh">status.sh</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/leftovers.sh">leftovers.sh</a></td><td>126</td></tr>
 <tr><td class="who">EKS + node + VPC</td><td>the cluster, one machine, the network</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/cluster.tf">cluster.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/network.tf">network.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/versions.tf">versions.tf</a> (tag <code>mycel-session</code>)</td><td>125</td></tr>
 <tr><td class="who">App</td><td>the product; same chart as minikube, AWS values on top</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/values-aws.yaml">values-aws.yaml</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/">templates/</a></td><td>124</td></tr>
 <tr><td class="who">Stores</td><td>database, queue, caches, vectors, files, model gateway</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel-stores/templates/">mycel-stores/templates/</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/k8s/stores-up.sh">stores-up.sh</a> (installs both charts, stores first)</td><td>124</td></tr>
@@ -166,20 +166,20 @@
 <tr><td class="who">Secrets</td><td>session passwords laid over <code>.env</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/.env.aws.example">.env.aws.example</a></td><td>126</td></tr>
 <tr><td class="who">State · Budgets</td><td>Terraform's memory · cost mails</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/state.tf">state.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/budgets.tf">budgets.tf</a></td><td>125</td></tr>
 <tr><td class="who">Reaper · Mail</td><td>delete a forgotten cluster; only one tagged <code>mycel-session</code></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper.tf">reaper.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/reaper/reaper.py">reaper.py</a></td><td>125 · 127</td></tr>
-<tr><td class="who">Route 53 · ACM · ALB ┄</td><td>open the app on <code>https://mycel.sbs</code></td><td>not built; <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/ingress.yaml">ingress.yaml</a> is where it starts</td><td>128 → 130–132</td></tr>
+<tr><td class="who">Zone · certificate</td><td><code>mycel.sbs</code> answers from AWS; free HTTPS</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/bootstrap/dns.tf">dns.tf</a></td><td>130</td></tr><tr><td class="who">ALB · LB controller</td><td>the public HTTPS door; the pod that makes it</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/ingress.yaml">ingress.yaml</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/aws/session/ingress.tf">ingress.tf</a> · <a class="file" href="vscode://file/home/vuzle/Documents/mycel/scripts/aws/lib.sh">lib.sh</a> (DNS record)</td><td>131</td></tr><tr><td class="who">Api network rule</td><td>only the ALB reaches the api, so the client address it forwards can be trusted</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/deploy/helm/mycel/templates/api/networkpolicy.yaml">networkpolicy.yaml</a></td><td>131</td></tr>
 </tbody></table>
 </section>
 
 <section id="session">
 <h2>3 · One session</h2>
 <figure class="tipfig"><div class="tip" role="tooltip"></div><div class="scroll-x">
-<svg class="diagram" viewBox="0 0 940 150" role="img" aria-label="aws up about 16 minutes, sets expiry to now plus 4 hours; forward and use; aws down about 10 minutes leaves nothing; if forgotten the reaper deletes it at expiry.">
+<svg class="diagram" viewBox="0 0 940 150" role="img" aria-label="aws up about 20 minutes, sets expiry to now plus 4 hours; anyone uses https://mycel.sbs; aws down about 16 minutes leaves nothing; if forgotten the reaper deletes it at expiry.">
 <defs><marker id="as" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
 <g font-family="var(--mono)" font-size="11" fill="var(--ink)">
-<g class="hv" data-tip="scripts/aws/up.sh&#10;checks the image is on Docker Hub · terraform apply · expiry tag · stores-up.sh"><rect x="16" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="42">1 · aws up · ~16 min</text><text x="28" y="62" font-size="9.5" fill="var(--ink-soft)">cluster + both charts</text><text x="28" y="78" font-size="9.5" fill="var(--ink-soft)">expires now + 4 h</text></g>
-<g class="hv" data-tip="scripts/aws/forward.sh&#10;localhost:8000 app, :3000 Grafana"><rect x="248" y="20" width="200" height="70" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="260" y="42">2 · forward · use</text><text x="260" y="62" font-size="9.5" fill="var(--ink-soft)">data starts empty</text><text x="260" y="78" font-size="9.5" fill="var(--ink-soft)">extend &lt;h&gt; if needed</text></g>
-<g class="hv" data-tip="scripts/aws/down.sh · leftovers.sh&#10;helm uninstall → terraform destroy → anything tagged left? fail loudly"><rect x="480" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="492" y="42">3 · aws down · ~10 min</text><text x="492" y="62" font-size="9.5" fill="var(--ink-soft)">uninstall, destroy,</text><text x="492" y="78" font-size="9.5" fill="var(--ink-soft)">check nothing is left</text></g>
-<g class="hv" data-tip="deploy/aws/bootstrap/reaper/reaper.py&#10;node group first, cluster on the next run, mail to the owner"><rect x="712" y="20" width="212" height="70" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="724" y="42">forgot? reaper</text><text x="724" y="62" font-size="9.5" fill="var(--ink-soft)">deletes it at expiry</text><text x="724" y="78" font-size="9.5" fill="var(--ink-soft)">at most ~$1.4 lost</text></g>
+<g class="hv" data-tip="scripts/aws/up.sh&#10;image on Docker Hub? · terraform apply · expiry tag · LB controller · both charts · DNS record"><rect x="16" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="28" y="42">1 · aws up · ~20 min</text><text x="28" y="62" font-size="9.5" fill="var(--ink-soft)">cluster, app, ALB, DNS</text><text x="28" y="78" font-size="9.5" fill="var(--ink-soft)">expires now + 4 h</text></g>
+<g class="hv" data-tip="https://mycel.sbs for anyone · scripts/aws/forward.sh: Grafana for the owner&#10;the ALB answers ~3 min after up ends"><rect x="248" y="20" width="200" height="70" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="260" y="42">2 · use mycel.sbs</text><text x="260" y="62" font-size="9.5" fill="var(--ink-soft)">data starts empty</text><text x="260" y="78" font-size="9.5" fill="var(--ink-soft)">extend &lt;h&gt; if needed</text></g>
+<g class="hv" data-tip="scripts/aws/down.sh · leftovers.sh&#10;helm uninstall → DNS record off, wait for the ALB → terraform destroy → anything left? fail loudly"><rect x="480" y="20" width="200" height="70" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="492" y="42">3 · aws down · ~16 min</text><text x="492" y="62" font-size="9.5" fill="var(--ink-soft)">uninstall, destroy,</text><text x="492" y="78" font-size="9.5" fill="var(--ink-soft)">check nothing is left</text></g>
+<g class="hv" data-tip="deploy/aws/bootstrap/reaper/reaper.py&#10;load balancers, then node group, then cluster on later runs; mail to the owner"><rect x="712" y="20" width="212" height="70" rx="2" fill="var(--surface)" stroke="var(--line)" stroke-dasharray="4 3"/><text x="724" y="42">forgot? reaper</text><text x="724" y="62" font-size="9.5" fill="var(--ink-soft)">deletes it at expiry</text><text x="724" y="78" font-size="9.5" fill="var(--ink-soft)">at most ~$1.4 lost</text></g>
 </g>
 <g fill="none" stroke="var(--ink-faint)"><path d="M216 55 H248" marker-end="url(#as)"/><path d="M448 55 H480" marker-end="url(#as)"/><path d="M448 75 H460 V120 H818 V90" stroke-dasharray="4 3" marker-end="url(#as)"/></g>
 <text x="560" y="138" font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">no down</text>
@@ -187,7 +187,7 @@
 <table class="tbl"><thead><tr><th>Command</th><th>Does</th></tr></thead><tbody>
 <tr><td class="who"><code>aws sso login --profile mycel</code></td><td>sign in first; every command stops without it</td></tr>
 <tr><td class="who"><code>stack.sh aws up</code></td><td>step 1</td></tr>
-<tr><td class="who"><code>stack.sh aws forward</code></td><td>step 2; a dropped tunnel restarts</td></tr>
+<tr><td class="who"><code>stack.sh aws forward</code></td><td>Grafana (and the app) on localhost; a dropped tunnel restarts</td></tr>
 <tr><td class="who"><code>stack.sh aws extend &lt;h&gt;</code></td><td>expiry = now + h, at most 12</td></tr>
 <tr><td class="who"><code>stack.sh aws down</code></td><td>step 3; safe to run again</td></tr>
 <tr><td class="who"><code>stack.sh aws status [--bill]</code></td><td>what runs, expiry; <code>--bill</code> the month's cost ($0.01 a call, a day late)</td></tr>
@@ -197,48 +197,29 @@
 <section id="cost">
 <h2>4 · Cost and size</h2>
 <table class="tbl"><thead><tr><th>Item</th><th>Value</th></tr></thead><tbody>
-<tr><td class="who">Per hour, running</td><td>~$0.34: EKS $0.10 + EC2 m7i-flex.xlarge $0.221 + IP and disk</td></tr>
-<tr><td class="who">Per demo of 3 h</td><td>~$1 · planned ALB adds ~$0.03/h</td></tr>
-<tr><td class="who">Between sessions</td><td>~$0 (bootstrap) · planned DNS zone $0.50/month</td></tr>
+<tr><td class="who">Per hour, running</td><td>~$0.37: EKS $0.10 + EC2 m7i-flex.xlarge $0.221 + ALB ~$0.035 + IPs and disk</td></tr>
+<tr><td class="who">Per demo of 3 h</td><td>~$1.10, with up and down</td></tr>
+<tr><td class="who">Between sessions</td><td>$0.50/month: the DNS zone; reaper, budgets, state ~$0</td></tr>
 <tr><td class="who">Limits</td><td>cap $30/month · budget mails at $10, $20 · $100 credit to 2027-10</td></tr>
-<tr><td class="who">Node use (measured)</td><td>CPU reserved 3.42 of 3.92 · used 0.27 · memory used 5.2 of 14.4 GiB</td></tr>
+<tr><td class="who">Billed, before credits</td><td>reaper test (125) $0.03 · first session, ~1 h (126) $0.31 incl. $0.05 tax</td></tr>
+<tr><td class="who">Node use (measured)</td><td>CPU reserved 3.42 of 3.92, used 0.23 · memory used 3.6 of 14.4 GiB</td></tr>
+<tr><td class="who">Time (measured)</td><td><code>up</code> 18 min + ~3 min for the ALB · <code>down</code> 16 min</td></tr>
 <tr><td class="who">Models</td><td>Gemini free tier: $0, but 20 requests a day; check before a demo</td></tr>
 </tbody></table>
 </section>
 
-<section id="next">
-<h2>5 · Next: open on https://mycel.sbs (HLD 128, to agree)</h2>
-<ul class="bul"><li>Before an interview: <code>aws up</code> · the interviewer opens the link and signs up · after: <code>down</code></li><li>The dashed boxes in §1</li></ul>
-<table class="tbl"><thead><tr><th>Decision</th><th>Why</th></tr></thead><tbody>
-<tr><td class="who">Domain</td><td><code>mycel.sbs</code> from Hostinger; its name servers point to a Route 53 zone in bootstrap ($0.50/month)</td></tr>
-<tr><td class="who">HTTPS</td><td>free ACM certificate, made once in bootstrap</td></tr>
-<tr><td class="who">Door</td><td>ALB on 443 (80 redirects), made by the LB controller from the app's Ingress</td></tr>
-<tr><td class="who">Who may enter</td><td>anyone, only while a session runs; no IP list, no password</td></tr>
-<tr><td class="who">Model cost</td><td>no cap: Gemini free tier; the risk is 20 requests a day, check before a demo</td></tr>
-<tr><td class="who">Google · Jira</td><td>add the <code>https://mycel.sbs</code> callbacks; Gmail linked with the owner's account in a demo</td></tr>
-<tr><td class="who">Api network rule</td><td>let in the ALB's subnet addresses instead of the nginx namespace</td></tr>
-<tr><td class="who"><code>down</code></td><td>uninstall, wait for the ALB to go, then destroy; leftovers also checks load balancers</td></tr>
-<tr><td class="who">Reaper</td><td>also deletes load balancers tagged <code>mycel-session</code>, only those</td></tr>
-<tr><td class="who">Not done</td><td>WAF, CloudFront, kept data between sessions</td></tr>
-</tbody></table>
-<table class="tbl"><thead><tr><th>Batch</th><th>Builds</th><th>Proves</th></tr></thead><tbody>
-<tr><td class="who">130</td><td>zone, NS at Hostinger, certificate; reaper and leftovers know load balancers</td><td>certificate issued</td></tr>
-<tr><td class="who">131</td><td>ALB Ingress, network rule, controller in <code>up</code>, DNS record, <code>down</code> waits</td><td><code>https://mycel.sbs</code> opens</td></tr>
-<tr><td class="who">132</td><td>OAuth callbacks; a demo end to end</td><td>a second account signs up and chats</td></tr>
-</tbody></table>
-<ul class="bul"><li>Extra cost: ~$0.03/h while up · $0.50/month for the zone</li></ul>
-</section>
-
 <section id="plans">
-<h2>6 · Plans behind this page</h2>
+<h2>5 · Plans behind this page</h2>
 <table class="tbl"><thead><tr><th>#</th><th>What</th><th>State</th></tr></thead><tbody>
-<tr><td class="who">123</td><td>HLD: one node, stores in the cluster, port-forward, cluster per session</td><td>agreed</td></tr>
+<tr><td class="who">123</td><td>HLD: one node, stores in the cluster, cluster per session</td><td>agreed</td></tr>
 <tr><td class="who">124</td><td>stores chart, AWS values, proven on minikube</td><td>done</td></tr>
 <tr><td class="who">125</td><td>Terraform: bootstrap and session</td><td>done</td></tr>
 <tr><td class="who">126</td><td><code>stack.sh aws</code> commands, full smoke on EKS</td><td>done</td></tr>
-<tr><td class="who">127</td><td>reaper only on tagged clusters ✓ · real bill · one clean rerun</td><td>open</td></tr>
-<tr><td class="who">128</td><td>HLD: open on <code>https://mycel.sbs</code> for demos</td><td>draft</td></tr>
-<tr><td class="who">130–132</td><td>DNS and cert · ALB and chart · OAuth and a demo end to end</td><td>after 128</td></tr>
+<tr><td class="who">127</td><td>reaper only on tagged clusters, real bill; trace without text still to check</td><td>open</td></tr>
+<tr><td class="who">128</td><td>HLD: open on <code>https://mycel.sbs</code> for demos</td><td>agreed</td></tr>
+<tr><td class="who">130</td><td>DNS zone, certificate; reaper knows load balancers</td><td>done</td></tr>
+<tr><td class="who">131</td><td>ALB, LB controller, network rule, <code>up</code>/<code>down</code>; first public session passed</td><td>done</td></tr>
+<tr><td class="who">132</td><td>OAuth callbacks for <code>mycel.sbs</code>; <code>/</code> opens the app</td><td>done</td></tr>
 </tbody></table>
 <ul class="bul"><li>Notes: <code>notes/flow/plan/e12-aws/</code> (outside git) · Jira epic MYC-264</li></ul>
 </section>
