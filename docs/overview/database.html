@@ -77,7 +77,7 @@ job_id · body · published_at (empty until RabbitMQ has it)."><rect x="380" y="
       <tbody>
         <tr class="tone-gold"><td class="who">worklog.started_at</td><td>the day the hours were for</td><td>yes</td></tr>
         <tr><td class="who">work_item.updated_at</td><td>last change in Jira</td><td>no — a later edit moves it; the sync starts from bronze <code>fetched_at</code> per project</td></tr>
-        <tr><td class="who">work_item.created_at · resolved_at</td><td>Jira's own created · resolved dates</td><td>no — sample issues were created in bulk through the API, so these are the load date, not when the work happened</td></tr>
+        <tr><td class="who">work_item.created_at · resolved_at</td><td>Jira's own created · resolved dates</td><td>no — the sample project was back-filled through the API (label <code>backfill</code>): Jira stamps these at the call. Real issues have real dates</td></tr>
         <tr><td class="who">work_item.due_at</td><td>deadline, end of day UTC</td><td>for "late" only</td></tr>
         <tr><td class="who">bronze.*.fetched_at</td><td>when we downloaded it</td><td>no</td></tr>
       </tbody>

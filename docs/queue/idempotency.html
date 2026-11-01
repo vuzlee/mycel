@@ -304,7 +304,7 @@
   <tr><td>7 ONE ROW</td><td>insert or update the turn row by job id</td><td>a repeat never makes a second row</td></tr>
   <tr><td>8 release</td><td>delete the lock, only if still ours</td><td>never frees another worker's lock</td></tr>
   <tr><td>9 ack</td><td>tell the queue it is done</td><td>last, so any crash before it brings the job back</td></tr>
-  <tr><td>repeat · COUNT</td><td>count deliveries of a redelivered job</td><td>over 4 → dead-letter queue (story D)</td></tr>
+  <tr><td>repeat · COUNT</td><td>count the redeliveries of a job</td><td>over 4 → dead-letter queue (story D)</td></tr>
 </table></div>
 <p class="insight"><b>Key:</b> ack comes last; any crash before it brings the job back. DONE? runs <i>before</i> LOCK — that order is the narrow race in section 06.</p>
 

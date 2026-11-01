@@ -33,7 +33,7 @@ notes:
   - ["cache", "none on the server; the browser refreshes every 30 s"]
   - ["limit", "at most 300 items in the window; older ones dropped and counted"]
   - ["web shell", "`web/src/main.tsx` routes · `context/AuthContext.tsx` who is signed in · `components/Sidebar.tsx`"]
-  - ["two checks", "the dashboard relies on `permission.py` alone; Postgres row security binds only agent SQL (`mycel_reader`)"]
+  - ["access", "the dashboard relies on `permission.py` alone; Postgres row security binds only agent SQL (`mycel_reader`)"]
 failures:
   - ["signed out", "401", "src/mycel/api/dependencies.py"]
   - ["project not readable", "403 not your project", "src/mycel/api/routes/dashboard.py"]

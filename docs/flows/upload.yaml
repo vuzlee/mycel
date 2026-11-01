@@ -34,10 +34,10 @@ edges:
 notes:
   - ["parse and chunk", "`etl/documents/parse.py` (docling) · `chunk.py` → passages of ~500 tokens"]
   - ["accepted", "PDF, DOCX, Markdown · up to 2 MB · checked by its bytes, not its name"]
-  - ["limits", "200 documents per person · 5 processing at once"]
+  - ["limits", "200 documents per person · 5 queued or processing per person; the worker runs one at a time"]
   - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]
   - ["stuck", "watchdog every 60 s: parsing longer than 10 min → failed"]
-  - ["why one at a time", "parsing and embedding hold 3–4 GB each; the pod's limit is 5 GiB"]
+  - ["why one at a time", "one ingest (docling) holds 3–4 GB; the pod's limit is 5 GiB"]
 failures:
   - ["over 2 MB", "refused in the browser; 413 at the server", "src/mycel/services/documents.py"]
   - ["empty or unknown type", "422 / 415", "src/mycel/services/documents.py"]
