@@ -3,6 +3,8 @@
 ```
 helm/mycel/     the chart: api, worker, scheduler, ingest, migrate hook, monitoring
 helm/mycel-stores/  the stores in the cluster, for stores-up and EKS
+aws/bootstrap/  Terraform, applied once: state bucket, budgets, reaper
+aws/session/    Terraform, one per session: VPC, EKS, one node
 helm/mycel/files/   Grafana and Loki config, also mounted by compose
 monitoring/     Prometheus, Alertmanager and Alloy config for compose
 inference/      local vLLM (planned, off)
@@ -26,11 +28,30 @@ minikube tunnel                         # mycel.local and grafana.mycel.local in
 | Setup | Pods | Stores |
 |---|---|---|
 | `k8s up` (minikube) | api · worker · scheduler · ingest | compose on the host, at `externalStores.host` (`host.minikube.internal`) |
-| `k8s stores-up` (minikube, later EKS) | the same, `values-aws.yaml` | in the cluster, chart `helm/mycel-stores/`, one Service per store, `emptyDir` |
+| `k8s stores-up` (minikube) · `aws up` (EKS) | the same, `values-aws.yaml` | in the cluster, chart `helm/mycel-stores/`, one Service per store, `emptyDir` |
 
 `stores-up` installs the stores first (the migrate hook needs Postgres), makes the app's
 gateway key, then the app. Every pod pulls with one Docker Hub login when `.env` has
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. Plan: `docs/plan/aws-phase-1.html`.
+
+## Run it on AWS (EKS)
+
+```bash
+aws sso login --profile mycel
+scripts/stack.sh aws up        # ~16 min, then ~$0.34 an hour; expires in 4 h
+scripts/stack.sh aws forward   # localhost:8000/app and :3000
+scripts/stack.sh aws down      # ~10 min, then checks nothing that costs is left
+```
+
+| Guard | Does |
+|---|---|
+| `mycel-expires` tag, 4 h | `aws extend <h>` moves it |
+| Reaper Lambda, every 15 min | deletes an expired cluster and mails the owner; no tag means 4 h after creation |
+| Budgets $10 and $20 | mail when actual or forecast spend passes them, before credits |
+| `.env.aws` | the stores get session passwords, never the dev ones |
+
+Once per account: `terraform -chdir=deploy/aws/bootstrap apply` with `owner_email` in its
+`terraform.tfvars`, then confirm the SNS mail. Plan and measurements: `docs/plan/aws-phase-1.html`.
 
 ## Rules
 
