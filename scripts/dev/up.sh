@@ -6,6 +6,10 @@ source "$ROOT/scripts/lib/hostproc.sh"
 
 require_env
 
+# Into the process env too: settings read .env themselves, but an MCP `token_env` is looked
+# up in os.environ, which compose and Helm fill and the host shell does not.
+set -a; source "$ROOT/.env"; set +a
+
 start_stores
 
 migrate
