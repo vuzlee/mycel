@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -195,6 +196,14 @@ class Turn(Base):
         UniqueConstraint("job_id", name="uq_turn_job_id"),
         # Leads with the conversation for its turns; `updated_at` second for the sidebar order.
         Index("ix_turn_conversation_updated", "conversation_id", "updated_at"),
+        # The newest turn's job and status, read from the index alone (migration 0029).
+        Index(
+            "ix_turn_conversation_newest",
+            "conversation_id",
+            text("created_at DESC"),
+            text("id DESC"),
+            postgresql_include=["job_id", "status"],
+        ),
         {"schema": APP},
     )
 

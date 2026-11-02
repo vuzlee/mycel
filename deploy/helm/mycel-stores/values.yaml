@@ -18,6 +18,8 @@ postgres:
   image: postgres:16-alpine
   user: mycel
   db: mycel
+  # Half the 1 Gi limit: cold reads of app.turn were the EKS limit at 128 MB (note 133).
+  sharedBuffers: 512MB
   resources:
     requests: {cpu: 200m, memory: 512Mi}
     limits: {memory: 1Gi}

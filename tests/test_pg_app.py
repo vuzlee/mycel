@@ -226,6 +226,24 @@ class TestTheSidebarFollowsTheLastThingSaid:
         assert len(statements) == 1
         assert latest == {a.id: ("a-2", "failed"), b.id: ("b-1", "queued")}
 
+    async def test_the_latest_turn_is_read_from_the_index_alone(
+        self, session: AsyncSession
+    ) -> None:
+        """No sort, no heap: the index is in the query's order and holds job and status."""
+        # A tiny table makes any plan cheap; the planner must be left only the index question.
+        await session.execute(text("SET LOCAL enable_seqscan = off"))
+        await session.execute(text("SET LOCAL enable_bitmapscan = off"))
+        query = text(
+            "EXPLAIN SELECT DISTINCT ON (conversation_id) conversation_id, job_id, status"
+            " FROM app.turn WHERE conversation_id = ANY(ARRAY[1, 2, 3])"
+            " ORDER BY conversation_id, created_at DESC, id DESC"
+        )
+        plan = (await session.execute(query)).scalars().all()
+
+        joined = "\n".join(plan)
+        assert "ix_turn_conversation_newest" in joined
+        assert "Sort" not in joined
+
 
 @needs_postgres
 class TestAConnectedGoogleAccount:
