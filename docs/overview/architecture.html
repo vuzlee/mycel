@@ -28,14 +28,14 @@
   </header>
   <section id="s00">
     <div class="section-head"><p class="eyebrow">0 · Read this first</p><h2>Words on this page</h2></div>
-<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">bronze · silver · gold</td><td>raw copy from the provider · cleaned rows · tables the product reads</td></tr><tr><td class="who">ETL</td><td>extract, transform, load: the steps that turn bronze into gold</td></tr><tr><td class="who">agent</td><td>a model with a prompt and tools it may call; the orchestrator hands work to specialists</td></tr><tr><td class="who">tool</td><td>a function an agent may call, e.g. run a query on gold</td></tr><tr><td class="who">job · queue · worker</td><td>a unit of slow work · RabbitMQ holding it · the process that runs it</td></tr><tr><td class="who">route · domain · service</td><td>HTTP entry · the order of steps for one job · one step, reusable</td></tr><tr><td class="who">outbox</td><td>a job row written in the same transaction as the data, sent to the queue after</td></tr><tr><td class="who">SSE</td><td>server-sent events: the server pushes each step to the browser as it happens</td></tr><tr><td class="who">gateway (LiteLLM)</td><td>one door to every hosted model; holds the keys, caps spend</td></tr><tr><td class="who">Helm chart</td><td>an install package for Kubernetes; same image everywhere, values differ</td></tr><tr><td class="who">schema</td><td>a named group of tables in one database: <code>bronze</code>, <code>silver</code>, <code>gold</code>, and <code>app</code> for people and chats</td></tr><tr><td class="who">Postgres · Redis</td><td>the database · a fast in-memory store for short-lived things: locks, live events, caches</td></tr><tr><td class="who">Qdrant · MinIO</td><td>vector search over work items and documents · file storage (S3-compatible)</td></tr><tr><td class="who">Kubernetes · pod</td><td>runs and restarts containers on a cluster · one running copy of a program</td></tr><tr><td class="who"><code>XADD</code> · <code>XREAD</code></td><td>Redis: append an event to a stream · read new ones; how live steps reach the browser</td></tr><tr><td class="who"><code>mycel_reader</code></td><td>the database user agent queries run as: reads gold, only the asker's projects</td></tr><tr><td class="who"><code>RUNS[kind]</code></td><td>the worker's table from job kind to the function that runs it</td></tr><tr><td class="who">opaque token · JWT</td><td>a random id the server looks up · a signed token that carries its own data</td></tr><tr><td class="who">row-level security</td><td>Postgres hides rows a user may not see, even from raw SQL</td></tr><tr><td class="who">ASGI · middleware</td><td>the interface between server and app · code that wraps every request</td></tr><tr><td class="who"><code>BaseHTTPMiddleware</code></td><td>Starlette's easy middleware; it buffers the whole response, which breaks streaming</td></tr><tr><td class="who">contextvars</td><td>per-task variables in Python; they do not cross into another process</td></tr><tr><td class="who"><code>inject()</code> · <code>extract()</code></td><td>OpenTelemetry: write the trace ids into message headers · read them back in the worker</td></tr><tr><td class="who">probe · <code>startupProbe</code></td><td>Kubernetes asks a pod "are you alive / ready?" · a probe that waits for a slow start</td></tr><tr><td class="who"><code>max_connections</code></td><td>the most connections Postgres accepts, from all processes together</td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">bronze · silver · gold</td><td>raw copy from the provider · cleaned rows · tables the product reads</td></tr><tr><td class="who">ETL</td><td>extract, transform, load: the steps that turn bronze into gold</td></tr><tr><td class="who">agent</td><td>a model with a prompt and tools it may call; the orchestrator hands work to specialists</td></tr><tr><td class="who">tool</td><td>a function an agent may call, e.g. run a query on gold</td></tr><tr><td class="who">job · queue · worker</td><td>a unit of slow work · RabbitMQ holding it · the process that runs it</td></tr><tr><td class="who">route · domain · service</td><td>HTTP entry · the order of steps for one job · one step, reusable</td></tr><tr><td class="who">outbox</td><td>a job row written in the same transaction as the data, sent to the queue after</td></tr><tr><td class="who">SSE</td><td>server-sent events: the server pushes each step to the browser as it happens</td></tr><tr><td class="who">gateway (LiteLLM)</td><td>one door to every hosted model; holds the keys, caps spend</td></tr><tr><td class="who">Helm chart</td><td>an install package for Kubernetes; same image everywhere, values differ</td></tr><tr><td class="who">schema</td><td>a named group of tables in one database: <code>bronze</code>, <code>silver</code>, <code>gold</code>, and <code>app</code> for people and chats</td></tr><tr><td class="who">Postgres · Redis</td><td>the database · a fast in-memory store for short-lived things: locks, live events, caches</td></tr><tr><td class="who">Qdrant · MinIO</td><td>vector search over work items and documents · file storage (S3-compatible)</td></tr><tr><td class="who">Kubernetes · pod</td><td>runs and restarts containers on a cluster · one running copy of a program</td></tr><tr><td class="who"><code>XADD</code> · <code>XREAD</code></td><td>Redis: append an event to a stream · read new ones; how live steps reach the browser</td></tr><tr><td class="who"><code>mycel_reader</code></td><td>the database user agent queries run as: reads gold, only the asker's projects</td></tr><tr><td class="who"><code>RUNS[kind]</code></td><td>the worker's table from job kind to the function that runs it</td></tr><tr><td class="who">opaque token · JWT</td><td>a random id the server looks up · a signed token that carries its own data</td></tr><tr><td class="who">row-level security</td><td>Postgres hides rows a user may not see, even from raw SQL</td></tr><tr><td class="who">chip</td><td>a source the person ticks under the chat box (Jira, Mail, Knowledge…); tools open only for picked chips</td></tr><tr><td class="who">MCP</td><td>Model Context Protocol: a standard way to call tools on another server</td></tr><tr><td class="who">TTL</td><td>how long a Redis key lives before it deletes itself</td></tr><tr><td class="who">OTLP · Langfuse</td><td>the standard wire format for traces · the service where traces are read</td></tr><tr><td class="who">Alembic · migration</td><td>the tool that changes the database schema · one numbered change</td></tr><tr><td class="who">dead-letter queue</td><td>where a job parks after its last try, until someone replays it</td></tr><tr><td class="who">SIGTERM</td><td>the signal that asks a process to stop; it finishes running jobs first</td></tr><tr><td class="who">Helm hook</td><td>a job Helm runs before the release (here: migrations)</td></tr><tr><td class="who">Service (Kubernetes)</td><td>a fixed name pods reach each other by</td></tr><tr><td class="who">Recreate · RollingUpdate</td><td>stop the old pod, then start the new one · start the new one first</td></tr><tr><td class="who">noeviction · allkeys-lru</td><td>Redis refuses writes when full · Redis drops the least used keys when full</td></tr><tr><td class="who">evals</td><td>golden questions with known answers, run by hand against real models</td></tr><tr><td class="who">ASGI · middleware</td><td>the interface between server and app · code that wraps every request</td></tr><tr><td class="who"><code>BaseHTTPMiddleware</code></td><td>Starlette's easy middleware; it buffers the whole response, which breaks streaming</td></tr><tr><td class="who">contextvars</td><td>per-task variables in Python; they do not cross into another process</td></tr><tr><td class="who"><code>inject()</code> · <code>extract()</code></td><td>OpenTelemetry: write the trace ids into message headers · read them back in the worker</td></tr><tr><td class="who">probe · <code>startupProbe</code></td><td>Kubernetes asks a pod "are you alive / ready?" · a probe that waits for a slow start</td></tr><tr><td class="who"><code>max_connections</code></td><td>the most connections Postgres accepts, from all processes together</td></tr></tbody></table>
   </section>
   <div class="part" id="p1"><span class="part-num">Part 1</span><h2 class="part-title">The idea</h2></div>
 <section id="s01">
     <div class="section-head">
       <p class="eyebrow">1.1 · Data flow</p>
       <h2>Data flows one way through four layers</h2>
-      <div><ul class="bul"><li>Each layer reads only the one below it</li><li>Agents never touch <code>bronze</code> or <code>silver</code></li><li>Key: bold line = the only way data reaches the AI · dashed = control and monitoring, not data</li></ul></div>
+      <div><ul class="bul"><li>Each layer reads only the one below it</li><li>Agents never touch <code>bronze</code> or <code>silver</code></li><li>Only Jira is stored; mail and calendar are read live when asked</li><li>Key: bold line = the only way data reaches the AI · dashed = control and monitoring, not data</li></ul></div>
     </div>
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
@@ -68,11 +68,11 @@
 
             <rect x="24" y="86" width="118" height="34" rx="2" fill="var(--surface)"
                   stroke="var(--line)"/>
-            <text x="83" y="107" text-anchor="middle">Gmail</text>
+            <text x="83" y="107" text-anchor="middle">Gmail</text><text x="83" y="118" text-anchor="middle" font-size="8" fill="var(--ink-faint)">live tool, not stored</text>
 
             <rect x="24" y="128" width="118" height="34" rx="2" fill="var(--surface)"
                   stroke="var(--line)"/>
-            <text x="83" y="149" text-anchor="middle">Calendar</text>
+            <text x="83" y="149" text-anchor="middle">Calendar</text><text x="83" y="160" text-anchor="middle" font-size="8" fill="var(--ink-faint)">live tool, not stored</text>
 
             <rect x="24" y="170" width="118" height="34" rx="2" fill="var(--surface)"
                   stroke="var(--line)" stroke-dasharray="3 3"/>
@@ -82,8 +82,7 @@
           <!-- provider -> sources arrows -->
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none" marker-end="url(#ar-faint)">
             <path d="M 142 61  L 168 61  L 168 118 L 214 118"/>
-            <path d="M 142 103 L 176 103 L 176 118 L 214 118"/>
-            <path d="M 142 145 L 176 145 L 176 118 L 214 118"/>
+
             <path d="M 142 187 L 168 187 L 168 118 L 214 118"/>
           </g>
           <text x="178" y="82" font-family="var(--mono)" font-size="9.5"
@@ -251,7 +250,7 @@
   </section>
   <section id="s02">
     <div class="section-head"><p class="eyebrow">1.2 · The contract between layers</p><h2>Three schemas, one direction</h2><div><ul class="bul"><li>Bad transform → re-run from bronze, no new Jira calls</li><li>Providers rate-limit and change; bronze is the copy we control</li></ul></div></div>
-<table class="tbl"><thead><tr><th>Schema</th><th>Holds</th><th>Written by</th><th>Read by</th></tr></thead><tbody><tr><td class="who">bronze</td><td>the provider's payload, untouched, append only</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/sync.py">plugins/&lt;p&gt;/sync.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td></tr><tr><td class="who">silver</td><td>typed columns, UTC times; changes when the source changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py">etl/promote.py</a></td></tr><tr><td class="who">gold</td><td>what the product reads; changes when the question changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py">etl/promote.py</a></td><td>agents · domains</td></tr><tr><td class="who">app</td><td>people, sessions, turns, connections</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/">infra/postgres/</a></td><td>api · services</td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>Schema</th><th>Holds</th><th>Written by</th><th>Read by</th></tr></thead><tbody><tr><td class="who">bronze</td><td>the provider's payload, untouched, append only</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/fetch.py">plugins/jira/fetch.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td></tr><tr><td class="who">silver</td><td>typed columns, UTC times; changes when the source changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/normalize.py">etl/normalize.py</a></td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/transform.py">etl/transform.py</a></td></tr><tr><td class="who">gold</td><td>what the product reads; changes when the question changes</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/etl/promote.py">etl/promote.py</a></td><td>agents · services (gather, dashboards)</td></tr><tr><td class="who">app</td><td>people, sessions, turns, connections</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/infra/postgres/">infra/postgres/</a></td><td>api · services</td></tr></tbody></table>
   </section>
   <div class="part" id="p2"><span class="part-num">Part 2</span><h2 class="part-title">Code flow</h2></div>
 <section id="s06">
@@ -359,7 +358,6 @@
           <g stroke="var(--ink-faint)" stroke-width="1.3" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
             <path d="M 242 118 L 242 170"/>
-            <path d="M 420 118 L 566 118 L 566 170"/>
           </g>
 
           <!-- scheduler -> domain (skips the route) -->
@@ -367,7 +365,7 @@
                 stroke="var(--silver)" stroke-width="1.4" stroke-dasharray="4 3"
                 fill="none" color="var(--silver)" marker-end="url(#m6)"/>
           <text x="900" y="84" font-family="var(--mono)" font-size="9"
-                fill="var(--silver)" text-anchor="end">calls the domain directly, no HTTP</text>
+                fill="var(--silver)" text-anchor="end">starts the sync directly, no HTTP</text>
 
           <!-- services -->
           <g font-family="var(--mono)" font-size="9.5" text-anchor="middle"
@@ -395,11 +393,9 @@
 
           <g stroke="var(--accent)" stroke-width="1.3" fill="none"
              color="var(--accent)" marker-end="url(#m6)">
-            <path d="M 380 250 L 380 282 L 200 282 L 200 298"/>
-            <path d="M 380 250 L 380 282 L 340 282 L 340 298"/>
-            <path d="M 380 250 L 380 282 L 480 282 L 480 298"/>
-            <path d="M 704 250 L 704 282 L 620 282 L 620 298"/>
-            <path d="M 704 250 L 704 282 L 768 282 L 768 298"/>
+            <path d="M 242 250 L 242 276 L 330 276 L 330 298"/>
+            <path d="M 704 250 L 704 276 L 350 276 L 350 298"/>
+            <path d="M 768 250 L 768 298"/>
           </g>
 
           <!-- capabilities -->
@@ -419,6 +415,12 @@
             <rect x="676" y="364" width="164" height="32" rx="2"
                   fill="var(--bronze-wash)" stroke="var(--bronze)"/>
             <a href="vscode://file/home/vuzle/Documents/mycel/src/mycel/plugins/jira/client.py" class="hv" data-path="src/mycel/plugins/jira/client.py" data-tip="plugins/jira/client.py&#10;provider HTTP client"><text x="758" y="384" fill="var(--bronze)">plugins/</text></a>
+          </g>
+          <g stroke="var(--gold)" stroke-width="1.1" fill="none" stroke-dasharray="3 3"
+             color="var(--gold)" marker-end="url(#m6)">
+            <path d="M 380 364 L 380 352 L 200 352 L 200 336"/>
+            <path d="M 400 364 L 400 352 L 480 352 L 480 336"/>
+            <path d="M 420 364 L 420 352 L 620 352 L 620 336"/>
           </g>
           <g stroke="var(--ink-faint)" stroke-width="1.2" fill="none"
              color="var(--ink-faint)" marker-end="url(#m6)">
@@ -442,7 +444,7 @@
           </g>
         </svg>
       </div>
-      <figcaption><ul class="bul"><li>An area = a route module (HTTP side) + a domain module (worker side), joined by the queue</li><li><code>scheduler/</code> and scripts call the domain module directly (dashed)</li><li><code>auth</code> is route + service only: sign-in chains nothing</li></ul></figcaption>
+      <figcaption><ul class="bul"><li>An area = a route module (HTTP side) + a domain module (worker side), joined by the queue</li><li>Purple: the route and the sync queue a job through <code>enqueue</code> · gold dashed: the agent tools call <code>permission</code>, <code>gather</code>, <code>analyze</code></li><li><code>scheduler/</code> and scripts start the work directly, no HTTP (dashed)</li><li>Quick reads (dashboard, projects, auth) call a service and answer at once; only slow work is queued</li></ul></figcaption>
     </figure>
 
     <table class="tbl">
@@ -472,7 +474,7 @@
         <tr>
           <td class="who">services/</td>
           <td>One single job, done end to end, reusable across domains</td>
-          <td class="no">Chain other services together — that is the domain module's job</td>
+          <td class="no">Call a domain, an agent or a route; another service is fine</td>
         </tr>
         <tr class="tone-gold">
           <td class="who">etl/ agents/</td>
@@ -487,7 +489,7 @@
       </tbody>
     </table>
 
-    <div class="path-note"><ul class="bul"><li>Domain = the chain; service = one link</li><li><code>domains/chat.py</code>: enqueue → worker → orchestrator → <code>app.turn</code></li><li><code>plugins/jira/sync.py</code>: fetch → transform → check</li></ul></div>
+    <div class="path-note"><ul class="bul"><li>Domain = the steps of one job; service = one reusable step</li><li><code>domains/chat.py</code>: prepare → orchestrator → settle into <code>app.turn</code></li><li><code>plugins/jira/sync.py</code>: fetch → transform (checks inside) → queue the index job</li></ul></div>
   </section>
 <section id="s07">
     <div class="section-head">
@@ -531,24 +533,24 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
       <div class="scroll-x">
         <svg class="diagram" viewBox="0 0 940 300" role="img"
-             aria-label="Mycel's dependency order, from what imports nothing to what imports everything: core and events at the left; llm imports core; infra imports core, events and llm; etl imports infra; agents and plugins import infra and each other; domains, worker, scheduler and api import all of them. Observability is imported by every layer.">
+             aria-label="Mycel's dependency order, from what imports nothing to what imports most: core; llm imports core; events imports nothing; infra imports core, events and llm; etl and queue import infra; services imports queue and infra; mcp imports core; plugins and agents import services and each other, plugins also etl, agents also mcp and llm; domains, worker and scheduler import all of them; api imports services and plugins, never agents or domains. Every layer imports core and observability.">
           <defs>
             <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5"
                     markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
             </marker>
           </defs>
-          <g font-family="var(--mono)" font-size="11.5" text-anchor="middle"><rect x="20" y="70" width="104" height="38" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/><text x="72" y="94" fill="var(--ink)">core</text><rect x="20" y="170" width="104" height="38" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="72" y="194" fill="var(--ink)">events</text><rect x="172" y="120" width="104" height="38" rx="2" fill="var(--surface)" stroke="var(--accent)"/><text x="224" y="144" fill="var(--accent)">llm</text><rect x="324" y="120" width="104" height="38" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="376" y="144" fill="var(--ink)">infra</text><rect x="476" y="170" width="104" height="38" rx="2" fill="var(--silver-wash)" stroke="var(--silver)"/><text x="528" y="194" fill="var(--silver)">etl</text><rect x="628" y="70" width="104" height="38" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="680" y="94" fill="var(--gold)">agents</text><rect x="628" y="170" width="104" height="38" rx="2" fill="var(--bronze-wash)" stroke="var(--bronze)"/><text x="680" y="194" fill="var(--bronze)">plugins</text><rect x="780" y="112" width="140" height="54" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="850" y="134" fill="var(--ink)">domains · worker</text><text x="850" y="152" fill="var(--ink)">scheduler · api</text></g>
-          <g stroke="currentColor" fill="none" stroke-width="1.3" color="var(--ink-faint)" marker-end="url(#dep)"><path d="M 124 89 L 148 89 L 148 133 L 168 133"/><path d="M 124 189 L 300 189 L 300 151 L 320 151"/><path d="M 276 139 L 320 139"/><path d="M 428 139 L 452 139 L 452 189 L 472 189"/><path d="M 428 139 L 452 139 L 452 89 L 624 89"/><path d="M 580 189 L 624 189"/><path d="M 732 89 L 756 89 L 756 133 L 776 133"/><path d="M 732 189 L 756 189 L 756 145 L 776 145"/></g>
-          <g stroke="var(--ink-faint)" fill="none" stroke-width="1.1" stroke-dasharray="3 3"><path d="M 680 108 L 680 170"/></g>
+          <g font-family="var(--mono)" font-size="11" text-anchor="middle"><rect x="20" y="50" width="96" height="34" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/><text x="68" y="71" fill="var(--ink)">core</text><rect x="150" y="50" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--accent)"/><text x="198" y="71" fill="var(--accent)">llm</text><rect x="150" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="198" y="221" fill="var(--ink)">events</text><rect x="280" y="125" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="328" y="146" fill="var(--ink)">infra</text><rect x="410" y="50" width="96" height="34" rx="2" fill="var(--silver-wash)" stroke="var(--silver)"/><text x="458" y="71" fill="var(--silver)">etl</text><rect x="410" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="458" y="221" fill="var(--ink)">queue</text><rect x="540" y="125" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="588" y="146" fill="var(--ink)">services</text><rect x="540" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="588" y="221" fill="var(--ink)">mcp</text><rect x="670" y="50" width="96" height="34" rx="2" fill="var(--bronze-wash)" stroke="var(--bronze)"/><text x="718" y="71" fill="var(--bronze)">plugins</text><rect x="670" y="200" width="96" height="34" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="718" y="221" fill="var(--gold)">agents</text><rect x="800" y="42" width="124" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="862" y="63" fill="var(--ink)">domains · worker</text><text x="862" y="80" fill="var(--ink)">scheduler</text><rect x="800" y="200" width="124" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="862" y="221" fill="var(--ink)">api</text></g>
+          <g stroke="currentColor" fill="none" stroke-width="1.2" color="var(--ink-faint)" marker-end="url(#dep)"><path d="M 506 67 L 667 67"/><path d="M 116 67 L 147 67"/><path d="M 246 67 L 263 67 L 263 142 L 277 142"/><path d="M 246 217 L 263 217 L 263 142 L 277 142"/><path d="M 376 142 L 393 142 L 393 67 L 407 67"/><path d="M 376 142 L 393 142 L 393 217 L 407 217"/><path d="M 506 217 L 523 217 L 523 142 L 537 142"/><path d="M 636 142 L 648 142 L 648 67 L 667 67"/><path d="M 636 142 L 648 142 L 648 217 L 667 217"/><path d="M 636 217 L 667 217"/><path d="M 766 67 L 797 67"/><path d="M 766 217 L 778 217 L 778 67 L 797 67"/><path d="M 766 67 L 790 67 L 790 217 L 797 217"/></g>
+          <g stroke="var(--ink-faint)" fill="none" stroke-width="1.1" stroke-dasharray="3 3"><path d="M 718 84 L 718 200"/></g>
           <g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">
-            <text x="688" y="136">each other:</text><text x="688" y="148">plugin tools ↔</text><text x="688" y="160">agent kit</text>
-            <text x="20" y="40">IMPORTS NOTHING</text><text x="780" y="40">IMPORTS EVERYTHING</text>
+            <text x="724" y="132">each other:</text><text x="724" y="144">plugin tools</text><text x="724" y="156">↔ agent kit</text>
+            <text x="20" y="28">IMPORTS NOTHING</text><text x="800" y="28">IMPORTS MOST</text>
+            <text x="800" y="250">+ services;</text><text x="800" y="262">never agents, domains</text>
           </g>
-          <text x="20" y="246" font-family="var(--sans)" font-size="10.5" fill="var(--ink-faint)">imported by every layer above</text>
-          <line x1="20" y1="272" x2="920" y2="272" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="3 4"/>
-          <rect x="380" y="256" width="180" height="32" rx="2" fill="var(--ground)" stroke="var(--accent)" stroke-width="1.2"/>
-          <text x="470" y="277" font-family="var(--mono)" font-size="11.5" fill="var(--accent)" text-anchor="middle">observability</text>
+          <line x1="20" y1="282" x2="760" y2="282" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="3 4"/>
+          <rect x="250" y="268" width="260" height="28" rx="2" fill="var(--ground)" stroke="var(--accent)" stroke-width="1.2"/>
+          <text x="380" y="286" font-family="var(--mono)" font-size="11" fill="var(--accent)" text-anchor="middle">core · observability: every layer</text>
         </svg>
       </div>
       <figcaption><ul class="bul"><li><code>observability</code> cuts across every layer: thin, no business logic</li></ul></figcaption>
@@ -564,7 +566,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
       <tbody>
         <tr><td class="who">core/</td><td>agents, services, domains, api</td><td>the foundation; imports nothing else</td></tr>
         <tr><td class="who">infra/</td><td>agents, services, domains, api, queue, lifecycle</td><td>stores sit under everything that runs work</td></tr>
-        <tr><td class="who">llm/ · events/</td><td>infra and everything above it</td><td>value types that infra may store</td></tr>
+        <tr><td class="who">llm/ · events/</td><td>infra, agents, services, domains, api, queue, lifecycle</td><td>value types that infra may store</td></tr>
         <tr><td class="who">queue/</td><td>agents, services, domains, api, lifecycle</td><td>moves jobs; worker/ runs them</td></tr>
         <tr><td class="who">services/</td><td>agents, domains, plugins, api</td><td>everything above calls services, never the reverse</td></tr>
         <tr><td class="who">etl/</td><td>services, domains, agents, plugins, api</td><td>pure steps on rows; a plugin feeds them</td></tr>
@@ -577,7 +579,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
   </section>
   <section id="s03">
     <div class="section-head"><p class="eyebrow">3.2 · The AI layer</p><h2>Every model call goes through one place</h2><div><ul class="bul"><li>Figure: <a href="../flows/model-cost.html">Model and cost</a> · <a href="../flows/agent-context.html">What the model sees</a></li></ul></div></div>
-<table class="tbl"><thead><tr><th>Piece</th><th>Does</th><th>File</th></tr></thead><tbody><tr><td class="who">orchestrator</td><td>reads the question, hands parts to specialists, merges</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/orchestrator.py">specialists/orchestrator.py</a></td></tr><tr><td class="who">specialists</td><td>analyst (gold), researcher (web, mail), summarizer, rewriter (turns a follow-up into a full question)</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/">agents/specialists/</a></td></tr><tr><td class="who">model builder</td><td>turns the turn's pick into a client: gateway or own endpoint</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/model_builder.py">model_builder.py</a></td></tr><tr><td class="who">runner</td><td>runs a turn, charges each call to the job budget</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/runner.py">runner.py</a></td></tr><tr><td class="who">budget</td><td>stops a job at its ceiling</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/llm/budget.py">llm/budget.py</a></td></tr><tr><td class="who">gateway</td><td>LiteLLM: host models and their keys</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/models.yaml">models.yaml</a></td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>Piece</th><th>Does</th><th>File</th></tr></thead><tbody><tr><td class="who">orchestrator</td><td>reads the question, hands parts to specialists, merges</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/orchestrator.py">specialists/orchestrator.py</a></td></tr><tr><td class="who">specialists</td><td>analyst (gold), researcher (web, mail, calendar, uploads), summarizer, rewriter (turns a follow-up into a full question)</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/specialists/">agents/specialists/</a></td></tr><tr><td class="who">model builder</td><td>turns the turn's pick into a client: gateway or own endpoint</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/model_builder.py">model_builder.py</a></td></tr><tr><td class="who">runner</td><td>runs a turn; charges the job budget once per run, sub-agents included</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/agents/core/runner.py">runner.py</a></td></tr><tr><td class="who">budget</td><td>stops a job at its ceiling</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/src/mycel/llm/budget.py">llm/budget.py</a></td></tr><tr><td class="who">gateway</td><td>LiteLLM: host models and their keys</td><td><a class="file" href="vscode://file/home/vuzle/Documents/mycel/config/litellm/models.yaml">models.yaml</a></td></tr></tbody></table>
   </section>
   <div class="part" id="p4"><span class="part-num">Part 4</span><h2 class="part-title">Running it</h2></div>
 <section id="s15">
@@ -683,7 +685,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
             <td>It buffers the response, so tokens arrive in one lump at the end. Looks like a slow model. The request-id middleware is therefore pure ASGI</td></tr>
         <tr><td class="who">Traces break at the<br>process boundary</td>
             <td><code>contextvars</code> do not cross a process. Without <code>inject()</code>/<code>extract()</code> in the message headers you get <b>two</b> unrelated traces, and nothing errors</td></tr>
-        <tr><td class="who"><code>tracing.setup()</code><br>runs too late</td>
+        <tr><td class="who"><code>setup_tracing()</code><br>runs too late</td>
             <td>Called after <code>instrument_app()</code>, spans fall into an empty provider and disappear &mdash; silently</td></tr>
         <tr><td class="who">Budget counted at<br>the call site</td>
             <td>Sub-agent usage does not roll up on its own. Only <code>runner.run</code> charges; <code>delegate</code> passes <code>usage=ctx.usage</code>, or a three-agent job is billed four times</td></tr>
@@ -858,7 +860,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
         <tr><td class="who">stores</td><td>minikube: the compose stores on the host · EKS: the <code>mycel-stores</code> chart, wiped on <code>down</code></td><td>not in the app chart: its migrate hook runs before anything else in its release</td></tr>
         <tr class="tone-gold"><td class="who">store hosts</td><td>set by the chart, never from <code>.env</code></td><td><code>localhost</code> in a pod is that pod</td></tr>
         <tr><td class="who">migrations</td><td>hook <code>pre-install,pre-upgrade</code></td><td>first install migrates too; a failed hook keeps old pods serving</td></tr>
-        <tr><td class="who">secrets</td><td>chart names the Secret, renders none</td><td>created once: <code>kubectl create secret generic mycel-secrets --from-env-file=.env</code></td></tr>
+        <tr><td class="who">secrets</td><td>chart names the Secret, renders none</td><td><code>scripts/stack.sh k8s secret</code>: <code>.env</code> without the gateway master key, Redis host rewritten for the cluster</td></tr>
       </tbody>
     </table>
   </section>
@@ -868,7 +870,7 @@ each step, in order"><rect x="876" y="496" width="150" height="44" rx="2" fill="
   </section>
   <section id="s08">
     <div class="section-head"><p class="eyebrow">Summary</p><h2>Nine rules that do not bend</h2></div>
-<table class="tbl"><thead><tr><th>Rule</th><th>Means</th></tr></thead><tbody><tr><td class="who">One direction</td><td>bronze → silver → gold, never back</td></tr><tr><td class="who">Agents read gold only</td><td>gold is the only contract with AI</td></tr><tr><td class="who">New source, no edits</td><td>a folder in <code>plugins/</code> + a registry line</td></tr><tr><td class="who">Models through one place</td><td>the gateway or a person's endpoint, built in <code>model_builder.py</code></td></tr><tr><td class="who">Slow work on the queue</td><td>the API returns a job id, never waits for a model</td></tr><tr><td class="who">Prompt changed → run evals</td><td>a worse answer turns no test red</td></tr><tr><td class="who">Thin routes, thick domains</td><td>routes only queue; the work runs in domains, so the scheduler can run a job without the API</td></tr><tr><td class="who">One image everywhere</td><td>tagged by commit SHA; only env differs</td></tr><tr><td class="who">Name = job</td><td>no abbreviations, no layers for a future</td></tr></tbody></table>
+<table class="tbl"><thead><tr><th>Rule</th><th>Means</th></tr></thead><tbody><tr><td class="who">One direction</td><td>bronze → silver → gold, never back</td></tr><tr><td class="who">Agents read gold only</td><td>for Jira data, gold is the only contract; mail, calendar, web and uploads are read live by tools</td></tr><tr><td class="who">New source, no edits</td><td>a folder in <code>plugins/</code> + a registry line</td></tr><tr><td class="who">Models through one place</td><td>the gateway or a person's endpoint, built in <code>model_builder.py</code></td></tr><tr><td class="who">Slow work on the queue</td><td>the API returns a job id, never waits for a model</td></tr><tr><td class="who">Prompt changed → run evals</td><td>a worse answer turns no test red</td></tr><tr><td class="who">Thin routes, thick domains</td><td>slow work is queued and runs in domains, so the scheduler can start it without the API; quick reads answer at once</td></tr><tr><td class="who">One image everywhere</td><td>tagged by commit SHA; only env differs</td></tr><tr><td class="who">Name = job</td><td>no abbreviations, no layers for a future</td></tr></tbody></table>
   </section>
   <!-- pager --><nav class="pager"><span></span><a class="at" href="../index.html">1.1 · contents</a><a href="../overview/config.html">Config ›</a></nav><!-- /pager -->
 <footer>
