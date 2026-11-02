@@ -10,6 +10,7 @@
 #   scripts/stack.sh load compose 150 30 /models    one rate, one route
 #   scripts/stack.sh load seed [users]              mycel_load at a real size; api moves to it
 #   scripts/stack.sh load reset                     api back on the dev database
+#   SHAPE=spike RUNS=1 scripts/stack.sh load compose 150   150 → 450 rps in 10 s, held, back
 #
 # Capacity is the last step that held the SLO. On the dev database a throwaway session for
 # the first user is written and deleted on exit. On mycel_load each VU signs in as one of
@@ -104,7 +105,7 @@ printf '%6s %7s %8s %8s %8s %7s %8s  %-6s  %s  %s\n' rate rps p50 p95 p99 errors
 step() {
   docker run --rm --network host --cpuset-cpus "$K6_CPUS" -v "$ROOT/scripts/ops/load:/load:ro" \
     -e BASE="$base" -e HOST_HEADER="$host_header" -e TOKEN="$token" -e USERS="$users" -e ROUTES="$routes" \
-    -e RATE="$1" -e WARMUP="$WARMUP" -e DURATION="${seconds}s" \
+    -e RATE="$1" -e SHAPE="${SHAPE:-}" -e WARMUP="$WARMUP" -e DURATION="${seconds}s" \
     -e SLO_P95="$SLO_P95" -e SLO_P99="$SLO_P99" -e SLO_ERRORS="$SLO_ERRORS" \
     "$K6_IMAGE" run -q /load/reads.js 2>/dev/null | grep '^{"rate"' || true
 }

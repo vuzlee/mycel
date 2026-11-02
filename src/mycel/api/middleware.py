@@ -1,5 +1,6 @@
-"""Hand-written middleware: a `request_id` on every request, and its timing in Prometheus."""
+"""Hand-written middleware: a `request_id`, its timing in Prometheus, and a cap on load."""
 
+import json
 import time
 import uuid
 
@@ -91,3 +92,55 @@ def _route(scope: Scope) -> str:
     route = scope.get("route")
     path = getattr(route, "path", None)
     return path if isinstance(path, str) and path else UNMATCHED
+
+
+#: Long-lived streams and probes: they wait, not work, so they never count against the cap.
+UNCAPPED = ("/health", "/app")
+
+
+class InFlightLimit:
+    """Answer 503 at once past `limit` requests in flight, before they queue to a timeout."""
+
+    def __init__(self, app: ASGIApp, limit: int) -> None:
+        self.app = app
+        self.limit = limit
+        self.in_flight = 0
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or _uncapped(scope["path"]):
+            await self.app(scope, receive, send)
+            return
+        if self.in_flight >= self.limit:
+            await _overloaded(send)
+            return
+        self.in_flight += 1
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            self.in_flight -= 1
+
+
+def _uncapped(path: str) -> bool:
+    return path.startswith(UNCAPPED) or path.endswith(("/events", "/documents/status"))
+
+
+async def _overloaded(send: Send) -> None:
+    body = json.dumps(
+        {
+            "error": "overloaded",
+            "detail": "too many requests at once; try again shortly",
+            "request_id": current_request_id.get() or None,
+        }
+    ).encode()
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 503,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"retry-after", b"1"),
+                (b"content-length", str(len(body)).encode()),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": body})

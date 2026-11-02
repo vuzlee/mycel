@@ -14,7 +14,7 @@ from starlette.types import Scope
 
 from mycel import REPO_ROOT
 from mycel.api import health
-from mycel.api.middleware import MetricsMiddleware, RequestIdMiddleware
+from mycel.api.middleware import InFlightLimit, MetricsMiddleware, RequestIdMiddleware
 from mycel.api.routes import (
     auth,
     chat,
@@ -92,6 +92,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls=UNTRACED)
 
+    app.add_middleware(InFlightLimit, limit=cfg.api_max_in_flight)
     app.add_middleware(MetricsMiddleware)
     # Added last so it runs outermost: everything inside needs the request id bound.
     app.add_middleware(RequestIdMiddleware)

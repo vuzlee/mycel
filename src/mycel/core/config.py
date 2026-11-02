@@ -149,6 +149,8 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     #: Extra connections opened under a burst, closed when idle.
     db_max_overflow: int = 5
+    #: Requests one api process works on at once; past it, 503 at once instead of a queue.
+    api_max_in_flight: int = 64
     rabbitmq_host: str = "localhost"
     rabbitmq_port: int = 5672
     rabbitmq_user: str = "mycel"
