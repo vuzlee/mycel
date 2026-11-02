@@ -27,7 +27,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 
 #: One grid for every flow, so all figures look alike.
-LANE_X, BOX_X0, COL_W, BOX_W, BOX_H, ROW_H, TOP = 104, 116, 190, 150, 44, 80, 16
+LANE_X, BOX_X0, COL_W, BOX_W, BOX_H, ROW_H, TOP = 104, 116, 214, 178, 44, 80, 16
 #: How far an arrow head stops short of the box it points at.
 HEAD = 4
 

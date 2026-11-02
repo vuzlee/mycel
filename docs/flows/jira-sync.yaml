@@ -28,7 +28,7 @@ edges:
   - {from: jsync,     to: fetch,     step: 4, kind: import, label: "projects, since"}
   - {from: fetch,     to: srcjira,            kind: import, label: "JQL search", exit: 0.3, enter: -0.3}
   - {from: fetch,     to: bronze,    step: 5, kind: import, label: "raw payloads"}
-  - {from: jsync,     to: transform, step: 6, kind: import, label: "changed keys", exit: 0.15, via: [[1.15, 1.5], [1.6, 1.5], [1.6, 3]]}
+  - {from: jsync,     to: transform, step: 6, kind: import, label: "changed keys", exit: 0.15, via: [[1.15, 1.5], [1.5, 1.5], [1.5, 3]]}
   - {from: transform, to: gold,      step: 7, kind: import, label: "upsert"}
   - {from: index,     to: gold,      step: 8, kind: import, label: "read gold", reverse: true}
   - {from: index,     to: qdrant,    step: 9, kind: calls,  text: "indexer",  label: "embed"}

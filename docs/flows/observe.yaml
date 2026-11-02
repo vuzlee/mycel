@@ -28,7 +28,7 @@ edges:
   - {from: alloy,   to: loki,             kind: calls,  text: "loki:3100", label: "push"}
   - {from: grafana, to: loki,             kind: calls,  text: "type: loki", label: "query"}
   - {from: chat,    to: channel, step: 4, kind: import, label: "publish"}
-  - {from: chat,    to: streams,          kind: import, label: "XADD", exit: 0.4, via: [[2.4, 0.5], [2.6, 0.5], [2.6, 2]]}
+  - {from: chat,    to: streams,          kind: import, label: "XADD", exit: 0.4, via: [[2.4, 0.5], [2.5, 0.5], [2.5, 2]]}
   - {from: sse,     to: streams, step: 5, kind: import, label: "read"}
 notes:
   - ["traces", "Langfuse: one trace per turn, a span per model and tool call; prompts and answers included where `otel_capture_content` is on (dev, prod), secrets scrubbed; off on EKS"]

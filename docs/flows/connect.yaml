@@ -6,8 +6,8 @@ page:
 lanes: [browser, api, plugin, provider, store]
 boxes:
   - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
-  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                label: api/connections.ts,      role: "goes to /connections/{key}/start"}
-  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start; callback under /auth"}
+  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                label: api/connections.ts,      role: "→ /connections/{key}/start"}
+  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start · callback in /auth"}
   - {id: registry, lane: api,      col: 0, file: src/mycel/plugins/registry.py,                     label: plugins/registry.py,     role: "plugin by key"}
   - {id: jplugin,  lane: plugin,   col: 1, file: src/mycel/plugins/jira/plugin.py,                  label: jira/plugin.py,          role: "connect → access → sync", hot: true}
   - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,                  label: jira/access.py,          role: "which projects readable"}

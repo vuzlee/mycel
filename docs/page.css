@@ -868,3 +868,6 @@ svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
 .toc td:first-child { width: 3rem; color: var(--ink-faint); font-family: var(--mono); }
 .toc { width: 100%; }
 .toc td:nth-child(2) { width: 14rem; font-family: var(--mono); }
+
+/* Figures break out of the text column, up to 1400px, centred; text and tables keep it. */
+.tipfig { margin-inline: calc(50% - min(50vw - 16px, 700px)); }

@@ -14,7 +14,7 @@ boxes:
   - {id: keyck,   lane: worker,  col: 2, file: src/mycel/domains/key_check.py,                 label: domains/key_check.py,     role: "tests each key"}
   - {id: cmodel,  lane: chat,    col: 2, file: src/mycel/domains/chat_model.py,                label: domains/chat_model.py,    role: "picks the model for a turn"}
   - {id: source,  lane: chat,    col: 3, file: src/mycel/agents/core/model_source.py,          label: core/model_source.py,     role: "own model: direct call"}
-  - {id: rot,     lane: chat,    col: 4, file: src/mycel/agents/core/model_builder.py,         label: core/model_builder.py,    role: "one client per key; next on 429"}
+  - {id: rot,     lane: chat,    col: 4, file: src/mycel/agents/core/model_builder.py,         label: core/model_builder.py,    role: "a client per key; 429 → next"}
   - {id: repo,    lane: stores,  col: 2, file: src/mycel/infra/postgres/repositories/own_models.py, label: "Postgres · own_model", role: "URL, encrypted keys"}
   - {id: redisk,  lane: stores,  col: 4, file: src/mycel/infra/redis/key_rotation.py,          label: "Redis · key order",      role: "which key next"}
 edges:

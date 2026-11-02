@@ -12,7 +12,7 @@ boxes:
   - {id: route,   lane: api,     col: 1, file: src/mycel/api/routes/documents.py,              label: routes/documents.py,      role: "upload, status stream"}
   - {id: svc,     lane: api,     col: 2, file: src/mycel/services/documents.py,                label: services/documents.py,    role: "checks, save, queue", hot: true}
   - {id: enq,     lane: queue,   col: 2, file: src/mycel/services/enqueue.py,                  label: services/enqueue.py,      role: "INGEST job"}
-  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time: prefetch 1 in queue/consumer.py"}
+  - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time (prefetch 1)"}
   - {id: ingest,  lane: worker,  col: 2, file: src/mycel/domains/ingest.py,                    label: domains/ingest.py,        role: "parse, chunk, embed", hot: true}
   - {id: files,   lane: stores,  col: 0, file: src/mycel/infra/objects/files.py,               label: "MinIO",                  role: "the original file"}
   - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document, chunk", role: "status, pieces"}
