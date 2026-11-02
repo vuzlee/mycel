@@ -129,6 +129,8 @@ def build(path: Path) -> str:
     spec = yaml.safe_load(path.read_text())
     if spec.get("boxes"):
         check(spec)
+    if "page" not in spec:
+        raise SystemExit(f"{path.name} has no page: — an embedded figure, build it with flow.py")
     p = spec["page"]
     lede = "".join(f"<li>{e(x)}</li>" for x in p.get("lede", []))
     out = [HEAD.format(title=html.escape(p["title"])), "<body>", NAV, '<div class="page">']
