@@ -18,7 +18,7 @@ steps:
   - ["12", "web/src/components/panels/Connections.tsx", "optional: an icon in `ICONS`"]
   - ["test", "tests/test_plugin_tools.py", "no client → no tools; `GET /connections` lists it (`tests/test_auth.py`)"]
 mistakes:
-  - ["tool module imported at the top of `plugin.py`", "`tests/test_layers.py` fails: api would import agents"]
+  - ["tool module imported at the top of `plugin.py`", "keep it inside `toolsets()` as Jira does: then loading the registry (api, scheduler) never loads `mycel.agents`"]
   - ["client imports anything but `core`, `infra.http` or `plugins/errors.py`", "`tests/test_layers.py` fails: a client only talks to the provider"]
   - ["callback put under `/connections`", "keep it at `/auth/<key>/callback`: that is the uri the provider has registered"]
   - ["a shared token in `.env` for the sync", "against the design: every read is on a person's own grant"]

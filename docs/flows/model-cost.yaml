@@ -12,7 +12,7 @@ boxes:
   - {id: litellm,   lane: model,  col: 3, file: config/litellm/config.yaml,                label: "LiteLLM gateway",      role: "host models, $10 key"}
   - {id: chatmodel, lane: turn,   col: 0, file: src/mycel/domains/chat_model.py,           label: domains/chat_model.py,  role: "model ref → model"}
   - {id: chat,      lane: turn,   col: 1, file: src/mycel/domains/chat.py,                 label: domains/chat.py,        role: "runs one turn", hot: true}
-  - {id: runner,    lane: turn,   col: 2, file: src/mycel/agents/core/runner.py,           label: core/runner.py,         role: "runs, charges each call"}
+  - {id: runner,    lane: turn,   col: 2, file: src/mycel/agents/core/runner.py,           label: core/runner.py,         role: "runs; charges once per run"}
   - {id: budget,    lane: turn,   col: 3, file: src/mycel/llm/budget.py,                   label: llm/budget.py,          role: "ceiling, token cap"}
   - {id: rbudget,   lane: stores, col: 0, file: src/mycel/infra/redis/budgets.py,          label: "Redis · budget",       role: "spend across retries"}
   - {id: conv,      lane: stores, col: 1, file: src/mycel/infra/postgres/repositories/conversations.py, label: "Postgres · turn", role: "spent_usd, tokens"}

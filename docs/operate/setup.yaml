@@ -23,6 +23,7 @@ tables:
       - ["edit", "`config/litellm/models.yaml` (in git, no keys); keep the providers you have"]
       - ["list", "`host_models` in `config/environments/base.yaml`: the names people may pick; exactly one `default: true`"]
       - ["keys", "put the keys it names in `.env`"]
+      - ["gateway key", "start the stack, then `scripts/stack.sh gateway-key`; paste the line it prints into `.env` as `LITELLM_API_KEY`. Without it every answer fails"]
   - title: 4 · The rest of .env
     head: [Key, What]
     rows:
