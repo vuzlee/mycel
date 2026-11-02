@@ -90,6 +90,17 @@ class TestTheScrapePort:
             server.close()
             await server.wait_closed()
 
+    async def test_a_second_process_on_the_same_port_says_why(self) -> None:
+        """`uvicorn --workers 2` would start two of these; the error must point at replicas."""
+        server = await serve_metrics(0, "127.0.0.1")
+        port = server.sockets[0].getsockname()[1]
+        try:
+            with pytest.raises(RuntimeError, match="replicas"):
+                await serve_metrics(port, "127.0.0.1")
+        finally:
+            server.close()
+            await server.wait_closed()
+
 
 async def _get(port: int, path: str) -> bytes:
     reader, writer = await asyncio.open_connection("127.0.0.1", port)

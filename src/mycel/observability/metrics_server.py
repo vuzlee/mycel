@@ -42,6 +42,13 @@ async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
 
 async def serve_metrics(port: int, host: str) -> asyncio.Server:
     """Start listening. `host` has no default: the bound interface is the only access control."""
-    server = await asyncio.start_server(_handle, host, port)
+    try:
+        server = await asyncio.start_server(_handle, host, port)
+    except OSError as exc:
+        # One /metrics port per process: `uvicorn --workers N` is not supported, scale by pods.
+        raise RuntimeError(
+            f"metrics port {port} is taken, likely by another worker of this process. "
+            "Run one uvicorn worker per container and scale with replicas."
+        ) from exc
     log.info("metrics endpoint listening", extra={"port": port, "host": host})
     return server

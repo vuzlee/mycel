@@ -61,6 +61,7 @@ Once per account: `terraform -chdir=deploy/aws/bootstrap apply` with `owner_emai
 | Settings that must hold go in the container `env:` | the Secret carries all of `.env` and overrides the ConfigMap |
 | Every pod has `enableServiceLinks: false` | a Service named `rabbitmq` would inject `RABBITMQ_PORT=tcp://…` and break Settings |
 | The Secret needs `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | tracing is on: without the keys every pod refuses to start (`ConfigError`) |
+| api runs one uvicorn worker; scale with `replicas` | each process binds its own `/metrics` port; a second worker fails to start |
 | Migrations run as a `pre-install,pre-upgrade` hook | new pods never start on an old schema |
 | Every migration is backward compatible by one step | the old code serves while it runs; drop a column in two releases |
 | `scheduler`: `replicas: 1`, `strategy: Recreate` | two schedulers fire every schedule twice |
