@@ -7,7 +7,7 @@ tables:
     head: [Step, Where, Do]
     rows:
       - ["1", "developer.atlassian.com/console/myapps", "Create → OAuth 2.0 integration"]
-      - ["2", "Permissions → Jira API", "`read:jira-work`, `read:jira-user`, `write:jira-work`"]
+      - ["2", "Permissions → Jira API", "`read:jira-work`, `read:jira-user`, `write:jira-work`, `offline_access`; with `jira_manage_sprints` on (dev) also `read:board-scope:jira-software`, `read:sprint:jira-software`, `write:sprint:jira-software`"]
       - ["3", "Authorization", "callback `<PUBLIC_BASE_URL>/auth/jira/callback`"]
       - ["4", "Settings → `.env`", "`JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`"]
   - title: 2 · Google OAuth client, for "Connect Google"

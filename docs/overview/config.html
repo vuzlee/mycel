@@ -24,7 +24,7 @@
       <tbody>
         <tr class="tone-gold"><td class="who">5</td><td>compose / Helm env</td><td>hosts set when it runs</td><td><code>POSTGRES_HOST=postgres</code></td></tr>
         <tr class="tone-gold"><td class="who">4</td><td><code>.env</code></td><td>passwords, keys</td><td><code>POSTGRES_PASSWORD</code> · <code>TOKEN_ENCRYPTION_KEY</code></td></tr>
-        <tr><td class="who">3</td><td><code>&lt;env&gt;.yaml</code></td><td>what changes in dev or prod</td><td><code>log_level: DEBUG</code></td></tr>
+        <tr><td class="who">3</td><td><code>&lt;env&gt;.yaml</code></td><td>what changes in dev, staging or prod</td><td><code>log_level: DEBUG</code></td></tr>
         <tr><td class="who">2</td><td><code>base.yaml</code></td><td>everything else, no secrets</td><td><code>db_pool_size: 5</code> · host models</td></tr>
         <tr><td class="who">1</td><td>code default</td><td>used when nothing else sets it</td><td><code>timezone = "UTC"</code></td></tr>
       </tbody>

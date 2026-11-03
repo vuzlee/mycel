@@ -1,4 +1,4 @@
-reviewed: 1792706430   # 2026-10-23: logs (Alloy, Loki) and alerts (Alertmanager) added; config.alloy service label read
+reviewed: 1793732999   # 2026-11-04: metrics_server.py since only raises a clearer error on a taken port; flow unchanged
 title: "Trace, metrics, logs: spans to Langfuse, /metrics to Prometheus, alerts to Alertmanager, logs through Alloy to Loki, Grafana over both, run events to the browser, doctor for health"
 page:
   eyebrow: Flow

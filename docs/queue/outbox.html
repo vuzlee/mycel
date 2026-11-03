@@ -205,7 +205,7 @@
 
 <h3 id="classes">3b · Class diagram</h3>
 <p class="purpose">Box = class or module: name, fields, methods. Line = relation.</p>
-<div class="table-wrap wide"><div class="cd" style="grid-template-columns:260px 110px 270px 110px 250px;grid-template-areas:'enq r1 rep r2 tbl' 'r3 . . . .' 'run . . . .' 'r4 . . . .' 'prd . . . .'">
+<div class="table-wrap wide"><div class="cd" style="grid-template-columns:260px 110px 270px 110px 250px;grid-template-areas:'run . . . .' 'r3 . . . .' 'enq r1 rep r2 tbl' 'r4 . . . .' 'prd . . . .'">
   <div class="cls key" style="grid-area:enq" data-path="src/mycel/services/enqueue.py"><b><small>«module»</small>enqueue</b>
     <ul><li>RELAY_AFTER = 10 s</li><li>RELAY_BATCH = 100</li><li>KEEP_PUBLISHED = 1 day</li></ul>
     <ul><li>+ stage(session, job)</li><li>+ send(job)</li><li>+ queue(job)</li><li>+ relay()</li><li>− _relay_one(): bool</li></ul></div>
@@ -216,10 +216,10 @@
   <div class="rel h" style="grid-area:r2"><span>reads · writes</span></div>
   <div class="cls" style="grid-area:tbl" data-path="src/mycel/infra/postgres/models/app.py"><b><small>«table»</small>Outbox</b>
     <ul><li>job_id <i>primary key</i></li><li>body · headers <i>JSONB</i></li><li>created_at · published_at</li><li>ix_outbox_unpublished <i>partial</i></li></ul></div>
-  <div class="rel v" style="grid-area:r3"><span>publish(job)</span></div>
+  <div class="rel v" style="grid-area:r3"><span>calls relay()</span></div>
   <div class="cls" style="grid-area:run;align-self:start" data-path="src/mycel/scheduler/runner.py"><b><small>«module»</small>runner</b>
     <ul><li>RELAY_INTERVAL_SECONDS = 5</li></ul><ul><li>− _loop(name, tick, interval)</li></ul></div>
-  <div class="rel v up" style="grid-area:r4"><span>calls relay</span></div>
+  <div class="rel v" style="grid-area:r4"><span>publish(job, headers)</span></div>
   <div class="cls" style="grid-area:prd" data-path="src/mycel/queue/producer.py"><b><small>«module»</small>producer</b>
     <ul><li>+ publish(job, headers)</li></ul></div>
 </div></div>
@@ -246,7 +246,7 @@
   <div class="n">2</div><div class="m r" style="grid-column:2/5"><span>send → error, only logged</span></div>
   <div class="n">3</div><div class="m r warn" style="grid-column:5/7"><span data-path="src/mycel/infra/postgres/repositories/outbox.py" tabindex="0">every 5 s: unsent &gt; 10 s, SKIP LOCKED</span></div>
   <div class="n"></div><div class="m l back" style="grid-column:5/7"><span>one row</span></div>
-  <div class="n">4</div><div class="m r" style="grid-column:4/6"><span>publish(job, headers)</span></div>
+  <div class="n">4</div><div class="m l" style="grid-column:4/6"><span>publish(job, headers)</span></div>
   <div class="n">5</div><div class="m r" style="grid-column:5/7"><span>mark_published, commit</span></div>
   <div class="n">6</div><div class="m r" style="grid-column:5/7"><span>prune sent rows &gt; 1 day</span></div>
 

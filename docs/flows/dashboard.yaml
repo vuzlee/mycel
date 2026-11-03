@@ -7,8 +7,8 @@ lanes: [browser, api, services, stores]
 boxes:
   - {id: page,    lane: browser,  col: 0, file: web/src/pages/dashboard/index.tsx,        label: dashboard/index.tsx,   role: "lays out the panels"}
   - {id: hook,    lane: browser,  col: 1, file: web/src/pages/dashboard/useDashboard.ts,  label: useDashboard.ts,       role: "refresh every 30 s"}
-  - {id: apits,   lane: browser,  col: 2, file: web/src/api/lists.ts,                           label: api/lists.ts,          role: "GET /dashboard"}
-  - {id: rdash,   lane: api,      col: 2, file: src/mycel/api/routes/dashboard.py,        label: routes/dashboard.py,   role: "GET /dashboard"}
+  - {id: apits,   lane: browser,  col: 2, file: web/src/api/lists.ts,                           label: api/lists.ts,          role: "GET /dashboard/{project}"}
+  - {id: rdash,   lane: api,      col: 2, file: src/mycel/api/routes/dashboard.py,        label: routes/dashboard.py,   role: "GET /dashboard/{project}"}
   - {id: rproj,   lane: api,      col: 3, file: src/mycel/api/routes/projects.py,         label: routes/projects.py,    role: "GET /projects"}
   - {id: sgate,   lane: services, col: 2, file: src/mycel/services/dashboards.py,         label: services/dashboards.py, role: "access check"}
   - {id: perm,    lane: services, col: 3, file: src/mycel/services/permission.py,         label: services/permission.py, role: "may this person read it?"}
@@ -19,7 +19,7 @@ boxes:
 edges:
   - {from: page,   to: hook,   step: 1, kind: calls,  text: "useDashboard()",   label: "use"}
   - {from: hook,   to: apits,  step: 2, kind: calls,  text: "fetchDashboard(",  label: "fetch"}
-  - {from: apits,  to: rdash,  step: 3, kind: http,   text: "/dashboard",       label: "GET"}
+  - {from: apits,  to: rdash,  step: 3, kind: http,   text: "/dashboard",       label: "GET /{project}?days="}
   - {from: apits,  to: rproj,           kind: http,   text: "/projects",        label: "projects", exit: 0.3, via: [[2.3, 0.5], [3, 0.5]]}
   - {from: rdash,  to: sgate,  step: 4, kind: import, label: "get"}
   - {from: sgate,  to: perm,   step: 5, kind: import, label: "require"}
@@ -39,7 +39,7 @@ failures:
   - ["project not readable", "403 not your project", "src/mycel/api/routes/dashboard.py"]
   - ["`days` outside 1–90", "422", "src/mycel/api/routes/dashboard.py"]
   - ["session expired", "back to sign in", "web/src/api/client.ts"]
-  - ["no projects", "the picker says no projects yet", "web/src/pages/dashboard/useDashboard.ts"]
+  - ["no projects", "the picker says no projects yet", "web/src/pages/dashboard/Picker.tsx"]
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, jira-sync.html]

@@ -38,7 +38,7 @@ notes:
   - ["see parked jobs", "`scripts/stack.sh replay`"]
   - ["send them back", "`scripts/stack.sh replay jobs.dlq 100`"]
 failures:
-  - ["publish fails after commit", "row stays unsent; relay sends it in ~10 s", "src/mycel/services/enqueue.py"]
+  - ["publish fails after commit", "row stays unsent; relay sends it in 10–15 s (rows older than 10 s, checked every 5 s)", "src/mycel/services/enqueue.py"]
   - ["relay sent it but could not mark it", "sent twice; chat's claim stops a double answer", "src/mycel/domains/chat.py"]
   - ["message body unreadable", "parked at once", "src/mycel/queue/consumer.py"]
   - ["unexpected error (a bug)", "recorded and parked, no retry", "src/mycel/queue/consumer.py"]
