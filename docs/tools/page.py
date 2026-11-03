@@ -3,7 +3,8 @@
     python docs/tools/page.py docs/flows/*.yaml    # writes docs/flows/<name>.html next to each
 
 The YAML adds to what flow.py reads:
-  page:     {title, lede: [bullets], eyebrow}
+  page:     {title, lede: [bullets], eyebrow, why: [two lines]}
+  words:    [glossary key, ...]           # at most six; meanings live in docs/glossary.yaml
   failures: [[case, what happens, file], ...]
   notes:    [[term, value], ...]          # a small table under the figure, optional
   related:  [[label, href], ...]
@@ -15,8 +16,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from book import PAGES, pager
+from book import PAGES, pager, topnav
 from flow import ROOT, check, draw
+from words import table as words_table
 
 HEAD = """<!doctype html>
 <meta charset="utf-8">
@@ -27,13 +29,6 @@ HEAD = """<!doctype html>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
 <link rel="stylesheet" href="../page.css">
 """
-
-NAV = (
-    '<nav class="topnav"><a href="../index.html">Handbook</a>'
-    '<a href="../overview/architecture.html">Architecture</a>'
-    '<a href="../overview/config.html">Config</a>'
-    '<a href="../overview/database.html">Database</a></nav>'
-)
 
 
 def e(s: str) -> str:
@@ -133,22 +128,31 @@ def build(path: Path) -> str:
         raise SystemExit(f"{path.name} has no page: — an embedded figure, build it with flow.py")
     p = spec["page"]
     lede = "".join(f"<li>{e(x)}</li>" for x in p.get("lede", []))
-    out = [HEAD.format(title=html.escape(p["title"])), "<body>", NAV, '<div class="page">']
+    href = str(path.with_suffix(".html").relative_to(ROOT / "docs"))
+    out = [HEAD.format(title=html.escape(p["title"])), "<body>", topnav(href), '<div class="page">']
     out.append(
         f'<header class="hero"><p class="eyebrow">{e(p.get("eyebrow", "Flow"))}</p>'
         f'<h1>{e(p["title"])}</h1><div class="hero-lede"><ul class="bul">{lede}'
         + ("<li>Hover a box for its file · click to open it</li>" if spec.get("boxes") else "")
-        + "</ul></div></header>"
+        + "</ul></div>"
+        + (
+            '<div class="why"><b>Why</b><ul class="bul">'
+            + "".join(f"<li>{e(x)}</li>" for x in p["why"])
+            + "</ul></div>"
+            if p.get("why")
+            else ""
+        )
+        + "</header>"
     )
     out.append("<section>")
+    if spec.get("words"):
+        out.append(words_table(spec["words"], href))
     if spec.get("boxes"):
         out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
         out.append(f'<div class="scroll-x">{draw(spec)}</div></figure>')
     if spec.get("steps") and not spec.get("boxes"):
         out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
         out.append(f'<div class="scroll-x">{steps_figure(spec["steps"])}</div></figure>')
-    if spec.get("words"):
-        out.append('<h3 class="tbl-title">Words</h3>' + table(["Word", "Means"], spec["words"]))
     if spec.get("steps"):
         out.append(
             '<h3 class="tbl-title">Files to change, in order</h3>'
@@ -179,14 +183,16 @@ def build(path: Path) -> str:
             + table(["File", "Does"], [[f, r] for f, r in files_list(spec)], files_col=0)
             + "</details>"
         )
+    if spec.get("related"):
+        out.append(
+            '<nav class="next"><b>Read next</b>'
+            + "".join(f'<a href="{h}">{e(lbl)}</a>' for lbl, h in spec["related"])
+            + "</nav>"
+        )
     out.append("</section>")
-    href = str(path.with_suffix(".html").relative_to(ROOT / "docs"))
     if href in {h for _, (_, h, *_) in PAGES}:
         out.append(pager(href))
-    rel = " · ".join(f'<a href="{h}">{e(lbl)}</a>' for lbl, h in spec.get("related", []))
-    out.append(
-        f'<footer><span>{rel}</span><span class="mono">{path.relative_to(ROOT)}</span></footer>'
-    )
+    out.append(f'<footer><span class="mono">{path.relative_to(ROOT)}</span></footer>')
     out.append('</div><script src="../tip.js"></script></body>')
     return "\n".join(out) + "\n"
 

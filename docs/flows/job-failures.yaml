@@ -2,8 +2,9 @@ reviewed: 1792515323   # 2026-10-20: re-read after 3dee7cd and MYC-214..219; fai
 title: "Job failures: outbox and relay, delivery, final versus transient errors, retry queues, dead-letter, replay"
 page:
   eyebrow: Flow
-  title: When a job fails
+  title: Job failures
   lede: ["A job is never lost: written with its row, retried, or parked", "Parked jobs go back with one command"]
+  why: ['Model calls time out, brokers restart, workers die mid-job', 'A job must be retried when that can help, and parked for a person when it cannot']
 lanes: [request, broker, worker, ops]
 boxes:
   - {id: enq,      lane: request, col: 0, file: src/mycel/services/enqueue.py,                   label: services/enqueue.py,    role: "outbox row, then publish"}
@@ -50,12 +51,4 @@ related:
   - [Architecture, ../overview/architecture.html]
   - [Upload a document, upload.html]
   - [Jira sync, jira-sync.html]
-words:
-  - ["job", "a unit of work on the queue"]
-  - ["outbox", "a table row written with the job, sent to the queue later; a crash cannot lose it"]
-  - ["RabbitMQ", "the message queue the workers read"]
-  - ["ack · reject", "tell the queue a job is done · failed"]
-  - ["retry queue", "holds a failed job for a delay, then sends it back"]
-  - ["dlq", "dead-letter queue: where a job parks after its last retry"]
-  - ["FINAL · TRANSIENT", "a failure retrying cannot fix · one it may"]
-  - ["claim", "a short Redis lock: only one worker runs a job at a time"]
+words: [job · queue · worker, outbox, ack · reject, retry queue, dead-letter queue, FINAL · TRANSIENT]

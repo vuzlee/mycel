@@ -14,7 +14,7 @@
   --ink-2: #453e56;
   --ink-soft: #6f6782;
   --dim: #6f6782;
-  --ink-faint: #9d96ae;
+  --ink-faint: #6e6681;  /* 4.5:1 on every light surface */
 
   --line: #e7e3f0;
   --line-soft: #f0edf7;
@@ -73,7 +73,7 @@
     --ink-2: #c5bed6;
     --ink-soft: #8f87a3;
     --dim: #8f87a3;
-    --ink-faint: #6b6380;
+    --ink-faint: #8b839f;  /* 4.5:1 on every dark surface */
 
     --line: #241f30;
     --line-soft: #1a1624;
@@ -119,7 +119,7 @@
   --ink-2: #c5bed6;
   --ink-soft: #8f87a3;
   --dim: #8f87a3;
-  --ink-faint: #6b6380;
+  --ink-faint: #8b839f;  /* 4.5:1 on every dark surface */
 
   --line: #241f30;
   --line-soft: #1a1624;
@@ -871,3 +871,18 @@ svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
 
 /* Figures break out of the text column a little, up to 1180px, centred; text and tables keep it. */
 .tipfig { margin-inline: calc(50% - min(50vw - 16px, 590px)); }
+
+/* ---------- One page shape (batch 134) ---------- */
+
+.why { display: grid; grid-template-columns: auto 1fr; gap: 0 1rem; max-width: 62ch; padding: 0.75rem 1rem; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; }
+.why b { font: 600 0.6875rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); padding-top: 0.45rem; }
+.why .bul { margin: 0; color: var(--ink); }
+.tbl.words .who a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--ink-faint); }
+.tbl.words a.taught { font: 500 0.75rem var(--mono); color: var(--accent); text-decoration: none; white-space: nowrap; }
+.tbl.words tr:target td { background: var(--accent-soft); }
+.more { font-size: 0.875rem; color: var(--ink-soft); margin-top: 0.5rem; }
+.next { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font: 500 0.8125rem var(--mono); }
+.next b { font-weight: 600; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
+.next a { color: var(--accent); text-decoration: none; }
+.topnav a[aria-current="page"] { color: var(--ink); }
+.topnav { overflow-x: auto; white-space: nowrap; }

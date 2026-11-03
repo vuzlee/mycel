@@ -1,8 +1,9 @@
 reviewed: 1792515323   # 2026-10-20: analyst prompt now names priority and sprint_*; mistake row updated
 page:
   eyebrow: Change
-  title: Add a column to gold
+  title: Add a gold column
   lede: ["Silver and gold must keep the same columns", "Old rows stay empty until a refetch"]
+  why: [Agents read gold only; a field not in gold does not exist for them, 'Silver and gold change together, or the next sync fails']
 steps:
   - ["1", "src/mycel/infra/postgres/models/gold.py", "add the `mapped_column` to `WorkItem`"]
   - ["2", "src/mycel/infra/postgres/models/jira.py", "the same column on `SilverWorkItem`"]
@@ -23,10 +24,4 @@ mistakes:
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, ../flows/jira-sync.html]
-words:
-  - ["bronze · silver · gold", "raw payloads · cleaned rows · joined table agents read"]
-  - ["migration", "a numbered file that changes the database schema"]
-  - ["refetch", "read Jira again so old rows get the new column"]
-  - ["prompt", "the instructions that tell the model which columns exist"]
-  - ["silver", "per-source cleaned rows, one table per provider"]
-  - ["gold", "the one table the product reads, the same columns whatever the source"]
+words: [bronze · silver · gold, migration, refetch, prompt]

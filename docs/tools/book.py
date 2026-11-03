@@ -1,7 +1,7 @@
 # ruff: noqa: E501  (HTML and SVG templates read better unwrapped)
 """The handbook as a book: index.html (Start-here figure + contents) and prev/next on every page.
 
-    python docs/tools/book.py    # rewrites docs/index.html and the pager in hand-written pages
+    python docs/tools/book.py    # rewrites index.html, glossary.html, and nav, words, pager in hand-written pages
 
 Order and figure come from docs/book.yaml. Generated pages get their pager from page.py.
 """
@@ -17,6 +17,22 @@ DOCS = ROOT / "docs"
 BOOK = yaml.safe_load((DOCS / "book.yaml").read_text())
 PAGES = [(i, p) for i, part in enumerate(BOOK["parts"], 1) for p in part["pages"]]
 MARK = re.compile(r"<!-- pager -->.*?<!-- /pager -->", re.S)
+TOPNAV = re.compile(r'<nav class="topnav">.*?</nav>', re.S)
+#: The same top bar on every page: home, the three overview pages, the glossary.
+NAV_LINKS = [
+    ("Handbook", "index.html"),
+    ("Architecture", "overview/architecture.html"),
+    ("Config", "overview/config.html"),
+    ("Database", "overview/database.html"),
+    ("Glossary", "glossary.html"),
+]
+
+
+def topnav(href: str) -> str:
+    up = "../" * href.count("/")
+    here = ' aria-current="page"'
+    links = "".join(f'<a href="{up}{h}"{here if h == href else ""}>{t}</a>' for t, h in NAV_LINKS)
+    return f'<nav class="topnav">{links}</nav>'
 
 
 def number(href: str) -> str:
@@ -114,7 +130,7 @@ def index() -> str:
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
 <link rel="stylesheet" href="page.css">
 <body>
-<nav class="topnav"><a href="index.html">Handbook</a><a href="overview/architecture.html">Architecture</a><a href="overview/config.html">Config</a><a href="overview/database.html">Database</a></nav>
+{topnav("index.html")}
 <div class="page">
 <header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read top to bottom; boxes side by side read in parallel</li><li>Data in, Model, Operate are independent; inside one, follow the arrows</li><li>Every page ends with ‹ previous · next ›; hover a box for its folders</li></ul></div></header>
 <section>
@@ -139,13 +155,46 @@ def index() -> str:
 """
 
 
+def glossary() -> str:
+    from words import GLOSSARY, row
+
+    rows = "".join(row(w, "glossary.html") for w in GLOSSARY)
+    return f"""<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glossary · Mycel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="page.css">
+<body>
+{topnav("glossary.html")}
+<div class="page">
+<header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Glossary</h1><div class="hero-lede"><ul class="bul"><li>Every word the handbook uses, one meaning each</li><li>→ opens the page that teaches it</li></ul></div></header>
+<section>
+<table class="tbl words"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody>{rows}</tbody></table>
+</section>
+<footer><span class="mono">docs/glossary.yaml</span></footer>
+</div>
+</body>
+"""
+
+
 def hand_pages() -> list[str]:
     """Pages not built by page.py; their pager is patched in place."""
     return [h for _, (_, h, *_) in PAGES if not (DOCS / h).with_suffix(".yaml").exists()]
 
 
 def patched(href: str) -> str:
+    """The page with this book's top bar, Words table and pager."""
+    from words import MARK as WORDS
+    from words import block
+
     s = (DOCS / href).read_text()
+    s = TOPNAV.sub(lambda _: topnav(href), s, count=1)
+    if '<nav class="topnav">' not in s:
+        s = s.replace("<body>\n", f"<body>\n{topnav(href)}\n", 1)
+    s = WORDS.sub(lambda m: block(m.group(1).split(" | "), href), s)
     if MARK.search(s):
         return MARK.sub(lambda _: pager(href), s)
     i = s.rindex("<footer") if "<footer" in s else s.rindex("</main>")
@@ -154,6 +203,7 @@ def patched(href: str) -> str:
 
 def main() -> int:
     (DOCS / "index.html").write_text(index())
+    (DOCS / "glossary.html").write_text(glossary())
     for h in hand_pages():
         (DOCS / h).write_text(patched(h))
     print(f"index.html + {len(hand_pages())} hand-written pages")

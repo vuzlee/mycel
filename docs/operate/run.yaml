@@ -2,6 +2,7 @@ page:
   eyebrow: Operate
   title: Run and fix it
   lede: ["Every command goes through `scripts/stack.sh`", "When something is wrong, run doctor first"]
+  why: ['One script for every start, stop and check, so dev, compose and Kubernetes behave alike', 'doctor first: most problems are a store not up or a key not set']
 tables:
   - title: Start and stop
     head: [Mode, Command, What runs where]
@@ -47,13 +48,4 @@ related:
   - [Job failures, ../flows/job-failures.html]
   - ["Traces, metrics, logs, events", ../flows/observe.html]
   - ["On AWS", aws.html]
-words:
-  - ["stack.sh", "the one script every start, stop and check goes through"]
-  - ["dev · compose · k8s", "app on the host · all in containers · on minikube"]
-  - ["doctor", "checks each part is up; run it first"]
-  - ["stores", "Postgres, RabbitMQ, Redis, Qdrant, MinIO, LiteLLM"]
-  - ["minikube", "a one-machine Kubernetes on your laptop"]
-  - ["Helm chart", "an install package for Kubernetes; two here: the app and the stores"]
-  - ["pod · Service", "one running copy of a program · the fixed name pods reach it by"]
-  - ["watchdog", "a timer that fails documents stuck in parsing"]
-  - ["upstreams", "the model providers the gateway calls"]
+words: [stack.sh, dev · compose · k8s, doctor, stores, Kubernetes · pod, Helm chart]

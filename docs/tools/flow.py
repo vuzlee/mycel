@@ -277,6 +277,29 @@ def layout_misses(spec: dict[str, Any]) -> list[str]:
     return sorted(set(misses))
 
 
+def crossings(spec: dict[str, Any]) -> list[str]:
+    """Lines drawn through another edge's label: the label reads as theirs."""
+    layout_misses(spec)
+    boxes = {b["id"]: b for b in spec["boxes"]}
+    routes = [route(e, boxes[e["from"]], boxes[e["to"]]) for e in spec["edges"]]
+    spots = place_labels(spec, boxes, routes)
+    names = [f"{e['from']}→{e['to']}" for e in spec["edges"]]
+    out = []
+    for i, (e, spot) in enumerate(zip(spec["edges"], spots, strict=True)):
+        if not (e.get("label") or e.get("step")):
+            continue
+        lb = label_box(e, *spot)
+        for j, pts in enumerate(routes):
+            if j == i:
+                continue
+            for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
+                seg = (min(x1, x2) - 0.5, min(y1, y2) - 0.5, max(x1, x2) + 0.5, max(y1, y2) + 0.5)
+                if overlaps(seg, lb):
+                    out.append(f"line {names[j]} runs through the label of {names[i]}")
+                    break
+    return sorted(set(out))
+
+
 def draw(spec: dict[str, Any]) -> str:
     """The figure as one inline SVG."""
     lanes = spec["lanes"]

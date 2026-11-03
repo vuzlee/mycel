@@ -2,8 +2,9 @@ reviewed: 1792458837   # 2026-10-20: code re-read after MYC-214..219 and E10; fl
 title: "Own model: a person adds an endpoint and keys; they are checked and encrypted; at chat time the call goes straight to that endpoint"
 page:
   eyebrow: Flow
-  title: Use your own model
+  title: Own model
   lede: ["A person adds their own endpoint and keys", "Calls go straight to it, not through the gateway"]
+  why: ['Some people have their own model or key, or must keep data off the shared gateway', 'A user-typed URL could reach inside the network, so it is checked on save and before every call']
 lanes: [browser, api, worker, chat, stores]
 boxes:
   - {id: panel,   lane: browser, col: 0, file: web/src/components/panels/OwnModels.tsx,        label: panels/OwnModels.tsx,     role: "add model, test keys"}
@@ -45,10 +46,4 @@ failures:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Config, ../overview/config.html]
-words:
-  - ["own model", "an endpoint and keys a person adds; calls skip the gateway"]
-  - ["endpoint", "the URL of a model API"]
-  - ["private address", "10.x, 192.168.x, localhost…; refused so no one reaches inside the network"]
-  - ["429", "\"too many requests\"; the next key is tried"]
-  - ["encrypted", "stored scrambled; only the app's key turns it back"]
-  - ["401 · 403 · 402", "bad or forbidden key · out of credit: the key is set aside"]
+words: [own model, endpoint, private address, '429', sealed, 401 · 403 · 402]

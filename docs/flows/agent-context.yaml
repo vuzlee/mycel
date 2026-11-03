@@ -3,7 +3,8 @@ title: "Agent context: the date goes in every prompt, searches filter by recency
 page:
   eyebrow: Flow
   title: What the model sees
-  lede: ["Each model request is the prompt plus the run so far", "Four steps keep it current and under the token cap"]
+  lede: [Each model request is the prompt plus the run so far, 'Numbered: date, shrink, summarise, call; web_search adds recency on the side']
+  why: [A model knows nothing past its training and reads only what is sent each time, Long runs fill the context and fail; these four steps keep it current and small]
 lanes: [run, per request, tools, model]
 boxes:
   - {id: runner,  lane: run,                col: 0, file: src/mycel/agents/core/runner.py,       label: core/runner.py,        role: "today's date on the prompt", hot: true}
@@ -35,14 +36,4 @@ failures:
 related:
   - [Model and cost, model-cost.html]
   - ["Traces, metrics, logs, events", observe.html]
-words:
-  - ["prompt", "the fixed instructions sent before the conversation"]
-  - ["token", "the unit a model counts text in; about 4 characters"]
-  - ["token cap", "the most tokens one turn may send"]
-  - ["summarise", "replace old messages by a short summary to stay under the cap"]
-  - ["tool result", "what a tool returned to the model; old ones shrink to one line"]
-  - ["run", "one turn: the model and its tool calls until an answer"]
-  - ["Tavily", "the web search API behind `web_search`"]
-  - ["runaway", "a run stopped at the token cap"]
-  - ["total_tokens_limit", "the token cap, per agent, in `config/agents/*.yaml`"]
-  - ["numbered \u00b7 side arrow", "1 \u2192 4 is the order of one model request \u00b7 a side arrow is a lookup a step makes on the way"]
+words: [prompt, token (model), token cap, tool result, run, side arrow]

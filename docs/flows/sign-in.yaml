@@ -4,6 +4,7 @@ page:
   eyebrow: Flow
   title: Sign in
   lede: ["Two ways in: Google, or a code sent by mail", "Both end in a session cookie, 14 days"]
+  why: [The app must know who asks before it reads anyone's Jira or mail, 'No password is stored: Google or a mailed code proves the address']
 lanes: [browser, api, services, stores]
 boxes:
   - {id: login,  lane: browser,  col: 0, file: web/src/pages/Login.tsx,                           label: pages/Login.tsx,           role: "Google button, email box"}
@@ -51,11 +52,4 @@ related:
   - [Connect an account, connect.html]
   - [Architecture, ../overview/architecture.html]
   - [Database, ../overview/database.html]
-words:
-  - ["session cookie", "a random id the browser sends with every request; the server looks up who it is"]
-  - ["OAuth · Google sign-in", "Google confirms the address; the app never sees a password"]
-  - ["state · nonce", "one-time values that stop a forged Google answer"]
-  - ["SMTP", "the protocol that sends mail"]
-  - ["httponly · secure · samesite", "the cookie is hidden from scripts · sent only on HTTPS · not sent from other sites"]
-  - ["rate limit", "at most N requests a minute per IP"]
-  - ["one callback", "Google allows one redirect per client; sign-in and connect share it, the state tells them apart"]
+words: [session cookie, Google sign-in, state · nonce, SMTP, httponly · secure · samesite, one callback]

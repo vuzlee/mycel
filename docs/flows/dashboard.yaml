@@ -3,6 +3,7 @@ page:
   eyebrow: Flow
   title: Dashboard
   lede: ["Estimate vs spent, late items and breakdowns for one project", "Read from gold, only projects you may browse"]
+  why: ['The numbers a lead checks every day, without asking the chat', 'Same gold and access rules as the agents, so the two never disagree']
 lanes: [browser, api, services, stores]
 boxes:
   - {id: page,    lane: browser,  col: 0, file: web/src/pages/dashboard/index.tsx,        label: dashboard/index.tsx,   role: "lays out the panels"}
@@ -43,8 +44,4 @@ failures:
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, jira-sync.html]
-words:
-  - ["gold", "the cleaned, joined table agents and charts read"]
-  - ["project access", "which Jira projects this person may browse, from their own token"]
-  - ["panel", "one chart on the page"]
-  - ["estimate vs spent", "hours planned against hours logged"]
+words: [bronze · silver · gold, project access, panel, estimate vs spent]

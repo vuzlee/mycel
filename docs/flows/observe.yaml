@@ -3,7 +3,8 @@ title: "Trace, metrics, logs: spans to Langfuse, /metrics to Prometheus, alerts 
 page:
   eyebrow: Flow
   title: Traces, metrics, logs, events
-  lede: ["Where to look when an answer is slow, costly or wrong", "Four outputs: traces, metrics, live events, doctor"]
+  lede: ['Where to look when an answer is slow, costly or wrong', 'Six outputs: traces, metrics, logs, alerts, live events, doctor']
+  why: ['An answer can be slow, costly or wrong in many places: API, queue, worker, model, tool', 'Each output answers one question: what happened (trace), how much (metric), why (log)']
 lanes: [process, observe, carry, look, logs]
 boxes:
   - {id: life,    lane: process, col: 0, file: src/mycel/lifecycle.py,                        label: mycel/lifecycle.py,   role: "starts each process"}
@@ -47,16 +48,4 @@ failures:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Model and cost, model-cost.html]
-words:
-  - ["trace · span", "one turn's tree of steps · one step in it, with time and tokens"]
-  - ["OTLP", "the standard wire format traces are sent in"]
-  - ["Langfuse", "where traces are read"]
-  - ["Prometheus · Grafana", "collects numbers every few seconds · draws them"]
-  - ["Loki", "stores container logs, searched in Grafana"]
-  - ["Alertmanager", "sends an alert when a rule fires"]
-  - ["doctor", "one command that checks each part is up"]
-  - ["Alloy", "reads container logs and pushes them to Loki"]
-  - ["scrape", "Prometheus pulls `/metrics` every few seconds; logs are pushed instead"]
-  - ["Last-Event-ID", "the browser's place in the stream, so a reconnect resumes"]
-  - ["mycel-error", "the message header that says why a job was parked"]
-  - ["DLQ", "dead-letter queue: where a job parks after its last try"]
+words: [trace · span, OTLP, Langfuse, Prometheus · Grafana, Loki, doctor]

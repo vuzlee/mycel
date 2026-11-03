@@ -4,6 +4,7 @@ page:
   eyebrow: Flow
   title: Model and cost
   lede: ["Each turn picks one model, and every agent of the run calls it", "Every call is priced; a job stops at $0.50"]
+  why: ['Every call costs money, and an agent loop can call many times', A ceiling per job and a cap per day stop a runaway before the bill does]
 lanes: [model, turn, stores]
 boxes:
   - {id: svcmodels, lane: model,  col: 0, file: src/mycel/services/model_catalog.py,              label: services/model_catalog.py, role: "host models, picks"}
@@ -43,12 +44,4 @@ failures:
 related:
   - [Own model, own-model.html]
   - [Config, ../overview/config.html]
-words:
-  - ["host model", "a model the deployment provides, through the gateway"]
-  - ["own model", "an endpoint and key a person adds themselves"]
-  - ["LiteLLM gateway", "one door to every host model; holds keys, counts spend"]
-  - ["budget", "the most one job may spend: $0.50"]
-  - ["usage", "tokens in and out of a call; priced into dollars"]
-  - ["UsageLimits", "pydantic-ai's cap on tokens per run"]
-  - ["budget", "the job's ceiling minus what it has spent so far"]
-  - ["pydantic-ai", "the Python library the agents are built on"]
+words: [host model, own model, gateway (LiteLLM), budget, usage, UsageLimits]

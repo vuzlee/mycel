@@ -6,6 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="../page.css">
 <link rel="stylesheet" href="../queue/deep.css">
 <style>
   .story { display: grid; gap: 10px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
@@ -128,19 +129,18 @@
   <symbol id="i-redis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></symbol>
   <symbol id="i-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></symbol>
 </svg>
-<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a></nav>
+<nav class="topnav"><a href="../index.html">Handbook</a><a href="../overview/architecture.html">Architecture</a><a href="../overview/config.html">Config</a><a href="../overview/database.html">Database</a><a href="../glossary.html">Glossary</a></nav>
 <main>
 
-<h1>Outbox: a committed job is never lost on its way to the queue</h1>
-<p class="lede">Saving a row and sending a message are two writes to two systems. A crash between them loses the job.</p>
+<h1>Outbox</h1>
+<p class="lede"><b>A committed job is never lost on its way to the queue.</b> Saving a row and sending a message are two writes to two systems. A crash between them loses the job.</p>
 
 <nav class="toc">
   <a href="#problem">01 Problem</a><a href="#hld">02 Components</a><a href="#normal">03 Inside the code</a><a href="#wrong">04 When things go wrong</a>
   <a href="#parts">05 Three moves</a><a href="#promise">06 Guarantees and limits</a><a href="#impl">Implementation</a>
 </nav>
 
-<h2 id="words">Words</h2>
-<table class="tbl"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who">outbox</td><td>a table of jobs waiting to be sent; the row is written in the same commit as the data</td></tr><tr><td class="who">commit · transaction</td><td>the moment a group of writes becomes permanent, all or none</td></tr><tr><td class="who">publish</td><td>send a message to the queue</td></tr><tr><td class="who">broker · RabbitMQ</td><td>the queue server that holds jobs for workers</td></tr><tr><td class="who">relay</td><td>a timer job that sends rows the API failed to send</td></tr><tr><td class="who">SKIP LOCKED</td><td>Postgres: skip rows another process is already handling</td></tr><tr><td class="who">HLD · LLD</td><td>the big picture of parts · the classes and calls inside the code</td></tr><tr><td class="who">JSONB</td><td>JSON stored so Postgres can query inside it</td></tr><tr><td class="who">partial index</td><td>an index over only some rows (here: unsent), so the relay finds them fast</td></tr><tr><td class="who">trace context</td><td>ids in the message headers that tie the job to its request's trace; kept so a relayed job is not a stray trace</td></tr></tbody></table>
+<section id="words"><!-- words: outbox | commit · transaction | publish | broker · RabbitMQ | relay | SKIP LOCKED --><h3 class="tbl-title">Words</h3><table class="tbl words"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who"><a href="../glossary.html#outbox">outbox</a></td><td>a table of jobs waiting to be sent; the row is written in the same commit as the data, so a crash cannot lose the job <a class="taught" href="../overview/architecture.html">→ Architecture</a></td></tr><tr><td class="who"><a href="../glossary.html#commit-transaction">commit · transaction</a></td><td>the moment a group of writes becomes permanent, all or none</td></tr><tr><td class="who"><a href="../glossary.html#publish">publish</a></td><td>send a message to the queue</td></tr><tr><td class="who"><a href="../glossary.html#broker-rabbitmq">broker · RabbitMQ</a></td><td>the queue server that holds jobs for workers</td></tr><tr><td class="who"><a href="../glossary.html#relay">relay</a></td><td>a scheduler timer that every 5 s sends outbox rows the API failed to send</td></tr><tr><td class="who"><a href="../glossary.html#skip-locked">SKIP LOCKED</a></td><td>Postgres: skip rows another process is already handling</td></tr></tbody></table><!-- /words --></section>
 
 <h2 id="problem">01 · The problem</h2>
 <p class="purpose">Without an outbox: the API saves the document, then dies before it publishes.</p>

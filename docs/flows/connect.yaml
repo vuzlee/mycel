@@ -3,6 +3,7 @@ page:
   eyebrow: Flow
   title: Connect an account
   lede: ["Each person connects their own Jira or Google", "The same routes serve every plugin"]
+  why: ['Mycel reads Jira and Gmail as the person, so it sees only what they may see', 'The provider never gives the app a password, only a token it can renew']
 lanes: [browser, api, plugin, provider, store]
 boxes:
   - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
@@ -49,14 +50,4 @@ related:
   - [Jira sync, jira-sync.html]
   - [Add a plugin, ../change/add-plugin.html]
   - [Sign in, sign-in.html]
-words:
-  - ["plugin", "one provider people connect, e.g. Jira or Google, in its own folder"]
-  - ["OAuth", "the provider asks the person, then gives the app a token, never the password"]
-  - ["consent", "the provider's page where the person says yes"]
-  - ["state", "a one-time random value that ties the callback to the start"]
-  - ["callback", "the URL the provider sends the person back to, with a code"]
-  - ["token", "the key the app uses to read the person's data; stored encrypted"]
-  - ["refresh token", "a long-lived key the app trades for short access tokens; the one thing stored"]
-  - ["GETDEL", "Redis: read a key and delete it in one step, so a state works once"]
-  - ["code", "a one-time ticket the provider sends back; swapped for tokens"]
-  - ["access token", "a short-lived key sent on each call to the provider"]
+words: [OAuth, consent, state · nonce, callback, code, refresh token]

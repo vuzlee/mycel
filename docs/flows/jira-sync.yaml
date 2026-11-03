@@ -3,6 +3,7 @@ page:
   eyebrow: Flow
   title: Jira sync
   lede: ["Every 15 minutes, and right after someone connects", "Each project is read on one connected person's token"]
+  why: ['Agents answer from a copy in Postgres: fast, and Jira''s rate limits are hit once, not per question', 'Raw copies are kept, so a bad transform is fixed without asking Jira again']
 lanes: [timer, plugin, jira, pipeline, stores, search]
 boxes:
   - {id: runner,   lane: timer,    col: 0, file: src/mycel/scheduler/runner.py,          label: scheduler/runner.py,   role: "every 15 min, one lock"}
@@ -52,14 +53,4 @@ related:
   - [Connect an account, connect.html]
   - [Database, ../overview/database.html]
   - [Job failures, job-failures.html]
-words:
-  - ["bronze · silver · gold", "raw payloads · cleaned rows · joined table for reading"]
-  - ["reader", "the connected person whose token reads a project"]
-  - ["JQL", "Jira's query language; here: issues changed since the last run"]
-  - ["lock", "only one sync runs at a time"]
-  - ["embed", "turn text into numbers so it can be searched by meaning"]
-  - ["Qdrant", "the vector database that holds those numbers"]
-  - ["INDEX_GOLD", "the job that embeds new gold rows for search"]
-  - ["ingest worker", "the worker for heavy jobs: parsing and embedding, one at a time"]
-  - ["solid · dashed arrow", "main path, numbered · the other way in (a SYNC job instead of the timer)"]
-  - ["upsert", "insert, or update if the row exists"]
+words: [bronze · silver · gold, reader, JQL, embed · vector, INDEX_GOLD, ingest worker]

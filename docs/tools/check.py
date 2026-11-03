@@ -6,18 +6,23 @@
 - every data-path and every vscode:// link names a file that exists
 - every flow figure's boxes exist and every edge is seen in the code (docs/tools/flow.py)
 - every flow page and the architecture figure match their YAML (rebuild with page.py / flow.py)
-- prints, without failing, each flow whose files were committed after the flow was
+- every page names at most six glossary words, and its H1 is its name in book.yaml
+- prints, without failing, each flow whose files were committed after the flow was, and each
+  line drawn through another edge's label
 """
 
+import html
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 import yaml
-from book import hand_pages, index, patched
-from flow import ROOT, check, draw
+from book import PAGES, glossary, hand_pages, index, patched
+from flow import ROOT, check, crossings, draw
 from page import build
+from words import MARK as WORDS
+from words import misses as word_misses
 
 DOCS = ROOT / "docs"
 FLOWS = sorted(
@@ -88,6 +93,7 @@ def flows() -> list[str]:
         misses += [f"{y.name}: {m}" for m in env_keys(y)]
         if "page" in spec and not spec.get("words"):
             misses.append(f"{y.name}: no words: list, a fresher meets terms with no meaning")
+        misses += word_misses(spec.get("words", []), y.name)
         page = y.with_suffix(".html")
         if "page" in spec and (not page.exists() or page.read_text() != build(y)):
             misses.append(
@@ -106,10 +112,20 @@ def flows() -> list[str]:
 
 
 def book() -> list[str]:
-    """index.html and every hand-written page's pager follow docs/book.yaml."""
+    """index, glossary and every hand-written page follow book.yaml; one name per page."""
     misses = []
     if (DOCS / "index.html").read_text() != index():
         misses.append("index.html: out of date — python docs/tools/book.py")
+    if not (DOCS / "glossary.html").exists() or (DOCS / "glossary.html").read_text() != glossary():
+        misses.append("glossary.html: out of date — python docs/tools/book.py")
+    for _, (title, h, *_) in PAGES:
+        s = (DOCS / h).read_text()
+        m = re.search(r"<h1[^>]*>(.*?)</h1>", s, re.S)
+        h1 = html.unescape(re.sub("<[^>]+>", "", m.group(1))).strip() if m else ""
+        if h1 != title:
+            misses.append(f"{h}: H1 {h1!r} is not its book name {title!r}")
+        for keys in WORDS.findall(s):
+            misses += word_misses(keys.split(" | "), h)
     for h in hand_pages():
         if (DOCS / h).read_text() != patched(h):
             misses.append(f"{h}: pager out of date — python docs/tools/book.py")
@@ -151,6 +167,12 @@ def main() -> int:
         print(m)
     for n in stale():
         print(f"stale? {n}")
+    for y in FLOWS:
+        spec = yaml.safe_load(y.read_text())
+        if spec.get("boxes"):
+            check(spec)
+            for c in crossings(spec):
+                print(f"cross? {y.relative_to(DOCS)}: {c}")
     print(f"{len(misses)} misses · {len(FLOWS)} flows")
     return 1 if misses else 0
 

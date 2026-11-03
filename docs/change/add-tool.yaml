@@ -1,8 +1,9 @@
 reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); recipe unchanged
 page:
   eyebrow: Change
-  title: Add a tool to the analyst
-  lede: ["A tool is a function the model may call", "Six files, in this order"]
+  title: Add a tool
+  lede: ['A tool is a function an agent may call; here, for the analyst', 'Six files, in this order']
+  why: [A model can only do what a tool lets it do, A narrow tool with a clear name beats a prompt that explains SQL]
 steps:
   - ["1", "src/mycel/agents/tools/work.py", "add `@toolset.tool(name=…)` inside `build_toolset()`; a new module copies `compute.py`"]
   - ["2", "src/mycel/agents/core/guards.py", "use, do not edit: call `guard_repeat(ctx, …)` first in a tool the model may repeat (see `tools/query.py`); the `work.py` reads skip it; raise `ModelRetry` for bad input"]
@@ -26,13 +27,4 @@ mistakes:
 related:
   - [Add a plugin, add-plugin.html]
   - [Architecture, ../overview/architecture.html]
-words:
-  - ["tool", "a function the model may call by name"]
-  - ["analyst", "the agent that answers questions over data"]
-  - ["prompt", "the instructions that tell the model the tool exists"]
-  - ["schema", "the arguments the tool takes, as the model sees them"]
-  - ["toolset", "a group of tools offered to the model together"]
-  - ["chip", "a source the person ticks under the chat box (Jira, Mail…); a toolset opens only for its chips"]
-  - ["ModelRetry", "an error the model reads and can fix by calling again"]
-  - ["READY_READS", "answers the app already knows how to compute; the model calls one instead of writing SQL"]
-  - ["MCP", "Model Context Protocol: a standard way to call tools that live on another server"]
+words: [tool, toolset, chip, prompt, ModelRetry, READY_READS]

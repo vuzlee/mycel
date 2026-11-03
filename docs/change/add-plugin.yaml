@@ -3,6 +3,7 @@ page:
   eyebrow: Change
   title: Add a plugin
   lede: ["A provider each person connects, e.g. GitHub", "One folder: client, consent, plugin; one registry line"]
+  why: [One folder per provider keeps the core free of provider code, 'Copy Jira: the shared consent, sealing and registry already work']
 steps:
   - ["1", "src/mycel/core/config.py", "`<key>_client_id`, `<key>_client_secret`; a line in `.env.example`"]
   - ["2", "src/mycel/plugins/jira/client.py", "`plugins/<key>/client.py`: the provider's REST calls on one person's token; raise `SourceError` / `NotWritten` from `plugins/errors.py`"]
@@ -27,13 +28,4 @@ mistakes:
 related:
   - [Connect an account, ../flows/connect.html]
   - [Add a tool, add-tool.html]
-words:
-  - ["plugin", "one provider people connect, in its own folder"]
-  - ["registry", "the one list of plugins the app knows"]
-  - ["OAuth", "the provider asks the person, then gives the app a token"]
-  - ["consent", "the provider's page where the person says yes"]
-  - ["client", "the code that calls the provider's API"]
-  - ["Plugin", "the interface every provider fills in, `plugins/base.py`"]
-  - ["OAuthProvider", "the shared consent round: start URL, code for token, refresh"]
-  - ["sealed", "encrypted with `TOKEN_ENCRYPTION_KEY` before it is stored"]
-  - ["SourceError · NotWritten", "the provider failed · a write was refused; the tool turns either into a readable answer"]
+words: [plugin, OAuth, client, OAuthProvider, sealed, registry]

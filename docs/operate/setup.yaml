@@ -2,6 +2,7 @@ page:
   eyebrow: Operate
   title: First-time setup
   lede: ["An admin does it once per deployment; each person then connects their own accounts", "`.env` holds only what hosting needs — nothing belongs to one person"]
+  why: [Mycel signs people in and reads their accounts through OAuth apps registered once per deployment, Secrets for the host only; each person's tokens come from their own consent]
 tables:
   - title: 1 · Jira OAuth app, for "Connect Jira"
     head: [Step, Where, Do]
@@ -59,13 +60,4 @@ related:
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
   - ["On AWS", aws.html]
-words:
-  - ["OAuth app", "what you register at Google or Atlassian so people can connect"]
-  - ["redirect URI", "where the provider sends a person back; must match exactly"]
-  - [".env", "the host's settings and keys; nothing personal"]
-  - ["gateway key", "the app's key to LiteLLM, made once"]
-  - ["test user", "a Google account allowed while the app is in Testing"]
-  - ["refresh token", "a long-lived key the app keeps per person, traded for short access tokens"]
-  - ["scope", "one permission the app asks the provider for"]
-  - ["Fernet", "the encryption format `TOKEN_ENCRYPTION_KEY` is a key for"]
-  - ["Testing (Google)", "an unpublished Google app: only listed test users may connect"]
+words: [OAuth app, redirect URI, .env, gateway key, scope, refresh token]
