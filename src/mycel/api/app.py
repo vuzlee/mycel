@@ -90,7 +90,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Imported lazily: it is only needed with tracing on, and importing it patches globally.
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        FastAPIInstrumentor.instrument_app(app, tracer_provider=provider, excluded_urls=UNTRACED)
+        FastAPIInstrumentor.instrument_app(
+            app,
+            tracer_provider=provider,
+            excluded_urls=UNTRACED,
+            # ASGI send/receive children, two to three per request, carry nothing Langfuse uses.
+            exclude_spans=["send", "receive"],
+        )
 
     app.add_middleware(InFlightLimit, limit=cfg.api_max_in_flight)
     app.add_middleware(MetricsMiddleware)
@@ -107,6 +113,8 @@ UNTRACED = ",".join(
         r"auth/me",
         r"health/",
         r"app",  # the single-page mount and its assets
+        r"/(projects|documents|models|conversations)$",  # the sidebar's lists, read on every page
+        r"/documents/status",  # the upload poll
     ]
 )
 

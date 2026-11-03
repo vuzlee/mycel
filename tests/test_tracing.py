@@ -126,7 +126,11 @@ class TestWhatIsNotTraced:
         assert self._excluded("/health/live")
         assert self._excluded("/app/login")
 
+    def test_the_sidebar_lists_are_dropped(self) -> None:
+        for path in ("/projects", "/documents", "/models", "/conversations", "/documents/status"):
+            assert self._excluded(path)
+
     def test_real_work_is_kept(self) -> None:
+        assert not self._excluded("/conversations/c1/turns")
         assert not self._excluded("/auth/code/verify")
-        assert not self._excluded("/conversations")
         assert not self._excluded("/dashboard/MYC")
