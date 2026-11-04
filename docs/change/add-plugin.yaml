@@ -1,4 +1,5 @@
 reviewed: 1793732999   # 2026-11-04: step 4 points at models/app.py; config.py since only gained api_max_in_flight
+reviewed: 1793804441  # 135.5 only changed the setup.html link
 page:
   eyebrow: Change
   title: Add a plugin

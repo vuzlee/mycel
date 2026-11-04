@@ -1,4 +1,5 @@
 title: "Connect an account: Settings → provider consent → callback → sealed token saved; Jira also reads access and queues a sync"
+reviewed: 1793804430  # 135.5 only changed the setup.html link
 page:
   eyebrow: Flow
   title: Connect an account
