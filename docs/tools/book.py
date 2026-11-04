@@ -63,44 +63,51 @@ def pager(href: str) -> str:
 
 
 def figure() -> str:
-    x = lambda c: 116 + 190 * c  # noqa: E731
-    y = lambda r: 16 + 72 * r  # noqa: E731
-    out = []
-    lane = 'font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" letter-spacing="1.2"'
+    """Overview pages in a row, read left to right; under them one column per part."""
+    w, gap, h, step = 150, 22, 44, 62
+    x = lambda c: 16 + (w + gap) * c  # noqa: E731
+    y = lambda r: 16 + step * r + 40 * (r > 0)  # noqa: E731
+    lane = 'font-family="var(--mono)" font-size="10" fill="var(--ink-soft)" letter-spacing="1.2"'
     line = 'fill="none" stroke="var(--ink-faint)" marker-end="url(#fa)"'
-    for c, name in enumerate(["DATA IN", "MODEL", "OPERATE", "CHANGE IT"]):
-        out.append(f'<text x="{x(c)}" y="{y(2) - 8}" {lane}>{name}</text>')
-    cols: dict[int, list[int]] = {}
-    for _, (_, _, _, _, (c, r)) in PAGES:
-        if r >= 2 and c < 3:
-            cols.setdefault(c, []).append(r)
-    top = x(1) + 75
-    for c in (0, 1, 2):
-        out.append(f'<path d="M{top} {y(0) + 44} V{y(1) - 14} H{x(c) + 75} V{y(1) - 2}" {line}/>')
-        out.append(f'<path d="M{x(c) + 75} {y(1) + 44} V{y(2) - 20}" {line}/>')
-        for a, b in zip(sorted(cols[c]), sorted(cols[c])[1:], strict=False):
-            out.append(f'<path d="M{x(c) + 75} {y(a) + 44} V{y(b) - 2}" {line}/>')
-    out.append(f'<path d="M{x(3)} {y(1) + 22} H{x(2) + 152}" {line}/>')
-    for part, (label, href, _q, dirs, (c, r)) in PAGES:
-        hot = (
+    first, *rest = BOOK["parts"]
+    out = []
+
+    def box(label: str, href: str, q: str, dirs: str, bx: float, by: float, hot: bool) -> str:
+        look = (
             'fill="var(--accent-soft)" stroke="var(--accent)"'
-            if r == 0
+            if hot
             else 'fill="var(--surface)" stroke="var(--line)"'
         )
-        dash = ' stroke-dasharray="4 3"' if part == len(BOOK["parts"]) else ""
-        out.append(
-            f'<a href="{href}" class="hv" data-tip="{html.escape(dirs)}\n{number(href)} · {html.escape(_q)}">'
-            f'<rect x="{x(c)}" y="{y(r) + 6 * (r > 1)}" width="150" height="44" rx="2" {hot}{dash}/>'
-            f'<text x="{x(c) + 10}" y="{y(r) + 6 * (r > 1) + 18}" font-family="var(--mono)" font-size="9.5" fill="var(--ink-faint)">{number(href)}</text>'
-            f'<text x="{x(c) + 10}" y="{y(r) + 6 * (r > 1) + 34}" font-family="var(--mono)" font-size="{11 if len(label) < 20 else 10}" fill="var(--ink)">{html.escape(label)}</text></a>'
+        size = 11 if len(label) < 20 else 10
+        return (
+            f'<a href="{href}" class="hv" data-tip="{html.escape(dirs)}\n{number(href)} · '
+            f'{html.escape(q)}"><rect x="{bx}" y="{by}" width="{w}" height="{h}" rx="2" {look}/>'
+            f'<text x="{bx + 10}" y="{by + 18}" font-family="var(--mono)" font-size="10" '
+            f'fill="var(--ink-soft)">{number(href)}</text><text x="{bx + 10}" y="{by + 34}" '
+            f'font-family="var(--mono)" font-size="{size}" fill="var(--ink)">'
+            f"{html.escape(label)}</text></a>"
         )
-    h = y(max(r for _, p in PAGES for r in [p[4][1]])) + 60
+
+    for i, (label, href, q, dirs, _) in enumerate(first["pages"]):
+        out.append(box(label, href, q, dirs, x(i), y(0), i < 2))
+        if i:
+            out.append(f'<path d="M{x(i) - gap} {y(0) + h / 2} H{x(i) - 2}" {line}/>')
+    rows = 0
+    for c, part in enumerate(rest):
+        out.append(
+            f'<text x="{x(c)}" y="{y(1) - 10}" {lane}>{html.escape(part["name"].upper())}</text>'
+        )
+        for r, (label, href, q, dirs, _) in enumerate(part["pages"]):
+            out.append(box(label, href, q, dirs, x(c), y(1 + r), False))
+            if r:
+                out.append(f'<path d="M{x(c) + w / 2} {y(r) + h} V{y(1 + r) - 2}" {line}/>')
+        rows = max(rows, len(part["pages"]))
     return (
-        f'<svg class="diagram" viewBox="0 0 852 {h}" role="img" aria-label="Reading order: '
-        "Architecture, then Config, Database, Run and Setup, then three independent branches, "
-        'change recipes last"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" '
-        'markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 '
-        f'L 0 10 z" fill="currentColor"/></marker></defs>{"".join(out)}</svg>'
+        f'<svg class="diagram" viewBox="0 0 {x(len(rest))} {y(rows) + h + 16}" role="img" '
+        'aria-label="Reading order: the overview row left to right, then each part top to '
+        'bottom"><defs><marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" '
+        'markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" '
+        f'fill="currentColor"/></marker></defs>{"".join(out)}</svg>'
     )
 
 
@@ -132,7 +139,7 @@ def index() -> str:
 <body>
 {topnav("index.html")}
 <div class="page">
-<header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read top to bottom; boxes side by side read in parallel</li><li>Data in, Model, Operate are independent; inside one, follow the arrows</li><li>Every page ends with ‹ previous · next ›; hover a box for its folders</li></ul></div></header>
+<header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read the top row first: Architecture, then Ask a question</li><li>Then any column; inside one, top to bottom</li><li>Every page ends with ‹ previous · next ›; words link to the Glossary</li></ul></div></header>
 <section>
 <figure class="tipfig"><div class="tip" role="tooltip"></div>
 <div class="scroll-x">{figure()}</div></figure>

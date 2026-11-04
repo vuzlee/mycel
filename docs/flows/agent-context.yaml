@@ -37,5 +37,5 @@ failures:
   - ["cap reached anyway", "the run stops as runaway", "src/mycel/agents/core/exceptions.py"]
 related:
   - [Model and cost, model-cost.html]
-  - ["Traces, metrics, logs, events", observe.html]
+  - ["Traces and metrics", observe.html]
 words: [prompt, token (model), token cap, tool result, run, side arrow]

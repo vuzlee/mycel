@@ -1,6 +1,6 @@
 """Draw a flow figure from a short description, and check every edge against the code.
 
-    python docs/tools/flow.py docs/flows/ask.yaml        # writes docs/flows/ask.svg.html
+    python docs/tools/flow.py docs/flows/upload.yaml     # writes docs/flows/upload.svg.html
     python docs/tools/flow.py --check docs/flows/*.yaml  # checks only; exit 1 on a miss
 
 A box is a real file on a grid (lane = row, col = column). An edge says how it shows in code:

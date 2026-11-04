@@ -1,5 +1,10 @@
 reviewed: 1792705266   # 2026-10-23: delegate.py returns a refused project read as text; the flow drawn (analyst path) is unchanged
 title: "One question, end to end: browser to API, queue, worker, agents, gold, and back as live events"
+page:
+  eyebrow: Flow
+  title: Ask a question
+  lede: ["One question, from the chat box to the stored answer", "Read this before the other flows: they each zoom into one part of it"]
+  why: [An answer takes seconds to minutes and can fail halfway, "So the API saves the question, queues a job and returns at once; a worker answers and streams each step back"]
 lanes: [user, api, queue, worker, agents, tools, stores]
 boxes:
   - {id: web,      lane: user,   col: 0, file: web/src/api/work.ts,                               label: api/work.ts,          role: "Lan types the question"}
@@ -32,8 +37,28 @@ edges:
   - {from: analyst,  to: tool,              kind: import, label: tool}
   - {from: tool,     to: query,    step: 7, kind: import, label: SQL}
   - {from: query,    to: gold,              kind: calls,  text: scoped_read, label: as mycel_reader}
-  - {from: domain,   to: turn,              kind: import, label: store, label_at: [0.12, 4.5], via: [[0.5, 3], [0.5, 6]]}
+  - {from: domain,   to: turn,     step: 9, kind: import, label: store the answer, exit: -0.45, via: [[0.55, 3.5], [0.5, 3.5], [0.5, 6]], label_at: [-0.05, 5.45]}
   - {from: domain,   to: redis,    step: 8, kind: import, label: XADD each step, label_at: [3.2, 3.42], exit: 0.3, enter: 0.3, via: [[1.3, 3.5], [4.3, 3.5]]}
   - {from: events,   to: redis,             kind: import, label: XREAD, reverse: true}
   - {from: stream,   to: events,            kind: http,   text: "/events", label: SSE, reverse: true}
-words: [turn, agent, job · queue · worker, SSE, stream]
+words: [turn, job · queue · worker, outbox, agent, orchestrator · specialist, SSE]
+notes:
+  - ["the example", "Lan asks \"who logged the most hours last week?\"; the orchestrator hands it to the analyst, whose tool reads gold"]
+  - ["202 at once", "`POST /chat` saves the turn and the job, then answers 202 with a job id; the browser opens the event stream for it"]
+  - ["who answers", "the worker (2 jobs at a time per pod); the orchestrator picks a specialist: analyst for Jira numbers, researcher for web, mail, calendar"]
+  - ["what it may read", "agent SQL runs as `mycel_reader`: only projects the asker may browse"]
+  - ["live steps", "each step is appended to a Redis stream; the browser reads it by SSE and resumes after `Last-Event-ID`"]
+  - ["cost", "a job stops at $0.50; a person at $5 a day"]
+failures:
+  - ["more than 20 questions a minute", "429 per user", "src/mycel/api/routes/chat.py"]
+  - ["daily $5 spent", "429 daily_limit before anything is queued", "src/mycel/services/chat.py"]
+  - ["last question still answering", "409 turn_in_progress", "src/mycel/services/chat.py"]
+  - ["API busy (64 in flight)", "503 with retry-after: 5", "src/mycel/api/app.py"]
+  - ["publish fails after commit", "the outbox relay sends the job within 15 s", "src/mycel/services/enqueue.py"]
+  - ["worker dies mid-answer", "the queue delivers again; the claim stops a second model bill", "src/mycel/domains/chat.py"]
+  - ["model or tool fails for good", "turn marked failed, the page shows the error", "src/mycel/domains/chat.py"]
+related:
+  - ["Outbox", "../queue/outbox.html"]
+  - ["Idempotency", "../queue/idempotency.html"]
+  - ["What the model sees", "agent-context.html"]
+  - ["Model and cost", "model-cost.html"]

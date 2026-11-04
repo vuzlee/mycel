@@ -2,7 +2,7 @@ reviewed: 1793732999   # 2026-11-04: metrics_server.py since only raises a clear
 title: "Trace, metrics, logs: spans to Langfuse, /metrics to Prometheus, alerts to Alertmanager, logs through Alloy to Loki, Grafana over both, run events to the browser, doctor for health"
 page:
   eyebrow: Flow
-  title: Traces, metrics, logs, events
+  title: Traces and metrics
   lede: ['Where to look when an answer is slow, costly or wrong', 'Six outputs: traces, metrics, logs, alerts, live events, doctor']
   why: ['An answer can be slow, costly or wrong in many places: API, queue, worker, model, tool', 'Each output answers one question: what happened (trace), how much (metric), why (log)']
 lanes: [process, observe, carry, look, logs]

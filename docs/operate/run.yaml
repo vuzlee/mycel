@@ -46,6 +46,6 @@ files:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Job failures, ../flows/job-failures.html]
-  - ["Traces, metrics, logs, events", ../flows/observe.html]
+  - ["Traces and metrics", ../flows/observe.html]
   - ["On AWS", aws.html]
 words: [stack.sh, dev · compose · k8s, doctor, stores, Kubernetes · pod, Helm chart]
