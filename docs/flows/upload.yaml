@@ -44,7 +44,7 @@ failures:
   - ["empty or unknown type", "422 / 415", "src/mycel/services/documents.py"]
   - ["same file again", "409 Already uploaded", "src/mycel/services/documents.py"]
   - ["too many documents / processing", "409 / 429", "src/mycel/services/documents.py"]
-  - ["publish fails after save", "relay sends it within seconds", "src/mycel/services/enqueue.py"]
+  - ["publish fails after save", "relay sends it within 15 s", "src/mycel/services/enqueue.py"]
   - ["cannot parse, no text", "status failed, reason saved", "src/mycel/domains/ingest.py"]
   - ["a store is down", "retried; failed only on the last try", "src/mycel/queue/consumer.py"]
   - ["worker died mid-parse", "the queue delivers it again; if every try dies, the watchdog marks it failed after 10 min", "src/mycel/domains/ingest.py"]

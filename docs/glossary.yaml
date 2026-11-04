@@ -2,8 +2,8 @@
 # Rebuild: uv run python docs/tools/book.py   (writes glossary.html; check.py fails when out of date)
 # [word, meaning, page that teaches it]
 words:
-  - [401 · 403 · 402, 'bad or forbidden key · out of credit: the key is set aside', flows/own-model.html]
-  - ['429', '"too many requests"; the next key is tried', flows/own-model.html]
+  - [401 · 403 · 402, 'bad or forbidden key · out of credit: the key sits out (401/403: 10 min; 402: 1 min or until the daily reset) and the next key is tried', flows/own-model.html]
+  - ['429', '"too many requests": the key sits out 1 min, or until the daily reset for a daily quota, and the next key is tried', flows/own-model.html]
   - [access token, a short-lived key sent on each call to the provider, flows/connect.html]
   - [ack · reject, the worker tells the queue a job is done · failed; no answer → delivered again, flows/job-failures.html]
   - [agent, a model with a prompt and tools it may call; the orchestrator hands parts of a question to specialists, overview/architecture.html]

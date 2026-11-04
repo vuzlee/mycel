@@ -46,7 +46,7 @@ failures:
   - ["cancelled at the provider", "`?jira_error=` the provider's word, or `cancelled`", "src/mycel/api/routes/connections.py"]
   - ["signed out before the provider sent them back", "`?jira_error=signed_out`; sign in, then connect again", "src/mycel/api/routes/connections.py"]
   - ["state expired or another account's", "`?jira_error=failed`", "src/mycel/services/oauth.py"]
-  - ["no refresh token returned", "nothing connected; the reason is only in the log", "src/mycel/services/oauth.py"]
+  - ["no refresh token returned", "`?jira_error=failed`; the reason is only in the log", "src/mycel/services/oauth.py"]
   - ["Atlassian account sees no Jira site", "failed", "src/mycel/plugins/jira/oauth.py"]
   - ["project read fails right after", "access empty; connect still succeeds", "src/mycel/plugins/jira/access.py"]
   - ["queueing the first sync fails", "logged; connect still succeeds; the timer syncs it", "src/mycel/plugins/jira/plugin.py"]

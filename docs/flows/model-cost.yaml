@@ -37,7 +37,7 @@ notes:
   - ["daily cap", "`user_daily_usd`, $5 per person a day (`base.yaml`); jobs still open count at their ceiling, so a turn is refused before it is queued"]
 failures:
   - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
-  - ["run goes past the ceiling", "charged when it ends: the job fails as over budget; a host-model run is not stopped mid-run", "src/mycel/agents/core/runner.py"]
+  - ["run goes past the ceiling", "charged when it ends: the job fails as over budget; a host-model run is not stopped mid-run (`cost_limit` needs a price pydantic-ai has only for own models)", "src/mycel/agents/core/runner.py"]
   - ["unknown model ref", "config error", "src/mycel/domains/chat_model.py"]
   - ["model has no price", "spend not counted, so no cap applies: add it to `model_prices_usd`", "src/mycel/llm/budget.py"]
   - ["gateway key over $10", "gateway refuses; the turn fails", "scripts/ops/gateway-key.sh"]
