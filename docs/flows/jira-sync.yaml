@@ -48,7 +48,7 @@ failures:
   - ["a person's access read fails", "their access is cleared until the next run", "src/mycel/plugins/jira/access.py"]
   - ["Jira says 429", "3 tries with Retry-After", "src/mycel/plugins/jira/http.py"]
   - ["Jira times out or 5xx", "the whole run stops; error recorded", "src/mycel/plugins/jira/sync.py"]
-  - ["run stops after bronze was written", "the next run reads them again: it starts from the last good sync", "src/mycel/plugins/jira/sync.py"]
+  - ["run stops after bronze was written", "the next run transforms them again from bronze, back to the last good sync; Jira is not asked twice", "src/mycel/plugins/jira/sync.py"]
   - ["a row fails the checks", "nothing reaches gold this run", "src/mycel/etl/transform.py"]
   - ["Jira times out or 5xx in a SYNC job", "retried 5 s → 30 s → 2 min, then parked", "src/mycel/worker/handlers.py"]
   - ["no ingest worker running", "the embed job waits: it runs on the ingest worker, which owns the embedding model", "src/mycel/domains/index.py"]

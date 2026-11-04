@@ -28,15 +28,15 @@ edges:
   - {from: enq,    to: worker, step: 6, kind: queue,  text: "JobKind",             label: "ingest queue", via: [[2.3, 2.5], [3, 2.5]], exit: 0.3}
   - {from: worker, to: ingest, step: 7, kind: calls,  text: 'JobKind.INGEST: (ingest, "run")', label: "run", label_at: [2.55, 2.62]}
   - {from: ingest, to: files,           kind: import, label: "download", exit: -0.3, via: [[1.7, 3.5], [0.2, 3.5]], enter: 0.2}
-  - {from: ingest, to: qdrant, step: 8, kind: import, label: "vectors"}
-  - {from: ingest, to: repo,   step: 9, kind: import, label: "chunks, ready", exit: -0.15, via: [[1.85, 3.62], [1, 3.62]]}
+  - {from: ingest, to: qdrant, step: 9, kind: import, label: "vectors"}
+  - {from: ingest, to: repo,   step: 8, kind: import, label: "chunks", exit: -0.15, via: [[1.85, 3.62], [1, 3.62]]}
   - {from: ingest, to: events, step: 10, kind: import, label: "changed", exit: 0.3, via: [[2.3, 3.4], [3, 3.4]]}
   - {from: live,   to: route,  step: 11, kind: http,   text: "/documents/status",   label: "status stream (SSE)", via: [[3, 0.5], [1.3, 0.5]], enter: 0.3, label_at: [2.1, 0.32]}
 notes:
   - ["parse and chunk", "`etl/documents/parse.py` (docling) · `chunk.py` → passages of ~500 tokens"]
   - ["accepted", "PDF, DOCX, Markdown · up to 2 MB · checked by its bytes, not its name"]
   - ["limits", "200 documents per person · 5 queued or processing per person; the worker runs one at a time"]
-  - ["status", "uploaded → parsing → ready or failed · the page gets the list again on every change"]
+  - ["status", "the row is saved as uploaded with its job, before the file; then parsing → chunks (8) → vectors (9) → ready, or failed · the page gets the list again on every change"]
   - ["stuck", "watchdog every 60 s: parsing longer than 10 min → failed"]
   - ["why one at a time", "one ingest (docling) holds 3–4 GB; the pod's limit is 5 GiB"]
 failures:
@@ -47,7 +47,7 @@ failures:
   - ["publish fails after save", "relay sends it within seconds", "src/mycel/services/enqueue.py"]
   - ["cannot parse, no text", "status failed, reason saved", "src/mycel/domains/ingest.py"]
   - ["a store is down", "retried; failed only on the last try", "src/mycel/queue/consumer.py"]
-  - ["worker died mid-parse", "watchdog marks it failed after 10 min", "src/mycel/domains/ingest.py"]
+  - ["worker died mid-parse", "the queue delivers it again; if every try dies, the watchdog marks it failed after 10 min", "src/mycel/domains/ingest.py"]
 related:
   - [Job failures, job-failures.html]
   - [Database, ../overview/database.html]

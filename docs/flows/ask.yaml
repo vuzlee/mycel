@@ -53,9 +53,9 @@ failures:
   - ["more than 20 questions a minute", "429 per user", "src/mycel/api/routes/chat.py"]
   - ["daily $5 spent", "429 daily_limit before anything is queued", "src/mycel/services/chat.py"]
   - ["last question still answering", "409 turn_in_progress", "src/mycel/services/chat.py"]
-  - ["API busy (64 in flight)", "503 with retry-after: 5", "src/mycel/api/app.py"]
+  - ["API busy (64 in flight)", "503 with retry-after: 1", "src/mycel/api/middleware.py"]
   - ["publish fails after commit", "the outbox relay sends the job within 15 s", "src/mycel/services/enqueue.py"]
-  - ["worker dies mid-answer", "the queue delivers again; the claim stops a second model bill", "src/mycel/domains/chat.py"]
+  - ["worker dies mid-answer", "the queue delivers again and the model runs again; a turn already done is skipped", "src/mycel/domains/chat.py"]
   - ["model or tool fails for good", "turn marked failed, the page shows the error", "src/mycel/domains/chat.py"]
 related:
   - ["Outbox", "../queue/outbox.html"]

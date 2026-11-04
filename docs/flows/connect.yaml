@@ -18,7 +18,7 @@ boxes:
   - {id: tokens,   lane: oauth,   col: 2, file: src/mycel/services/sealing.py,                      label: services/sealing.py,     role: "encrypts the token"}
   - {id: atl,      lane: outside, col: 0, file: src/mycel/plugins/jira/oauth.py,                    label: auth.atlassian.com,      role: "the person says yes", outside: true}
   - {id: redis,    lane: store,   col: 0, file: src/mycel/infra/redis/client.py,                    label: Redis,                   role: "state, 10 min"}
-  - {id: accounts, lane: store,   col: 1, file: src/mycel/infra/postgres/repositories/accounts.py,  label: "Postgres · jira_account", role: "account, project access"}
+  - {id: accounts, lane: store,   col: 1, file: src/mycel/infra/postgres/repositories/accounts.py,  label: "Postgres · jira_account", role: "account, sealed token"}
 edges:
   - {from: panel,    to: apits,    step: 1, kind: calls, text: "connectPlugin(plugin.key)",  label: "click"}
   - {from: apits,    to: routes,   step: 2, kind: http,  text: "/start",                     label: "GET start"}
@@ -41,10 +41,10 @@ notes:
   - ["back to the page", "`/app/?settings=accounts&jira=connected` (or `jira_error=…`): Settings opens on Accounts"]
 failures:
   - ["unknown plugin", "404", "src/mycel/api/routes/connections.py"]
-  - ["client id/secret or encryption key not set", "503", "src/mycel/services/oauth.py"]
-  - ["cancelled at the provider", "`?jira_error=cancelled`", "src/mycel/api/routes/connections.py"]
+  - ["client id/secret or encryption key not set", "503", "src/mycel/api/routes/connections.py"]
+  - ["cancelled at the provider", "`?jira_error=` the provider's word, or `cancelled`", "src/mycel/api/routes/connections.py"]
   - ["state expired or another account's", "`?jira_error=failed`", "src/mycel/services/oauth.py"]
-  - ["no refresh token returned", "failed, with a hint", "src/mycel/services/oauth.py"]
+  - ["no refresh token returned", "nothing connected; the reason is only in the log", "src/mycel/services/oauth.py"]
   - ["Atlassian account sees no Jira site", "failed", "src/mycel/plugins/jira/oauth.py"]
   - ["project read fails right after", "access empty; connect still succeeds", "src/mycel/plugins/jira/access.py"]
   - ["queueing the first sync fails", "logged; connect still succeeds; the timer syncs it", "src/mycel/plugins/jira/plugin.py"]
