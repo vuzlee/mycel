@@ -334,7 +334,7 @@ figcaption {
 
 /* ---------- Directory tree ---------- */
 
-.tree {
+.tree-grid {
   display: grid;
   grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
   gap: 0 2.5rem;
@@ -465,7 +465,7 @@ figcaption {
 
 /* ---------- Table of contents ---------- */
 
-.toc {
+nav.toc {
   padding-top: 1.25rem;
   border-top: 1px solid var(--line);
   display: grid;
@@ -473,7 +473,7 @@ figcaption {
   gap: 0.75rem 2rem;
 }
 
-.toc a {
+nav.toc a {
   color: var(--ink-soft);
   text-decoration: none;
   display: flex;
@@ -484,9 +484,9 @@ figcaption {
   padding-top: 0.625rem;
 }
 
-.toc a:hover { color: var(--accent); border-top-color: var(--accent); }
+nav.toc a:hover { color: var(--accent); border-top-color: var(--accent); }
 
-.toc a b {
+nav.toc a b {
   font-family: var(--mono);
   font-size: 0.6875rem;
   font-weight: 400;
@@ -886,3 +886,6 @@ svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
 .next a { color: var(--accent); text-decoration: none; }
 .topnav a[aria-current="page"] { color: var(--ink); }
 .topnav { overflow-x: auto; white-space: nowrap; }
+
+/* Links in running text and tables take the accent, not the browser blue. */
+:where(body) a:where(:not([class])) { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 2px; }

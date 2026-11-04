@@ -139,7 +139,7 @@ def index() -> str:
 <body>
 {topnav("index.html")}
 <div class="page">
-<header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read the top row first: Architecture, then Ask a question</li><li>Then any column; inside one, top to bottom</li><li>Every page ends with ‹ previous · next ›; words link to the Glossary</li></ul></div></header>
+<header class="hero"><p class="eyebrow">{BOOK["title"]}</p><h1>Start here</h1><div class="hero-lede"><ul class="bul"><li>Read the top row first: 1.1 → 1.4, Architecture to Database</li><li>Then any column; inside one, top to bottom</li><li>Every chapter page ends with ‹ previous · next ›; words link to the Glossary</li></ul></div></header>
 <section>
 <figure class="tipfig"><div class="tip" role="tooltip"></div>
 <div class="scroll-x">{figure()}</div></figure>
