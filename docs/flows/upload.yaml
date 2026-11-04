@@ -23,15 +23,15 @@ edges:
   - {from: ui,     to: apits,  step: 1, kind: calls,  text: "uploadDocument(file)", label: "file"}
   - {from: apits,  to: route,  step: 2, kind: http,   text: '"/documents"',        label: "POST /documents"}
   - {from: route,  to: svc,    step: 3, kind: import, label: "bytes"}
-  - {from: svc,    to: enq,    step: 4, kind: calls,  text: "enqueue.ingest_job(", label: "job"}
-  - {from: svc,    to: files,           kind: import, label: "save file", exit: -0.3, via: [[1.7, 1.5], [0, 1.5]]}
-  - {from: enq,    to: worker, step: 5, kind: queue,  text: "JobKind",             label: "ingest queue", via: [[2.3, 2.5], [3, 2.5]], exit: 0.3}
-  - {from: worker, to: ingest, step: 6, kind: calls,  text: 'JobKind.INGEST: (ingest, "run")', label: "run"}
+  - {from: svc,    to: files,  step: 4, kind: import, label: "save file", exit: -0.3, via: [[1.7, 1.5], [0, 1.5]]}
+  - {from: svc,    to: enq,    step: 5, kind: calls,  text: "enqueue.ingest_job(", label: "job"}
+  - {from: enq,    to: worker, step: 6, kind: queue,  text: "JobKind",             label: "ingest queue", via: [[2.3, 2.5], [3, 2.5]], exit: 0.3}
+  - {from: worker, to: ingest, step: 7, kind: calls,  text: 'JobKind.INGEST: (ingest, "run")', label: "run", label_at: [2.55, 2.62]}
   - {from: ingest, to: files,           kind: import, label: "download", exit: -0.3, via: [[1.7, 3.5], [0.2, 3.5]], enter: 0.2}
-  - {from: ingest, to: qdrant, step: 7, kind: import, label: "vectors"}
-  - {from: ingest, to: repo,   step: 8, kind: import, label: "chunks, ready", exit: -0.15, via: [[1.85, 3.6], [1, 3.6]]}
-  - {from: ingest, to: events,          kind: import, label: "changed", exit: 0.3}
-  - {from: live,   to: route,           kind: http,   text: "/documents/status",   label: "SSE", via: [[3, 0.5], [1.3, 0.5]], enter: 0.3}
+  - {from: ingest, to: qdrant, step: 8, kind: import, label: "vectors"}
+  - {from: ingest, to: repo,   step: 9, kind: import, label: "chunks, ready", exit: -0.15, via: [[1.85, 3.62], [1, 3.62]]}
+  - {from: ingest, to: events, step: 10, kind: import, label: "changed", exit: 0.3, via: [[2.3, 3.4], [3, 3.4]]}
+  - {from: live,   to: route,  step: 11, kind: http,   text: "/documents/status",   label: "status stream (SSE)", via: [[3, 0.5], [1.3, 0.5]], enter: 0.3, label_at: [2.1, 0.32]}
 notes:
   - ["parse and chunk", "`etl/documents/parse.py` (docling) · `chunk.py` → passages of ~500 tokens"]
   - ["accepted", "PDF, DOCX, Markdown · up to 2 MB · checked by its bytes, not its name"]

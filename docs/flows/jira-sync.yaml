@@ -4,35 +4,38 @@ page:
   title: Jira sync
   lede: ["Every 15 minutes, and right after someone connects", "Each project is read on one connected person's token"]
   why: ['Agents answer from a copy in Postgres: fast, and Jira''s rate limits are hit once, not per question', 'Raw copies are kept, so a bad transform is fixed without asking Jira again']
-lanes: [timer, plugin, jira, pipeline, stores, search]
+lanes: [start, plugin, jira, pipeline, stores, search]
 boxes:
-  - {id: runner,   lane: timer,    col: 0, file: src/mycel/scheduler/runner.py,          label: scheduler/runner.py,   role: "every 15 min, one lock"}
-  - {id: dsync,    lane: timer,    col: 1, file: src/mycel/domains/sync.py,              label: domains/sync.py,       role: "on connect: a SYNC job"}
+  - {id: runner,   lane: start,    col: 0, file: src/mycel/scheduler/runner.py,          label: scheduler/runner.py,   role: "every 15 min"}
+  - {id: dsync,    lane: start,    col: 1, file: src/mycel/domains/sync.py,              label: domains/sync.py,       role: "or a SYNC job on connect"}
   - {id: plugin,   lane: plugin,   col: 0, file: src/mycel/plugins/jira/plugin.py,       label: jira/plugin.py,        role: "sync()"}
   - {id: jsync,    lane: plugin,   col: 1, file: src/mycel/plugins/jira/sync.py,         label: jira/sync.py,          role: "one run, start to end", hot: true}
   - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,       label: jira/access.py,        role: "who reads which project"}
   - {id: oauth,    lane: plugin,   col: 3, file: src/mycel/plugins/jira/oauth.py,        label: jira/oauth.py,         role: "each reader's token"}
+  - {id: fetch,    lane: jira,     col: 1, file: src/mycel/plugins/jira/fetch.py,        label: jira/fetch.py,         role: "changed since last run"}
   - {id: srcjira,  lane: jira,     col: 2, file: src/mycel/plugins/jira/client.py,       label: jira/client.py,        role: "Jira REST: search, hours"}
-  - {id: fetch,    lane: pipeline, col: 1, file: src/mycel/plugins/jira/fetch.py,        label: jira/fetch.py,         role: "changed since last run"}
   - {id: transform,lane: pipeline, col: 2, file: src/mycel/etl/transform.py,             label: etl/transform.py,      role: "bronze → silver → gold"}
+  - {id: enq,      lane: pipeline, col: 3, file: src/mycel/services/enqueue.py,          label: services/enqueue.py,   role: "outbox row, then publish"}
   - {id: bronze,   lane: stores,   col: 1, file: src/mycel/infra/postgres/repositories/bronze.py, label: "Postgres · bronze", role: "raw, as Jira sent it"}
-  - {id: gold,     lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/gold.py,   label: "Postgres · gold",   role: "what agents read", hot: true}
-  - {id: index,    lane: search,   col: 2, file: src/mycel/domains/index.py,             label: domains/index.py,      role: "INDEX_GOLD job: embed"}
-  - {id: qdrant,   lane: search,   col: 3, file: src/mycel/infra/vectors/indexer.py,     label: Qdrant,                role: "gold, searchable"}
+  - {id: gold,     lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/gold.py,   label: "Postgres · silver, gold", role: "cleaned · what agents read", hot: true}
+  - {id: qdrant,   lane: search,   col: 2, file: src/mycel/infra/vectors/indexer.py,     label: Qdrant,                role: "gold, searchable"}
+  - {id: index,    lane: search,   col: 3, file: src/mycel/domains/index.py,             label: "domains/index.py",    role: "on the ingest worker: embeds", tip: "worker --queue ingest runs INDEX_GOLD here: embeds new gold rows"}
 edges:
   - {from: runner,    to: plugin,    step: 1, kind: calls,  text: "p.sync",          label: "tick"}
-  - {from: dsync,     to: plugin,             kind: calls,  text: "plugin.sync()",   label: "or: SYNC job", exit: -0.3, via: [[0.7, 0.5], [0.3, 0.5]], enter: 0.3}
+  - {from: dsync,     to: plugin,             kind: calls,  text: "plugin.sync()",   label: "or", exit: -0.3, via: [[0.7, 0.5], [0.3, 0.5]], enter: 0.3}
   - {from: plugin,    to: jsync,     step: 2, kind: import, label: "run"}
-  - {from: jsync,     to: access,    step: 3, kind: import, label: "refresh access"}
+  - {from: jsync,     to: access,    step: 3, kind: import, label: "readers"}
   - {from: jsync,     to: oauth,              kind: import, label: "tokens", via: [[1.3, 0.5], [3, 0.5]], exit: 0.3}
   - {from: access,    to: srcjira,            kind: import, label: "projects"}
-  - {from: jsync,     to: fetch,     step: 4, kind: import, label: "projects, since"}
-  - {from: fetch,     to: srcjira,            kind: import, label: "JQL search", exit: 0.3, enter: -0.3}
-  - {from: fetch,     to: bronze,    step: 5, kind: import, label: "raw payloads"}
-  - {from: jsync,     to: transform, step: 6, kind: import, label: "changed keys", exit: 0.15, via: [[1.15, 1.5], [1.5, 1.5], [1.5, 3]]}
+  - {from: jsync,     to: fetch,     step: 4, kind: import, label: "since"}
+  - {from: fetch,     to: srcjira,            kind: import, label: "JQL"}
+  - {from: fetch,     to: bronze,    step: 5, kind: import, label: "raw"}
+  - {from: jsync,     to: transform, step: 6, kind: import, label: "changed keys", exit: 0.3, via: [[1.3, 1.4], [1.5, 1.4], [1.5, 2.5], [2, 2.5]]}
   - {from: transform, to: gold,      step: 7, kind: import, label: "upsert"}
-  - {from: index,     to: gold,      step: 8, kind: import, label: "read gold", reverse: true}
-  - {from: index,     to: qdrant,    step: 9, kind: calls,  text: "indexer",  label: "embed"}
+  - {from: jsync,     to: enq,       step: 8, kind: calls,  text: "JobKind.INDEX_GOLD", label: "INDEX_GOLD job", exit: 0.15, via: [[1.15, 1.6], [2.5, 1.6], [2.5, 3]], label_at: [2.55, 2.05]}
+  - {from: enq,       to: index,     step: 9, kind: calls,  text: "publish",         label: "ingest queue"}
+  - {from: index,     to: gold,               kind: import, label: "read", exit: -0.3, via: [[2.7, 4.5], [2.3, 4.5]], enter: 0.3, reverse: true}
+  - {from: index,     to: qdrant,    step: 10, kind: calls, text: "indexer",         label: "embed"}
 notes:
   - ["checks", "`etl/checks/work.py` rejects bad rows before gold; the whole batch rolls back"]
   - ["who reads", "each project once, by the first connected person who may browse it"]

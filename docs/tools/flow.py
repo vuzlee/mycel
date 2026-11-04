@@ -11,6 +11,10 @@ A box is a real file on a grid (lane = row, col = column). An edge says how it s
 An edge that cannot be seen is drawn dashed, labelled "assumed", and fails --check unless the
 YAML marks it `assumed: true`.
 
+A box with `outside: true` is a service outside the repo (Google, Atlassian): `file` is the
+repo file that holds its URL, and it is drawn dashed. An edge to or from one is seen when that
+file contains `text`.
+
 Edge layout: `via` [[col, row], …] bends it (x.5 / y.5 are the gaps between boxes); `exit` and
 `enter` shift where it leaves or meets a box; `reverse` flips the arrow; `label_at` places the
 label by hand.
@@ -67,6 +71,8 @@ def seen(edge: dict[str, Any], boxes: dict[str, Any]) -> bool:
     """Whether the code shows this edge."""
     a, b = read(boxes[edge["from"]]["file"]), read(boxes[edge["to"]]["file"])
     kind, text = edge.get("kind", "import"), edge.get("text", "")
+    if boxes[edge["from"]].get("outside") or boxes[edge["to"]].get("outside"):
+        return bool(text) and (text in a or text in b)
     if kind == "import":
         module = module_of(boxes[edge["to"]]["file"])
         return bool(module) and imports(a, module)
@@ -93,7 +99,7 @@ def check(spec: dict[str, Any]) -> list[str]:
             misses.append(
                 f"edge {e['from']}→{e['to']} ({e.get('kind', 'import')}): not seen in code"
             )
-    return misses + layout_misses(spec)
+    return misses + layout_misses(spec) + crossings(spec)
 
 
 def X(c: float) -> float:
@@ -181,11 +187,14 @@ def box_svg(b: dict[str, Any]) -> str:
         else ("var(--surface)", "var(--line)", "var(--ink)")
     )
     tip = html.escape(b["file"].replace("src/mycel/", "") + "\n" + b.get("tip", b["role"]))
+    dash = ' stroke-dasharray="4 3"' if b.get("outside") else ""
+    if b.get("outside"):
+        tip = html.escape(f"outside the repo · URL in {b['file'].replace('src/mycel/', '')}")
     return (
         f'<a href="vscode://file{ROOT / b["file"]}" class="hv" '
         f'data-path="{b["file"]}" data-tip="{tip}">'
         f'<rect x="{b["x"]:.0f}" y="{b["y"]:.0f}" width="{BOX_W}" height="{BOX_H}" rx="2" '
-        f'fill="{fill}" stroke="{stroke}"/>'
+        f'fill="{fill}" stroke="{stroke}"{dash}/>'
         + text(b["x"] + 10, b["y"] + 18, b["label"], size=11, fill=color)
         + text(b["x"] + 10, b["y"] + 34, b["role"], mono=False, size=9.5, fill="var(--ink-soft)")
         + "</a>"
@@ -217,30 +226,43 @@ def overlaps(a: tuple[float, ...], b: tuple[float, ...]) -> bool:
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
+def segments(pts: list[Point]) -> list[tuple[float, float, float, float]]:
+    """Each straight piece of a route as a thin box."""
+    return [
+        (min(x1, x2) - 0.5, min(y1, y2) - 0.5, max(x1, x2) + 0.5, max(y1, y2) + 0.5)
+        for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False)
+    ]
+
+
 def place_labels(
     spec: dict[str, Any], boxes: dict[str, Any], routes: list[list[Point]]
 ) -> list[Point]:
-    """A spot per label: the default, else the first nearby spot clear of boxes and labels."""
+    """A spot per label: the default, else the first nearby spot clear of boxes, labels, lines."""
     rect = [(b["x"], b["y"], b["x"] + BOX_W, b["y"] + BOX_H) for b in boxes.values()]
     taken: list[tuple[float, float, float, float]] = []
     spots = []
+    lines = [s for r in routes for s in segments(r)]
     for e, pts in zip(spec["edges"], routes, strict=True):
         x0, y0 = label_spot(e, pts)
-        tries = (
-            [(x0, y0)]
+        # a hand-placed label may still step aside a little; a computed one looks wider
+        near = (
+            ((0, 6, -6, 12, -12), (0, 20, -20, 40))
             if "label_at" in e
-            else [
-                (x0 + dx, y0 + dy)
-                for dy in (0, 12, -12, 24, -24, 36)
-                for dx in (0, 30, -30, 60, -60, 90)
-            ]
+            else (
+                (0, 12, -12, 24, -24, 36),
+                (0, 30, -30, 60, -60, 90),
+            )
         )
-        for x, y in tries:
-            lb = label_box(e, x, y)
-            if not any(overlaps(lb, r) for r in rect) and not any(overlaps(lb, t) for t in taken):
-                break
-        else:
-            x, y = x0, y0
+        tries = [(x0 + dx, y0 + dy) for dy in near[0] for dx in near[1]]
+
+        def free(x: float, y: float, strict: bool) -> bool:
+            lb = label_box(e, x, y)  # noqa: B023  (used at once, inside this iteration)
+            if any(overlaps(lb, r) for r in rect) or any(overlaps(lb, t) for t in taken):
+                return False
+            return not strict or not any(overlaps(lb, ln) for ln in lines)  # noqa: B023
+
+        # clear of boxes, labels and other lines; else of boxes and labels; else the default
+        x, y = next((p for strict in (True, False) for p in tries if free(*p, strict)), (x0, y0))
         taken.append(label_box(e, x, y))
         spots.append((x, y))
     return spots
@@ -278,7 +300,7 @@ def layout_misses(spec: dict[str, Any]) -> list[str]:
 
 
 def crossings(spec: dict[str, Any]) -> list[str]:
-    """Lines drawn through another edge's label: the label reads as theirs."""
+    """Lines drawn through a label: it reads as theirs, or is struck through."""
     layout_misses(spec)
     boxes = {b["id"]: b for b in spec["boxes"]}
     routes = [route(e, boxes[e["from"]], boxes[e["to"]]) for e in spec["edges"]]
@@ -290,13 +312,9 @@ def crossings(spec: dict[str, Any]) -> list[str]:
             continue
         lb = label_box(e, *spot)
         for j, pts in enumerate(routes):
-            if j == i:
-                continue
-            for (x1, y1), (x2, y2) in zip(pts, pts[1:], strict=False):
-                seg = (min(x1, x2) - 0.5, min(y1, y2) - 0.5, max(x1, x2) + 0.5, max(y1, y2) + 0.5)
-                if overlaps(seg, lb):
-                    out.append(f"line {names[j]} runs through the label of {names[i]}")
-                    break
+            if any(overlaps(seg, lb) for seg in segments(pts)):
+                who = "its own line" if j == i else f"line {names[j]}"
+                out.append(f"{who} runs through the label of {names[i]}")
     return sorted(set(out))
 
 

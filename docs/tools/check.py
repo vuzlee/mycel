@@ -4,11 +4,11 @@
 
 - every link and script/stylesheet path resolves inside docs/, every #anchor exists
 - every data-path and every vscode:// link names a file that exists
-- every flow figure's boxes exist and every edge is seen in the code (docs/tools/flow.py)
+- every flow figure's boxes exist, every edge is seen in the code, no line runs through a box
+  or another edge's label (docs/tools/flow.py)
 - every flow page and the architecture figure match their YAML (rebuild with page.py / flow.py)
 - every page names at most six glossary words, and its H1 is its name in book.yaml
-- prints, without failing, each flow whose files were committed after the flow was, and each
-  line drawn through another edge's label
+- prints, without failing, each flow whose files were committed after the flow was
 """
 
 import html
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 from book import PAGES, glossary, hand_pages, index, patched
-from flow import ROOT, check, crossings, draw
+from flow import ROOT, check, draw
 from page import build
 from words import MARK as WORDS
 from words import misses as word_misses
@@ -167,12 +167,6 @@ def main() -> int:
         print(m)
     for n in stale():
         print(f"stale? {n}")
-    for y in FLOWS:
-        spec = yaml.safe_load(y.read_text())
-        if spec.get("boxes"):
-            check(spec)
-            for c in crossings(spec):
-                print(f"cross? {y.relative_to(DOCS)}: {c}")
     print(f"{len(misses)} misses · {len(FLOWS)} flows")
     return 1 if misses else 0
 

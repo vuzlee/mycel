@@ -21,13 +21,13 @@ edges:
   - {from: page,   to: hook,   step: 1, kind: calls,  text: "useDashboard()",   label: "use"}
   - {from: hook,   to: apits,  step: 2, kind: calls,  text: "fetchDashboard(",  label: "fetch"}
   - {from: apits,  to: rdash,  step: 3, kind: http,   text: "/dashboard",       label: "GET /{project}?days="}
-  - {from: apits,  to: rproj,           kind: http,   text: "/projects",        label: "projects", exit: 0.3, via: [[2.3, 0.5], [3, 0.5]]}
+  - {from: apits,  to: rproj,           kind: http,   text: "/projects",        label: "side: project list", exit: 0.3, via: [[2.3, 0.5], [3, 0.5]]}
   - {from: rdash,  to: sgate,  step: 4, kind: import, label: "get"}
   - {from: sgate,  to: perm,   step: 5, kind: import, label: "require"}
   - {from: sgate,  to: sbuild, step: 6, kind: import, label: "build"}
   - {from: sbuild, to: gather, step: 7, kind: import, label: "gather"}
   - {from: gather, to: gold,   step: 8, kind: import, label: "items"}
-  - {from: gather, to: stats,          kind: import, label: "counts", exit: 0.3, via: [[0.3, 2.5], [1, 2.5]]}
+  - {from: gather, to: stats,  step: 9, kind: import, label: "counts", exit: 0.3, via: [[0.3, 2.5], [1, 2.5]]}
 notes:
   - ["window", "`?days=` 1–90, default 7"]
   - ["shows", "estimate vs spent per person · late items · status, priority, kind, sprint, epics"]

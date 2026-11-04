@@ -4,37 +4,40 @@ page:
   title: Connect an account
   lede: ["Each person connects their own Jira or Google", "The same routes serve every plugin"]
   why: ['Mycel reads Jira and Gmail as the person, so it sees only what they may see', 'The provider never gives the app a password, only a token it can renew']
-lanes: [browser, api, plugin, provider, store]
+lanes: [browser, api, plugin, oauth, outside, store]
 boxes:
-  - {id: panel,    lane: browser,  col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
-  - {id: apits,    lane: browser,  col: 1, file: web/src/api/connections.ts,                label: api/connections.ts,      role: "→ /connections/{key}/start"}
-  - {id: routes,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,   role: "start · callback in /auth"}
-  - {id: registry, lane: api,      col: 0, file: src/mycel/plugins/registry.py,                     label: plugins/registry.py,     role: "plugin by key"}
-  - {id: jplugin,  lane: plugin,   col: 1, file: src/mycel/plugins/jira/plugin.py,                  label: jira/plugin.py,          role: "connect → access → sync", hot: true}
-  - {id: access,   lane: plugin,   col: 2, file: src/mycel/plugins/jira/access.py,                  label: jira/access.py,          role: "which projects readable"}
-  - {id: enqueue,  lane: plugin,   col: 3, file: src/mycel/services/enqueue.py,                     label: services/enqueue.py,     role: "queues a sync"}
-  - {id: soauth,   lane: provider, col: 0, file: src/mycel/services/oauth.py,                       label: services/oauth.py,       role: "one-time state"}
-  - {id: joauth,   lane: provider, col: 1, file: src/mycel/plugins/jira/oauth.py,                   label: jira/oauth.py,           role: "Atlassian consent, token"}
-  - {id: tokens,   lane: provider, col: 2, file: src/mycel/services/sealing.py,                      label: services/sealing.py,     role: "encrypts the token"}
-  - {id: redis,    lane: store,    col: 0, file: src/mycel/infra/redis/client.py,                   label: Redis,                   role: "state, 10 min"}
-  - {id: accounts, lane: store,    col: 1, file: src/mycel/infra/postgres/repositories/accounts.py, label: "Postgres · jira_account", role: "account, project access"}
+  - {id: panel,    lane: browser, col: 0, file: web/src/components/panels/Connections.tsx,         label: panels/Connections.tsx,  role: "Connect button"}
+  - {id: apits,    lane: browser, col: 1, file: web/src/api/connections.ts,                         label: api/connections.ts,      role: "→ /connections/{key}/start"}
+  - {id: registry, lane: api,     col: 0, file: src/mycel/plugins/registry.py,                      label: plugins/registry.py,     role: "plugin by key"}
+  - {id: routes,   lane: api,     col: 1, file: src/mycel/api/routes/connections.py,                label: routes/connections.py,   role: "start · callback in /auth"}
+  - {id: jplugin,  lane: plugin,  col: 1, file: src/mycel/plugins/jira/plugin.py,                   label: jira/plugin.py,          role: "connect → access → sync", hot: true}
+  - {id: access,   lane: plugin,  col: 2, file: src/mycel/plugins/jira/access.py,                   label: jira/access.py,          role: "which projects readable"}
+  - {id: enqueue,  lane: plugin,  col: 3, file: src/mycel/services/enqueue.py,                      label: services/enqueue.py,     role: "queues a sync"}
+  - {id: soauth,   lane: oauth,   col: 0, file: src/mycel/services/oauth.py,                        label: services/oauth.py,       role: "consent URL, one-time state"}
+  - {id: joauth,   lane: oauth,   col: 1, file: src/mycel/plugins/jira/oauth.py,                    label: jira/oauth.py,           role: "code → token"}
+  - {id: tokens,   lane: oauth,   col: 2, file: src/mycel/services/sealing.py,                      label: services/sealing.py,     role: "encrypts the token"}
+  - {id: atl,      lane: outside, col: 0, file: src/mycel/plugins/jira/oauth.py,                    label: auth.atlassian.com,      role: "the person says yes", outside: true}
+  - {id: redis,    lane: store,   col: 0, file: src/mycel/infra/redis/client.py,                    label: Redis,                   role: "state, 10 min"}
+  - {id: accounts, lane: store,   col: 1, file: src/mycel/infra/postgres/repositories/accounts.py,  label: "Postgres · jira_account", role: "account, project access"}
 edges:
-  - {from: panel,    to: apits,    step: 1, kind: calls,  text: "connectPlugin(plugin.key)", label: "click"}
-  - {from: apits,    to: routes,   step: 2, kind: http,   text: "/start",                    label: "GET start"}
-  - {from: routes,   to: registry, step: 3, kind: calls,  text: "registry.get(key)",         label: "find"}
-  - {from: routes,   to: jplugin,  step: 4, kind: calls,  text: "plugin.connect(",           label: "callback: code"}
-  - {from: jplugin,  to: joauth,   step: 5, kind: calls,  text: "oauth.connect(",            label: "exchange code"}
-  - {from: joauth,   to: soauth,            kind: calls,  text: "JIRA.owner_of(",            label: "state"}
-  - {from: soauth,   to: redis,             kind: calls,  text: "_state_key(",               label: "GETDEL"}
-  - {from: joauth,   to: tokens,            kind: calls,  text: "seal(grant.refresh_token)", label: "encrypt"}
-  - {from: joauth,   to: accounts, step: 6, kind: calls,  text: "repo.upsert_jira_account(", label: "save account"}
-  - {from: jplugin,  to: access,   step: 7, kind: calls,  text: "access.refresh(user_id)",   label: "projects"}
-  - {from: jplugin,  to: enqueue,  step: 8, kind: calls,  text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
+  - {from: panel,    to: apits,    step: 1, kind: calls, text: "connectPlugin(plugin.key)",  label: "click"}
+  - {from: apits,    to: routes,   step: 2, kind: http,  text: "/start",                     label: "GET start"}
+  - {from: routes,   to: registry,          kind: calls, text: "registry.get(key)",          label: "find"}
+  - {from: routes,   to: soauth,   step: 3, kind: calls, text: "plugin.consent_url(",        label: "consent URL", exit: -0.3, via: [[0.7, 1.5], [0.3, 1.5]], enter: 0.3}
+  - {from: soauth,   to: redis,             kind: calls, text: "_state_key(",                label: "state", exit: -0.45, via: [[-0.45, 4.5]], enter: -0.45}
+  - {from: soauth,   to: atl,      step: 4, kind: calls, text: "AUTH_URL",                   label: "redirect", exit: 0.1, enter: 0.1}
+  - {from: atl,      to: routes,   step: 5, kind: calls, text: "callback_path",              label: "back with code", exit: 0.45, via: [[0.45, 3.5], [0.55, 3.5], [0.55, 1]], enter: 0}
+  - {from: routes,   to: jplugin,  step: 6, kind: calls, text: "plugin.connect(",            label: "code, state"}
+  - {from: jplugin,  to: joauth,   step: 7, kind: calls, text: "oauth.connect(",             label: "code → token", exit: 0.3, enter: 0.3}
+  - {from: joauth,   to: tokens,            kind: calls, text: "seal(grant.refresh_token)",  label: "encrypt"}
+  - {from: joauth,   to: accounts, step: 8, kind: calls, text: "repo.upsert_jira_account(",  label: "save account", exit: 0.3, via: [[1.3, 4.5]], enter: 0.3}
+  - {from: jplugin,  to: access,   step: 9, kind: calls, text: "access.refresh(user_id)",    label: "projects"}
+  - {from: jplugin,  to: enqueue,  step: 10, kind: calls, text: "enqueue.queue(",            label: "queue a sync", exit: 0.3, via: [[1.3, 1.5], [3, 1.5]], label_at: [2.15, 1.45]}
 notes:
   - ["routes", "`/connections/{key}/start` · `/auth/{key}/callback` (registered with the provider) · `DELETE /connections/{key}` · `GET /connections`"]
   - ["state", "Redis, 10 min, used once; only the account that started may finish"]
   - ["token", "refresh token encrypted with `TOKEN_ENCRYPTION_KEY`; Jira replaces it on each refresh"]
-  - ["Google", "`plugins/google/`: same path without steps 7–8 (no access, no sync); its tools go to the researcher; sign-in shares `/auth/google/callback`"]
+  - ["Google", "`plugins/google/`: same path without steps 9–10 (no access, no sync); its tools go to the researcher; sign-in shares `/auth/google/callback`"]
   - ["back to the page", "`/app/?settings=accounts&jira=connected` (or `jira_error=…`): Settings opens on Accounts"]
 failures:
   - ["unknown plugin", "404", "src/mycel/api/routes/connections.py"]

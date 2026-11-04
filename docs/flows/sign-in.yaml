@@ -3,32 +3,38 @@ title: "Sign in: Google, or a six-digit code by mail; both end in a 14-day sessi
 page:
   eyebrow: Flow
   title: Sign in
-  lede: ["Two ways in: Google, or a code sent by mail", "Both end in a session cookie, 14 days"]
+  lede: ["Two ways in: C = a code sent by mail, G = Google", "Both then run 1–3: account, session row, a 14-day cookie"]
   why: [The app must know who asks before it reads anyone's Jira or mail, 'No password is stored: Google or a mailed code proves the address']
-lanes: [browser, api, services, stores]
+lanes: [browser, api, services, outside, stores]
 boxes:
   - {id: login,  lane: browser,  col: 0, file: web/src/pages/Login.tsx,                           label: pages/Login.tsx,           role: "Google button, email box"}
-  - {id: apits,  lane: browser,  col: 1, file: web/src/api/auth.ts,                                    label: api/auth.ts,          role: "calls /auth routes"}
-  - {id: conn,   lane: api,      col: 0, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "shared Google callback"}
-  - {id: route,  lane: api,      col: 1, file: src/mycel/api/routes/auth.py,                      label: api/routes/auth.py,        role: "sign-in routes, sets cookie"}
+  - {id: ctx,    lane: browser,  col: 1, file: web/src/context/AuthContext.tsx,                   label: context/AuthContext.tsx,   role: "sends the typed code"}
+  - {id: apits,  lane: browser,  col: 2, file: web/src/api/auth.ts,                               label: api/auth.ts,               role: "calls /auth routes"}
+  - {id: conn,   lane: api,      col: 1, file: src/mycel/api/routes/connections.py,               label: routes/connections.py,     role: "shared Google callback"}
+  - {id: route,  lane: api,      col: 2, file: src/mycel/api/routes/auth.py,                      label: api/routes/auth.py,        role: "sign-in routes, sets cookie"}
   - {id: deps,   lane: api,      col: 3, file: src/mycel/api/dependencies.py,                     label: api/dependencies.py,       role: "cookie → who is asking"}
-  - {id: gsign,  lane: services, col: 0, file: src/mycel/services/google_signin.py,               label: services/google_signin.py, role: "checks Google's answer"}
+  - {id: gsign,  lane: services, col: 0, file: src/mycel/services/google_signin.py,               label: services/google_signin.py, role: "URL out, answer checked"}
   - {id: scode,  lane: services, col: 1, file: src/mycel/services/signin_code.py,                 label: services/signin_code.py,   role: "6-digit code, 10 min"}
   - {id: sauth,  lane: services, col: 2, file: src/mycel/services/auth.py,                        label: services/auth.py,          role: "account, session", hot: true}
+  - {id: google, lane: outside,  col: 0, file: src/mycel/services/google_signin.py,               label: accounts.google.com,       role: "the person picks an account", outside: true}
   - {id: smtp,   lane: stores,   col: 0, file: src/mycel/infra/smtp.py,                           label: infra/smtp.py,             role: "sends the code mail"}
   - {id: redis,  lane: stores,   col: 1, file: src/mycel/infra/redis/client.py,                   label: Redis,                     role: "code hash, Google state"}
   - {id: idrepo, lane: stores,   col: 2, file: src/mycel/infra/postgres/repositories/identity.py, label: "Postgres · user, session", role: "who, and their cookie"}
 edges:
-  - {from: login, to: apits,  step: 1, kind: calls,  text: "requestCode(email)",            label: "email"}
-  - {from: apits, to: route,  step: 2, kind: http,   text: "/code",                         label: "POST /auth/code"}
-  - {from: route, to: scode,  step: 3, kind: calls,  text: "signin_code.issue(body.email)", label: "make code"}
-  - {from: scode, to: redis,           kind: calls,  text: "_code_key(email)",              label: "hash"}
-  - {from: scode, to: smtp,            kind: import, label: "mail", exit: -0.3}
-  - {from: route, to: gsign,           kind: calls,  text: "google_signin.start(",          label: "or Google", exit: -0.3}
-  - {from: conn,  to: route,  step: 4, kind: calls,  text: "finish_google_signin(",         label: "back"}
-  - {from: route, to: sauth,  step: 5, kind: calls,  text: "auth.account_for(",             label: "find or create", exit: 0.3, enter: -0.2}
-  - {from: sauth, to: idrepo, step: 6, kind: calls,  text: "create_session(",               label: "session row"}
-  - {from: deps,  to: sauth,  step: 7, kind: calls,  text: "session_user(",                 label: "each request", enter: 0.2}
+  - {from: login,  to: ctx,    step: C1, kind: calls, text: "signInWithCode(email, code)",  label: "email, then code"}
+  - {from: ctx,    to: apits,  step: C2, kind: calls, text: "api.verifyCode(email, code)",  label: "verify"}
+  - {from: apits,  to: route,  step: C3, kind: http,  text: "/code/verify",                 label: "POST /auth/code/verify", exit: 0.1, enter: 0.1}
+  - {from: route,  to: scode,  step: C4, kind: calls, text: "signin_code.spend(",           label: "spend code", exit: -0.15, via: [[1.85, 1.62], [1.3, 1.62]], enter: 0.3}
+  - {from: scode,  to: redis,           kind: calls, text: "_code_key(email)",             label: "hash", enter: 0}
+  - {from: scode,  to: smtp,            kind: import, label: "mail", exit: -0.3}
+  - {from: login,  to: route,  step: G1, kind: calls, text: "googleSignInUrl(",             label: "Google button", exit: -0.2, via: [[-0.2, 0.5], [1.75, 0.5]], enter: -0.25}
+  - {from: route,  to: gsign,  step: G2, kind: calls, text: "google_signin.start(",         label: "URL with state", exit: -0.4, via: [[1.6, 1.42], [0.2, 1.42]], enter: 0.2}
+  - {from: gsign,  to: google, step: G3, kind: calls, text: "GOOGLE_AUTH_URL",              label: "redirect", exit: -0.2, enter: -0.2}
+  - {from: google, to: conn,   step: G4, kind: calls, text: "GOOGLE_CALLBACK_PATH",         label: "back with code", exit: 0.35, via: [[0.35, 2.5], [0.5, 2.5], [0.5, 1.52], [0.75, 1.52]], enter: -0.25}
+  - {from: conn,   to: route,  step: G5, kind: calls, text: "finish_google_signin(",        label: "", label_at: [1.43, 0.93]}
+  - {from: route,  to: sauth,  step: 1,  kind: calls, text: "auth.account_for(",            label: "find or create", exit: 0.15, enter: 0.15}
+  - {from: sauth,  to: idrepo, step: 2,  kind: calls, text: "create_session(",              label: "session row"}
+  - {from: deps,   to: sauth,  step: 3,  kind: calls, text: "session_user(",                label: "each request", enter: 0.38}
 notes:
   - ["in the browser", "`web/src/context/AuthContext.tsx` holds who is signed in; `main.tsx` guards private pages"]
   - ["session cookie", "`mycel_session` · 14 days · httponly · samesite=lax · secure outside dev"]
