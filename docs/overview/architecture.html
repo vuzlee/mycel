@@ -37,7 +37,7 @@
     <div class="section-head">
       <p class="eyebrow">1.1 · Data flow</p>
       <h2>Data flows one way through four layers</h2>
-      <div><ul class="bul"><li>Each layer reads only the one below it</li><li>Agents never touch <code>bronze</code> or <code>silver</code></li><li>Only Jira is stored; mail and calendar are read live when asked</li><li>Key: bold line = the only way data reaches the AI · dashed = control and monitoring, not data</li></ul></div>
+      <div><ul class="bul"><li>Each layer reads only the one below it</li><li>Agents never touch <code>bronze</code> or <code>silver</code></li><li>Only Jira is stored; mail and calendar are read live when asked</li></ul></div>
     </div>
 
     <figure class="tipfig"><div class="tip" role="tooltip"></div>
@@ -197,8 +197,8 @@
                 fill="var(--ink-soft)">answers · summaries</text>
 
           <!-- ===== Control layer ===== -->
-          <text x="24" y="462" font-family="var(--mono)" font-size="10"
-                letter-spacing="1.6" fill="var(--ink-faint)">CONTROL &amp; OPERATIONS LAYER</text>
+          <text x="122" y="470" font-family="var(--mono)" font-size="10"
+                letter-spacing="1.6" fill="var(--ink-faint)">CONTROL &amp; OPERATIONS</text>
 
           <rect x="24" y="476" width="176" height="52" rx="2"
                 fill="var(--surface)" stroke="var(--line)"/>
@@ -545,8 +545,8 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
           <g font-family="var(--mono)" font-size="11" text-anchor="middle"><rect x="20" y="50" width="96" height="34" rx="2" fill="var(--surface-alt)" stroke="var(--line)"/><text x="68" y="71" fill="var(--ink)">core</text><rect x="150" y="50" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--accent)"/><text x="198" y="71" fill="var(--accent)">llm</text><rect x="150" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="198" y="221" fill="var(--ink)">events</text><rect x="280" y="125" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="328" y="146" fill="var(--ink)">infra</text><rect x="410" y="50" width="96" height="34" rx="2" fill="var(--silver-wash)" stroke="var(--silver)"/><text x="458" y="71" fill="var(--silver)">etl</text><rect x="410" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="458" y="221" fill="var(--ink)">queue</text><rect x="540" y="125" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="588" y="146" fill="var(--ink)">services</text><rect x="540" y="200" width="96" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="588" y="221" fill="var(--ink)">mcp</text><rect x="670" y="50" width="96" height="34" rx="2" fill="var(--bronze-wash)" stroke="var(--bronze)"/><text x="718" y="71" fill="var(--bronze)">plugins</text><rect x="670" y="200" width="96" height="34" rx="2" fill="var(--gold-wash)" stroke="var(--gold)"/><text x="718" y="221" fill="var(--gold)">agents</text><rect x="800" y="42" width="124" height="50" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="862" y="63" fill="var(--ink)">domains · worker</text><text x="862" y="80" fill="var(--ink)">scheduler</text><rect x="800" y="200" width="124" height="34" rx="2" fill="var(--surface)" stroke="var(--line)"/><text x="862" y="221" fill="var(--ink)">api</text></g>
           <g stroke="currentColor" fill="none" stroke-width="1.2" color="var(--ink-faint)" marker-end="url(#dep)"><path d="M 506 67 L 667 67"/><path d="M 116 67 L 147 67"/><path d="M 246 67 L 263 67 L 263 142 L 277 142"/><path d="M 246 217 L 263 217 L 263 142 L 277 142"/><path d="M 376 142 L 393 142 L 393 67 L 407 67"/><path d="M 376 142 L 393 142 L 393 217 L 407 217"/><path d="M 506 217 L 523 217 L 523 142 L 537 142"/><path d="M 636 142 L 648 142 L 648 67 L 667 67"/><path d="M 636 142 L 648 142 L 648 217 L 667 217"/><path d="M 636 217 L 667 217"/><path d="M 766 67 L 797 67"/><path d="M 766 217 L 778 217 L 778 67 L 797 67"/><path d="M 766 67 L 790 67 L 790 217 L 797 217"/></g>
           <g stroke="var(--ink-faint)" fill="none" stroke-width="1.1" stroke-dasharray="3 3"><path d="M 718 84 L 718 200"/></g>
-          <g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)">
-            <text x="724" y="132">each other:</text><text x="724" y="144">plugin tools</text><text x="724" y="156">↔ agent kit</text>
+          <g font-family="var(--mono)" font-size="9" fill="var(--ink-faint)" text-anchor="end">
+            <text x="712" y="132">each other:</text><text x="712" y="144">plugin tools</text><text x="712" y="156">↔ agent kit</text>
             <text x="20" y="28">IMPORTS NOTHING</text><text x="800" y="28">IMPORTS MOST</text>
             <text x="800" y="250">+ services;</text><text x="800" y="262">never agents, domains</text>
           </g>

@@ -52,19 +52,19 @@ tables:
     rows:
       - ["job results, event streams", "nothing visible: pages fall back to `app.turn` in Postgres"]
       - ["job budgets", "a job retried afterwards starts with a full ceiling"]
-      - ["delivery counts, claims", "a job that kills its worker gets a few more tries; a duplicate could run once more"]
+      - ["delivery counts, claims", "a job that kills its worker starts its count over (4 more tries); a duplicate could run once more"]
       - ["rate-limit windows", "every limit starts over"]
-      - ["unconfirmed drafts", "the person asks for the draft again"]
+      - ["unconfirmed write drafts (calendar, Jira)", "the person asks the agent for the change again"]
       - ["cache Redis (6380)", "can be flushed any time; costs only recomputation"]
   - title: Silent traps — wrong, but no error
-    head: [Trap, What happens]
+    head: [Trap, What happens, Where]
     rows:
-      - ["`BaseHTTPMiddleware`", "buffers the response, so SSE tokens arrive in one lump; the request-id middleware is pure ASGI for this"]
-      - ["traces across processes", "contextvars do not cross a process; without `inject()` / `extract()` in message headers you get two unrelated traces"]
-      - ["`setup_tracing()` too late", "after `instrument_app()` spans go to an empty provider and vanish"]
-      - ["budget counted at the call site", "sub-agent usage does not roll up on its own; only `runner.run` charges, `delegate` passes `usage=ctx.usage`"]
-      - ["pool sized per process", "the limit is `max_connections` across all processes; fails only under load"]
-      - ["a hung pod with an open port", "looks healthy; self-healing is only as good as the probes"]
+      - ["`BaseHTTPMiddleware` on SSE", "it holds the whole reply, so live steps arrive in one lump at the end; ours is plain ASGI", "src/mycel/api/middleware.py"]
+      - ["trace lost between processes", "a worker starts a fresh trace unless the job carries it in its headers (`inject()` · `extract()`)", "src/mycel/queue/context.py"]
+      - ["tracing set up too late", "set up after the web app is wrapped, spans go nowhere", "src/mycel/observability/tracing.py"]
+      - ["budget counted in the wrong place", "sub-agents must pass `usage=ctx.usage`; only the runner charges, or one job is billed several times", "src/mycel/agents/core/runner.py"]
+      - ["database pool sized per process", "Postgres limits connections across all processes; it fails only under load", "src/mycel/infra/postgres/engine.py"]
+      - ["a hung pod with an open port", "looks healthy; restarts are only as good as the probes", "deploy/helm/mycel/templates/api/deployment.yaml"]
 files:
   - ["every command", "scripts/stack.sh"]
   - ["dev", "scripts/dev/up.sh"]

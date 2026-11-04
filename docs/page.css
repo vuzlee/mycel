@@ -889,3 +889,5 @@ svg a.hv:hover rect { stroke: var(--accent); stroke-width: 1.8; }
 
 /* Links in running text and tables take the accent, not the browser blue. */
 :where(body) a:where(:not([class])) { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 2px; }
+/* A wide figure bleeds past the text column; its caption stays in the column. */
+.tipfig > figcaption { max-width: none; padding-inline: max(0px, calc((min(100vw - 32px, 1180px) - min(100vw - 2 * clamp(1rem, 4vw, 3rem), 984px)) / 2)); }

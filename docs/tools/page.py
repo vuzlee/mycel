@@ -12,6 +12,7 @@ The YAML adds to what flow.py reads:
 """
 
 import html
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -87,7 +88,11 @@ STEP_DEFS = (
 
 def _fit(name: str, room: int = 20) -> str:
     """A box holds about 20 monospace characters; the hover keeps the whole path."""
-    return name if len(name) <= room else name[: room - 1] + "…"
+    if len(name) <= room:
+        return name
+    if re.match(r"\d{4}_", name):  # a migration: its number says which one
+        return name[:4] + " migration"
+    return name[: room - 1] + "…"
 
 
 def _grid(steps: list[list[str]], groups: list[list[str]] | None, per: int, lead: int):
@@ -121,7 +126,10 @@ def steps_figure(steps: list[list[str]], groups: list[list[str]] | None = None) 
             )
         short = path.replace("src/mycel/", "")
         parts = short.split("/")[:-1]
-        folder = "/".join(parts) if len("/".join(parts)) <= 20 else "…/" + parts[-1]
+        folder = "/".join(parts)
+        while len(folder) > 18 and len(parts) > 1:  # drop leading folders, keep the meaningful tail
+            parts = parts[1:]
+            folder = "/".join(parts)
         out.append(
             STEP.format(
                 tip=html.escape(short, quote=True),
@@ -184,8 +192,13 @@ def build(path: Path) -> str:
             '<h3 class="tbl-title">Files to change, in order</h3>'
             + table(["#", "File", "Do"], spec["steps"], files_col=1)
         )
-    for name, head, rows in [(t["title"], t["head"], t["rows"]) for t in spec.get("tables", [])]:
-        out.append(f'<h3 class="tbl-title">{e(name)}</h3>' + table(head, rows))
+    for t in spec.get("tables", []):
+        # A column holding only repo paths becomes file links.
+        cols = range(len(t["head"]))
+        files = next((i for i in cols if all((ROOT / r[i]).exists() for r in t["rows"])), None)
+        out.append(
+            f'<h3 class="tbl-title">{e(t["title"])}</h3>' + table(t["head"], t["rows"], files)
+        )
     if spec.get("mistakes"):
         out.append(
             '<h3 class="tbl-title">Easy to get wrong</h3>'
