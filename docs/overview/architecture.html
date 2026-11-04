@@ -611,7 +611,7 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
 <section id="s09">
     <div class="section-head">
       <p class="eyebrow">4.2 · The operational stack</p>
-      <h2>What <code>docker compose up</code> starts</h2>
+      <h2>What <code>docker compose up</code> starts</h2><div><ul class="bul"><li>Ports, what a Redis restart loses, silent traps → <a href="../operate/run.html">Run and fix it</a></li></ul></div>
     </div>
     <table class="tbl">
       <thead><tr><th>Service</th><th>Role</th><th>Started by</th><th>Note</th></tr></thead>
@@ -631,13 +631,11 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     </table>
     <div class="path-note"><ul class="bul"><li>Traces go straight to Langfuse (OTLP)</li><li>Grafana has no traces; a log line carries its <code>trace_id</code></li></ul></div>
   </section>
-<section id="s13">
-    <div class="section-head"><p class="eyebrow">4.3 · Ports and traps</p><h2>Moved to Run and fix it</h2><div><ul class="bul"><li>Every port, what a Redis restart loses, and six silent traps: <a href="../operate/run.html">Run and fix it</a></li></ul></div></div>
-  </section>
+
 
 <section id="s16">
     <div class="section-head">
-      <p class="eyebrow">4.4 · From dev machine to cluster</p>
+      <p class="eyebrow">4.3 · From dev machine to cluster</p>
       <h2>Two images, one environment</h2>
       <div><ul class="bul"><li>CI builds two images per commit SHA: <code>mycel</code>, <code>mycel-ingest</code></li><li>CI renders the Helm chart; it does not deploy</li></ul></div>
     </div>
@@ -787,7 +785,7 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     <div><ul class="bul"><li>Same images everywhere</li><li>Differences are env vars only; secrets never in <code>config/</code></li></ul></div>
   </section>
   <section id="s12">
-    <div class="section-head"><p class="eyebrow">4.5 · On a cluster</p><h2>Kubernetes: minikube and EKS</h2><div><ul class="bul"><li><code>docker-compose.yml</code> = dev · <code>deploy/helm/</code> = cluster</li><li>Same image, only values differ</li><li>AWS: <a href="../operate/aws.html">On AWS</a></li></ul></div></div>
+    <div class="section-head"><p class="eyebrow">4.4 · On a cluster</p><h2>Kubernetes: minikube and EKS</h2><div><ul class="bul"><li><code>docker-compose.yml</code> = dev · <code>deploy/helm/</code> = cluster</li><li>Same image, only values differ</li><li>AWS: <a href="../operate/aws.html">On AWS</a></li></ul></div></div>
 <h3 class="tbl-title">Each pod on the cluster</h3>
     <table class="tbl">
       <thead><tr><th>Topic</th><th>Choice</th><th>Why</th></tr></thead>
@@ -804,11 +802,11 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     </table>
   </section>
   <section id="s11">
-    <div class="section-head"><p class="eyebrow">4.6 · Status</p><h2>What runs and what does not</h2></div>
+    <div class="section-head"><p class="eyebrow">4.5 · Status</p><h2>What runs and what does not</h2></div>
 <table class="tbl"><thead><tr><th>Item</th><th>State</th></tr></thead><tbody><tr><td class="who">plugins</td><td>Jira, Google built; Slack, Confluence not</td></tr><tr><td class="who">agents</td><td>orchestrator, analyst, researcher, summarizer, rewriter</td></tr><tr><td class="who">ETL</td><td>normalize, promote, checks, under one lock</td></tr><tr><td class="who">vector search</td><td>Qdrant: <code>rag_search</code> over gold work items · the Knowledge chip over uploads</td></tr><tr><td class="who">evals</td><td>golden sets, run by hand, not in CI</td></tr><tr><td class="who">local model</td><td>vLLM in compose behind a profile; no agent uses it</td></tr><tr><td class="who">cluster</td><td>minikube; EKS by session (On AWS)</td></tr></tbody></table>
   </section>
   <section id="s08">
-    <div class="section-head"><p class="eyebrow">4.7 · Summary</p><h2>Nine rules that do not bend</h2></div>
+    <div class="section-head"><p class="eyebrow">4.6 · Summary</p><h2>Nine rules that do not bend</h2></div>
 <table class="tbl"><thead><tr><th>Rule</th><th>Means</th></tr></thead><tbody><tr><td class="who">One direction</td><td>bronze → silver → gold, never back</td></tr><tr><td class="who">Agents read gold only</td><td>for Jira data, gold is the only contract; mail, calendar, web and uploads are read live by tools</td></tr><tr><td class="who">New source, no edits</td><td>a folder in <code>plugins/</code> + a registry line</td></tr><tr><td class="who">Models through one place</td><td>the gateway or a person's endpoint, built in <code>model_builder.py</code></td></tr><tr><td class="who">Slow work on the queue</td><td>the API returns a job id, never waits for a model</td></tr><tr><td class="who">Prompt changed → run evals</td><td>a worse answer turns no test red</td></tr><tr><td class="who">Thin routes, thick domains</td><td>slow work is queued and runs in domains, so the scheduler can start it without the API; quick reads answer at once</td></tr><tr><td class="who">Same images everywhere</td><td>app and ingest, tagged by commit SHA; only env differs</td></tr><tr><td class="who">Name = job</td><td>no abbreviations, no layers for a future</td></tr></tbody></table>
   </section>
   <!-- pager --><nav class="pager"><span></span><a class="at" href="../index.html">1.1 · contents</a><a href="../flows/ask.html">Ask a question ›</a></nav><!-- /pager -->
