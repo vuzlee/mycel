@@ -34,6 +34,37 @@ tables:
       - ["Connect button missing", "plugin client not in `.env`", "doctor: PLUGINS group", "set `<KEY>_CLIENT_ID` / `_SECRET`"]
       - ["a pod dies at start: `rabbitmq_port` not an integer", "Kubernetes adds `<SERVICE>_PORT=tcp://…` for every Service; one clashed with the RabbitMQ port setting", "`kubectl logs <pod>`", "`enableServiceLinks: false` stops Kubernetes adding them (already set in both charts)"]
       - ["docs figure looks wrong", "code changed since the figure", "`uv run python docs/tools/check.py`", "fix the YAML, run `page.py`"]
+  - title: Ports on this machine (dev, compose)
+    head: [Port, Service, What it is]
+    rows:
+      - ["8000", "api", "FastAPI: `/app`, `/chat`, `/health`"]
+      - ["5433", "postgres", "PostgreSQL 16; 5433 so a local Postgres keeps 5432; tests use `mycel_test` here"]
+      - ["5672 · 15672", "rabbitmq", "AMQP · management UI"]
+      - ["6379 · 6380", "redis · redis-cache", "live events, job status, budgets · cached answers and tokens, evicts when full"]
+      - ["4000", "litellm", "model gateway"]
+      - ["6333", "qdrant", "HTTP + dashboard"]
+      - ["9000 · 9001", "minio", "S3 API · console"]
+      - ["8001", "vllm", "own model on the LAN; compose profile only"]
+      - ["9100–9103", "worker · scheduler · ingest · api", "`/metrics`"]
+      - ["9090 · 9093 · 3100 · 3000", "prometheus · alertmanager · loki · grafana", "monitoring profile only"]
+  - title: If the state Redis (6379) restarts
+    head: [Lost, What happens]
+    rows:
+      - ["job results, event streams", "nothing visible: pages fall back to `app.turn` in Postgres"]
+      - ["job budgets", "a job retried afterwards starts with a full ceiling"]
+      - ["delivery counts, claims", "a job that kills its worker gets a few more tries; a duplicate could run once more"]
+      - ["rate-limit windows", "every limit starts over"]
+      - ["unconfirmed drafts", "the person asks for the draft again"]
+      - ["cache Redis (6380)", "can be flushed any time; costs only recomputation"]
+  - title: Silent traps — wrong, but no error
+    head: [Trap, What happens]
+    rows:
+      - ["`BaseHTTPMiddleware`", "buffers the response, so SSE tokens arrive in one lump; the request-id middleware is pure ASGI for this"]
+      - ["traces across processes", "contextvars do not cross a process; without `inject()` / `extract()` in message headers you get two unrelated traces"]
+      - ["`setup_tracing()` too late", "after `instrument_app()` spans go to an empty provider and vanish"]
+      - ["budget counted at the call site", "sub-agent usage does not roll up on its own; only `runner.run` charges, `delegate` passes `usage=ctx.usage`"]
+      - ["pool sized per process", "the limit is `max_connections` across all processes; fails only under load"]
+      - ["a hung pod with an open port", "looks healthy; self-healing is only as good as the probes"]
 files:
   - ["every command", "scripts/stack.sh"]
   - ["dev", "scripts/dev/up.sh"]

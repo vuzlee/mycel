@@ -3,8 +3,13 @@ reviewed: 1793804441  # 135.5 only changed the setup.html link
 page:
   eyebrow: Change
   title: Add a plugin
-  lede: ["A provider each person connects, e.g. GitHub", "One folder: client, consent, plugin; one registry line"]
+  lede: ["A provider each person connects, e.g. GitHub", "Most code in one new folder; a few lines in core, agents and web", "Rows: where each file lives · numbers: the order in the table"]
   why: [One folder per provider keeps the core free of provider code, 'Copy Jira: the shared consent, sealing and registry already work']
+groups:
+  - [plugin folder, "2", "3", "5", "6"]
+  - [backend core, "1", "4", "7", "11"]
+  - [agents, "9", "10"]
+  - [web, "8", "12"]
 steps:
   - ["1", "src/mycel/core/config.py", "`<key>_client_id`, `<key>_client_secret`; a line in `.env.example`"]
   - ["2", "src/mycel/plugins/jira/client.py", "`plugins/<key>/client.py`: the provider's REST calls on one person's token; raise `SourceError` / `NotWritten` from `plugins/errors.py`"]

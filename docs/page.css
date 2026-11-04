@@ -638,8 +638,8 @@ footer a { color: var(--accent); text-decoration: none; }
 
 .bul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
 @media (max-width: 760px) {
-  .col { grid-template-columns: 1fr; gap: 0.1875rem; }
-  .col-t { color: var(--tone, var(--ink-faint)); }
+  .dict .col { grid-template-columns: 1fr; gap: 0.1875rem; }
+  .dict .col-t { color: var(--tone, var(--ink-faint)); }
   .flow { grid-template-columns: 1fr; }
 }
 /* ---------- Column dictionary ---------- */
@@ -667,7 +667,7 @@ footer a { color: var(--accent); text-decoration: none; }
   color: var(--tone);
 }
 .dict-head p { font-size: 0.875rem; color: var(--ink-soft); max-width: 70ch; }
-.col {
+.dict .col {
   display: grid;
   grid-template-columns: minmax(0, 11rem) minmax(0, 12rem) minmax(0, 1fr);
   gap: 0 1.5rem;
@@ -675,22 +675,22 @@ footer a { color: var(--accent); text-decoration: none; }
   border-bottom: 1px solid var(--line-soft);
   align-items: baseline;
 }
-.col:last-child { border-bottom: none; }
-.col-n {
+.dict .col:last-child { border-bottom: none; }
+.dict .col-n {
   font-family: var(--mono);
   font-size: 0.8125rem;
   color: var(--ink);
   word-break: break-word;
 }
-.col-t {
+.dict .col-t {
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-faint);
   word-break: break-word;
 }
-.col-d { font-size: 0.875rem; color: var(--ink-soft); line-height: 1.55; min-width: 0; }
-.col-d b { font-weight: 500; color: var(--ink); }
-.col-d .ex {
+.dict .col-d { font-size: 0.875rem; color: var(--ink-soft); line-height: 1.55; min-width: 0; }
+.dict .col-d b { font-weight: 500; color: var(--ink); }
+.dict .col-d .ex {
   display: block;
   margin-top: 0.4375rem;
   font-family: var(--mono);
@@ -701,7 +701,7 @@ footer a { color: var(--accent); text-decoration: none; }
   padding: 0.25rem 0.5rem;
   word-break: break-word;
 }
-.col[data-key] .col-n::after {
+.dict .col[data-key] .col-n::after {
   content: attr(data-key);
   display: inline-block;
   margin-left: 0.5rem;
@@ -711,10 +711,10 @@ footer a { color: var(--accent); text-decoration: none; }
   color: var(--ink-faint);
   vertical-align: 0.1em;
 }
-.col[data-key="pk"] { background: var(--gold-wash); }
-.col[data-key="nk"] { background: var(--silver-wash); }
-.col[data-key="pk"] .col-n::after { color: var(--gold); }
-.col[data-key="nk"] .col-n::after { color: var(--silver); }
+.dict .col[data-key="pk"] { background: var(--gold-wash); }
+.dict .col[data-key="nk"] { background: var(--silver-wash); }
+.dict .col[data-key="pk"] .col-n::after { color: var(--gold); }
+.dict .col[data-key="nk"] .col-n::after { color: var(--silver); }
 .dict-foot {
   padding: 0.8125rem 1.25rem;
   border-top: 1px solid var(--line);

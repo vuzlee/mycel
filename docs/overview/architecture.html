@@ -586,7 +586,7 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
   <div class="part" id="p4"><span class="part-num">Part 4</span><h2 class="part-title">Running it</h2></div>
 <section id="s15">
     <div class="section-head">
-      <p class="eyebrow">4.0 · Processes</p>
+      <p class="eyebrow">4.1 · Processes</p>
       <h2>Two images, four programs</h2>
     </div>
     <table class="tbl">
@@ -610,7 +610,7 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
   </section>
 <section id="s09">
     <div class="section-head">
-      <p class="eyebrow">4.1 &middot; The operational stack</p>
+      <p class="eyebrow">4.2 · The operational stack</p>
       <h2>What <code>docker compose up</code> starts</h2>
     </div>
     <table class="tbl">
@@ -632,75 +632,12 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     <div class="path-note"><ul class="bul"><li>Traces go straight to Langfuse (OTLP)</li><li>Grafana has no traces; a log line carries its <code>trace_id</code></li></ul></div>
   </section>
 <section id="s13">
-    <div class="section-head">
-      <p class="eyebrow">4.1b &middot; Ports</p>
-      <h2>What listens where</h2>
-      
-    </div>
-
-    <table class="tbl">
-      <thead><tr><th>Port</th><th>Service</th><th>What it is</th></tr></thead>
-      <tbody>
-        <tr><td class="who">8000</td><td>api</td><td>FastAPI: <code>/app</code>, <code>/chat</code>, <code>/health</code></td></tr>
-        <tr><td class="who">5433</td><td>postgres</td><td>PostgreSQL 16. 5433 on the host so a local Postgres keeps 5432; tests use <code>mycel_test</code> on the same server</td></tr>
-        <tr><td class="who">5672</td><td>rabbitmq</td><td>AMQP</td></tr>
-        <tr><td class="who">15672</td><td>rabbitmq</td><td>management UI</td></tr>
-        <tr><td class="who">6379</td><td>redis</td><td>live events, job status, budgets</td></tr>
-        <tr><td class="who">6380</td><td>redis-cache</td><td>cached answers and access tokens; evicts when full</td></tr>
-        <tr><td class="who">4000</td><td>litellm</td><td>model gateway</td></tr>
-        <tr><td class="who">6333</td><td>qdrant</td><td>HTTP + dashboard</td></tr>
-        <tr><td class="who">9000</td><td>minio</td><td>S3 API</td></tr>
-        <tr><td class="who">9001</td><td>minio</td><td>console</td></tr>
-        <tr><td class="who">8001</td><td>vllm</td><td>OpenAI-compatible, profile only</td></tr>
-        <tr><td class="who">9100–9103</td><td>app processes</td><td><code>/metrics</code>: worker · scheduler · ingest · api</td></tr>
-        <tr><td class="who">9090</td><td>prometheus</td><td>profile only</td></tr>
-        <tr><td class="who">9093</td><td>alertmanager</td><td>profile only</td></tr>
-        <tr><td class="who">3100</td><td>loki</td><td>profile only</td></tr>
-        <tr><td class="who">3000</td><td>grafana</td><td>profile only</td></tr>
-      </tbody>
-    </table>
-
-    <p>The state Redis on 6379 is not persisted. If it restarts or is flushed:</p>
-    <table class="tbl">
-      <thead><tr><th>Lost</th><th>What happens</th></tr></thead>
-      <tbody>
-        <tr><td>Job results and event streams</td><td>Nothing visible: polls and reloads fall back to <code>app.turn</code> in Postgres</td></tr>
-        <tr><td>Job budgets</td><td>A job retried afterwards starts with a full ceiling again</td></tr>
-        <tr><td>Delivery counts and job claims</td><td>A job that kills its worker gets a few more tries; a duplicate delivery could run once more</td></tr>
-        <tr><td>Rate-limit windows</td><td>Every limit starts over</td></tr>
-        <tr><td>Unconfirmed drafts</td><td>The person asks for the draft again</td></tr>
-      </tbody>
-    </table>
-    <p>The cache Redis on 6380 can be flushed at any time; it only costs recomputation.</p>
+    <div class="section-head"><p class="eyebrow">4.3 · Ports and traps</p><h2>Moved to Run and fix it</h2><div><ul class="bul"><li>Every port, what a Redis restart loses, and six silent traps: <a href="../operate/run.html">Run and fix it</a></li></ul></div></div>
   </section>
-<section id="s14">
-    <div class="section-head">
-      <p class="eyebrow">4.1c &middot; Silent traps</p>
-      <h2>Six things that raise no error when they are wrong</h2>
-      
-    </div>
 
-    <table class="tbl">
-      <thead><tr><th>Trap</th><th>What happens</th></tr></thead>
-      <tbody>
-        <tr><td class="who">BaseHTTPMiddleware<br>blocks SSE</td>
-            <td>It buffers the response, so tokens arrive in one lump at the end. Looks like a slow model. The request-id middleware is therefore pure ASGI</td></tr>
-        <tr><td class="who">Traces break at the<br>process boundary</td>
-            <td><code>contextvars</code> do not cross a process. Without <code>inject()</code>/<code>extract()</code> in the message headers you get <b>two</b> unrelated traces, and nothing errors</td></tr>
-        <tr><td class="who"><code>setup_tracing()</code><br>runs too late</td>
-            <td>Called after <code>instrument_app()</code>, spans fall into an empty provider and disappear &mdash; silently</td></tr>
-        <tr><td class="who">Budget counted at<br>the call site</td>
-            <td>Sub-agent usage does not roll up on its own. Only <code>runner.run</code> charges; <code>delegate</code> passes <code>usage=ctx.usage</code>, or a three-agent job is billed four times</td></tr>
-        <tr><td class="who">Pool sized<br>per process</td>
-            <td>The limit is <code>max_connections</code> across <b>all</b> processes, not per one. It only fails under load</td></tr>
-        <tr><td class="who">A hung pod with an<br>open port looks healthy</td>
-            <td>Self-healing is only as correct as the probes. <code>vllm</code> needs a <code>startupProbe</code> &mdash; the model takes minutes to load</td></tr>
-      </tbody>
-    </table>
-  </section>
 <section id="s16">
     <div class="section-head">
-      <p class="eyebrow">4.2 · From dev machine to cluster</p>
+      <p class="eyebrow">4.4 · From dev machine to cluster</p>
       <h2>Two images, one environment</h2>
       <div><ul class="bul"><li>CI builds two images per commit SHA: <code>mycel</code>, <code>mycel-ingest</code></li><li>CI renders the Helm chart; it does not deploy</li></ul></div>
     </div>
@@ -850,7 +787,7 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     <div><ul class="bul"><li>Same images everywhere</li><li>Differences are env vars only; secrets never in <code>config/</code></li></ul></div>
   </section>
   <section id="s12">
-    <div class="section-head"><p class="eyebrow">4.3 · On a cluster</p><h2>Kubernetes: minikube and EKS</h2><div><ul class="bul"><li><code>docker-compose.yml</code> = dev · <code>deploy/helm/</code> = cluster</li><li>Same image, only values differ</li><li>AWS: <a href="../operate/aws.html">On AWS</a></li></ul></div></div>
+    <div class="section-head"><p class="eyebrow">4.5 · On a cluster</p><h2>Kubernetes: minikube and EKS</h2><div><ul class="bul"><li><code>docker-compose.yml</code> = dev · <code>deploy/helm/</code> = cluster</li><li>Same image, only values differ</li><li>AWS: <a href="../operate/aws.html">On AWS</a></li></ul></div></div>
 <h3 class="tbl-title">Each pod on the cluster</h3>
     <table class="tbl">
       <thead><tr><th>Topic</th><th>Choice</th><th>Why</th></tr></thead>
@@ -867,11 +804,11 @@ each step, in order"><rect x="972" y="496" width="178" height="44" rx="2" fill="
     </table>
   </section>
   <section id="s11">
-    <div class="section-head"><p class="eyebrow">4.4 · Status</p><h2>What runs and what does not</h2></div>
+    <div class="section-head"><p class="eyebrow">4.6 · Status</p><h2>What runs and what does not</h2></div>
 <table class="tbl"><thead><tr><th>Item</th><th>State</th></tr></thead><tbody><tr><td class="who">plugins</td><td>Jira, Google built; Slack, Confluence not</td></tr><tr><td class="who">agents</td><td>orchestrator, analyst, researcher, summarizer, rewriter</td></tr><tr><td class="who">ETL</td><td>normalize, promote, checks, under one lock</td></tr><tr><td class="who">vector search</td><td>Qdrant: <code>rag_search</code> over gold work items · the Knowledge chip over uploads</td></tr><tr><td class="who">evals</td><td>golden sets, run by hand, not in CI</td></tr><tr><td class="who">local model</td><td>vLLM in compose behind a profile; no agent uses it</td></tr><tr><td class="who">cluster</td><td>minikube; EKS by session (On AWS)</td></tr></tbody></table>
   </section>
   <section id="s08">
-    <div class="section-head"><p class="eyebrow">Summary</p><h2>Nine rules that do not bend</h2></div>
+    <div class="section-head"><p class="eyebrow">4.7 · Summary</p><h2>Nine rules that do not bend</h2></div>
 <table class="tbl"><thead><tr><th>Rule</th><th>Means</th></tr></thead><tbody><tr><td class="who">One direction</td><td>bronze → silver → gold, never back</td></tr><tr><td class="who">Agents read gold only</td><td>for Jira data, gold is the only contract; mail, calendar, web and uploads are read live by tools</td></tr><tr><td class="who">New source, no edits</td><td>a folder in <code>plugins/</code> + a registry line</td></tr><tr><td class="who">Models through one place</td><td>the gateway or a person's endpoint, built in <code>model_builder.py</code></td></tr><tr><td class="who">Slow work on the queue</td><td>the API returns a job id, never waits for a model</td></tr><tr><td class="who">Prompt changed → run evals</td><td>a worse answer turns no test red</td></tr><tr><td class="who">Thin routes, thick domains</td><td>slow work is queued and runs in domains, so the scheduler can start it without the API; quick reads answer at once</td></tr><tr><td class="who">Same images everywhere</td><td>app and ingest, tagged by commit SHA; only env differs</td></tr><tr><td class="who">Name = job</td><td>no abbreviations, no layers for a future</td></tr></tbody></table>
   </section>
   <!-- pager --><nav class="pager"><span></span><a class="at" href="../index.html">1.1 · contents</a><a href="../flows/ask.html">Ask a question ›</a></nav><!-- /pager -->

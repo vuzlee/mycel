@@ -7,6 +7,7 @@ The YAML adds to what flow.py reads:
   words:    [glossary key, ...]           # at most six; meanings live in docs/glossary.yaml
   failures: [[case, what happens, file], ...]
   notes:    [[term, value], ...]          # a small table under the figure, optional
+  groups:   [[row label, step, step, ...], ...]  # change pages: one figure row per part of the code
   related:  [[label, href], ...]
 """
 
@@ -89,12 +90,35 @@ def _fit(name: str, room: int = 20) -> str:
     return name if len(name) <= room else name[: room - 1] + "…"
 
 
-def steps_figure(steps: list[list[str]]) -> str:
-    """A change recipe as boxes, one per file, in order; hover shows the full path."""
+def _grid(steps: list[list[str]], groups: list[list[str]] | None, per: int, lead: int):
+    """(step, x, y, row label) per box: one row per group, else `per` boxes a row."""
+    w, gap = 150, 22
+    if not groups:
+        return [
+            (s, lead + i % per * (w + gap), 16 + i // per * 90, None) for i, s in enumerate(steps)
+        ]
+    by_num = {s[0]: s for s in steps}
+    return [
+        (by_num[n], lead + j * (w + gap), 16 + r * 90, name if j == 0 else None)
+        for r, (name, *nums) in enumerate(groups)
+        for j, n in enumerate(nums)
+    ]
+
+
+def steps_figure(steps: list[list[str]], groups: list[list[str]] | None = None) -> str:
+    """A change recipe as boxes, one per file; `groups` gives one labelled row per code area."""
     per, w, gap = 5, 150, 22
+    lead = 130 if groups else 16
     out = []
-    for i, (num, path, _do) in enumerate(steps):
-        x, y = 16 + i % per * (w + gap), 16 + i // per * 90
+    cells = _grid(steps, groups, per, lead)
+    rows = max(y for *_, y, _l in cells) // 90 + 1
+    width = max(x for _s, x, _y, _l in cells) + w + 16
+    for i, ((num, path, _do), x, y, row) in enumerate(cells):
+        if row:
+            out.append(
+                f'<text x="16" y="{y + 32}" font-family="var(--mono)" font-size="10"'
+                f' letter-spacing="1.2" fill="var(--ink-faint)">{html.escape(row.upper())}</text>'
+            )
         short = path.replace("src/mycel/", "")
         parts = short.split("/")[:-1]
         folder = "/".join(parts) if len("/".join(parts)) <= 20 else "…/" + parts[-1]
@@ -111,11 +135,12 @@ def steps_figure(steps: list[list[str]]) -> str:
                 name=html.escape(_fit(path.split("/")[-1])),
             )
         )
-        if i % per < per - 1 and i < len(steps) - 1:
+        nxt = cells[i + 1] if i + 1 < len(cells) else None
+        if nxt and nxt[2] == y and not groups:
             out.append(ARROW.format(x0=x + w, y=y + 28, x1=x + w + gap))
-    h = 16 + (len(steps) + per - 1) // per * 90
+    h = 16 + rows * 90
     return (
-        f'<svg class="diagram" viewBox="0 0 {16 + per * (w + gap)} {h}" role="img"'
+        f'<svg class="diagram" viewBox="0 0 {max(width, 16 + per * (w + gap))} {h}" role="img"'
         f' aria-label="Files to change, in order">{STEP_DEFS}{"".join(out)}</svg>'
     )
 
@@ -152,7 +177,8 @@ def build(path: Path) -> str:
         out.append(f'<div class="scroll-x">{draw(spec)}</div></figure>')
     if spec.get("steps") and not spec.get("boxes"):
         out.append('<figure class="tipfig"><div class="tip" role="tooltip"></div>')
-        out.append(f'<div class="scroll-x">{steps_figure(spec["steps"])}</div></figure>')
+        fig = steps_figure(spec["steps"], spec.get("groups"))
+        out.append(f'<div class="scroll-x">{fig}</div></figure>')
     if spec.get("steps"):
         out.append(
             '<h3 class="tbl-title">Files to change, in order</h3>'
