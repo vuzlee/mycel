@@ -37,4 +37,4 @@ parts:
     pages:
       - [Add a plugin, change/add-plugin.html, "Add a provider people connect", "src/mycel/plugins/<key>/", [4, 3]]
       - [Add a tool, change/add-tool.html, "Add a tool to an agent", "agents/specialists · agents/prompts · web/src/lib", [4, 4]]
-      - [Add a gold column, change/add-gold-column.html, "Add a column to gold", "infra/postgres/models · migrations/ · agents/prompts", [4, 5]]
+      - [Add a gold column, change/add-gold-column.html, "Add a field agents and charts can read", "infra/postgres/models · migrations/ · agents/prompts", [4, 5]]

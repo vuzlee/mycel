@@ -89,7 +89,7 @@ def figure() -> str:
         )
 
     for i, (label, href, q, dirs, _) in enumerate(first["pages"]):
-        out.append(box(label, href, q, dirs, x(i), y(0), i < 2))
+        out.append(box(label, href, q, dirs, x(i), y(0), True))
         if i:
             out.append(f'<path d="M{x(i) - gap} {y(0) + h / 2} H{x(i) - 2}" {line}/>')
     rows = 0
@@ -148,7 +148,7 @@ def index() -> str:
 <section>
 <h2>Contents</h2>
 {contents()}
-<details><summary>Keeping this handbook right</summary>
+<details><summary>Keeping this handbook right (for writers)</summary>
 <table class="tbl"><thead><tr><th>Do</th><th>Command</th></tr></thead><tbody>
 <tr><td class="who">check every link, file, figure edge and page order</td><td><code>uv run python docs/tools/check.py</code></td></tr>
 <tr><td class="who">rebuild a flow page after editing its YAML</td><td><code>uv run python docs/tools/page.py docs/flows/&lt;name&gt;.yaml</code></td></tr>

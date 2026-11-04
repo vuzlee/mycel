@@ -29,7 +29,7 @@ tables:
     head: [Key, What]
     rows:
       - ["`TOKEN_ENCRYPTION_KEY`", "encrypts every stored refresh token; `python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"`; to rotate, put the new key first, comma, the old one; replacing it disconnects everyone"]
-      - ["`SMTP_HOST` · `SMTP_FROM` · `SMTP_USERNAME` · `SMTP_PASSWORD`", "sender of the sign-in code mail (Gmail: `smtp.gmail.com` + an app password); unset → only Google sign-in, doctor says so"]
+      - ["`SMTP_HOST` · `SMTP_FROM` · `SMTP_USERNAME` · `SMTP_PASSWORD`", "sender of the sign-in code mail (Gmail: `smtp.gmail.com` + an app password); unset → only Google sign-in, the doctor MAIL line says so"]
       - ["`PUBLIC_BASE_URL`", "in `config/environments/`; the address people reach the app at; every OAuth callback is built from it"]
   - title: 5 · Start and check
     head: [Command, Does]
@@ -60,4 +60,4 @@ related:
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
   - ["On AWS", aws.html]
-words: [OAuth app, redirect URI, .env, gateway key, scope, gateway (LiteLLM)]
+words: [OAuth app, redirect URI, .env, gateway (LiteLLM), gateway key, scope]

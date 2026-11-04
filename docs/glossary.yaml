@@ -27,7 +27,7 @@ words:
   - [commit · transaction, 'the moment a group of writes becomes permanent, all or none', queue/outbox.html]
   - [consent, the provider's page where the person says yes, flows/connect.html]
   - [contextvars, per-task variables in Python; they do not cross into another process, overview/architecture.html]
-  - [credits, '$100 AWS gave the account; pays bills until 2027-10. Budgets count before them, so a real cost still shows', operate/aws.html]
+  - [credits, 'money AWS gave the account, used before the card is charged; Budgets count before them, so a real cost still shows (amount and end date: On AWS)', operate/aws.html]
   - [dead-letter queue, '`jobs.dlq` · `ingest.dlq`: where a job parks after its last try, until someone replays it; a job there is "parked"', flows/job-failures.html]
   - [delivery count, how many times this job was handed over again (redelivered); too many → dead-letter, queue/idempotency.html]
   - [dev · compose · k8s, app on the host · all in containers · on minikube, operate/run.html]

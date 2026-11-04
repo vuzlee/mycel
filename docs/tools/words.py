@@ -30,6 +30,14 @@ def slug(word: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", word.lower()).strip("-") or "w"
 
 
+def _means(word: str, means: str) -> str:
+    """`a · b` with `x · y`: one line per word, so no reader matches them by position."""
+    words, parts = word.split(" · "), means.split(" · ")
+    if len(words) < 2 or len(words) != len(parts):
+        return e(means)
+    return "<br>".join(f"<b>{e(w)}</b>: {e(m)}" for w, m in zip(words, parts, strict=True))
+
+
 def row(word: str, here: str) -> str:
     """One glossary row; the meaning links to the page that teaches it, unless that is `here`."""
     means, page = GLOSSARY[word]
@@ -39,7 +47,7 @@ def row(word: str, here: str) -> str:
         more = f' <a class="taught" href="{up}{page}">→ {html.escape(title_of(page))}</a>'
     return (
         f'<tr id="{slug(word)}"><td class="who"><a href="{up}glossary.html#{slug(word)}">'
-        f"{e(word)}</a></td><td>{e(means)}{more}</td></tr>"
+        f"{e(word)}</a></td><td>{_means(word, means)}{more}</td></tr>"
     )
 
 

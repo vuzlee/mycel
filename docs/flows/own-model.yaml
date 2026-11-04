@@ -23,7 +23,7 @@ edges:
   - {from: apits,  to: route,  step: 2, kind: http,   text: "/own",                 label: "POST /models/own"}
   - {from: route,  to: svc,    step: 3, kind: import, label: "fields"}
   - {from: svc,    to: guard,           kind: import, label: "check URL"}
-  - {from: svc,    to: repo,   step: 4, kind: import, label: "save, keys encrypted", exit: 0.3, via: [[2.3, 1.5], [2.5, 1.5], [2.5, 3.6], [2.3, 3.6]], enter: 0.3}
+  - {from: svc,    to: repo,   step: 4, kind: import, label: "save, keys encrypted", exit: 0.3, via: [[2.3, 1.5], [2.5, 1.5], [2.5, 3.62], [2.3, 3.62]], enter: 0.3, label_at: [2.55, 2.0]}
   - {from: svc,    to: keyck,  step: 5, kind: calls,  text: "key_check_job(",       label: "Test: a job"}
   - {from: keyck,  to: cmodel,          kind: import, label: "test_keys"}
   - {from: cmodel, to: repo,   step: 6, kind: import, label: "at chat time"}
@@ -34,16 +34,17 @@ notes:
   - ["limits", "10 models per person · 1–5 keys each · 6 key tests a minute"]
   - ["URL", "https only (plain http only for hosts in `model_http_hosts`, `base.yaml`) · no private or internal address · checked on save and before every call"]
   - ["keys", "encrypted with `TOKEN_ENCRYPTION_KEY` · only the last 4 characters are shown (8 or fewer: only …)"]
-  - ["key order", "a key that gets 401/402/403/429 is set aside (400/401/403: 10 min; a daily quota: until reset; else 60 s); the next key is tried"]
+  - ["key order", "401, 402, 403, 429 (or a 400 that says the key is bad) → the key sits out and the next is tried; rejected: 10 min · daily quota: until reset · else 60 s"]
   - ["cost cap", "the $5 daily cap is skipped; the per-job cap ($0.50) still applies when the model's price is known"]
 failures:
   - ["blocked URL (private, internal, plain http)", "422 on save; refused at chat time", "src/mycel/services/url_guard.py"]
   - ["no key, or more than 5", "422", "src/mycel/services/own_models.py"]
   - ["a key fails the test", "that key shows not ok, with why", "src/mycel/domains/chat_model.py"]
   - ["a key runs out mid-chat", "next key tried", "src/mycel/agents/core/rotating.py"]
-  - ["every key fails", "quota → retried later; auth → the turn fails", "src/mycel/agents/core/rotating.py"]
+  - ["every key fails", "quota → the job retry queue tries again later; auth → the turn fails", "src/mycel/agents/core/rotating.py"]
   - ["encryption key changed", "stored keys cannot be read", "src/mycel/services/sealing.py"]
 related:
+  - [Model and cost, model-cost.html]
   - [Architecture, ../overview/architecture.html]
   - [Config, ../overview/config.html]
 words: [own model, endpoint, private address, '429', sealed, 401 · 403 · 402]

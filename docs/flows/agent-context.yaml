@@ -3,7 +3,7 @@ title: "Agent context: the date goes on every question, searches filter by recen
 page:
   eyebrow: Flow
   title: What the model sees
-  lede: [Each model request is the prompt plus the run so far, 'Numbered: date, shrink, summarise, call; web_search adds recency on the side']
+  lede: [Each model request is the prompt plus the run so far, 'Four steps before each call: date, shrink, summarise, call']
   why: [A model knows nothing past its training and reads only what is sent each time, Long runs fill the context and fail; these four steps keep it current and small]
 lanes: [run, wiring, per request, tools, model]
 boxes:
@@ -25,16 +25,16 @@ edges:
   - {from: search,  to: tavily,           kind: calls,  text: "time_range", label: "side: recency"}
   - {from: runner,  to: builder, step: 4, kind: import, label: "open, then request", exit: -0.45, via: [[-0.45, 4]], enter: 0}
 notes:
-  - ["date", "the question (not the fixed prompt) starts with today's date in the asker's zone; a small model could not miss it"]
+  - ["date", "the question (not the fixed prompt) starts with today's date in the asker's zone; small models skip a date placed in the fixed prompt"]
   - ["recency", "`web_search` sends day / week / month / year as Tavily's `time_range`"]
   - ["old results", "web results older than the last 2 rounds become one line: urls kept, text dropped; other tool results stay whole"]
   - ["compact", "past 75% of `total_tokens_limit` a model call summarises the middle of the run"]
-  - ["measured", "AI-news question: 333k tokens and a failure → 110k tokens and an answer"]
+  - ["measured", "AI-news question: 333k tokens and a failure → 110k tokens and an answer (batch 110 notes)"]
 failures:
   - ["model ignores the date", "recency still filters by time", "src/mycel/agents/tools/web_search.py"]
-  - ["a search stalls or returns 5xx", "a stall (20 s timeout) or 5xx is resent once at once; still failing → that query comes back empty with a warning, the others kept; every query failed → the tool fails, the job is parked", "src/mycel/agents/tools/web_search.py"]
+  - ["a search stalls or returns 5xx", "a stall (20 s timeout) or 5xx is resent once at once; still failing → that query comes back empty with a warning, the others kept; every query failed → the tool fails and the job is parked (see Job failures)", "src/mycel/agents/tools/web_search.py"]
   - ["summary call fails", "the run fails with it (retried if the model error is transient)", "src/mycel/agents/core/compact.py"]
-  - ["cap reached anyway", "the run stops as runaway", "src/mycel/agents/core/exceptions.py"]
+  - ["cap reached anyway", "the run stops as runaway (it hit its cap)", "src/mycel/agents/core/exceptions.py"]
 related:
   - [Model and cost, model-cost.html]
   - ["Traces and metrics", observe.html]

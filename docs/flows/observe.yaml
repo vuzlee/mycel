@@ -14,7 +14,7 @@ boxes:
   - {id: mserver, lane: observe, col: 1, file: src/mycel/observability/metrics_server.py,     label: metrics_server.py,    role: "/metrics per process"}
   - {id: channel, lane: observe, col: 2, file: src/mycel/events/channel.py,                   label: events/channel.py,    role: "what a run publishes"}
   - {id: doctor,  lane: observe, col: 3, file: src/mycel/doctor/__init__.py,                  label: mycel/doctor,         role: "is each part up?", hot: true}
-  - {id: langfuse, lane: carry,  col: 0, file: src/mycel/core/config.py,                      label: Langfuse,             role: "one trace per turn", outside: true}
+  - {id: langfuse, lane: carry,  col: 0, file: src/mycel/observability/tracing.py,           label: Langfuse,             role: "one trace per turn", outside: true}
   - {id: streams, lane: carry,   col: 2, file: src/mycel/infra/redis/streams.py,              label: "Redis stream",       role: "events per job"}
   - {id: sse,     lane: carry,   col: 3, file: src/mycel/api/routes/events.py,                label: routes/events.py,     role: "SSE to the browser"}
   - {id: alert,   lane: look,    col: 0, file: deploy/monitoring/alertmanager.yaml,           label: Alertmanager,         role: "routes firing alerts"}
@@ -32,7 +32,7 @@ edges:
   - {from: alloy,   to: loki,             kind: calls,  text: "loki:3100", label: "push"}
   - {from: grafana, to: loki,             kind: calls,  text: "type: loki", label: "query", exit: 0.3, enter: 0.3}
   - {from: chat,    to: channel,          kind: import, label: "event types", exit: -0.3, enter: -0.3}
-  - {from: chat,    to: streams, step: 5, kind: import, label: "XADD each step", exit: 0.45, via: [[2.45, 0.5], [2.55, 0.5], [2.55, 1.5], [2.45, 1.5]], enter: 0.45, label_at: [2.62, 1.5]}
+  - {from: chat,    to: streams, step: 5, kind: import, label: "XADD each step", exit: 0.45, via: [[2.45, 0.5], [2.55, 0.5], [2.55, 1.5], [2.45, 1.5]], enter: 0.45, label_at: [2.6, 1.3]}
   - {from: sse,     to: streams, step: 6, kind: import, label: "read", reverse: true}
   - {from: docsh,   to: doctor,  step: 7, kind: calls,  text: "from mycel import doctor", label: "probe"}
 notes:

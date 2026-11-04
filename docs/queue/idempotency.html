@@ -140,7 +140,7 @@
   <a href="#guards">05 Four safeguards</a><a href="#promise">06 Guarantees and limits</a><a href="#impl">Implementation</a>
 </nav>
 
-<section id="words"><!-- words: idempotent | at least once | ack · reject | claim | delivery count | upsert --><h3 class="tbl-title">Words</h3><table class="tbl words"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who"><a href="../glossary.html#idempotent">idempotent</a></td><td>running it twice has the same effect as once</td></tr><tr><td class="who"><a href="../glossary.html#at-least-once">at least once</a></td><td>the queue may deliver a job again; never zero times</td></tr><tr><td class="who"><a href="../glossary.html#ack-reject">ack · reject</a></td><td>the worker tells the queue a job is done · failed; no answer → delivered again <a class="taught" href="../flows/job-failures.html">→ Job failures</a></td></tr><tr><td class="who"><a href="../glossary.html#claim">claim</a></td><td>a short Redis key: only one worker runs this job now</td></tr><tr><td class="who"><a href="../glossary.html#delivery-count">delivery count</a></td><td>how many times this job was handed over again (redelivered); too many → dead-letter</td></tr><tr><td class="who"><a href="../glossary.html#upsert">upsert</a></td><td>insert, or update if the row exists: one row per key</td></tr></tbody></table><!-- /words --></section>
+<section id="words"><!-- words: idempotent | at least once | ack · reject | claim | delivery count | upsert --><h3 class="tbl-title">Words</h3><table class="tbl words"><thead><tr><th>Word</th><th>Means</th></tr></thead><tbody><tr><td class="who"><a href="../glossary.html#idempotent">idempotent</a></td><td>running it twice has the same effect as once</td></tr><tr><td class="who"><a href="../glossary.html#at-least-once">at least once</a></td><td>the queue may deliver a job again; never zero times</td></tr><tr><td class="who"><a href="../glossary.html#ack-reject">ack · reject</a></td><td><b>ack</b>: the worker tells the queue a job is done<br><b>reject</b>: failed; no answer → delivered again <a class="taught" href="../flows/job-failures.html">→ Job failures</a></td></tr><tr><td class="who"><a href="../glossary.html#claim">claim</a></td><td>a short Redis key: only one worker runs this job now</td></tr><tr><td class="who"><a href="../glossary.html#delivery-count">delivery count</a></td><td>how many times this job was handed over again (redelivered); too many → dead-letter</td></tr><tr><td class="who"><a href="../glossary.html#upsert">upsert</a></td><td>insert, or update if the row exists: one row per key</td></tr></tbody></table><!-- /words --></section>
 
 <h2 id="problem">01 · The problem</h2>
 <p class="purpose">Without safeguards: worker A dies mid-answer, the queue hands the same job to worker B.</p>
@@ -324,7 +324,7 @@
 <div class="guard" data-path="src/mycel/infra/redis/deliveries.py"><b>1 COUNT</b><span>Has this job crashed workers too often?</span><small>stops D · a poison job looping forever</small></div>
 <div class="guard" data-path="src/mycel/domains/chat.py"><b>2 DONE?</b><span>Has this job been answered?</span><small>stops B · reuses a saved answer</small></div>
 <div class="guard" data-path="src/mycel/infra/redis/claims.py"><b>3 LOCK</b><span>Is someone answering it right now?</span><small>stops A · two workers at once</small></div>
-<div class="guard" data-path="src/mycel/infra/postgres/repositories/conversations.py"><b>4 ONE ROW</b><span>If two writes happen, where do they go?</span><small>one row per job id; last write wins. Does not stop a model call</small></div>
+<div class="guard" data-path="src/mycel/infra/postgres/repositories/conversations.py"><b>4 ONE ROW</b><span>If two writes happen, where do they go?</span><small>one row per job id: the question row is kept if it exists, the answer row overwrites. Does not stop a model call</small></div>
 
 <h2 id="promise">06 · Guarantees and limits</h2>
 <div class="cols">
@@ -337,7 +337,7 @@
   <div class="col bad"><h3>Not guaranteed</h3><ul>
     <li><b>Exactly once.</b> A crash before save (story C) runs the model again.</li>
     <li>DONE? is checked <i>before</i> the claim. If A saves and releases between B's check and B's claim, B runs again.</li>
-    <li>A lost claim (Redis unreachable &gt; 25 s) only logs a warning; the work goes on, and a second worker may start. No fencing token guards the save.</li>
+    <li>A lost claim (Redis unreachable &gt; 25 s) only logs a warning; the work goes on, and a second worker may start. No fencing token (a number that makes a late writer's save fail) guards the save.</li>
   </ul></div>
 </div>
 <p class="insight"><b>Key:</b> the model is called twice only when no answer was saved in time, or in the two narrow races above.</p>

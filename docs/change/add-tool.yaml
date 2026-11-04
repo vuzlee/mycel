@@ -2,12 +2,12 @@ reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); recipe 
 page:
   eyebrow: Change
   title: Add a tool
-  lede: ['A tool is a function an agent may call; here, for the analyst', 'Five files to edit and one to use, in this order']
+  lede: ['A tool is a function an agent may call; here, for the analyst', 'Five files to edit and one to use (box 2, guards.py), in this order']
   why: [A model can only do what a tool lets it do, A narrow tool with a clear name beats a prompt that explains SQL]
 steps:
-  - ["1", "src/mycel/agents/tools/work.py", "add `@toolset.tool(name=…)` inside `build_toolset()`; a new module copies `compute.py`"]
-  - ["2", "src/mycel/agents/core/guards.py", "use, do not edit: call `guard_repeat(ctx, …)` first in a tool the model may repeat (see `tools/query.py`); the `work.py` reads skip it; raise `ModelRetry` for bad input"]
-  - ["3", "src/mycel/agents/specialists/analyst.py", "add the toolset in `toolsets()`; a ready-made answer also goes in `READY_READS` (work.py)"]
+  - ["1", "src/mycel/agents/tools/work.py", "add `@toolset.tool(name=…)` inside `build_toolset()`, and its name to `READY_READS` if it returns a finished answer; a new module copies `compute.py`"]
+  - ["2", "src/mycel/agents/core/guards.py", "use, do not edit: a tool the model may repeat calls `guard_repeat(ctx, …)` first (see `tools/query.py`); plain reads like `work.py` skip it; raise `ModelRetry` for bad input; past the limit it raises `DegenerateLoop`"]
+  - ["3", "src/mycel/agents/specialists/analyst.py", "add the toolset in `toolsets()`"]
   - ["4", "src/mycel/agents/prompts/analyst.py", "tell the model when to use it"]
   - ["5", "config/agents/analyst.yaml", "raise `tool_calls_limit` if needed — and the \"twelve queries\" line in the prompt"]
   - ["6", "web/src/lib/toolLabel.ts", "a label for the live step, else it shows \"Running my tool\""]
@@ -20,11 +20,11 @@ tables:
       - ["a tool on a person's account (Jira, Google)", "in that plugin's package; see Add a plugin. It may import only the tool kit from `agents/`: deps, `chip_filter.opens`, guards, errors, limits (`tests/test_layers.py`)"]
 mistakes:
   - ["toolset made without `opens(Chip…)`", "never offered once the person picks sources"]
-  - ["chip set on the toolset when one tool needs another", "per-tool `opens(…)` overrides it; `tools/delegate.py` does this"]
+  - ["one chip on the whole toolset when tools need different ones", "give each tool its own `opens(…)`; it overrides the toolset's, as `delegate.py` does for researcher (web) vs analyst (Jira)"]
   - ["ready read missing from `READY_READS`", "`run_sql` stays open; the model checks the answer again"]
   - ["`ValueError` instead of `ModelRetry`", "the model gets no readable error"]
   - ["limit raised, prompt not", "the model still believes it has twelve queries"]
 related:
   - [Add a plugin, add-plugin.html]
   - [Architecture, ../overview/architecture.html]
-words: [tool, toolset, chip, prompt, ModelRetry, READY_READS]
+words: [tool, toolset, chip, MCP, ModelRetry, READY_READS]

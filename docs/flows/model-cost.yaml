@@ -23,14 +23,14 @@ edges:
   - {from: chatmodel, to: source,    step: 2, kind: import, label: "host or own", exit: 0.3, enter: -0.3}
   - {from: source,    to: builder,   step: 3, kind: import, label: "build"}
   - {from: builder,   to: litellm,   step: 4, kind: calls,  text: "LiteLLMProvider(", label: "call"}
-  - {from: chat,      to: rbudget,   step: 5, kind: calls,  text: "budgets.load(", label: "load budget", exit: -0.3, via: [[0.7, 1.5], [0, 1.5]]}
+  - {from: chat,      to: rbudget,   step: 5, kind: calls,  text: "budgets.load(", label: "load budget", exit: -0.3, via: [[0.7, 1.5], [0, 1.5]], label_at: [0.3, 1.62]}
   - {from: chat,      to: runner,    step: 6, kind: calls,  text: "runner.run(", label: "run"}
   - {from: runner,    to: budget,    step: 7, kind: import, label: "charge"}
   - {from: chat,      to: conv,      step: 8, kind: import, label: "save spend"}
 notes:
   - ["job ceiling", "`job_ceiling_usd` = $0.50, kept in Redis across retries"]
   - ["token cap", "`total_tokens_limit` per agent → `UsageLimits`"]
-  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens; host models: every input token at the full rate, cached or not"]
+  - ["price", "the run's own cost when pydantic-ai can price it (own models), else `model_prices_usd` per million tokens; host models: every input token at the full rate, cached or not"]
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
   - ["own models", "called direct, priced from the price data pydantic-ai ships (cached input at the cache rate), not capped by the gateway"]
   - ["one model a turn", "every agent of the run calls the turn's pick; no pick = the person's saved default if on, else `default: true` in `host_models`"]
@@ -40,8 +40,9 @@ failures:
   - ["run goes past the ceiling", "charged when it ends: the job fails as over budget; a host-model run is not stopped mid-run (`cost_limit` needs a price pydantic-ai has only for own models)", "src/mycel/agents/core/runner.py"]
   - ["unknown model ref", "config error", "src/mycel/domains/chat_model.py"]
   - ["model has no price", "spend not counted, so no cap applies: add it to `model_prices_usd`", "src/mycel/llm/budget.py"]
-  - ["gateway key over $10", "gateway refuses; the turn fails", "scripts/ops/gateway-key.sh"]
+  - ["gateway key over $10", "the gateway refuses calls until a new key; answers fail", "scripts/ops/gateway-key.sh"]
 related:
   - [Own model, own-model.html]
   - [Config, ../overview/config.html]
+  - [What the model sees, agent-context.html]
 words: [host model, own model, gateway (LiteLLM), budget, usage, UsageLimits]
