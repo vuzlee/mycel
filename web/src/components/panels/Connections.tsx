@@ -65,7 +65,7 @@ function Connection({ plugin }: { plugin: PluginStatus }) {
         {plugin.who && <span className="pill on">Connected</span>}
       </header>
       {!plugin.configured && (
-        <p className="muted">Not set up on this deployment — see docs/operate/setup.md.</p>
+        <p className="muted">Not set up on this deployment — see docs/operate/setup.html.</p>
       )}
       {plugin.configured && plugin.who && (
         <>
