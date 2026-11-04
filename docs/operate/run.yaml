@@ -48,4 +48,4 @@ related:
   - [Job failures, ../flows/job-failures.html]
   - ["Traces and metrics", ../flows/observe.html]
   - ["On AWS", aws.html]
-words: [stack.sh, dev · compose · k8s, doctor, stores, Kubernetes · pod, Helm chart]
+words: [stack.sh, dev · compose · k8s, doctor, dead-letter queue, Kubernetes · pod, Helm chart]

@@ -16,7 +16,7 @@ boxes:
   - {id: worker,  lane: worker,  col: 3, file: src/mycel/worker/handlers.py,                            label: "worker --queue ingest",   role: "one at a time (prefetch 1)"}
   - {id: ingest,  lane: worker,  col: 2, file: src/mycel/domains/ingest.py,                    label: domains/ingest.py,        role: "parse, chunk, embed", hot: true}
   - {id: files,   lane: stores,  col: 0, file: src/mycel/infra/objects/files.py,               label: "MinIO",                  role: "the original file"}
-  - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document, chunk", role: "status, pieces"}
+  - {id: repo,    lane: stores,  col: 1, file: src/mycel/infra/postgres/repositories/documents.py, label: "Postgres · document", role: "status, chunks"}
   - {id: qdrant,  lane: stores,  col: 2, file: src/mycel/infra/vectors/documents.py,           label: Qdrant,                   role: "vectors for search"}
   - {id: events,  lane: stores,  col: 3, file: src/mycel/infra/redis/document_events.py,       label: "Redis · changed",        role: "tells the page"}
 edges:

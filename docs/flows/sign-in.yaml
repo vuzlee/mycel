@@ -3,7 +3,7 @@ title: "Sign in: Google, or a six-digit code by mail; both end in a 14-day sessi
 page:
   eyebrow: Flow
   title: Sign in
-  lede: ["Two ways in: C = a code sent by mail, G = Google", "Both then run 1–3: account, session row, a 14-day cookie"]
+  lede: ["Two ways in: C = a code sent by mail, G = Google", "C1–C4 or G1–G5, then 1–3: account, session row, a 14-day cookie"]
   why: [The app must know who asks before it reads anyone's Jira or mail, 'No password is stored: Google or a mailed code proves the address']
 lanes: [browser, api, services, outside, stores]
 boxes:

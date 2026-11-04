@@ -29,4 +29,4 @@ mistakes:
 related:
   - [Connect an account, ../flows/connect.html]
   - [Add a tool, add-tool.html]
-words: [plugin, OAuth, client, OAuthProvider, sealed, registry]
+words: [plugin, OAuth, client, OAuthProvider, sealed, chip]

@@ -44,4 +44,4 @@ failures:
 related:
   - [Database, ../overview/database.html]
   - [Jira sync, jira-sync.html]
-words: [bronze · silver · gold, project access, panel, estimate vs spent]
+words: [bronze · silver · gold, project access, row security, estimate vs spent]

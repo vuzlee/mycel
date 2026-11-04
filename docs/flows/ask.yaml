@@ -38,10 +38,10 @@ edges:
   - {from: tool,     to: query,    step: 7, kind: import, label: SQL}
   - {from: query,    to: gold,              kind: calls,  text: scoped_read, label: as mycel_reader}
   - {from: domain,   to: turn,     step: 9, kind: import, label: store the answer, exit: -0.45, via: [[0.55, 3.5], [0.5, 3.5], [0.5, 6]], label_at: [-0.05, 5.45]}
-  - {from: domain,   to: redis,    step: 8, kind: import, label: XADD each step, label_at: [3.2, 3.42], exit: 0.3, enter: 0.3, via: [[1.3, 3.5], [4.3, 3.5]]}
+  - {from: domain,   to: redis,    step: 8, kind: import, label: "XADD each step (all along)", label_at: [3.2, 3.42], exit: 0.3, enter: 0.3, via: [[1.3, 3.5], [4.3, 3.5]]}
   - {from: events,   to: redis,             kind: import, label: XREAD, reverse: true}
   - {from: stream,   to: events,            kind: http,   text: "/events", label: SSE, reverse: true}
-words: [turn, job · queue · worker, outbox, agent, orchestrator · specialist, SSE]
+words: [turn, job · queue · worker, outbox, agent, orchestrator · specialist, claim]
 notes:
   - ["the example", "Lan asks \"who logged the most hours last week?\"; the orchestrator hands it to the analyst, whose tool reads gold"]
   - ["202 at once", "`POST /chat` saves the turn and the job, then answers 202 with a job id; the browser opens the event stream for it"]

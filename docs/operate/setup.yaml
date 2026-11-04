@@ -60,4 +60,4 @@ related:
   - [Connect an account, ../flows/connect.html]
   - [Config, ../overview/config.html]
   - ["On AWS", aws.html]
-words: [OAuth app, redirect URI, .env, gateway key, scope, refresh token]
+words: [OAuth app, redirect URI, .env, gateway key, scope, gateway (LiteLLM)]

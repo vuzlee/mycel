@@ -52,4 +52,4 @@ failures:
 related:
   - [Architecture, ../overview/architecture.html]
   - [Model and cost, model-cost.html]
-words: [trace · span, OTLP, Langfuse, Prometheus · Grafana, Loki, doctor]
+words: [trace · span, OTLP, Langfuse, Prometheus · Grafana, Loki, XADD · XREAD]
