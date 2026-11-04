@@ -2,7 +2,7 @@ reviewed: 1792695015   # 2026-10-23: E11 renames re-read (imports only); recipe 
 page:
   eyebrow: Change
   title: Add a tool
-  lede: ['A tool is a function an agent may call; here, for the analyst', 'Six files, in this order']
+  lede: ['A tool is a function an agent may call; here, for the analyst', 'Five files to edit and one to use, in this order']
   why: [A model can only do what a tool lets it do, A narrow tool with a clear name beats a prompt that explains SQL]
 steps:
   - ["1", "src/mycel/agents/tools/work.py", "add `@toolset.tool(name=…)` inside `build_toolset()`; a new module copies `compute.py`"]
@@ -20,7 +20,7 @@ tables:
       - ["a tool on a person's account (Jira, Google)", "in that plugin's package; see Add a plugin. It may import only the tool kit from `agents/`: deps, `chip_filter.opens`, guards, errors, limits (`tests/test_layers.py`)"]
 mistakes:
   - ["toolset made without `opens(Chip…)`", "never offered once the person picks sources"]
-  - ["chip set per tool, not per toolset", "chips apply to the whole toolset"]
+  - ["chip set on the toolset when one tool needs another", "per-tool `opens(…)` overrides it; `tools/delegate.py` does this"]
   - ["ready read missing from `READY_READS`", "`run_sql` stays open; the model checks the answer again"]
   - ["`ValueError` instead of `ModelRetry`", "the model gets no readable error"]
   - ["limit raised, prompt not", "the model still believes it has twelve queries"]

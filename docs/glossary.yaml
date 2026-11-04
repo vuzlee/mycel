@@ -154,7 +154,7 @@ words:
   - [token (model), the unit a model counts text in; about 4 characters, flows/agent-context.html]
   - [token cap, 'the most tokens one agent run may use: `total_tokens_limit` in `config/agents/*.yaml`', flows/agent-context.html]
   - [tool, 'a function an agent may call by name, e.g. run a query on gold', overview/architecture.html]
-  - [tool result, what a tool returned to the model; old ones shrink to one line, flows/agent-context.html]
+  - [tool result, what a tool returned to the model; old web results shrink to one line, flows/agent-context.html]
   - [toolset, a group of tools offered to the model together, change/add-tool.html]
   - [trace context, ids in the message headers that tie the job to its request's trace; kept so a relayed job is not a stray trace, queue/outbox.html]
   - [trace · span, 'one turn''s tree of steps · one step in it, with time and tokens', flows/observe.html]

@@ -33,8 +33,8 @@ edges:
 notes:
   - ["limits", "10 models per person · 1–5 keys each · 6 key tests a minute"]
   - ["URL", "https only (plain http only for hosts in `model_http_hosts`, `base.yaml`) · no private or internal address · checked on save and before every call"]
-  - ["keys", "encrypted with `TOKEN_ENCRYPTION_KEY` · only the last 4 characters are shown"]
-  - ["key order", "a key that gets 401/402/403/429 is set aside (60 s; 10 min if rejected; until reset for a daily quota); the next key is tried"]
+  - ["keys", "encrypted with `TOKEN_ENCRYPTION_KEY` · only the last 4 characters are shown (8 or fewer: only …)"]
+  - ["key order", "a key that gets 401/402/403/429 is set aside (400/401/403: 10 min; a daily quota: until reset; else 60 s); the next key is tried"]
   - ["cost cap", "the $5 daily cap is skipped; the per-job cap ($0.50) still applies when the model's price is known"]
 failures:
   - ["blocked URL (private, internal, plain http)", "422 on save; refused at chat time", "src/mycel/services/url_guard.py"]

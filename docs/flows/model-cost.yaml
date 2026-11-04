@@ -30,14 +30,14 @@ edges:
 notes:
   - ["job ceiling", "`job_ceiling_usd` = $0.50, kept in Redis across retries"]
   - ["token cap", "`total_tokens_limit` per agent → `UsageLimits`"]
-  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens; cached input at the provider's cache rate"]
+  - ["price", "the gateway's `usage.cost`, else `model_prices_usd` per million tokens; host models: every input token at the full rate, cached or not"]
   - ["gateway key", "the app's key is capped at $10 per 30 days (`scripts/stack.sh gateway-key`)"]
-  - ["own models", "called direct, priced by the same table, not capped by the gateway"]
-  - ["one model a turn", "every agent of the run calls the turn's pick; no pick = `default: true` in `host_models`"]
+  - ["own models", "called direct, priced from the price data pydantic-ai ships (cached input at the cache rate), not capped by the gateway"]
+  - ["one model a turn", "every agent of the run calls the turn's pick; no pick = the person's saved default if on, else `default: true` in `host_models`"]
   - ["daily cap", "`user_daily_usd`, $5 per person a day (`base.yaml`); jobs still open count at their ceiling, so a turn is refused before it is queued"]
 failures:
   - ["no budget left", "stopped before any model call", "src/mycel/llm/budget.py"]
-  - ["ceiling reached mid-run", "run stops as overdrawn", "src/mycel/agents/core/runner.py"]
+  - ["run goes past the ceiling", "charged when it ends: the job fails as over budget; a host-model run is not stopped mid-run", "src/mycel/agents/core/runner.py"]
   - ["unknown model ref", "config error", "src/mycel/domains/chat_model.py"]
   - ["model has no price", "spend not counted, so no cap applies: add it to `model_prices_usd`", "src/mycel/llm/budget.py"]
   - ["gateway key over $10", "gateway refuses; the turn fails", "scripts/ops/gateway-key.sh"]

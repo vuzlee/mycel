@@ -3,7 +3,7 @@ title: "Job failures: outbox and relay, delivery, final versus transient errors,
 page:
   eyebrow: Flow
   title: Job failures
-  lede: ["A job is never lost: written with its row, retried, or parked", "Parked jobs go back with one command"]
+  lede: ["A job is not lost: written with its row, retried, or parked (only an unreadable outbox row is dropped)", "Parked jobs go back with one command"]
   why: ['Model calls time out, brokers restart, workers die mid-job', 'A job must be retried when that can help, and parked for a person when it cannot']
 lanes: [request, broker, worker, failed, ops]
 boxes:
@@ -37,10 +37,10 @@ notes:
   - ["send them back", "`scripts/stack.sh replay jobs.dlq 100`"]
 failures:
   - ["publish fails after commit", "row stays unsent; relay sends it in 10–15 s (rows older than 10 s, checked every 5 s)", "src/mycel/services/enqueue.py"]
-  - ["relay sent it but could not mark it", "sent twice; chat's claim stops a double answer", "src/mycel/domains/chat.py"]
+  - ["relay sent it but could not mark it", "sent twice; chat skips a turn already done (the claim only stops two at once)", "src/mycel/domains/chat.py"]
   - ["message body unreadable", "parked at once", "src/mycel/queue/consumer.py"]
   - ["unexpected error (a bug)", "recorded and parked, no retry", "src/mycel/queue/consumer.py"]
-  - ["broker or Postgres down while failing", "message returned to the queue", "src/mycel/queue/consumer.py"]
+  - ["broker down while failing", "message returned to the queue; Postgres down: the failure is only logged, the job still parks", "src/mycel/queue/consumer.py"]
   - ["what \"failed\" means", "chat: the turn shows failed · ingest: the document shows failed · others: nothing", "src/mycel/worker/handlers.py"]
 related:
   - [Outbox in depth, ../queue/outbox.html]
